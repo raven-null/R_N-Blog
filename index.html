@@ -1,0 +1,1321 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>R_N</title>
+    <link rel="icon" href="/images/system1.jpg" type="image/png">
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="css/style.css">
+
+    <!-- Marked.js -->
+    <script src="js/vendor/marked.min.js"></script>
+
+    <!-- Highlight.js -->
+    <link rel="stylesheet" href="css/highlight-github-dark.min.css">
+    <script src="js/vendor/highlight.min.js"></script>
+</head>
+
+<body>
+
+    <!-- ===== HERO SECTION (Full Page) ===== -->
+    <section class="hero" id="hero">
+        <!-- Background Gradient Animation -->
+        <div class="hero-bg-gradient"></div>
+        
+        <!-- Grid Flash Effect -->
+        <div class="hero-grid-flash"></div>
+        
+        <!-- Pulse Rings -->
+        <div class="hero-pulse-ring"></div>
+        <div class="hero-pulse-ring"></div>
+        <div class="hero-pulse-ring"></div>
+        
+        <!-- Floating Lines -->
+        <div class="hero-floating-line"></div>
+        <div class="hero-floating-line"></div>
+        <div class="hero-floating-line"></div>
+        
+        <!-- Particle Burst -->
+        <div class="hero-particle-burst"></div>
+        <div class="hero-particle-burst"></div>
+        <div class="hero-particle-burst"></div>
+        <div class="hero-particle-burst"></div>
+        <div class="hero-particle-burst"></div>
+        <div class="hero-particle-burst"></div>
+
+        <!-- Decorative elements -->
+        <div class="hero-deco-line left"></div>
+        <div class="hero-deco-line right"></div>
+        <div class="hero-corner tl"></div>
+        <div class="hero-corner tr"></div>
+        <div class="hero-corner bl"></div>
+        <div class="hero-corner br"></div>
+
+        <!-- Floating orbs -->
+        <div class="hero-orb hero-orb-1"></div>
+        <div class="hero-orb hero-orb-2"></div>
+        <div class="hero-orb hero-orb-3"></div>
+
+        <!-- Particles -->
+        <canvas class="hero-particles" id="heroParticles"></canvas>
+
+        <!-- Content -->
+        <div class="hero-content">
+            <div class="hero-tag">渡鸦_NULL BLOG</div>
+            <h1 class="hero-title">
+                <span class="highlight" id="heroTitleText" data-text="HELLO">HELLO</span>
+            </h1>
+            <p class="hero-subtitle">只要你不失去你的崇高，整个世界都将向你敞开</p>
+
+            <div class="hero-stats">
+                <div class="hero-stat">
+                    <div class="hero-stat-num" id="statPosts">0</div>
+                    <div class="hero-stat-label">Articles</div>
+                </div>
+                <div class="hero-stat">
+                    <div class="hero-stat-num" id="statTags">0</div>
+                    <div class="hero-stat-label">Tags</div>
+                </div>
+                <div class="hero-stat">
+                    <div class="hero-stat-num" id="statWords">0</div>
+                    <div class="hero-stat-label">Words</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Accent Line -->
+        <div class="hero-accent-line"></div>
+
+        <!-- Scroll indicator -->
+        <div class="scroll-indicator" id="scrollIndicator">
+            <span>Scroll</span>
+            <div class="scroll-arrow"></div>
+        </div>
+    </section>
+
+    <!-- ===== CONTENT WRAPPER ===== -->
+    <div class="content-wrapper" id="contentWrapper">
+
+        <!-- Sticky Nav -->
+        <nav class="nav-bar" id="navBar">
+            <div class="nav-inner">
+                <a href="#" class="nav-brand" id="startBtn" onclick="startGeekSpace(event)">
+                    <span class="dot"></span>
+                    START
+                </a>
+                <div class="nav-links">
+                    <a href="#" class="nav-link active" onclick="BlogApp.filterByTag(null); return false;">全部</a>
+                    <a href="#" class="nav-link" onclick="BlogApp.filterByTag('技术'); return false;">技术</a>
+                    <a href="#" class="nav-link" onclick="BlogApp.filterByTag('生活'); return false;">生活</a>
+                    <a href="#" class="nav-link" onclick="BlogApp.filterByTag('AI'); return false;">AI</a>
+                </div>
+                <div class="nav-search-wrapper">
+                    <button class="nav-search-btn" onclick="BlogApp.toggleSearch()" title="Search">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <circle cx="11" cy="11" r="8" />
+                            <path d="m21 21-4.35-4.35" />
+                        </svg>
+                    </button>
+                    <div class="search-dropdown" id="searchDropdown">
+                        <input type="text" id="searchInput" placeholder="Search articles..."
+                            oninput="BlogApp.searchPosts(this.value)">
+                        <button class="search-dropdown-close" onclick="BlogApp.toggleSearch()">&times;</button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Tags -->
+            <div class="tags-section" id="tags">
+                <!-- Dynamic -->
+            </div>
+
+            <!-- Posts -->
+            <div id="posts">
+                <div class="loading">
+                    <div class="loading-spinner"></div>
+                    <p>Loading...</p>
+                </div>
+            </div>
+
+            <!-- Pagination -->
+            <div id="pagination"></div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="footer-left">&copy; 渡鸦_NULL BLOG 1.3</div>
+            <div class="footer-right">
+                <a href="#" class="footer-link">GitHub</a>
+                <a href="#" class="footer-link">RSS</a>
+                <a href="#" class="footer-link">About</a>
+            </div>
+        </footer>
+    </div>
+
+    <!-- ===== TRANSITION PAGE (Hidden by default) ===== -->
+    <div id="transitionPage" style="display:none; position:fixed; inset:0; z-index:1000; background:#000; cursor:none;">
+        <div id="glitchContainer" style="position:fixed; inset:0; z-index:1; transition:transform 0s;">
+            <canvas id="matrixCanvas" style="position:fixed; top:0; left:0; width:100vw; height:100vh;"></canvas>
+            <div style="position:fixed; inset:0; z-index:2; pointer-events:none; background:radial-gradient(ellipse at center, transparent 62%, rgba(0,0,0,0.78) 100%);"></div>
+        </div>
+    </div>
+
+    <!-- ===== GEEK CENTER PAGE (Hidden by default) ===== -->
+    <div id="geekPage" style="display:none; position:fixed; inset:0; z-index:1000; background:#05080c; overflow:auto;">
+        <canvas id="matrixBg" style="position:fixed; top:0; left:0; width:100%; height:100%; z-index:-2; opacity:0.25;"></canvas>
+        <div style="position:fixed; top:0; left:0; width:100%; height:100%; background:repeating-linear-gradient(transparent 0px, rgba(0,255,156,0.04) 1px, transparent 2px); pointer-events:none; z-index:-1;"></div>
+        <div class="container">
+            <header>
+                <h1 class="glitch" data-text>GLOBAL NETWORK COMMAND CENTER</h1>
+                <div class="subtitle">SYSTEM ACCESS // ENCRYPTED TERMINAL v4.7.2</div>
+            </header>
+
+            <div class="grid-wrap">
+                <div style="display:grid;grid-template-columns:1fr 2fr 1fr;gap:20px;grid-column:span 3;">
+                    <div class="panel">
+                        <h2>VISITORS <span class="status-online">● ONLINE</span></h2>
+                        <div style="text-align:center;padding:5px 0;">
+                            <div style="font-size:11px;color:#33ffbb;margin-bottom:4px;">当前在线</div>
+                            <div style="font-size:28px;font-weight:bold;color:#00ff9c;text-shadow:0 0 10px rgba(0,255,156,0.5);">
+                                <span id="busuanzi_container_site_uv" style="font-family:Consolas,monospace;">
+                                    <span id="busuanzi_site_uv" style="color:#00ff9c;">--</span>
+                                </span>
+                            </div>
+                            <div style="font-size:10px;color:#006b47;margin-top:2px;">VISITORS</div>
+                        </div>
+                        <div style="margin-top:10px;border-top:1px solid #004d32;padding-top:10px;">
+                            <div style="font-size:11px;color:#33ffbb;margin-bottom:6px;">近期访客趋势</div>
+                            <canvas id="visitorChart" height="50"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="panel">
+                        <h2>SYSTEM INFORMATION</h2>
+                        <div id="systemInfo" style="display:grid;grid-template-columns:1fr 1fr;gap:2px 12px;font-size:11px;line-height:1.5;">
+                            <div>正在检测...</div>
+                        </div>
+                    </div>
+
+                    <div class="panel">
+                        <h2>ANNOUNCEMENT</h2>
+                        <div id="announcementBox" style="line-height:1.6;font-size:12px;max-height:180px;overflow-y:auto;">
+                            <div style="color:#006b47;">加载中...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel col-2">
+                    <h2>TERMINAL LOGS</h2>
+                    <div class="terminal" id="logBox">
+                        <div class="cmd">[root@anonymous]# Initializing proxy tunnel...</div>
+                        <div>Tunnel node #14 established.</div>
+                        <div class="cmd">[root@anonymous]# Scanning open ports...</div>
+                        <div>Detecting target address segment...</div>
+                        <div class="warning">Firewall bypass module loaded</div>
+                        <div>Waiting for new connection...</div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <h2>UPDAT PLAN</h2>
+                    <div id="taskList" style="line-height:1.8;font-size:13px;max-height:180px;overflow-y:auto;">
+                        <div style="color:#006b47;">加载中...</div>
+                    </div>
+                </div>
+            </div>
+
+            <footer>
+                <div>SESSION ID: 98FA73D281CC5501</div>
+                <div id="clock">TIME: 00:00:00</div>
+                <div>WARNING: Unauthorized access will be logged</div>
+            </footer>
+        </div>
+    </div>
+
+    <style>
+        @keyframes alertFlash{
+            0%,100%{ border-color:rgba(255,0,0,0.15); box-shadow:inset 0 0 30px rgba(255,0,0,0.05); }
+            50%{ border-color:rgba(255,0,0,0.75); box-shadow:inset 0 0 80px rgba(255,0,0,0.25); }
+        }
+        @keyframes pulseBorder{
+            0%,100%{ box-shadow:0 0 14px rgba(255,0,0,0.35), inset 0 0 18px rgba(255,0,0,0.08); }
+            50%{ box-shadow:0 0 26px rgba(255,0,0,0.62), inset 0 0 24px rgba(255,0,0,0.14); }
+        }
+        @keyframes blink{
+            0%,100%{opacity:1}
+            50%{opacity:0}
+        }
+        @keyframes glowText{
+            0%, 100% { filter: brightness(1); }
+            50% { filter: brightness(1.3); }
+        }
+        /* geekPage 内部样式 (来自前端模板1.html) */
+        #geekPage * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Consolas", monospace;
+        }
+        #geekPage .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        #geekPage header {
+            text-align: center;
+            padding: 30px 0;
+            border-bottom: 1px solid #008c5c;
+            margin-bottom: 30px;
+        }
+        #geekPage h1 {
+            font-size: 36px;
+            letter-spacing: 8px;
+            text-shadow: 0 0 10px #00ff9c,0 0 25px #008c5c;
+            animation: flicker 3s infinite alternate;
+        }
+        #geekPage .subtitle {
+            margin-top: 10px;
+            color: #33ffbb;
+            letter-spacing: 3px;
+        }
+        @keyframes flicker {
+            0%{opacity:0.9}
+            100%{opacity:1}
+        }
+        #geekPage .grid-wrap {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+        }
+        #geekPage .panel {
+            border: 1px solid #006b47;
+            background: rgba(0,20,12,0.75);
+            padding: 18px;
+            border-radius: 4px;
+            box-shadow: 0 0 12px rgba(0, 255, 156, 0.15);
+        }
+        #geekPage .panel h2 {
+            font-size: 16px;
+            border-bottom: 1px solid #004d32;
+            padding-bottom: 8px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+        }
+        #geekPage .status-online {
+            color: #00ff41;
+        }
+        #geekPage .terminal {
+            height: 180px;
+            overflow-y: auto;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+        #geekPage .terminal::-webkit-scrollbar {
+            width: 4px;
+        }
+        #geekPage .terminal::-webkit-scrollbar-thumb {
+            background: #00ff9c;
+        }
+        /* geekPage 整体滚动条 */
+        #geekPage::-webkit-scrollbar {
+            width: 6px;
+        }
+        #geekPage::-webkit-scrollbar-track {
+            background: #05080c;
+        }
+        #geekPage::-webkit-scrollbar-thumb {
+            background: #006b47;
+            border-radius: 3px;
+        }
+        #geekPage::-webkit-scrollbar-thumb:hover {
+            background: #00ff9c;
+        }
+        #geekPage .cmd {
+            color: #66ffc4;
+        }
+        #geekPage .warning {
+            color: #ffcc00;
+        }
+        #geekPage .danger {
+            color: #ff3c57;
+        }
+        #geekPage .progress-item {
+            margin:12px 0;
+        }
+        #geekPage .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: #002719;
+            margin-top:6px;
+        }
+        #geekPage .progress-fill {
+            height: 100%;
+            background: #00ff9c;
+            box-shadow: 0 0 8px #00ff9c;
+        }
+        #geekPage footer {
+            margin-top: 30px;
+            border-top:1px solid #006b47;
+            padding:15px;
+            display:flex;
+            justify-content: space-between;
+            font-size:13px;
+            color:#77ddbb;
+        }
+        #geekPage .glitch {
+            position: relative;
+        }
+        #geekPage .glitch::before {
+            content: attr(data-text);
+            position: absolute;
+            left: -2px;
+            text-shadow: -2px 0 #00ccff;
+            clip-path: inset(0 0 0 0);
+            animation: glitch-anim 2s infinite linear alternate-reverse;
+        }
+        @keyframes glitch-anim {
+            0% {clip-path: inset(15% 0 65% 0)}
+            20% {clip-path: inset(40% 0 43% 0)}
+            40% {clip-path: inset(66% 0 21% 0)}
+            60% {clip-path: inset(23% 0 58% 0)}
+            80% {clip-path: inset(54% 0 35% 0)}
+            100% {clip-path: inset(8% 0 88% 0)}
+        }
+        #geekPage .col-2 {
+            grid-column: span 2;
+        }
+        /* 全局滚动条样式 - 细滚动条 */
+        #geekPage ::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+        #geekPage ::-webkit-scrollbar-track {
+            background: rgba(0,20,12,0.5);
+            border-radius: 2px;
+        }
+        #geekPage ::-webkit-scrollbar-thumb {
+            background: #006b47;
+            border-radius: 2px;
+        }
+        #geekPage ::-webkit-scrollbar-thumb:hover {
+            background: #00ff9c;
+        }
+        #geekPage ::-webkit-scrollbar-corner {
+            background: transparent;
+        }
+        /* Markdown内容样式 */
+        #taskList p, #announcementBox p {
+            margin: 0 0 4px 0;
+            line-height: 1.5;
+        }
+        #taskList ul, #announcementBox ul {
+            margin: 4px 0;
+            padding-left: 16px;
+        }
+        #taskList li, #announcementBox li {
+            margin-bottom: 2px;
+        }
+        #taskList code, #announcementBox code {
+            background: rgba(0,255,156,0.1);
+            padding: 1px 4px;
+            border-radius: 2px;
+            font-size: 12px;
+        }
+        #taskList h1, #taskList h2, #taskList h3,
+        #announcementBox h1, #announcementBox h2, #announcementBox h3 {
+            font-size: 14px;
+            color: #33ffbb;
+            margin: 8px 0 4px 0;
+        }
+    </style>
+
+    <!-- Scripts -->
+    <script src="js/theme.js"></script>
+    <script src="js/markdown.js"></script>
+    <script src="js/app.js"></script>
+
+    <script>
+        // ===== Hero Particles =====
+        class HeroParticles {
+            constructor(canvas) {
+                this.canvas = canvas;
+                this.ctx = canvas.getContext('2d');
+                this.particles = [];
+                this.mouse = { x: 0, y: 0 };
+                this.cachedAccent = '#ffffff';
+                this.lastColorCheck = 0;
+                this.resize();
+                this.init();
+                this.animate();
+
+                window.addEventListener('resize', () => this.resize());
+                
+                // 鼠标移动事件节流
+                let mouseTimer = null;
+                window.addEventListener('mousemove', (e) => {
+                    if (mouseTimer) return;
+                    mouseTimer = requestAnimationFrame(() => {
+                        this.mouse.x = e.clientX;
+                        this.mouse.y = e.clientY;
+                        mouseTimer = null;
+                    });
+                });
+            }
+
+            resize() {
+                this.canvas.width = window.innerWidth;
+                this.canvas.height = window.innerHeight;
+            }
+
+            init() {
+                const count = Math.min(50, Math.floor(window.innerWidth / 20));
+                this.particles = [];
+                for (let i = 0; i < count; i++) {
+                    this.particles.push({
+                        x: Math.random() * this.canvas.width,
+                        y: Math.random() * this.canvas.height,
+                        vx: (Math.random() - 0.5) * 0.3,
+                        vy: (Math.random() - 0.5) * 0.3,
+                        size: Math.random() * 1.5 + 0.5,
+                        opacity: Math.random() * 0.4 + 0.1
+                    });
+                }
+            }
+
+            animate() {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+                // 每秒检查一次主题颜色
+                const now = Date.now();
+                if (now - this.lastColorCheck > 1000) {
+                    const style = getComputedStyle(document.documentElement);
+                    this.cachedAccent = style.getPropertyValue('--accent').trim() || '#ffffff';
+                    this.lastColorCheck = now;
+                }
+
+                const particles = this.particles;
+                const len = particles.length;
+                
+                for (let i = 0; i < len; i++) {
+                    const p = particles[i];
+                    p.x += p.vx;
+                    p.y += p.vy;
+
+                    // Mouse interaction
+                    const dx = this.mouse.x - p.x;
+                    const dy = this.mouse.y - p.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < 150) {
+                        p.x -= dx * 0.01;
+                        p.y -= dy * 0.01;
+                    }
+
+                    // Wrap around
+                    if (p.x < 0) p.x = this.canvas.width;
+                    if (p.x > this.canvas.width) p.x = 0;
+                    if (p.y < 0) p.y = this.canvas.height;
+                    if (p.y > this.canvas.height) p.y = 0;
+
+                    // Draw particle
+                    this.ctx.beginPath();
+                    this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    this.ctx.fillStyle = this.hexToRgba(this.cachedAccent, p.opacity);
+                    this.ctx.fill();
+
+                    // Connect nearby particles (优化：限制检查范围)
+                    for (let j = i + 1; j < len && j < i + 10; j++) {
+                        const p2 = particles[j];
+                        const d = Math.sqrt((p.x - p2.x) ** 2 + (p.y - p2.y) ** 2);
+                        if (d < 120) {
+                            this.ctx.beginPath();
+                            this.ctx.moveTo(p.x, p.y);
+                            this.ctx.lineTo(p2.x, p2.y);
+                            this.ctx.strokeStyle = this.hexToRgba(this.cachedAccent, 0.06 * (1 - d / 120));
+                            this.ctx.stroke();
+                        }
+                    }
+                }
+
+                requestAnimationFrame(() => this.animate());
+            }
+
+            hexToRgba(hex, alpha) {
+                hex = hex.replace('#', '');
+                if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+                const r = parseInt(hex.substring(0, 2), 16);
+                const g = parseInt(hex.substring(2, 4), 16);
+                const b = parseInt(hex.substring(4, 6), 16);
+                return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+            }
+        }
+
+        // ===== Scroll Observer =====
+        function initScrollObserver() {
+            const wrapper = document.getElementById('contentWrapper');
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        wrapper.classList.add('visible');
+                    }
+                });
+            }, { threshold: 0.05 });
+
+            observer.observe(wrapper);
+        }
+
+        // ===== Card Reveal Observer =====
+        function initCardObserver() {
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
+
+            // Observe existing cards
+            document.querySelectorAll('.card').forEach(card => observer.observe(card));
+
+            // Store observer for dynamic cards
+            window._cardObserver = observer;
+        }
+
+        // ===== Counter Animation =====
+        function animateCounter(el, target, suffix = '') {
+            const duration = 1500;
+            const start = performance.now();
+
+            function update(now) {
+                const elapsed = now - start;
+                const progress = Math.min(elapsed / duration, 1);
+                const eased = 1 - Math.pow(1 - progress, 3);
+                const current = Math.round(eased * target);
+
+                el.textContent = current + suffix;
+
+                if (progress < 1) {
+                    requestAnimationFrame(update);
+                }
+            }
+
+            requestAnimationFrame(update);
+        }
+
+        // ===== Type Writer Effect =====
+        function typeWriter(el, text, speed = 80) {
+            let i = 0;
+            el.textContent = '';
+
+            function type() {
+                if (i < text.length) {
+                    el.textContent += text.charAt(i);
+                    i++;
+                    setTimeout(type, speed);
+                }
+            }
+
+            type();
+        }
+
+        // ===== Init =====
+        document.addEventListener('DOMContentLoaded', () => {
+            // Particles
+            const canvas = document.getElementById('heroParticles');
+            if (canvas) new HeroParticles(canvas);
+
+            // Scroll observer
+            initScrollObserver();
+
+            // Type writer for hero title
+            const titleEl = document.getElementById('heroTitleText');
+            if (titleEl) {
+                setTimeout(() => typeWriter(titleEl, 'Hello World!', 120), 800);
+            }
+
+            // Scroll indicator click
+            const scrollIndicator = document.getElementById('scrollIndicator');
+            if (scrollIndicator) {
+                scrollIndicator.addEventListener('click', () => {
+                    document.getElementById('contentWrapper').scrollIntoView({ behavior: 'smooth' });
+                });
+            }
+
+            // ESC to close search
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    const dropdown = document.getElementById('searchDropdown');
+                    if (dropdown && dropdown.classList.contains('show')) {
+                        BlogApp.toggleSearch();
+                    }
+                }
+            });
+
+            // WASD shortcuts
+            document.addEventListener('keydown', (e) => {
+                if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+                
+                switch(e.key.toLowerCase()) {
+                    case 'w':
+                        window.scrollBy({ top: -300, behavior: 'smooth' });
+                        break;
+                    case 's':
+                        window.scrollBy({ top: 300, behavior: 'smooth' });
+                        break;
+                    case 'a':
+                        window.history.back();
+                        break;
+                    case 'd':
+                        window.history.forward();
+                        break;
+                    case 'q':
+                        ThemeManager.nextTheme();
+                        break;
+                    case 'e':
+                        startGeekSpace(new Event('click'));
+                        break;
+                }
+            });
+
+            // Click outside to close search
+            document.addEventListener('click', (e) => {
+                const wrapper = document.querySelector('.nav-search-wrapper');
+                const dropdown = document.getElementById('searchDropdown');
+                if (dropdown && dropdown.classList.contains('show') && !wrapper.contains(e.target)) {
+                    BlogApp.toggleSearch();
+                }
+            });
+
+            // Init blog app
+            BlogApp.init().then(() => {
+                // Animate stats
+                const totalPosts = BlogApp.posts.length;
+                const allTags = new Set();
+                let totalWords = 0;
+                BlogApp.posts.forEach(post => {
+                    post.tags.forEach(tag => allTags.add(tag));
+                    totalWords += post.content ? post.content.length : 0;
+                });
+
+                setTimeout(() => {
+                    animateCounter(document.getElementById('statPosts'), totalPosts);
+                    animateCounter(document.getElementById('statTags'), allTags.size);
+                    animateCounter(document.getElementById('statWords'), Math.round(totalWords / 1000), 'k');
+                }, 1000);
+
+                // Init card observer after posts render
+                setTimeout(() => initCardObserver(), 100);
+            });
+        });
+
+        // Override renderPosts to re-init card observer
+        const originalRenderPosts = BlogApp.renderPosts.bind(BlogApp);
+        BlogApp.renderPosts = function () {
+            originalRenderPosts();
+            setTimeout(() => {
+                document.querySelectorAll('.card:not(.visible)').forEach(card => {
+                    if (window._cardObserver) window._cardObserver.observe(card);
+                });
+            }, 50);
+        };
+
+        // ===== START 按钮点击事件 =====
+        var isInTransition = false; // 标志变量，防止循环调用
+        var isRequestingFullscreen = false; // 标志变量，表示正在请求全屏
+        var geekPageTimeout = null; // 保存setTimeout引用，用于取消
+        
+        function startGeekSpace(event) {
+            event.preventDefault();
+            
+            isRequestingFullscreen = true;
+            
+            // 请求全屏
+            document.documentElement.requestFullscreen().then(function() {
+                // 全屏成功，显示过渡页面
+                isRequestingFullscreen = false;
+                showTransitionPage();
+            }).catch(function(err) {
+                // 全屏失败也显示过渡页面
+                console.log('全屏请求失败:', err.message);
+                isRequestingFullscreen = false;
+                showTransitionPage();
+            });
+        }
+
+        // 监听全屏状态变化，退出全屏时返回首页
+        function onFullscreenChange() {
+            var isFullscreen = document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement;
+            if (!isFullscreen && isInTransition && !isRequestingFullscreen) {
+                // 退出全屏，返回首页
+                isInTransition = false;
+                backToHome();
+            }
+        }
+        document.addEventListener('fullscreenchange', onFullscreenChange);
+        document.addEventListener('webkitfullscreenchange', onFullscreenChange);
+        document.addEventListener('msfullscreenchange', onFullscreenChange);
+
+        // 显示过渡页面
+        function showTransitionPage() {
+            isInTransition = true;
+            
+            // 隐藏首页内容
+            document.getElementById('hero').style.display = 'none';
+            document.getElementById('contentWrapper').style.display = 'none';
+            
+            // 显示过渡页面
+            document.getElementById('transitionPage').style.display = 'block';
+            
+            // 启动黑客风动画
+            startMatrixAnimation();
+            
+            // 5秒后切换到极客中心
+            geekPageTimeout = setTimeout(function() {
+                geekPageTimeout = null;
+                showGeekPage();
+            }, 5000);
+        }
+
+        // 黑客风动画
+        var matrixAnimationId = null;
+        function startMatrixAnimation() {
+            var canvas = document.getElementById('matrixCanvas');
+            var ctx = canvas.getContext('2d');
+            var w, h;
+
+            var charSet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜｦﾝ";
+            var fontSize = 16;
+            var columns;
+            var drops = [];
+
+            var mouse = { x: -9999, y: -9999 };
+            var clearRadius = 130;
+
+            function resizeCanvas() {
+                w = canvas.width = window.innerWidth;
+                h = canvas.height = window.innerHeight;
+                columns = Math.floor(w / fontSize);
+                drops = [];
+                for (var i = 0; i < columns; i++) {
+                    drops[i] = Math.random() * -h;
+                }
+            }
+
+            function drawMatrix() {
+                if (!isInTransition) return; // 如果被打断，停止动画
+
+                ctx.fillStyle = "rgba(0, 0, 0, 0.06)";
+                ctx.fillRect(0, 0, w, h);
+                ctx.font = fontSize + "px Consolas";
+
+                for (var i = 0; i < drops.length; i++) {
+                    var colX = i * fontSize;
+                    var dropY = drops[i] * fontSize;
+
+                    var dist = Math.hypot(colX - mouse.x, dropY - mouse.y);
+                    if (dist < clearRadius) {
+                        continue;
+                    }
+
+                    var randChar = charSet[Math.floor(Math.random() * charSet.length)];
+                    ctx.fillStyle = "#00ff41";
+                    ctx.shadowColor = "#00ff41";
+                    ctx.shadowBlur = 6;
+                    ctx.fillText(randChar, colX, dropY);
+                    ctx.shadowBlur = 0;
+
+                    var speed = 0.8 + Math.random() * 1.4;
+                    drops[i] += speed;
+
+                    if (drops[i] * fontSize > h && Math.random() > 0.975) {
+                        drops[i] = Math.random() * -60;
+                    }
+                }
+                matrixAnimationId = requestAnimationFrame(drawMatrix);
+            }
+
+            function onMouseMove(e) {
+                mouse.x = e.clientX;
+                mouse.y = e.clientY;
+            }
+
+            function onMouseLeave() {
+                mouse.x = -9999;
+                mouse.y = -9999;
+            }
+
+            window.addEventListener("mousemove", onMouseMove);
+            window.addEventListener("mouseleave", onMouseLeave);
+            window.addEventListener("resize", resizeCanvas);
+            
+            resizeCanvas();
+            drawMatrix();
+            
+            // 保存清理函数
+            window._matrixCleanup = function() {
+                window.removeEventListener("mousemove", onMouseMove);
+                window.removeEventListener("mouseleave", onMouseLeave);
+                window.removeEventListener("resize", resizeCanvas);
+                if (matrixAnimationId) {
+                    cancelAnimationFrame(matrixAnimationId);
+                    matrixAnimationId = null;
+                }
+            };
+        }
+
+        // 显示极客中心页面
+        function showGeekPage() {
+            // 隐藏过渡页面
+            document.getElementById('transitionPage').style.display = 'none';
+            
+            // 创建打字机效果容器
+            var overlay = document.createElement('div');
+            overlay.id = 'welcomeOverlay';
+            overlay.style.cssText = 'position:fixed; inset:0; z-index:2000; background:#000; display:flex; align-items:center; justify-content:center;';
+            
+            var textEl = document.createElement('div');
+            textEl.id = 'typingText';
+            textEl.style.cssText = 'font-family:Consolas,Monaco,monospace; font-size:36px; color:#00ff88; text-shadow:0 0 20px rgba(0,255,136,0.5);';
+            overlay.appendChild(textEl);
+            document.body.appendChild(overlay);
+            
+            // 打字机效果
+            var text = 'Welcome INTER-KNOT';
+            var i = 0;
+            var cursor = document.createElement('span');
+            cursor.id = 'typingCursor';
+            cursor.style.cssText = 'display:inline-block; width:2px; height:36px; background:#00ff88; margin-left:4px; vertical-align:text-bottom; animation:blink 1s step-end infinite;';
+            textEl.appendChild(cursor);
+            
+            // 保存定时器引用，用于打断
+            var typingTimers = [];
+            
+            function typeChar() {
+                if (!isInTransition) return; // 如果被打断，停止打字
+                
+                if (i < text.length) {
+                    var charSpan = document.createElement('span');
+                    charSpan.textContent = text[i];
+                    textEl.insertBefore(charSpan, cursor);
+                    i++;
+                    var timer = setTimeout(typeChar, 80);
+                    typingTimers.push(timer);
+                } else {
+                    // 打字完成，等待1秒后缓缓显现极客空间
+                    var timer = setTimeout(function() {
+                        if (!isInTransition) return; // 如果被打断，不显示极客空间
+                        
+                        // 显示极客中心页面
+                        document.getElementById('geekPage').style.display = 'block';
+                        document.getElementById('geekPage').style.opacity = '0';
+                        document.getElementById('geekPage').style.transition = 'opacity 1.5s ease';
+                        
+                        // 缓缓显现
+                        setTimeout(function() {
+                            if (!isInTransition) return;
+                            document.getElementById('geekPage').style.opacity = '1';
+                        }, 50);
+                        
+                        // 移除遮罩
+                        setTimeout(function() {
+                            if (overlay.parentNode) {
+                                overlay.remove();
+                            }
+                            document.getElementById('geekPage').style.transition = '';
+                        }, 1600);
+                    }, 1000);
+                    typingTimers.push(timer);
+                }
+            }
+            
+            var startTimer = setTimeout(typeChar, 500);
+            typingTimers.push(startTimer);
+            
+            // 保存定时器引用到全局，用于打断
+            window._typingTimers = typingTimers;
+            
+            // 启动极客中心动画
+            startGeekAnimation();
+        }
+
+        // 返回首页
+        function backToHome() {
+            isInTransition = false;
+            isRequestingFullscreen = false;
+            
+            // 取消所有定时器
+            if (geekPageTimeout) {
+                clearTimeout(geekPageTimeout);
+                geekPageTimeout = null;
+            }
+            
+            // 打断打字机动画
+            if (window._typingTimers) {
+                window._typingTimers.forEach(function(timer) {
+                    clearTimeout(timer);
+                });
+                window._typingTimers = null;
+            }
+            
+            // 清理黑客风动画
+            if (window._matrixCleanup) {
+                window._matrixCleanup();
+                window._matrixCleanup = null;
+            }
+            
+            // 移除打字机遮罩
+            var overlay = document.getElementById('welcomeOverlay');
+            if (overlay && overlay.parentNode) {
+                overlay.remove();
+            }
+            
+            // 隐藏过渡页面和极客中心页面
+            document.getElementById('transitionPage').style.display = 'none';
+            document.getElementById('geekPage').style.display = 'none';
+            document.getElementById('geekPage').style.opacity = '';
+            document.getElementById('geekPage').style.transition = '';
+            
+            // 显示首页内容
+            document.getElementById('hero').style.display = '';
+            document.getElementById('contentWrapper').style.display = '';
+        }
+
+        // 极客中心动画 - 前端模板1
+        function startGeekAnimation() {
+            var canvas = document.getElementById("matrixBg");
+            var ctx = canvas.getContext("2d");
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            var chars = "01アイウエオカキクケコサシスセソタチツテト";
+            var fontSize = 14;
+            var columns = canvas.width / fontSize;
+            var drops = [];
+            for(var i=0;i<columns;i++) drops[i] = Math.random()*-100;
+            function drawMatrix(){
+                ctx.fillStyle="rgba(5,8,12,0.06)";
+                ctx.fillRect(0,0,canvas.width,canvas.height);
+                ctx.fillStyle="#00ff9c";
+                ctx.font=fontSize+"px Consolas";
+                for(var i=0;i<drops.length;i++){
+                    var text = chars[Math.floor(Math.random()*chars.length)];
+                    ctx.fillText(text,i*fontSize,drops[i]*fontSize);
+                    if(drops[i]*fontSize>canvas.height && Math.random()>0.975) drops[i]=0;
+                    drops[i]++;
+                }
+            }
+            setInterval(drawMatrix,40);
+            window.addEventListener("resize",function(){
+                canvas.width=window.innerWidth;
+                canvas.height=window.innerHeight;
+            });
+
+            // 实时时钟
+            function updateClock(){
+                var now = new Date();
+                var t = now.toTimeString().split(" ")[0];
+                document.getElementById("clock").innerText = "TIME: "+t;
+            }
+            setInterval(updateClock,1000);
+            updateClock();
+
+            // 模拟动态日志刷新
+            var logBox = document.getElementById("logBox");
+            var warning = '<span class="warning">';
+            var cmd = '<span class="cmd">';
+            var logTexts = [
+                "Receiving encrypted data packet...",
+                "Proxy route switching...",
+                "Packet capture started.",
+                warning+"Potential trace signal detected!</span>",
+                "IP address camouflage refreshed",
+                cmd+"> Executing penetration script...</span>"
+            ];
+            setInterval(function(){
+                var r = logTexts[Math.floor(Math.random()*logTexts.length)];
+                var div = document.createElement("div");
+                div.innerHTML = r;
+                logBox.appendChild(div);
+                logBox.scrollTop = logBox.scrollHeight;
+                if(logBox.children.length>25) logBox.removeChild(logBox.firstChild);
+            },3200);
+
+            // 初始化访客图表
+            initVisitorChart();
+
+            // 初始化系统信息
+            initSystemInfo();
+
+            // 加载任务清单和公告
+            loadTaskList();
+            loadAnnouncement();
+        }
+
+        // 加载任务清单
+        function loadTaskList() {
+            var container = document.getElementById('taskList');
+            if (!container) return;
+            
+            fetch('posts/00-update-plan.md')
+                .then(function(response) { return response.text(); })
+                .then(function(md) {
+                    if (md.trim()) {
+                        container.innerHTML = marked.parse(md);
+                    } else {
+                        container.innerHTML = '<div style="color:#006b47;">暂无任务</div>';
+                    }
+                })
+                .catch(function() {
+                    container.innerHTML = '<div style="color:#006b47;">暂无任务</div>';
+                });
+        }
+
+        // 加载公告
+        function loadAnnouncement() {
+            var container = document.getElementById('announcementBox');
+            if (!container) return;
+            
+            fetch('posts/00-announcenment.md')
+                .then(function(response) { return response.text(); })
+                .then(function(md) {
+                    if (md.trim()) {
+                        container.innerHTML = marked.parse(md);
+                    } else {
+                        container.innerHTML = '<div style="color:#006b47;">暂无公告</div>';
+                    }
+                })
+                .catch(function() {
+                    container.innerHTML = '<div style="color:#006b47;">暂无公告</div>';
+                });
+        }
+
+        // 系统信息检测
+        function initSystemInfo() {
+            var infoHtml = '';
+            var container = document.getElementById('systemInfo');
+            if (!container) return;
+
+            // CPU 逻辑核心数
+            var cores = navigator.hardwareConcurrency || '未知';
+            infoHtml += '<div>CPU 核心: <span style="color:#00ff9c;">' + cores + ' 核</span></div>';
+
+            // 内存大小 (deviceMemory 返回的是 GB 近似值)
+            var memory = navigator.deviceMemory;
+            if (memory) {
+                infoHtml += '<div>内存大小: <span style="color:#00ff9c;">约 ' + memory + ' GB</span></div>';
+            }
+
+            // 操作系统
+            var ua = navigator.userAgent;
+            var os = '未知';
+            if (ua.indexOf('Win') !== -1) os = 'Windows';
+            else if (ua.indexOf('Mac') !== -1) os = 'macOS';
+            else if (ua.indexOf('Linux') !== -1) os = 'Linux';
+            else if (ua.indexOf('Android') !== -1) os = 'Android';
+            else if (ua.indexOf('like Mac') !== -1) os = 'iOS';
+            infoHtml += '<div>操作系统: <span style="color:#00ff9c;">' + os + '</span></div>';
+
+            // 浏览器信息
+            var browser = '未知';
+            if (ua.indexOf('Firefox') !== -1) browser = 'Firefox';
+            else if (ua.indexOf('Edg') !== -1) browser = 'Edge';
+            else if (ua.indexOf('Chrome') !== -1) browser = 'Chrome';
+            else if (ua.indexOf('Safari') !== -1) browser = 'Safari';
+            infoHtml += '<div>浏览器: <span style="color:#00ff9c;">' + browser + '</span></div>';
+
+            // 屏幕信息
+            infoHtml += '<div>屏幕分辨率: <span style="color:#00ff9c;">' + screen.width + ' × ' + screen.height + '</span></div>';
+            infoHtml += '<div>可用区域: <span style="color:#00ff9c;">' + screen.availWidth + ' × ' + screen.availHeight + '</span></div>';
+            infoHtml += '<div>色深: <span style="color:#00ff9c;">' + screen.colorDepth + ' bit</span></div>';
+            infoHtml += '<div>设备像素比: <span style="color:#00ff9c;">' + (window.devicePixelRatio || 1) + 'x</span></div>';
+
+            // GPU 信息
+            try {
+                var canvas = document.createElement('canvas');
+                var gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+                if (gl) {
+                    var debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+                    if (debugInfo) {
+                        var renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+                        infoHtml += '<div>GPU: <span style="color:#00ff9c;">' + renderer + '</span></div>';
+                    }
+                }
+            } catch (e) { }
+
+            // 网络信息
+            if (navigator.connection) {
+                var conn = navigator.connection;
+                var networkType = conn.effectiveType || conn.type || '未知';
+                infoHtml += '<div>网络类型: <span style="color:#00ff9c;">' + networkType.toUpperCase() + '</span></div>';
+                if (conn.downlink) {
+                    infoHtml += '<div>下行速度: <span style="color:#00ff9c;">' + conn.downlink + ' Mbps</span></div>';
+                }
+            }
+
+            // 电池状态
+            if (navigator.getBattery) {
+                navigator.getBattery().then(function(battery) {
+                    var batteryLevel = Math.round(battery.level * 100);
+                    var charging = battery.charging ? '充电中' : '未充电';
+                    var batteryHtml = '<div>电池电量: <span style="color:#00ff9c;">' + batteryLevel + '% (' + charging + ')</span></div>';
+                    
+                    // 在内存信息之后插入电池信息
+                    var lines = container.innerHTML.split('</div>');
+                    if (lines.length > 2) {
+                        lines.splice(2, 0, batteryHtml);
+                        container.innerHTML = lines.join('</div>');
+                    } else {
+                        container.innerHTML += batteryHtml;
+                    }
+
+                    // 监听电池状态变化
+                    battery.addEventListener('levelchange', function() {
+                        batteryLevel = Math.round(battery.level * 100);
+                        updateBatteryInfo(batteryLevel, battery.charging);
+                    });
+                    battery.addEventListener('chargingchange', function() {
+                        updateBatteryInfo(Math.round(battery.level * 100), battery.charging);
+                    });
+                });
+            }
+
+            // 语言和时区
+            infoHtml += '<div>语言: <span style="color:#00ff9c;">' + navigator.language + '</span></div>';
+            var timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || '未知';
+            infoHtml += '<div>时区: <span style="color:#00ff9c;">' + timezone + '</span></div>';
+
+            // Cookie 和 JS 状态
+            infoHtml += '<div>Cookie: <span style="color:#00ff9c;">' + (navigator.cookieEnabled ? '已启用' : '已禁用') + '</span></div>';
+            infoHtml += '<div>Do Not Track: <span style="color:#00ff9c;">' + (navigator.doNotTrack === '1' ? '是' : '否') + '</span></div>';
+
+            // 触摸支持
+            var touchSupport = '否';
+            if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+                touchSupport = '是 (' + (navigator.maxTouchPoints || '?') + ' 点)';
+            }
+            infoHtml += '<div>触摸支持: <span style="color:#00ff9c;">' + touchSupport + '</span></div>';
+
+            container.innerHTML = infoHtml;
+        }
+
+        function updateBatteryInfo(level, charging) {
+            var container = document.getElementById('systemInfo');
+            if (!container) return;
+            var batteryDiv = container.querySelector('[data-battery]');
+            if (batteryDiv) {
+                batteryDiv.innerHTML = '电池电量: <span style="color:#00ff9c;">' + level + '% (' + (charging ? '充电中' : '未充电') + ')</span>';
+            }
+        }
+
+        // 访客趋势图表
+        function initVisitorChart() {
+            var canvas = document.getElementById('visitorChart');
+            if (!canvas) return;
+            var ctx = canvas.getContext('2d');
+            var width = canvas.parentElement.offsetWidth;
+            canvas.width = width;
+            canvas.height = 50;
+
+            // 模拟数据 - 近7天访客
+            var data = [12, 19, 8, 15, 22, 18, 25];
+            var labels = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+            var maxVal = Math.max.apply(null, data);
+            var padding = { top: 3, right: 3, bottom: 12, left: 3 };
+            var chartWidth = width - padding.left - padding.right;
+            var chartHeight = 50 - padding.top - padding.bottom;
+            var stepX = chartWidth / (data.length - 1);
+
+            // 绘制网格线
+            ctx.strokeStyle = 'rgba(0, 107, 71, 0.3)';
+            ctx.lineWidth = 0.5;
+            for (var i = 0; i <= 4; i++) {
+                var y = padding.top + (chartHeight / 4) * i;
+                ctx.beginPath();
+                ctx.moveTo(padding.left, y);
+                ctx.lineTo(width - padding.right, y);
+                ctx.stroke();
+            }
+
+            // 绘制渐变填充
+            var gradient = ctx.createLinearGradient(0, padding.top, 0, 50 - padding.bottom);
+            gradient.addColorStop(0, 'rgba(0, 255, 156, 0.3)');
+            gradient.addColorStop(1, 'rgba(0, 255, 156, 0.02)');
+
+            ctx.beginPath();
+            ctx.moveTo(padding.left, padding.top + chartHeight);
+            for (var i = 0; i < data.length; i++) {
+                var x = padding.left + i * stepX;
+                var y = padding.top + chartHeight - (data[i] / maxVal) * chartHeight;
+                if (i === 0) {
+                    ctx.lineTo(x, y);
+                } else {
+                    // 贝塞尔曲线平滑
+                    var prevX = padding.left + (i - 1) * stepX;
+                    var prevY = padding.top + chartHeight - (data[i - 1] / maxVal) * chartHeight;
+                    var cpX = (prevX + x) / 2;
+                    ctx.bezierCurveTo(cpX, prevY, cpX, y, x, y);
+                }
+            }
+            ctx.lineTo(width - padding.right, padding.top + chartHeight);
+            ctx.closePath();
+            ctx.fillStyle = gradient;
+            ctx.fill();
+
+            // 绘制曲线
+            ctx.beginPath();
+            for (var i = 0; i < data.length; i++) {
+                var x = padding.left + i * stepX;
+                var y = padding.top + chartHeight - (data[i] / maxVal) * chartHeight;
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    var prevX = padding.left + (i - 1) * stepX;
+                    var prevY = padding.top + chartHeight - (data[i - 1] / maxVal) * chartHeight;
+                    var cpX = (prevX + x) / 2;
+                    ctx.bezierCurveTo(cpX, prevY, cpX, y, x, y);
+                }
+            }
+            ctx.strokeStyle = '#00ff9c';
+            ctx.lineWidth = 2;
+            ctx.shadowColor = '#00ff9c';
+            ctx.shadowBlur = 5;
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+
+            // 绘制数据点
+            for (var i = 0; i < data.length; i++) {
+                var x = padding.left + i * stepX;
+                var y = padding.top + chartHeight - (data[i] / maxVal) * chartHeight;
+                ctx.beginPath();
+                ctx.arc(x, y, 3, 0, Math.PI * 2);
+                ctx.fillStyle = '#00ff9c';
+                ctx.fill();
+                ctx.strokeStyle = '#05080c';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            }
+
+            // 绘制标签
+            ctx.fillStyle = '#006b47';
+            ctx.font = '10px Consolas';
+            ctx.textAlign = 'center';
+            for (var i = 0; i < labels.length; i++) {
+                var x = padding.left + i * stepX;
+                ctx.fillText(labels[i], x, 45);
+            }
+        }
+    </script>
+
+    <!-- 不蒜子统计 -->
+    <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+</body>
+
+</html>
