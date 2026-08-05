@@ -106,13 +106,40 @@ addMessage('assistant', content) {
 - **重新生成**：加"重新生成"按钮，重新调用 API 获取新回复
 - **点赞/点踩**：收集反馈，为后续 Prompt 优化提供数据
 
-### 3. 快捷问题（Suggestions）
+### 3. 划词快捷访问 AI（划词助手）
 
-- 首次打开时展示 2-4 个预设问题卡片，如：
-  - "介绍一下这个博客"
-  - "如何发布一篇文章？"
-  - "给我推荐一些技术文章"
-- 点击即可直接发送，降低新用户使用门槛
+- 在博客正文中选中任意文字后，鼠标附近弹出快捷浮层（如"AI 解释"、"AI 翻译"、"AI 润色"）
+- 点击对应按钮后自动将选中内容作为上下文发送给 AI，无需手动复制粘贴
+- 浮层跟随选区定位，选中内容变更时实时更新
+
+```javascript
+document.addEventListener('mouseup', (e) => {
+    const selection = window.getSelection();
+    const text = selection.toString().trim();
+    if (text && text.length > 1 && !selection.isCollapsed) {
+        // 在选区附近显示快捷浮层
+        showSelectionBubble(e.clientX, e.clientY, text);
+    } else {
+        hideSelectionBubble();
+    }
+});
+
+async function askAI(text, action) {
+    const prompt = {
+        explain: `请解释以下内容：\n${text}`,
+        translate: `请将以下内容翻译为中文：\n${text}`,
+        polish: `请润色以下内容：\n${text}`
+    }[action];
+    AIChat.sendExternalMessage(prompt); // 打开窗口并发送
+}
+```
+
+**注意：**
+- 正文区域（`.article-content`）内启用划词，避免与目录、输入框等冲突
+- 划词浮层在移动端长按选中时同样可用
+- 发送前拼接固定前缀模板，保证 AI 明确理解指令
+
+**收益：** 阅读文章时遇到不理解的内容可即选即问，显著降低操作成本，提升阅读与学习体验。
 
 ### 4. 输入体验增强
 
@@ -187,8 +214,8 @@ config: {
 | P0 | 流式输出 | 中 | 等待体验质变 |
 | P0 | 上下文裁剪 | 小 | 速度与成本 |
 | P1 | Markdown 渲染回复 | 小 | 回复可读性 |
-| P1 | 快捷问题 + 复制按钮 | 小 | 易用性 |
-| P1 | 输入限制 + 错误重试 | 小 | 稳定性 |
+| P1 | 划词快捷访问 AI | 中 | 即选即问，降低使用门槛 |
+| P1 | 复制按钮 + 输入限制 + 错误重试 | 小 | 易用性与稳定性 |
 | P2 | API Key 后端化 | 中 | 安全 |
 | P2 | 会话管理 | 大 | 扩展能力 |
 | P3 | 反馈收集、多模型切换 | 中 | 长期优化 |
