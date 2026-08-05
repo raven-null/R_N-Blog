@@ -234,8 +234,10 @@ const BlogApp = {
                     </div>
                 `}
                 <div class="card-body">
-                    <div class="card-avatar" style="background-image:url('${avatarImg}');"></div>
-                    <div class="card-username">${post.author}</div>
+                    <div class="card-author">
+                        <div class="card-avatar" style="background-image:url('${avatarImg}');"></div>
+                        <span class="card-username">${post.author}</span>
+                    </div>
                     <div class="card-tag">
                         ${(post.tags || []).map(tag => `<span>${tag}</span>`).join(' ')}
                     </div>

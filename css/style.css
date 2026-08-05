@@ -889,25 +889,32 @@ body {
     position: relative;
 }
 
+.card-author {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+    min-width: 0;
+}
+
 .card-avatar {
-    position: absolute;
-    top: -20px;
-    left: 16px;
     width: 36px;
     height: 36px;
     border-radius: 50%;
     background: var(--bg-tertiary) url('../images/TX/03_TX.webp') center/cover;
     border: 2px solid var(--bg-card);
-    z-index: 2;
+    flex-shrink: 0;
     overflow: hidden;
 }
 
 .card-username {
-    padding-top: 6px;
     font-size: 12px;
     font-weight: 500;
     color: var(--text-muted);
     letter-spacing: 0.5px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .card-tag {
