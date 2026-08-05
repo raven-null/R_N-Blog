@@ -87,16 +87,16 @@ const BlogApp = {
     // 加载单篇文章数据
     // BG 文件夹图片列表（用于无图文章的默认封面）
     bgImages: [
-        'images/BG/BG (1).jpg', 'images/BG/BG (29).jpg', 'images/BG/BG (30).jpg',
-        'images/BG/BG (31).jpg', 'images/BG/BG (32).jpg', 'images/BG/BG (33).jpg',
-        'images/BG/BG (34).jpg', 'images/BG/BG (35).jpg', 'images/BG/BG (36).jpg',
-        'images/BG/BG (37).jpg', 'images/BG/BG (38).jpg', 'images/BG/BG (39).jpg',
-        'images/BG/BG (40).jpg', 'images/BG/BG (41).jpg', 'images/BG/BG (42).jpg',
-        'images/BG/BG (43).jpg', 'images/BG/BG (44).jpg', 'images/BG/BG (45).jpg',
-        'images/BG/BG (46).jpg', 'images/BG/BG (47).jpg', 'images/BG/BG (48).jpg',
-        'images/BG/BG (49).jpg', 'images/BG/BG (50).jpg', 'images/BG/BG (51).jpg',
-        'images/BG/BG (52).jpg', 'images/BG/BG (53).jpg', 'images/BG/BG (54).jpg',
-        'images/BG/BG (55).jpg'
+        'images/BG/01_BG.webp', 'images/BG/02_BG.webp', 'images/BG/03_BG.webp',
+        'images/BG/04_BG.webp', 'images/BG/05_BG.webp', 'images/BG/06_BG.webp',
+        'images/BG/07_BG.webp', 'images/BG/08_BG.webp', 'images/BG/09_BG.webp',
+        'images/BG/10_BG.webp', 'images/BG/11_BG.webp', 'images/BG/12_BG.webp',
+        'images/BG/13_BG.webp', 'images/BG/14_BG.webp', 'images/BG/15_BG.webp',
+        'images/BG/16_BG.webp', 'images/BG/17_BG.webp', 'images/BG/18_BG.webp',
+        'images/BG/19_BG.webp', 'images/BG/20_BG.webp', 'images/BG/21_BG.webp',
+        'images/BG/22_BG.webp', 'images/BG/23_BG.webp', 'images/BG/24_BG.webp',
+        'images/BG/25_BG.webp', 'images/BG/26_BG.webp', 'images/BG/27_BG.webp',
+        'images/BG/28_BG.webp'
     ],
 
     // 根据文件名生成固定随机索引

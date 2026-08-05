@@ -6,8 +6,8 @@ tags:
   - 技术
   - JavaScript
   - 动画
-author: 渡鸦NULL
-excerpt: 认识轻量级 JavaScript 动画引擎 Anime.js，掌握 v4 版本的安装、核心 API、时间轴、交错动画、SVG 与文本动画等使用方法。
+author: AI
+excerpt: 认识轻量级 JavaScript 动画引擎 Anime.js，掌握 v4 版本的安装、核心 API、时间轴、交错动画、SVG 与文本动画等使用方法
 image:
 ---
 
