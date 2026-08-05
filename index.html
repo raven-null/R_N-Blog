@@ -16,6 +16,9 @@
     <!-- Highlight.js -->
     <link rel="stylesheet" href="css/highlight-github-dark.min.css">
     <script src="js/vendor/highlight.min.js"></script>
+
+    <!-- Anime.js -->
+    <script src="js/vendor/anime.umd.min.js"></script>
 </head>
 
 <body>
@@ -441,6 +444,7 @@
     <script src="js/theme.js"></script>
     <script src="js/markdown.js"></script>
     <script src="js/app.js"></script>
+    <script src="js/animations.js"></script>
 
     <script>
         // ===== Hero Particles =====
@@ -636,10 +640,14 @@
             // Scroll observer
             initScrollObserver();
 
-            // Type writer for hero title
+            // Type writer for hero title（Anime.js 就绪时使用逐字动画）
             const titleEl = document.getElementById('heroTitleText');
             if (titleEl) {
-                setTimeout(() => typeWriter(titleEl, 'Hello World!', 120), 800);
+                if (window.BlogAnimations && BlogAnimations.ready) {
+                    setTimeout(() => BlogAnimations.animateHeroTitle(titleEl), 800);
+                } else {
+                    setTimeout(() => typeWriter(titleEl, 'Hello World!', 120), 800);
+                }
             }
 
             // Scroll indicator click
@@ -706,10 +714,16 @@
                     totalWords += post.wordCount || (post.content ? post.content.length : 0);
                 });
 
+                const wordsK = Math.round(totalWords / 1000);
+
                 setTimeout(() => {
-                    animateCounter(document.getElementById('statPosts'), totalPosts);
-                    animateCounter(document.getElementById('statTags'), allTags.size);
-                    animateCounter(document.getElementById('statWords'), Math.round(totalWords / 1000), 'k');
+                    if (window.BlogAnimations && BlogAnimations.ready) {
+                        BlogAnimations.animateStats(totalPosts, allTags.size, wordsK);
+                    } else {
+                        animateCounter(document.getElementById('statPosts'), totalPosts);
+                        animateCounter(document.getElementById('statTags'), allTags.size);
+                        animateCounter(document.getElementById('statWords'), wordsK, 'k');
+                    }
                 }, 1000);
 
                 // Init card observer after posts render

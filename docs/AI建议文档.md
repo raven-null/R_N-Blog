@@ -228,11 +228,11 @@ config: {
 
 ---
 
-## 七、Anime.js 前端动画集成方案
+# Anime.js 前端动画集成方案
 
 > 目标：将轻量级动画引擎 Anime.js 引入本项目，替换/增强现有的 CSS 动画与手写 rAF 动画，实现专业、流畅、可维护的前端动效。
 
-### 1. 引入方式（遵循项目"本地化加载"约定）
+## 1. 引入方式（遵循项目"本地化加载"约定）
 
 本项目第三方库全部本地加载（无 CDN 依赖），Anime.js 同样采用本地化：
 
@@ -257,7 +257,7 @@ const { animate, stagger, createTimeline, utils, spring } = anime;
 
 > 注意：v4 API 与 v3 不同，本项目统一使用 v4 写法。
 
-### 2. 统一管理：新增 `js/animations.js`
+## 2. 统一管理：新增 `js/animations.js`
 
 所有 Anime.js 动效收敛到独立模块，避免散落在页面内联脚本中：
 
@@ -289,7 +289,7 @@ document.addEventListener('DOMContentLoaded', () => BlogAnimations.init());
 
 两个页面按需启用各自的方法，例如文章页不调用 `initCardEntrance`。
 
-### 3. 具体动画清单
+## 3. 具体动画清单
 
 #### 3.1 首页 Hero 标题逐字动画（替换现有打字效果）
 
@@ -490,5 +490,5 @@ animate('.chat-message:last-child', {
 
 ---
 
-**状态：** AI 助手部分已实施（v2.2.0）；Anime.js 动画方案待评审
+**状态：** AI 助手部分已实施（v2.2.0）；Anime.js 动画方案已实施（v2.4.0）
 **作者：** 渡鸦NULL

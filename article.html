@@ -15,6 +15,9 @@
     <!-- Highlight.js -->
     <link rel="stylesheet" href="css/highlight-github-dark.min.css">
     <script src="js/vendor/highlight.min.js"></script>
+
+    <!-- Anime.js -->
+    <script src="js/vendor/anime.umd.min.js"></script>
     
     <style>
         /* ===== 页面整体布局 ===== */
@@ -1325,6 +1328,7 @@
     <script src="js/theme.js"></script>
     <script src="js/markdown.js"></script>
     <script src="js/chat.js"></script>
+    <script src="js/animations.js"></script>
 
     <script>
         // 文章详情页应用
@@ -1495,6 +1499,11 @@
                 // 渲染 Markdown 正文
                 const html = MarkdownParser.parseMarkdown(this.currentPost.content);
                 content.innerHTML = html;
+
+                // 文章内容入场动画（Anime.js）
+                if (window.BlogAnimations && BlogAnimations.ready) {
+                    BlogAnimations.animateArticleContent(content);
+                }
 
                 // 延迟高亮代码块，不阻塞渲染
                 requestAnimationFrame(() => {

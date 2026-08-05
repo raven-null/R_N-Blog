@@ -2218,3 +2218,25 @@ body {
         display: none !important;
     }
 }
+
+/* ===== Anime.js 动画样式 ===== */
+.hero-char {
+    display: inline-block;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dim) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* Anime.js 接管卡片入场/悬停时，关闭原生 CSS 过渡避免冲突 */
+.anime-ready .card,
+.anime-ready .card.visible {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: none !important;
+}
+
+/* 聊天窗口使用 Anime.js 开关动画时关闭 CSS 过渡 */
+.chat-window.anime-driven {
+    transition: none !important;
+}

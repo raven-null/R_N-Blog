@@ -45,6 +45,13 @@ const AIChat = {
         this.initSelectionBubble();
         this.restoreWindowState();
         this.updateCharCount();
+
+        // 聊天窗口开关动画（Anime.js 就绪时启用）
+        this.chatAnime = window.BlogAnimations && window.BlogAnimations.isChatAnimeEnabled();
+        if (this.chatAnime) {
+            const chatWindow = document.getElementById('chatWindow');
+            if (chatWindow) chatWindow.classList.add('anime-driven');
+        }
     },
 
     // 创建聊天界面
@@ -403,10 +410,21 @@ const AIChat = {
 
     openWindow() {
         const chatWindow = document.getElementById('chatWindow');
-        chatWindow.classList.add('show');
-        chatWindow.style.opacity = '1';
+        const useAnime = this.chatAnime;
         chatWindow.style.visibility = 'visible';
-        chatWindow.style.transform = '';
+        chatWindow.style.opacity = useAnime ? '0' : '1';
+        chatWindow.classList.add('show');
+        if (useAnime) {
+            anime.animate(chatWindow, {
+                scale: [0.92, 1],
+                translateY: [16, 0],
+                opacity: [0, 1],
+                duration: 400,
+                ease: 'out(3)'
+            });
+        } else {
+            chatWindow.style.transform = '';
+        }
         const input = document.getElementById('chatInput');
         if (input) input.focus();
         this.unreadCount = 0;
@@ -415,10 +433,26 @@ const AIChat = {
 
     closeWindow() {
         const chatWindow = document.getElementById('chatWindow');
-        chatWindow.classList.remove('show');
-        chatWindow.style.opacity = '';
-        chatWindow.style.visibility = '';
-        chatWindow.style.transform = '';
+        if (this.chatAnime) {
+            anime.animate(chatWindow, {
+                scale: [1, 0.94],
+                translateY: [0, 14],
+                opacity: [1, 0],
+                duration: 220,
+                ease: 'in(2)',
+                onComplete: () => {
+                    chatWindow.classList.remove('show');
+                    chatWindow.style.opacity = '';
+                    chatWindow.style.visibility = '';
+                    chatWindow.style.transform = '';
+                }
+            });
+        } else {
+            chatWindow.classList.remove('show');
+            chatWindow.style.opacity = '';
+            chatWindow.style.visibility = '';
+            chatWindow.style.transform = '';
+        }
     },
 
     // 未读消息角标

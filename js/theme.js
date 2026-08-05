@@ -213,15 +213,24 @@ const ThemeManager = {
         this.currentTheme = themeName;
         const theme = this.themes[themeName];
 
-        // 将主题颜色写入CSS变量
-        const root = document.documentElement;
-        Object.entries(theme.colors).forEach(([property, value]) => {
-            root.style.setProperty(property, value);
-        });
+        // 使用 Anime.js 平滑过渡主题色，不可用时直接应用
+        if (window.BlogAnimations && window.BlogAnimations.ready) {
+            window.BlogAnimations.transitionTheme(theme.colors);
+        } else {
+            this.applyColors(theme.colors);
+        }
 
         // 持久化到本地存储
         localStorage.setItem('blog-theme', themeName);
         this.updateThemeButtons();
+    },
+
+    // 直接应用主题颜色到 CSS 变量
+    applyColors(colors) {
+        const root = document.documentElement;
+        Object.entries(colors).forEach(([property, value]) => {
+            root.style.setProperty(property, value);
+        });
     },
 
     // 切换到下一个主题
