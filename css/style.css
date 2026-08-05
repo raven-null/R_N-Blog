@@ -2565,6 +2565,10 @@ html.reader-focus .reader-toolbar {
 }
 
 html.reader-focus .article-main {
-    max-width: 820px;
+    max-width: 1040px;
     margin: 0 auto;
+}
+
+html.reader-focus .article-content {
+    max-width: 920px;
 }
