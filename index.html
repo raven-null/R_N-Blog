@@ -130,7 +130,11 @@
         </svg>
     </button>
 
-
+    <!-- 图库灯箱 -->
+    <div class="gallery-lightbox" id="galleryLightbox" onclick="closeGalleryLightbox()">
+        <button class="gallery-lightbox-close" onclick="event.stopPropagation(); closeGalleryLightbox()">&times;</button>
+        <img id="galleryLightboxImg" src="" alt="图片预览">
+    </div>
 
     <!-- Scripts -->
     <script src="js/theme.js"></script>
@@ -172,6 +176,33 @@
             window._cardObserver = observer;
         }
 
+        // ===== 图库灯箱 =====
+        function openGalleryLightbox(src) {
+            const lb = document.getElementById('galleryLightbox');
+            const img = document.getElementById('galleryLightboxImg');
+            if (!lb || !img) return;
+            img.src = src;
+            lb.style.display = 'flex';
+            requestAnimationFrame(() => {
+                lb.classList.add('show');
+                if (typeof anime !== 'undefined') {
+                    anime.animate(img, { scale: [0.85, 1], opacity: [0, 1], duration: 300, ease: 'out(3)' });
+                    anime.animate(lb, { opacity: [0, 1], duration: 250, ease: 'out(2)' });
+                }
+            });
+        }
+
+        function closeGalleryLightbox() {
+            const lb = document.getElementById('galleryLightbox');
+            if (!lb) return;
+            lb.classList.remove('show');
+            if (typeof anime !== 'undefined') {
+                anime.animate(lb, { opacity: [1, 0], duration: 200, ease: 'in(2)', onComplete: () => { lb.style.display = 'none'; } });
+            } else {
+                lb.style.display = 'none';
+            }
+        }
+
         // ===== Init =====
         document.addEventListener('DOMContentLoaded', () => {
             // Scroll observer
@@ -204,12 +235,16 @@
                 });
             })();
 
-            // ESC to close search
+            // ESC to close search / 图库灯箱
             document.addEventListener('keydown', (e) => {
                 if (e.key === 'Escape') {
                     const dropdown = document.getElementById('searchDropdown');
                     if (dropdown && dropdown.classList.contains('show')) {
                         BlogApp.toggleSearch();
+                    }
+                    const lb = document.getElementById('galleryLightbox');
+                    if (lb && lb.classList.contains('show')) {
+                        closeGalleryLightbox();
                     }
                 }
             });

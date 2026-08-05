@@ -443,7 +443,7 @@ const BlogApp = {
         }
     },
 
-    // 渲染图库（读取 images/R-N-picture 目录清单）
+    // 渲染图库（读取 images/R-N-picture 目录清单，瀑布流布局）
     async renderGallery() {
         const grid = document.getElementById('galleryGrid');
         if (!grid || grid.dataset.rendered) return;
@@ -452,7 +452,8 @@ const BlogApp = {
             const images = await this.loadGalleryManifest();
             grid.innerHTML = images.map((src, i) => `
                 <figure class="gallery-item">
-                    <img src="images/R-N-picture/${src}" alt="图片 ${i + 1}" loading="lazy">
+                    <img src="images/R-N-picture/${src}" alt="图片 ${i + 1}" loading="lazy"
+                         onclick="openGalleryLightbox('images/R-N-picture/${src}')">
                 </figure>
             `).join('');
         } catch (e) {
