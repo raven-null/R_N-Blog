@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>渡鸦_NULL BLOG</title>
+    <link>https://ravennull.work/</link>
+    <atom:link href="https://ravennull.work/feed.xml" rel="self" type="application/rss+xml"/>
+    <description>渡鸦NULL的个人博客</description>
+    <language>zh-CN</language>
+    <lastBuildDate>Wed, 05 Aug 2026 00:00:00 GMT</lastBuildDate>
+
+    <item>
+      <title>Anime.js 动画库入门与使用指南</title>
+      <link>https://ravennull.work/article.html?post=04-animejs-guide.md</link>
+      <guid>https://ravennull.work/article.html?post=04-animejs-guide.md</guid>
+      <pubDate>Wed, 05 Aug 2026 00:00:00 GMT</pubDate>
+      <description>认识轻量级 JavaScript 动画引擎 Anime.js，掌握 v4 版本的安装、核心 API、时间轴、交错动画、SVG 与文本动画等使用方法。</description>
+    </item>
+
+    <item>
+      <title>黎明之剑</title>
+      <link>https://ravennull.work/article.html?post=03-dawns-blade.md</link>
+      <guid>https://ravennull.work/article.html?post=03-dawns-blade.md</guid>
+      <pubDate>Tue, 28 Jul 2026 00:00:00 GMT</pubDate>
+      <description>高文穿越了，但穿越的时候稍微出了点问题……</description>
+    </item>
+
+    <item>
+      <title>即梦AI 万能提示词框架</title>
+      <link>https://ravennull.work/article.html?post=02-jimeng-ai-prompt-framework.md</link>
+      <guid>https://ravennull.work/article.html?post=02-jimeng-ai-prompt-framework.md</guid>
+      <pubDate>Mon, 20 Jul 2026 00:00:00 GMT</pubDate>
+      <description>教你如何正确使用即梦AI</description>
+    </item>
+
+    <item>
+      <title>博客完整使用手册</title>
+      <link>https://ravennull.work/article.html?post=01-blog-usage-guide.md</link>
+      <guid>https://ravennull.work/article.html?post=01-blog-usage-guide.md</guid>
+      <pubDate>Tue, 21 Jul 2026 00:00:00 GMT</pubDate>
+      <description>从零开始，全面了解博客系统的每一个功能，包括文章发布、主题切换、主题动画、AI助手、搜索、目录导航等。</description>
+    </item>
+  </channel>
+</rss>

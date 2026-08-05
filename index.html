@@ -155,12 +155,23 @@
         <footer class="footer">
             <div class="footer-left">&copy; 渡鸦_NULL BLOG 1.3</div>
             <div class="footer-right">
-                <a href="#" class="footer-link">GitHub</a>
-                <a href="#" class="footer-link">RSS</a>
-                <a href="#" class="footer-link">About</a>
+                <a href="https://github.com/raven-null/R_N-Blog" class="footer-link" target="_blank" rel="noopener">GitHub</a>
+                <a href="feed.xml" class="footer-link" target="_blank" rel="noopener">RSS</a>
+                <a href="article.html?post=01-blog-usage-guide.md" class="footer-link">About</a>
             </div>
         </footer>
     </div>
+
+    <!-- 阅读进度条 -->
+    <div class="reading-progress" id="readingProgress"></div>
+
+    <!-- 回到顶部按钮 -->
+    <button class="back-to-top" id="backToTop" title="回到顶部">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="19" x2="12" y2="5"></line>
+            <polyline points="5 12 12 5 19 12"></polyline>
+        </svg>
+    </button>
 
     <!-- ===== TRANSITION PAGE (Hidden by default) ===== -->
     <div id="transitionPage" style="display:none; position:fixed; inset:0; z-index:1000; background:#000; cursor:none;">
@@ -639,6 +650,27 @@
 
             // Scroll observer
             initScrollObserver();
+
+            // 阅读进度条 + 回到顶部按钮
+            (function initScrollUI() {
+                const progress = document.getElementById('readingProgress');
+                const backToTop = document.getElementById('backToTop');
+                if (!progress || !backToTop) return;
+
+                const update = () => {
+                    const doc = document.documentElement;
+                    const scrollTop = window.scrollY || doc.scrollTop;
+                    const scrollHeight = doc.scrollHeight - window.innerHeight;
+                    progress.style.width = scrollHeight > 0 ? (scrollTop / scrollHeight * 100) + '%' : '0%';
+                    backToTop.classList.toggle('show', scrollTop > 400);
+                };
+                window.addEventListener('scroll', update, { passive: true });
+                update();
+
+                backToTop.addEventListener('click', () => {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                });
+            })();
 
             // Type writer for hero title（Anime.js 就绪时使用逐字动画）
             const titleEl = document.getElementById('heroTitleText');

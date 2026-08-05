@@ -15,8 +15,8 @@ const BlogApp = {
     filteredPosts: [],
     // 当前选中的标签
     currentTag: null,
-    // 当前页码
-    currentPage: 1,
+    // 当前已加载的文章数量（加载更多）
+    visibleCount: 10,
 
     // 初始化应用
     async init() {
@@ -141,9 +141,10 @@ const BlogApp = {
         }
     },
 
-    // 渲染页面（标签、文章、分页）
+    // 渲染页面（标签、导航、文章、分页）
     render() {
         this.renderTags();
+        this.renderNavLinks();
         this.renderPosts();
         this.renderPagination();
     },
@@ -159,9 +160,9 @@ const BlogApp = {
             (post.tags || []).forEach(tag => allTags.add(tag));
         });
 
-        // 排除的标签
-        const excludedTags = ['技术', 'AI', '生活'];
-        
+        // 排除导航栏已展示的主标签，避免重复
+        const excludedTags = this.getMainTags();
+
         // 过滤掉排除的标签
         const filteredTags = Array.from(allTags).filter(tag => !excludedTags.includes(tag));
 
@@ -173,7 +174,7 @@ const BlogApp = {
         const tagsHTML = filteredTags.map(tag => `
             <button class="tag-btn ${this.currentTag === tag ? 'active' : ''}"
                     onclick="BlogApp.filterByTag('${tag}')">
-                ${tag}
+                ${tag}<span class="tag-count">${this.countTag(tag)}</span>
             </button>
         `).join('');
 
@@ -184,16 +185,24 @@ const BlogApp = {
         `;
     },
 
-    // 渲染文章瀑布流
+    // 获取导航栏展示的主标签（按文章数降序取前 4 个）
+    getMainTags() {
+        const counts = {};
+        this.posts.forEach(p => (p.tags || []).forEach(t => { counts[t] = (counts[t] || 0) + 1; }));
+        return Object.keys(counts).sort((a, b) => counts[b] - counts[a]).slice(0, 4);
+    },
+
+    // 统计某标签的文章数
+    countTag(tag) {
+        return this.posts.filter(p => (p.tags || []).includes(tag)).length;
+    },
+
+    // 渲染文章瀑布流（支持"加载更多"追加）
     renderPosts() {
         const postsContainer = document.getElementById('posts');
         if (!postsContainer) return;
 
-        const startIndex = (this.currentPage - 1) * this.config.postsPerPage;
-        const endIndex = startIndex + this.config.postsPerPage;
-        const postsToShow = this.filteredPosts.slice(startIndex, endIndex);
-
-        if (postsToShow.length === 0) {
+        if (this.filteredPosts.length === 0) {
             postsContainer.innerHTML = `
                 <div style="text-align:center;padding:80px 20px;color:var(--text-muted);">
                     <div style="font-size:48px;margin-bottom:16px;opacity:0.3;">∅</div>
@@ -203,8 +212,20 @@ const BlogApp = {
             return;
         }
 
-        const postsHTML = postsToShow.map(post => this.renderPostCard(post)).join('');
-        postsContainer.innerHTML = `<div class="waterfall">${postsHTML}</div>`;
+        const end = Math.min(this.visibleCount, this.filteredPosts.length);
+
+        // 首次渲染或筛选重置时替换，否则追加新批次
+        const wrap = postsContainer.querySelector('.waterfall');
+        if (!wrap || end <= this.config.postsPerPage) {
+            const postsHTML = this.filteredPosts.slice(0, end).map(post => this.renderPostCard(post)).join('');
+            postsContainer.innerHTML = `<div class="waterfall">${postsHTML}</div>`;
+        } else {
+            const start = Math.max(0, end - this.config.postsPerPage);
+            const newHTML = this.filteredPosts.slice(start, end).map(post => this.renderPostCard(post)).join('');
+            const tmp = document.createElement('div');
+            tmp.innerHTML = newHTML;
+            while (tmp.firstChild) wrap.appendChild(tmp.firstChild);
+        }
     },
 
     // 根据作者名字返回对应头像
@@ -221,16 +242,26 @@ const BlogApp = {
         const dateFormatted = this.formatDate(post.date);
         const avatarImg = this.getAuthorAvatar(post.author);
 
+        // 预计阅读时长（按每 300 字约 1 分钟估算）
+        const wordCount = post.wordCount || 0;
+        const readTime = Math.max(1, Math.round(wordCount / 300));
+
+        // 3 天内发布的文章显示 NEW 徽标
+        const isNew = post.date && (Date.now() - new Date(post.date).getTime()) < 3 * 24 * 60 * 60 * 1000;
+        const newBadge = isNew ? '<span class="card-new">NEW</span>' : '';
+
         return `
             <div class="card" onclick="BlogApp.openPost('${post.filename}')">
                 ${post.image ? `
                     <div class="card-img">
-                        <img src="${post.image}" alt="${post.title}" class="img-placeholder"
+                        <img src="${post.image}" alt="${post.title}" class="img-placeholder" loading="lazy"
                              onerror="this.style.display='none';this.parentElement.style.background='linear-gradient(145deg, ${gradientColors[0]}, ${gradientColors[1]})';">
+                        ${newBadge}
                     </div>
                 ` : `
                     <div class="card-img" style="height: ${this.getRandomHeight()}px; background: linear-gradient(145deg, ${gradientColors[0]}, ${gradientColors[1]});">
                         <div class="big-text">${this.getCardIcon(post.tags || [])}</div>
+                        ${newBadge}
                     </div>
                 `}
                 <div class="card-body">
@@ -245,53 +276,70 @@ const BlogApp = {
                     <div class="card-desc">${post.excerpt}</div>
                     <div class="card-meta">
                         <span class="card-date">${dateFormatted}</span>
+                        <span class="card-reading">${readTime} 分钟</span>
                     </div>
                 </div>
             </div>
         `;
     },
 
-    // 渲染分页按钮
+    // 渲染加载更多按钮
     renderPagination() {
         const paginationContainer = document.getElementById('pagination');
         if (!paginationContainer) return;
 
-        const totalPages = Math.ceil(this.filteredPosts.length / this.config.postsPerPage);
-        if (totalPages <= 1) {
+        const total = this.filteredPosts.length;
+        if (total <= this.config.postsPerPage) {
             paginationContainer.innerHTML = '';
             return;
         }
 
-        let html = '';
-
-        // 上一页按钮
-        if (this.currentPage > 1) {
-            html += `<button class="page-btn" onclick="BlogApp.goToPage(${this.currentPage - 1})">&larr;</button>`;
+        if (this.visibleCount < total) {
+            paginationContainer.innerHTML = `
+                <div class="pagination-wrap">
+                    <button class="load-more-btn" onclick="BlogApp.loadMore()">加载更多</button>
+                </div>
+            `;
+        } else {
+            paginationContainer.innerHTML = `
+                <div class="pagination-wrap">
+                    <span class="load-more-done">已加载全部 ${total} 篇</span>
+                </div>
+            `;
         }
+    },
 
-        // 页码按钮
-        for (let i = 1; i <= totalPages; i++) {
-            if (i === this.currentPage) {
-                html += `<button class="page-btn active">${i}</button>`;
-            } else if (i === 1 || i === totalPages || (i >= this.currentPage - 2 && i <= this.currentPage + 2)) {
-                html += `<button class="page-btn" onclick="BlogApp.goToPage(${i})">${i}</button>`;
-            } else if (i === this.currentPage - 3 || i === this.currentPage + 3) {
-                html += `<span class="page-ellipsis">...</span>`;
-            }
-        }
+    // 加载更多文章
+    loadMore() {
+        this.visibleCount += this.config.postsPerPage;
+        this.renderPosts();
+        this.renderPagination();
+    },
 
-        // 下一页按钮
-        if (this.currentPage < totalPages) {
-            html += `<button class="page-btn" onclick="BlogApp.goToPage(${this.currentPage + 1})">&rarr;</button>`;
-        }
+    // 渲染导航栏标签链接（动态生成 + 数量徽标）
+    renderNavLinks() {
+        const navLinks = document.querySelector('.nav-links');
+        if (!navLinks) return;
 
-        paginationContainer.innerHTML = `<div class="pagination-wrap">${html}</div>`;
+        const counts = {};
+        this.posts.forEach(p => (p.tags || []).forEach(t => { counts[t] = (counts[t] || 0) + 1; }));
+        const mainTags = this.getMainTags();
+
+        const makeLink = (tag, label, count) => `
+            <a href="#" class="nav-link ${this.currentTag === tag ? 'active' : ''}"
+               onclick="BlogApp.filterByTag(${tag === null ? 'null' : `'${tag}'`}); return false;">
+                ${label}${count !== null ? `<span class="nav-count">${count}</span>` : ''}
+            </a>`;
+
+        let html = makeLink(null, '全部', this.posts.length);
+        mainTags.forEach(tag => { html += makeLink(tag, tag, counts[tag]); });
+        navLinks.innerHTML = html;
     },
 
     // 按标签筛选文章
     filterByTag(tag) {
         this.currentTag = tag;
-        this.currentPage = 1;
+        this.visibleCount = this.config.postsPerPage;
 
         if (tag) {
             this.filteredPosts = this.posts.filter(post => (post.tags || []).includes(tag));
@@ -300,38 +348,10 @@ const BlogApp = {
         }
 
         this.renderTags();
+        this.renderNavLinks();
         this.renderPosts();
         this.renderPagination();
         this.updateURL();
-        this.updateNavLinks();
-    },
-
-    // 更新导航栏链接的激活状态
-    updateNavLinks() {
-        document.querySelectorAll('.nav-link').forEach(link => {
-            link.classList.remove('active');
-        });
-        document.querySelectorAll('.nav-link').forEach(link => {
-            const onclick = link.getAttribute('onclick') || '';
-            if (this.currentTag && onclick.includes(`'${this.currentTag}'`)) {
-                link.classList.add('active');
-            } else if (!this.currentTag && onclick.includes('null')) {
-                link.classList.add('active');
-            }
-        });
-    },
-
-    // 跳转到指定页
-    goToPage(page) {
-        this.currentPage = page;
-        this.renderPosts();
-        this.renderPagination();
-
-        // 滚动到内容区顶部
-        const contentWrapper = document.getElementById('contentWrapper');
-        if (contentWrapper) {
-            contentWrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
     },
 
     // 打开文章详情页
@@ -370,7 +390,7 @@ const BlogApp = {
             );
         }
 
-        this.currentPage = 1;
+        this.visibleCount = this.config.postsPerPage;
         this.renderPosts();
         this.renderPagination();
     },
@@ -385,21 +405,17 @@ const BlogApp = {
         window.addEventListener('popstate', () => this.handleRoute());
     },
 
-    // 处理 URL 路由（标签和页码）
+    // 处理 URL 路由（标签）
     handleRoute() {
         const urlParams = new URLSearchParams(window.location.search);
         const tag = urlParams.get('tag');
-        const page = urlParams.get('page');
-
         if (tag) this.filterByTag(tag);
-        if (page) this.goToPage(parseInt(page));
     },
 
     // 更新 URL 参数
     updateURL() {
         const params = new URLSearchParams();
         if (this.currentTag) params.set('tag', this.currentTag);
-        if (this.currentPage > 1) params.set('page', this.currentPage);
         const queryString = params.toString();
         const newURL = queryString ? `?${queryString}` : window.location.pathname;
         window.history.pushState({}, '', newURL);
