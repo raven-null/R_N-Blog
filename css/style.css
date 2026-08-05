@@ -2483,7 +2483,7 @@ body.footer-visible .theme-toggle {
 
 /* 正文排版（字号/行距由 reader.js 变量控制） */
 .article-content {
-    max-width: 760px;
+    max-width: 900px;
     font-size: var(--reader-font-size, 16px) !important;
     line-height: var(--reader-line-height, 1.8) !important;
 }
