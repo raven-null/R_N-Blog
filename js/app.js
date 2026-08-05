@@ -346,6 +346,11 @@ const BlogApp = {
                 ${tag}<span class="tag-count">${counts[tag]}</span>
             </button>
         `).join('');
+
+        // 标签面板错峰弹出（Anime.js 就绪时）
+        if (window.BlogAnimations && window.BlogAnimations.ready) {
+            window.BlogAnimations.animateTagsPanel();
+        }
     },
 
     // 关闭标签面板

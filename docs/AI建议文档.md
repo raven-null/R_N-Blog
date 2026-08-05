@@ -722,7 +722,7 @@ const visible = showMore ? all.slice(0, MAX_VISIBLE) : all;
 
 ---
 
-## 十一、参考 animejs.com 的动效改造建议
+# 参考 animejs.com 的动效改造建议
 
 > 参考 [animejs.com](https://animejs.com) 首页展示的动画手法，结合本站现状（Hero 已精简、卡片瀑布流、标签面板、AI 聊天、主题切换），提出可落地的动效改造。
 
@@ -817,5 +817,5 @@ cta.addEventListener('mouseleave', () => {
 
 ---
 
-**状态：** AI 助手部分已实施（v2.2.0）；Anime.js 动画方案已实施（v2.4.0）；首页改造方案已实施（v2.4.2，P0/P1 项）；标签区改为导航栏"全部标签"面板（v2.4.5）；Hero 重设计已实施（v2.5.0，P0/P1 项）；animejs.com 动效借鉴方案待评审
+**状态：** AI 助手部分已实施（v2.2.0）；Anime.js 动画方案已实施（v2.4.0）；首页改造方案已实施（v2.4.2，P0/P1 项）；标签区改为导航栏"全部标签"面板（v2.4.5）；Hero 重设计已实施（v2.5.0，P0/P1 项）；animejs.com 动效借鉴已实施（v2.5.2，P0/P1 项）
 **作者：** 渡鸦NULL

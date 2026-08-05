@@ -21,6 +21,72 @@ const BlogAnimations = {
         if (document.getElementById('posts') || document.querySelector('.card')) {
             this.initCardEntrance();
         }
+        if (document.querySelector('.hero')) {
+            this.initHeroEntrance();
+            this.initCtaHover();
+        }
+    },
+
+    // Hero 入场时间轴（品牌标签 → 副标题 → SVG 装饰线 → CTA → 滚动指示）
+    initHeroEntrance() {
+        document.documentElement.classList.add('anime-ready');
+
+        const tag = document.querySelector('.hero-tag');
+        const subtitle = document.querySelector('.hero-subtitle');
+        const cta = document.querySelector('.hero-cta');
+        const indicator = document.querySelector('.scroll-indicator');
+
+        try {
+            const timeline = anime.createTimeline({ defaults: { ease: 'out(3)' } });
+            if (tag) timeline.add(tag, { opacity: [0, 1], translateY: [14, 0], duration: 500 });
+            if (subtitle) timeline.add(subtitle, { opacity: [0, 1], translateY: [10, 0], duration: 500 }, '-=250');
+
+            // SVG 装饰线淡入（不启用描边绘制，避免 drawable 解析问题）
+            const underline = document.querySelector('.hero-underline');
+            if (underline) timeline.add(underline, { opacity: [0, 1], duration: 400 }, '-=150');
+
+            if (cta) timeline.add(cta, { opacity: [0, 1], scale: [0.92, 1], duration: 450 }, '-=250');
+            if (indicator) timeline.add(indicator, { opacity: [0, 1], duration: 600 }, '-=150');
+        } catch (e) {
+            // 时间轴失败时回退：逐个淡入
+            [tag, subtitle, cta, indicator].forEach((el, i) => {
+                if (el) anime.animate(el, { opacity: [0, 1], duration: 500, delay: i * 200, ease: 'out(3)' });
+            });
+        }
+    },
+
+    // CTA 按钮弹簧 hover
+    initCtaHover() {
+        const cta = document.querySelector('.hero-cta');
+        if (!cta) return;
+        cta.addEventListener('mouseenter', () => {
+            try {
+                anime.animate(cta, { scale: [1, 1.05], duration: 400, ease: anime.spring({ bounce: 0.6 }) });
+            } catch (e) {
+                anime.animate(cta, { scale: [1, 1.05], duration: 300, ease: 'out(3)' });
+            }
+        });
+        cta.addEventListener('mouseleave', () => {
+            try {
+                anime.animate(cta, { scale: [1.05, 1], duration: 400, ease: anime.spring({ bounce: 0.6 }) });
+            } catch (e) {
+                anime.animate(cta, { scale: [1.05, 1], duration: 300, ease: 'out(3)' });
+            }
+        });
+    },
+
+    // 标签面板打开时错峰弹出
+    animateTagsPanel() {
+        if (!this.ready) return;
+        const chips = document.querySelectorAll('.tags-dropdown-list .tag-btn');
+        if (!chips.length) return;
+        anime.animate(chips, {
+            opacity: [0, 1],
+            scale: [0.8, 1],
+            delay: anime.stagger(25, { from: 'center' }),
+            duration: 250,
+            ease: 'out(2)'
+        });
     },
 
     // 瀑布流卡片入场（首批完整入场，后续渲染仅快速淡入，避免"刷新"感）
@@ -78,12 +144,21 @@ const BlogAnimations = {
         }
         try {
             const params = {};
-            Object.entries(colors).forEach(([p, v]) => { params[p] = v; });
-            anime.animate(document.documentElement, {
-                ...params,
-                duration: 400,
-                ease: 'out(2)'
+            Object.entries(colors).forEach(([p, v]) => {
+                // rgba 等非纯色值直接应用，避免动画解析失败
+                if (p === '--shadow' || p === '--glow') {
+                    document.documentElement.style.setProperty(p, v);
+                } else {
+                    params[p] = v;
+                }
             });
+            if (Object.keys(params).length) {
+                anime.animate(document.documentElement, {
+                    ...params,
+                    duration: 400,
+                    ease: 'out(2)'
+                });
+            }
         } catch (e) {
             // 动画失败时直接应用主题色
             this.applyColors(colors);

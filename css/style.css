@@ -134,10 +134,16 @@ body {
     font-weight: 400;
     letter-spacing: 3px;
     max-width: 640px;
-    margin: 0 auto 48px;
+    margin: 0 auto 16px;
     line-height: 1.7;
     opacity: 0;
     animation: fadeInUp 0.8s ease forwards 0.5s;
+}
+
+/* Hero SVG 装饰线 */
+.hero-underline {
+    display: block;
+    margin: 0 auto 36px;
 }
 
 /* CTA 主按钮 */
@@ -2249,6 +2255,16 @@ body {
 }
 
 /* ===== Anime.js 动画样式 ===== */
+
+/* Anime.js 接管 Hero 入场时，关闭原生 CSS 动画避免冲突 */
+.anime-ready .hero-tag,
+.anime-ready .hero-subtitle,
+.anime-ready .hero-cta,
+.anime-ready .hero-underline,
+.anime-ready .scroll-indicator {
+    opacity: 0;
+    animation: none !important;
+}
 
 /* Anime.js 接管卡片入场/悬停时，关闭原生 CSS 过渡避免冲突 */
 .anime-ready .card,
