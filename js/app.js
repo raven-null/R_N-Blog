@@ -72,16 +72,16 @@ const BlogApp = {
     // 加载单篇文章数据
     // BG 文件夹图片列表（用于无图文章的默认封面）
     bgImages: [
-        'images/BG/BG (1).jpg', 'images/BG/BG (2).jpg', 'images/BG/BG (3).jpg',
-        'images/BG/BG (4).jpg', 'images/BG/BG (5).jpg', 'images/BG/BG (6).jpg',
-        'images/BG/BG (7).jpg', 'images/BG/BG (8).jpg', 'images/BG/BG (9).jpg',
-        'images/BG/BG (10).jpg', 'images/BG/BG (11).jpg', 'images/BG/BG (12).jpg',
-        'images/BG/BG (13).jpg', 'images/BG/BG (14).jpg', 'images/BG/BG (15).jpg',
-        'images/BG/BG (16).jpg', 'images/BG/BG (17).jpg', 'images/BG/BG (18).jpg',
-        'images/BG/BG (19).jpg', 'images/BG/BG (20).jpg', 'images/BG/BG (21).jpg',
-        'images/BG/BG (22).jpg', 'images/BG/BG (23).jpg', 'images/BG/BG (24).jpg',
-        'images/BG/BG (25).jpg', 'images/BG/BG (26).jpg', 'images/BG/BG (27).jpg',
-        'images/BG/BG (28).jpg'
+        'images/BG/BG (1).jpg', 'images/BG/BG (29).jpg', 'images/BG/BG (30).jpg',
+        'images/BG/BG (31).jpg', 'images/BG/BG (32).jpg', 'images/BG/BG (33).jpg',
+        'images/BG/BG (34).jpg', 'images/BG/BG (35).jpg', 'images/BG/BG (36).jpg',
+        'images/BG/BG (37).jpg', 'images/BG/BG (38).jpg', 'images/BG/BG (39).jpg',
+        'images/BG/BG (40).jpg', 'images/BG/BG (41).jpg', 'images/BG/BG (42).jpg',
+        'images/BG/BG (43).jpg', 'images/BG/BG (44).jpg', 'images/BG/BG (45).jpg',
+        'images/BG/BG (46).jpg', 'images/BG/BG (47).jpg', 'images/BG/BG (48).jpg',
+        'images/BG/BG (49).jpg', 'images/BG/BG (50).jpg', 'images/BG/BG (51).jpg',
+        'images/BG/BG (52).jpg', 'images/BG/BG (53).jpg', 'images/BG/BG (54).jpg',
+        'images/BG/BG (55).jpg'
     ],
 
     // 根据文件名生成固定随机索引
