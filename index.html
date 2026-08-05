@@ -703,7 +703,7 @@
                 let totalWords = 0;
                 BlogApp.posts.forEach(post => {
                     post.tags.forEach(tag => allTags.add(tag));
-                    totalWords += post.content ? post.content.length : 0;
+                    totalWords += post.wordCount || (post.content ? post.content.length : 0);
                 });
 
                 setTimeout(() => {

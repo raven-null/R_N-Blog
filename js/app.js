@@ -31,8 +31,9 @@ const BlogApp = {
     // 加载所有文章
     async loadPosts() {
         try {
-            // 检查缓存
-            const cachedData = sessionStorage.getItem('blog-posts-data');
+            // 检查缓存（带版本号，旧缓存自动失效）
+            const CACHE_KEY = 'blog-posts-data-v2';
+            const cachedData = sessionStorage.getItem(CACHE_KEY);
             if (cachedData) {
                 this.posts = JSON.parse(cachedData);
                 this.filteredPosts = [...this.posts];
@@ -51,8 +52,22 @@ const BlogApp = {
             this.posts.sort((a, b) => new Date(b.date) - new Date(a.date));
             this.filteredPosts = [...this.posts];
             
-            // 缓存结果
-            sessionStorage.setItem('blog-posts-data', JSON.stringify(this.posts));
+            // 缓存结果（仅缓存元数据与字数，不缓存正文，避免超长正文超出存储配额）
+            try {
+                const cacheData = this.posts.map(p => ({
+                    filename: p.filename,
+                    title: p.title,
+                    date: p.date,
+                    tags: p.tags,
+                    author: p.author,
+                    excerpt: p.excerpt,
+                    image: p.image,
+                    wordCount: p.wordCount || 0
+                }));
+                sessionStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
+            } catch (e) {
+                console.warn('文章缓存失败（不影响使用）:', e);
+            }
         } catch (error) {
             console.error('加载文章失败:', error);
         }
@@ -117,6 +132,7 @@ const BlogApp = {
                 excerpt: frontmatter.excerpt || MarkdownParser.extractExcerpt(content),
                 image: frontmatter.image || MarkdownParser.extractFirstImage(content) || this.getRandomBgImage(filename),
                 content: content,
+                wordCount: content.length,
                 frontmatter: frontmatter
             };
         } catch (error) {
@@ -200,7 +216,8 @@ const BlogApp = {
             <div class="card" onclick="BlogApp.openPost('${post.filename}')">
                 ${post.image ? `
                     <div class="card-img">
-                        <img src="${post.image}" alt="${post.title}" class="img-placeholder">
+                        <img src="${post.image}" alt="${post.title}" class="img-placeholder"
+                             onerror="this.style.display='none';this.parentElement.style.background='linear-gradient(145deg, ${gradientColors[0]}, ${gradientColors[1]})';">
                     </div>
                 ` : `
                     <div class="card-img" style="height: ${this.getRandomHeight()}px; background: linear-gradient(145deg, ${gradientColors[0]}, ${gradientColors[1]});">
