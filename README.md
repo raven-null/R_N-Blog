@@ -1,92 +1,84 @@
-# 个人博客系统
+# 个人博客 · 渡鸦NULL
 
-一个基于纯前端技术的个人博客系统，专为GitHub Pages设计。
+一个基于纯前端技术的个人博客，部署于 GitHub Pages（<https://ravennull.work>），无需后端即可运行。
 
 ## ✨ 特性
 
-- 🚀 **纯前端** - 无需后端，直接部署到GitHub Pages
-- 📝 **Markdown支持** - 丢入.md文件即可显示
-- 🏷️ **标签分类** - 自动提取标签，支持分类筛选
-- 🎨 **十套主题** - 暗黑、白色、赛博朋克、复古纸张、霓虹等十种风格
-- 🌟 **科技感UI** - 全屏Hero区、CSS动画、滚动渐入效果
-- 📱 **响应式** - 适配各种屏幕尺寸，移动端专属悬浮球菜单
-- 💻 **代码高亮** - 支持多种编程语言，一键复制代码
-- 🔍 **下拉搜索** - 从导航栏搜索图标下拉打开，快速筛选文章
-- 🖼️ **图片灯箱** - 点击图片放大查看，支持缩放和拖拽
-- 📑 **固定目录** - 文章页左侧目录栏固定，支持搜索和自动高亮
-- 🤖 **AI 助手** - 内置智能对话助手，支持拖拽和调整大小
-- 📋 **一键复制** - 代码块和引用块支持一键复制功能
+- 🚀 **纯前端** - HTML5 / CSS3 / 原生 JS（ES6+），无需后端，直接部署 GitHub Pages
+- 📝 **Markdown 文章** - `posts` 目录丢入 `.md` 文件即可显示
+- 🏷️ **标签体系** - 标签按钮弹出面板，展示全部标签及文章计数，支持筛选
+- 🎨 **十套主题** - Dark / Light / Cyberpunk / Sepia / Neon / Nord / Dracula / Ocean / Forest / Sunset，自动持久化
+- 🖼️ **三视图** - 文章（瀑布流卡片）/ 图库（灯箱相册）/ 我的（个人仪表盘），顶栏滑块切换
+- 📚 **阅读体验** - 阅读工具栏（字号 / 行距 / 字体 / 护眼 / 夜间 / 专注）、目录、进度条
+- ⚡ **动画** - Anime.js 驱动卡片入场、视图切换等动效
+- 🤖 **AI 助手** - 内置智谱 GLM-4 对话助手，支持流式输出与划词问答
+- 📱 **响应式** - 适配各种屏幕尺寸，移动端悬浮球快捷操作
 
 ## 🚀 快速开始
 
 ### 本地运行
 
 ```bash
-# 使用Node.js
+# 方式一：Node.js
 npm install -g http-server
 http-server -p 8080
 
-# 或使用Python
+# 方式二：Python
 python -m http.server 8080
 
-# 或使用VS Code的Live Server插件
-# 右键点击index.html -> Open with Live Server
+# 方式三：VS Code Live Server
+# 右键 index.html -> Open with Live Server
 ```
 
-### 部署到GitHub Pages
+### 部署到 GitHub Pages
 
-1. Fork或克隆本仓库
-2. 上传你的Markdown文件到 `posts` 文件夹
-3. 更新 `posts/manifest.json`
-4. 在仓库Settings中启用GitHub Pages（Source选择`main`分支，目录选择`/ (root)`）
-5. 添加`.nojekyll`文件到项目根目录（确保GitHub Pages正确处理所有文件）
-6. 等待5-10分钟即可访问
-
-**详细部署指南：** [GitHub Pages部署指南](posts/github-project-modification.md)
+1. Fork 或克隆本仓库
+2. 根目录已包含 `.nojekyll` 与 `CNAME`（域名 `ravennull.work`），确保 GitHub Pages 正确处理文件与自定义域名
+3. 在仓库 Settings 中启用 GitHub Pages，Source 选择 `main` 分支、目录 `/ (root)`
+4. 根目录的 `feed.xml` 提供 RSS 订阅
+5. 等待数分钟即可通过域名访问
 
 ## 📝 添加文章
 
-### 步骤一：创建Markdown文件
+### 步骤一：创建 Markdown 文件
 
-在 `posts` 文件夹创建 `.md` 文件，例如：`my-new-article.md`
+在 `posts` 目录创建 `.md` 文件，如 `my-new-article.md`。
 
-### 步骤二：添加Frontmatter
+### 步骤二：添加 Frontmatter
 
-文件开头必须包含Frontmatter信息：
+文件开头必须包含 Frontmatter：
 
 ```yaml
 ---
 title: 文章标题
-date: 2026-07-21
-tags: [标签1, 标签2]
-author: 作者名
-excerpt: 文章摘要，会显示在首页卡片上
-image: images/cover.jpg  # 可选，封面图片路径
+date: 2026-08-05
+tags: [技术, 生活]
+author: 渡鸦NULL
+excerpt: 文章摘要，显示在首页卡片上
+image: images/BG/01_BG.webp  # 可选，封面图片
+update: 2026-08-06            # 可选，更新时间
 ---
 
 正文内容...
 ```
 
-**Frontmatter字段说明：**
+| 字段 | 必填 | 说明 |
+|------|------|------|
+| title | 是 | 文章标题 |
+| date | 是 | 发布日期 |
+| tags | 是 | 标签数组 |
+| author | 否 | 作者名 |
+| excerpt | 否 | 文章摘要 |
+| image | 否 | 封面图片路径 |
+| update | 否 | 更新时间 |
 
-| 字段 | 必填 | 说明 | 示例 |
-|------|------|------|------|
-| title | 是 | 文章标题 | `我的第一篇文章` |
-| date | 是 | 发布日期 | `2026-07-21` |
-| tags | 是 | 标签数组 | `[技术, JavaScript]` |
-| author | 否 | 作者名 | `渡鸦NULL` |
-| excerpt | 否 | 文章摘要 | `这是摘要...` |
-| image | 否 | 封面图片URL | `images/cover.jpg` |
+### 步骤三：更新 manifest.json
 
-### 步骤三：更新manifest.json
-
-打开 `posts/manifest.json` 文件，添加新文章的文件名：
+在 `posts/manifest.json` 中添加文件名：
 
 ```json
 [
-    "blog-usage-guide.md",
-    "github-guide.md",
-    "javascript-async.md",
+    "01-blog-usage-guide.md",
     "my-new-article.md"
 ]
 ```
@@ -95,231 +87,100 @@ image: images/cover.jpg  # 可选，封面图片路径
 
 刷新博客页面，新文章将自动显示。
 
-### 使用图片
+## 🖼️ 图库加图
 
-将图片放入 `images/` 文件夹，在Markdown中引用：
+图库图片存放于 `images/R-N-picture` 目录，添加后运行脚本生成索引：
 
-```markdown
-![图片说明文字](images/assets/01-blog-usage-guide/1.jpg)
+```bash
+node scripts/build-gallery.js
 ```
 
-- 图片说明文字（alt文本）会自动显示在图片下方作为说明
-- 支持相对路径和绝对URL
-- 点击图片可打开灯箱放大查看，支持缩放和拖拽
+运行完成后提交生成的文件即可，图库支持灯箱查看、左右切换、下载、幻灯片放映与页码跳转。
 
-## 🎨 主题切换
+## 🎨 主题
 
-点击主题按钮循环切换，共十套风格：
+点击顶栏主题按钮切换，共十套风格：Dark（暗黑，默认）、Light（白色）、Cyberpunk（赛博朋克）、Sepia（复古纸张）、Neon（霓虹）、Nord（冷色调灰蓝）、Dracula、Ocean、Forest、Sunset。
 
-| 主题 | 图标 | 说明 |
-|------|------|------|
-| Dark | ◐ | 暗黑模式（默认） |
-| Light | ○ | 白色模式 |
-| Cyberpunk | ◈ | 赛博朋克（紫色霓虹风格） |
-| Sepia | ◎ | 复古纸张（暖色调，适合阅读） |
-| Neon | ◆ | 霓虹风格（深紫底色 + 粉青点缀） |
-| Nord | ❖ | Nord 配色（冷色调灰蓝，护眼舒适） |
-| Dracula | ❂ | 吸血鬼主题（深紫灰 + 紫色强调） |
-| Ocean | ≋ | 深海风格（深蓝底色 + 青绿强调） |
-| Forest | ♧ | 森林风格（深绿底色 + 绿色强调） |
-| Sunset | ☀ | 日落风格（深红底色 + 粉橙强调） |
+所有 UI 元素（导航栏、卡片、滚动条、粒子等）均跟随主题变化，选择自动保存到本地存储。
 
-所有 UI 元素（粒子、滚动条、导航栏、卡片等）均跟随主题变化，主题选择会自动保存到本地存储。
+## 🔍 搜索
 
-## 🔍 搜索功能
+导航栏搜索框输入关键词，按标题、摘要、标签即时筛选文章。
 
-点击导航栏右侧的搜索图标，会从图标下方弹出搜索框：
+## 📑 目录
 
-- 输入关键词即时筛选文章
-- 按 `ESC` 或点击外部区域关闭
-- 支持按标题、摘要、标签搜索
-
-## 📑 文章目录
-
-文章详情页左侧显示固定目录栏：
-
-- 目录栏固定在屏幕左侧，不随文章滚动
-- 返回首页按钮与目录之间有明确间隔
-- 目录列表独立滚动，阅读文章时自动高亮当前章节
-- 点击目录项平滑滚动到对应位置
-- 支持目录搜索功能，快速定位标题
-- 屏幕宽度 ≤ 768px 时目录自动隐藏，通过悬浮球菜单访问
+文章页左侧固定目录栏，支持目录搜索与折叠，默认展开；阅读时自动高亮当前章节，点击平滑滚动定位。
 
 ## 🖼️ 图片灯箱
 
-文章中的图片支持灯箱功能：
-
-- 点击图片打开灯箱放大查看
-- 支持鼠标滚轮缩放（0.5x - 5x）
-- 支持拖拽已缩放的图片
-- 按 `ESC` 或点击外部区域关闭
-- 移动端支持触摸缩放
+文章图片与图库图片均支持灯箱查看：点击放大、缩放与拖拽、`ESC` 关闭；图库灯箱额外支持左右切换、下载、幻灯片与页码。
 
 ## 📋 代码复制
 
-文章中的代码块和引用块支持一键复制：
+代码块右上角一键复制，点击显示"已复制"，2 秒后自动恢复。
 
-- 代码块右上角显示复制按钮
-- 引用块右上角显示复制按钮
-- 点击后显示"已复制"提示
-- 2秒后自动恢复原始状态
+## 🤖 AI 助手
 
-## 🤖 AI 智能助手
+文章页内置 AI 对话助手（智谱 GLM-4）：
 
-内置 AI 对话助手，支持大语言模型问答。
+- 流式输出与停止生成、Markdown 渲染
+- 复制 / 重新生成回复，多会话管理
+- 窗口位置记忆、未读消息角标、字数统计
+- `/` 快捷指令；划词选中正文即可快速问答（解释 / 翻译 / 润色）
 
-### 配置
+## 📱 移动端
 
-打开 `js/chat.js`，替换 API Key：
-
-```javascript
-config: {
-    apiUrl: 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
-    apiKey: 'YOUR_API_KEY_HERE',  // 替换为你的智谱 API Key
-    model: 'glm-4-flash',
-    maxTokens: 1024
-}
-```
-
-API Key 获取地址：https://open.bigmodel.cn/
-
-### 使用
-
-- 点击右下角聊天图标打开对话窗口
-- 在底部输入框输入问题，回车或点击发送
-- 对话历史自动保存，刷新页面不丢失
-- 支持清空对话、关闭窗口
-- 支持拖拽移动窗口位置
-- 支持拖拽左上角调整窗口大小
-
-### 切换 AI 模型
-
-在 `js/chat.js` 中修改 `model` 字段：
-
-```javascript
-config: {
-    model: 'glm-4-flash',   // 快速模型
-    // model: 'glm-4',      // 标准模型
-    // model: 'glm-4v',     // 多模态模型（支持图片）
-}
-```
-
-## 📱 移动端适配
-
-博客针对移动端进行了专门优化：
-
-- **悬浮球菜单**：屏幕宽度 < 773px 时显示右下角悬浮球
-- **弹出菜单**：点击悬浮球显示目录、返回、首页、主题、AI助手等快捷操作
-- **侧边栏**：移动端目录栏通过悬浮球菜单打开，覆盖全屏
-- **响应式布局**：文章卡片自动适配不同屏幕尺寸
+- 顶栏视图切换、吸顶导航自动适配
+- 阅读目录通过移动端悬浮球访问
+- 悬浮球含返回、首页、主题、AI 助手等快捷操作
+- 图片灯箱支持触摸缩放
 
 ## 📁 项目结构
 
 ```
-├── index.html              # 首页
-├── article.html            # 文章详情页
-├── .nojekyll               # 告诉GitHub Pages不使用Jekyll处理
+├── index.html / article.html    # 首页 / 文章详情页
+├── feed.xml / CNAME / .nojekyll # RSS / 自定义域名 / Jekyll 关闭标记
 ├── css/
-│   ├── style.css           # 主样式（包含所有主题和响应式样式）
-│   └── highlight-github-dark.min.css  # 代码高亮样式
+│   ├── style.css                # 主样式（主题、响应式）
+│   └── highlight-github-dark.min.css  # 代码高亮
 ├── js/
-│   ├── app.js              # 首页核心逻辑（文章加载、筛选、搜索、分页）
-│   ├── markdown.js         # Markdown解析（frontmatter提取、Markdown渲染）
-│   ├── theme.js            # 主题管理（10套主题、CSS变量更新、持久化）
-│   ├── chat.js             # AI 对话助手（API调用、拖拽、调整大小、历史保存）
-│   └── vendor/
-│       ├── marked.min.js   # Markdown解析库
-│       └── highlight.min.js # 代码高亮库
-├── images/                 # 图片资源目录
-│   ├── BG/                 # 默认封面图片目录
-│   └── system1.jpg         # 系统图标
-├── posts/                  # Markdown文章
-│   ├── manifest.json       # 文章列表（JSON数组格式）
-│   ├── blog-usage-guide.md # 博客使用手册
-│   ├── github-guide.md     # GitHub指南
-│   ├── javascript-async.md # JavaScript异步教程
-│   └── *.md                # 其他文章文件
-└── docs/                   # 文档
-    ├── 项目文档.md          # 项目架构文档
-    └── 操作文档.md          # 使用指南和常见问题
+│   ├── app.js                   # 首页逻辑（加载、筛选、搜索、分页）
+│   ├── markdown.js              # Markdown 解析（frontmatter、渲染）
+│   ├── theme.js                 # 主题管理（10 套主题、持久化）
+│   ├── chat.js                  # AI 助手（流式、多会话、划词问答）
+│   ├── reader.js                # 文章阅读（目录、工具栏、快捷键、进度）
+│   ├── animations.js            # Anime.js 动画
+│   └── vendor/                  # anime.umd.min.js / marked.min.js / highlight.min.js
+├── scripts/build-gallery.js     # 图库索引生成脚本
+├── images/
+│   ├── BG/                      # 封面图
+│   ├── R-N-picture/             # 图库图片（生成 manifest.json）
+│   ├── TX/                      # 作者头像（01_TX 渡鸦NULL / 02_TX AI / 03_TX 其他）
+│   └── assets/                  # 文章内嵌图片
+├── posts/                       # 文章（*.md + manifest.json）
+└── docs/                        # 文档
+    ├── 项目文档.md / 操作文档.md / 更新日志.md / 文章模板.md / AI建议文档.md
 ```
 
 ## 🛠️ 自定义
 
-### 修改配置
-
-编辑 `js/app.js` 中的配置：
-
-```javascript
-config: {
-    postsDirectory: 'posts',    // 文章目录
-    postsPerPage: 10            // 每页显示文章数量
-}
-```
-
-### 添加主题
-
-在 `js/theme.js` 的 `themes` 对象中添加新主题，需包含以下 CSS 变量：
-
-```javascript
-新主题: {
-    name: '主题名',
-    icon: '图标',  // 单字符图标
-    colors: {
-        '--bg-primary': '#背景色',
-        '--bg-secondary': '#次要背景',
-        '--bg-tertiary': '#三级背景',
-        '--bg-card': '#卡片背景',
-        '--text-primary': '#主文字',
-        '--text-secondary': '#次要文字',
-        '--text-muted': '#弱化文字',
-        '--accent': '#强调色',
-        '--accent-dim': '#次要强调色',
-        '--border': '#边框色',
-        '--border-light': '#浅边框色',
-        '--shadow': 'rgba(r, g, b, alpha)',  // 阴影色
-        '--glow': 'rgba(r, g, b, alpha)'     // 发光色
-    }
-}
-```
-
-### 修改AI助手人格
-
-在 `js/chat.js` 中修改系统提示词：
-
-```javascript
-{
-    role: 'system',
-    content: '你是一名博客管理员，名叫渡鸦_001。你的职责是：1. 热情友好地接待每一位访客；2. 回答关于博客内容、技术文章的问题；3. 你的所有回复都要体现你作为管理员的身份。'
-}
-```
+- **主题**：在 `js/theme.js` 的 `themes` 对象中添加主题（`name` / `icon` / `colors` CSS 变量）
+- **AI 助手**：在 `js/chat.js` 中修改系统提示词（人格）与 API Key（`config.apiKey`）
+- **每页文章数**：修改 `js/app.js` 中 `config` 的 `postsPerPage` 字段
 
 ## 📖 文档
 
-- [项目文档](docs/项目文档.md) - 详细了解项目架构
-- [操作文档](docs/操作文档.md) - 使用指南和常见问题
-- [GitHub项目修改指南](posts/github-project-modification.md) - 如何修改和部署项目
-
-## 🌐 浏览器支持
-
-- Chrome 60+
-- Firefox 60+
-- Safari 12+
-- Edge 79+
+- [项目文档](docs/项目文档.md) - 项目架构说明
+- [操作文档](docs/操作文档.md) - 使用指南与常见问题
+- [更新日志](docs/更新日志.md) - 版本更新记录
+- [文章模板](docs/文章模板.md) - 写文章参考模板
+- [AI建议文档](docs/AI建议文档.md) - AI 相关使用建议
 
 ## 📄 许可证
 
 MIT License
 
-## 🤝 贡献
-
-欢迎提交Issue和Pull Request！
-
-## 📧 联系
-
-如有问题，请提交Issue。
-
 ---
 
-**最后更新：** 2026-07-21
+**最后更新：** 2026-08-05
 **维护者：** 渡鸦NULL
