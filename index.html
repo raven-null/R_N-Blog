@@ -79,40 +79,44 @@
             </div>
         </nav>
 
-        <!-- Main Content -->
-        <main class="main-content">
+        <!-- 可滚动内容区（滚动条仅在此区域内显示） -->
+        <div class="scroll-area" id="scrollArea">
 
-            <!-- 视图：博客 -->
-            <section class="view view-blog" id="view-blog">
-                <div id="posts">
-                    <div class="loading">
-                        <div class="loading-spinner"></div>
-                        <p>Loading...</p>
+            <!-- Main Content -->
+            <main class="main-content">
+
+                <!-- 视图：博客 -->
+                <section class="view view-blog" id="view-blog">
+                    <div id="posts">
+                        <div class="loading">
+                            <div class="loading-spinner"></div>
+                            <p>Loading...</p>
+                        </div>
                     </div>
+                    <div id="pagination"></div>
+                </section>
+
+                <!-- 视图：图库 -->
+                <section class="view view-gallery" id="view-gallery" style="display:none;">
+                    <div class="gallery-grid" id="galleryGrid"></div>
+                </section>
+
+                <!-- 视图：仪表盘 -->
+                <section class="view view-dashboard" id="view-dashboard" style="display:none;">
+                    <div class="dashboard-stats" id="dashboardStats"></div>
+                </section>
+            </main>
+
+            <!-- Footer -->
+            <footer class="footer">
+                <div class="footer-left">&copy; 渡鸦_NULL BLOG 1.3<span class="footer-stats" id="footerStats"></span></div>
+                <div class="footer-right">
+                    <a href="https://github.com/raven-null/R_N-Blog" class="footer-link" target="_blank" rel="noopener">GitHub</a>
+                    <a href="feed.xml" class="footer-link" target="_blank" rel="noopener">RSS</a>
+                    <a href="article.html?post=01-blog-usage-guide.md" class="footer-link">About</a>
                 </div>
-                <div id="pagination"></div>
-            </section>
-
-            <!-- 视图：图库 -->
-            <section class="view view-gallery" id="view-gallery" style="display:none;">
-                <div class="gallery-grid" id="galleryGrid"></div>
-            </section>
-
-            <!-- 视图：仪表盘 -->
-            <section class="view view-dashboard" id="view-dashboard" style="display:none;">
-                <div class="dashboard-stats" id="dashboardStats"></div>
-            </section>
-        </main>
-
-        <!-- Footer -->
-        <footer class="footer">
-            <div class="footer-left">&copy; 渡鸦_NULL BLOG 1.3<span class="footer-stats" id="footerStats"></span></div>
-            <div class="footer-right">
-                <a href="https://github.com/raven-null/R_N-Blog" class="footer-link" target="_blank" rel="noopener">GitHub</a>
-                <a href="feed.xml" class="footer-link" target="_blank" rel="noopener">RSS</a>
-                <a href="article.html?post=01-blog-usage-guide.md" class="footer-link">About</a>
-            </div>
-        </footer>
+            </footer>
+        </div>
     </div>
 
     <!-- 阅读进度条 -->
@@ -173,16 +177,16 @@
             // Scroll observer
             initScrollObserver();
 
-            // 阅读进度条 + 回到顶部按钮 + 页脚遮挡处理
+            // 阅读进度条 + 回到顶部按钮 + 页脚遮挡处理（滚动发生在 #scrollArea）
             (function initScrollUI() {
                 const progress = document.getElementById('readingProgress');
                 const backToTop = document.getElementById('backToTop');
-                if (!progress || !backToTop) return;
+                const scroller = document.getElementById('scrollArea');
+                if (!progress || !backToTop || !scroller) return;
 
                 const update = () => {
-                    const doc = document.documentElement;
-                    const scrollTop = window.scrollY || doc.scrollTop;
-                    const scrollHeight = doc.scrollHeight - window.innerHeight;
+                    const scrollTop = scroller.scrollTop;
+                    const scrollHeight = scroller.scrollHeight - scroller.clientHeight;
                     progress.style.width = scrollHeight > 0 ? (scrollTop / scrollHeight * 100) + '%' : '0%';
                     backToTop.classList.toggle('show', scrollTop > 400);
 
@@ -191,12 +195,12 @@
                     const footerInView = !!footer && footer.getBoundingClientRect().top <= window.innerHeight;
                     document.body.classList.toggle('footer-visible', footerInView);
                 };
-                window.addEventListener('scroll', update, { passive: true });
+                scroller.addEventListener('scroll', update, { passive: true });
                 window.addEventListener('resize', update);
                 update();
 
                 backToTop.addEventListener('click', () => {
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                    scroller.scrollTo({ top: 0, behavior: 'smooth' });
                 });
             })();
 
@@ -216,10 +220,10 @@
                 
                 switch(e.key.toLowerCase()) {
                     case 'w':
-                        window.scrollBy({ top: -300, behavior: 'smooth' });
+                        document.getElementById('scrollArea').scrollBy({ top: -300, behavior: 'smooth' });
                         break;
                     case 's':
-                        window.scrollBy({ top: 300, behavior: 'smooth' });
+                        document.getElementById('scrollArea').scrollBy({ top: 300, behavior: 'smooth' });
                         break;
                     case 'a':
                         window.history.back();

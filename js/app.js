@@ -413,6 +413,8 @@ const BlogApp = {
         }
 
         window.scrollTo(0, 0);
+        const scroller = document.getElementById('scrollArea');
+        if (scroller) scroller.scrollTop = 0;
     },
 
     // 滑块指示器移动到指定视图按钮（Anime.js 动画）
