@@ -369,6 +369,7 @@ body.home-layout {
     display: flex;
     align-items: center;
     gap: 12px;
+    margin-left: auto;
 }
 
 .nav-tools-item {
@@ -1330,8 +1331,19 @@ body.home-layout {
     }
 
     .nav-inner {
-        justify-content: space-between;
+        justify-content: flex-end;
+        height: 52px;
         padding: 0 12px;
+        gap: 8px;
+    }
+
+    .nav-search-btn {
+        width: 36px;
+        height: 36px;
+    }
+
+    .nav-tools {
+        gap: 8px;
     }
 
     .nav-brand {
@@ -2229,12 +2241,12 @@ body.home-layout {
     }
 
     .top-bar-inner {
-        height: 48px;
+        height: 44px;
     }
 
     .top-bar-brand {
-        font-size: 13px;
-        letter-spacing: 2px;
+        font-size: 12px;
+        letter-spacing: 1px;
     }
 
     .top-bar-views {
@@ -2242,8 +2254,8 @@ body.home-layout {
     }
 
     .view-btn {
-        font-size: 12px;
-        padding: 6px 14px;
+        font-size: 11px;
+        padding: 5px 11px;
     }
 
     .chat-toggle {
@@ -2436,4 +2448,20 @@ body.footer-visible .theme-toggle {
     opacity: 0 !important;
     visibility: hidden !important;
     pointer-events: none !important;
+}
+
+/* 超小屏：隐藏顶部品牌文字，为视图按钮腾出空间 */
+@media (max-width: 360px) {
+    .top-bar-brand {
+        display: none;
+    }
+
+    .view-btn {
+        padding: 5px 9px;
+        font-size: 11px;
+    }
+
+    .nav-inner {
+        height: 48px;
+    }
 }
