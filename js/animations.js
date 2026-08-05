@@ -21,58 +21,6 @@ const BlogAnimations = {
         if (document.getElementById('posts') || document.querySelector('.card')) {
             this.initCardEntrance();
         }
-        if (document.querySelector('.hero')) {
-            this.initHeroEntrance();
-            this.initCtaHover();
-        }
-    },
-
-    // Hero 入场时间轴（品牌标签 → 副标题 → SVG 装饰线 → CTA → 滚动指示）
-    initHeroEntrance() {
-        document.documentElement.classList.add('anime-ready');
-
-        const tag = document.querySelector('.hero-tag');
-        const subtitle = document.querySelector('.hero-subtitle');
-        const cta = document.querySelector('.hero-cta');
-        const indicator = document.querySelector('.scroll-indicator');
-
-        try {
-            const timeline = anime.createTimeline({ defaults: { ease: 'out(3)' } });
-            if (tag) timeline.add(tag, { opacity: [0, 1], translateY: [14, 0], duration: 500 });
-            if (subtitle) timeline.add(subtitle, { opacity: [0, 1], translateY: [10, 0], duration: 500 }, '-=250');
-
-            // SVG 装饰线淡入（不启用描边绘制，避免 drawable 解析问题）
-            const underline = document.querySelector('.hero-underline');
-            if (underline) timeline.add(underline, { opacity: [0, 1], duration: 400 }, '-=150');
-
-            if (cta) timeline.add(cta, { opacity: [0, 1], scale: [0.92, 1], duration: 450 }, '-=250');
-            if (indicator) timeline.add(indicator, { opacity: [0, 1], duration: 600 }, '-=150');
-        } catch (e) {
-            // 时间轴失败时回退：逐个淡入
-            [tag, subtitle, cta, indicator].forEach((el, i) => {
-                if (el) anime.animate(el, { opacity: [0, 1], duration: 500, delay: i * 200, ease: 'out(3)' });
-            });
-        }
-    },
-
-    // CTA 按钮弹簧 hover
-    initCtaHover() {
-        const cta = document.querySelector('.hero-cta');
-        if (!cta) return;
-        cta.addEventListener('mouseenter', () => {
-            try {
-                anime.animate(cta, { scale: [1, 1.05], duration: 400, ease: anime.spring({ bounce: 0.6 }) });
-            } catch (e) {
-                anime.animate(cta, { scale: [1, 1.05], duration: 300, ease: 'out(3)' });
-            }
-        });
-        cta.addEventListener('mouseleave', () => {
-            try {
-                anime.animate(cta, { scale: [1.05, 1], duration: 400, ease: anime.spring({ bounce: 0.6 }) });
-            } catch (e) {
-                anime.animate(cta, { scale: [1.05, 1], duration: 300, ease: 'out(3)' });
-            }
-        });
     },
 
     // 标签面板打开时错峰弹出

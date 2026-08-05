@@ -105,70 +105,6 @@ body {
     z-index: 1;
 }
 
-/* Hero content */
-.hero-content {
-    position: relative;
-    z-index: 3;
-    text-align: center;
-    padding: 0 24px;
-}
-
-.hero-tag {
-    display: inline-block;
-    padding: 8px 24px;
-    border: 1px solid var(--border);
-    border-radius: 100px;
-    font-size: 15px;
-    letter-spacing: 5px;
-    text-transform: uppercase;
-    color: var(--text-primary);
-    background: var(--glow);
-    margin-bottom: 32px;
-    opacity: 0;
-    animation: fadeInUp 0.8s ease forwards 0.3s;
-}
-
-.hero-subtitle {
-    font-size: clamp(18px, 2.6vw, 26px);
-    color: var(--text-secondary);
-    font-weight: 400;
-    letter-spacing: 3px;
-    max-width: 640px;
-    margin: 0 auto 16px;
-    line-height: 1.7;
-    opacity: 0;
-    animation: fadeInUp 0.8s ease forwards 0.5s;
-}
-
-/* Hero SVG 装饰线 */
-.hero-underline {
-    display: block;
-    margin: 0 auto 36px;
-}
-
-/* CTA 主按钮 */
-.hero-cta {
-    display: inline-block;
-    padding: 12px 40px;
-    border-radius: 100px;
-    border: 1px solid var(--accent);
-    background: var(--accent);
-    color: var(--bg-primary);
-    font-size: 14px;
-    font-weight: 600;
-    letter-spacing: 2px;
-    text-decoration: none;
-    cursor: pointer;
-    transition: all 0.25s;
-    opacity: 0;
-    animation: fadeInUp 0.8s ease forwards 0.7s;
-}
-
-.hero-cta:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 24px var(--shadow), 0 0 16px var(--glow);
-}
-
 /* Scroll indicator */
 .scroll-indicator {
     position: absolute;
@@ -2255,16 +2191,6 @@ body {
 }
 
 /* ===== Anime.js 动画样式 ===== */
-
-/* Anime.js 接管 Hero 入场时，关闭原生 CSS 动画避免冲突 */
-.anime-ready .hero-tag,
-.anime-ready .hero-subtitle,
-.anime-ready .hero-cta,
-.anime-ready .hero-underline,
-.anime-ready .scroll-indicator {
-    opacity: 0;
-    animation: none !important;
-}
 
 /* Anime.js 接管卡片入场/悬停时，关闭原生 CSS 过渡避免冲突 */
 .anime-ready .card,
