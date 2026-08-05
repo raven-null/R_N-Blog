@@ -228,5 +228,267 @@ config: {
 
 ---
 
-**状态：** 已实施（v2.2.0），安全与合规部分暂缓
+## 七、Anime.js 前端动画集成方案
+
+> 目标：将轻量级动画引擎 Anime.js 引入本项目，替换/增强现有的 CSS 动画与手写 rAF 动画，实现专业、流畅、可维护的前端动效。
+
+### 1. 引入方式（遵循项目"本地化加载"约定）
+
+本项目第三方库全部本地加载（无 CDN 依赖），Anime.js 同样采用本地化：
+
+1. 从 [GitHub Releases](https://github.com/juliangarnier/anime/releases) 下载 **v4.0.0** 的 `anime.umd.min.js`
+2. 放入 `js/vendor/anime.umd.min.js`
+3. 在两个页面加载：
+
+```html
+<!-- index.html 与 article.html -->
+<script src="js/vendor/marked.min.js"></script>
+<script src="js/vendor/highlight.min.js"></script>
+<script src="js/vendor/anime.umd.min.js"></script>
+<script src="js/theme.js"></script>
+<script src="js/markdown.js"></script>
+<script src="js/app.js"></script>
+```
+
+```javascript
+// UMD 全局对象（v4 写法）
+const { animate, stagger, createTimeline, utils, spring } = anime;
+```
+
+> 注意：v4 API 与 v3 不同，本项目统一使用 v4 写法。
+
+### 2. 统一管理：新增 `js/animations.js`
+
+所有 Anime.js 动效收敛到独立模块，避免散落在页面内联脚本中：
+
+```javascript
+/**
+ * 全局动画控制器
+ * 依赖：anime.umd.min.js
+ */
+const BlogAnimations = {
+    // 是否应减少动效（尊重用户系统设置）
+    get reducedMotion() {
+        return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    },
+
+    init() {
+        if (this.reducedMotion || typeof anime === 'undefined') return;
+        this.initHeroTitle();
+        this.initStatsCounter();
+        this.initCardEntrance();
+        this.initScrollReveal();
+        this.initThemeTransition();
+        this.initChatWindow();
+    },
+    // ...各动画方法见下文
+};
+
+document.addEventListener('DOMContentLoaded', () => BlogAnimations.init());
+```
+
+两个页面按需启用各自的方法，例如文章页不调用 `initCardEntrance`。
+
+### 3. 具体动画清单
+
+#### 3.1 首页 Hero 标题逐字动画（替换现有打字效果）
+
+现有 `typewriter` 用定时器实现，改用 Anime.js 逐字缩放+透明度更优雅：
+
+```javascript
+initHeroTitle() {
+    const title = document.getElementById('heroTitleText');
+    if (!title) return;
+    const text = title.dataset.text || title.textContent;
+    title.innerHTML = text.split('').map((c, i) => `<span class="hero-char">${c}</span>`).join('');
+    animate('.hero-char', {
+        opacity: [0, 1],
+        scale: [2, 1],
+        translateY: [20, 0],
+        duration: 600,
+        delay: stagger(50, { from: 'center' }),
+        ease: 'out(3)'
+    });
+}
+```
+
+#### 3.2 统计数字动画（替换手写 animateCounter）
+
+用 Anime.js 驱动 JS 对象再写入 DOM，代码更简洁：
+
+```javascript
+initStatsCounter() {
+    const data = {
+        posts: BlogApp.posts.length,
+        tags: new Set(BlogApp.posts.flatMap(p => p.tags || [])).size,
+        words: Math.round(BlogApp.posts.reduce((s, p) => s + (p.wordCount || 0), 0) / 1000)
+    };
+    const counter = { value: 0 };
+    animate(counter, {
+        value: [0, 1],
+        duration: 1500,
+        ease: 'out(2)',
+        onUpdate: () => {
+            document.getElementById('statPosts').textContent = Math.round(data.posts * counter.value);
+            document.getElementById('statTags').textContent = Math.round(data.tags * counter.value);
+            document.getElementById('statWords').textContent = Math.round(data.words * counter.value) + 'k';
+        }
+    });
+}
+```
+
+#### 3.3 瀑布流卡片错峰入场（stagger）
+
+替换现有 `opacity + translateY` 的 CSS 渐入，配合交错实现"多米诺"入场：
+
+```javascript
+initCardEntrance() {
+    animate('.card', {
+        opacity: [0, 1],
+        translateY: [40, 0],
+        scale: [0.98, 1],
+        duration: 700,
+        delay: stagger(70),
+        ease: 'out(3)'
+    });
+}
+```
+
+> 注意：现有 `.card` 有 `.visible` 类控制显隐，接入后需协调，避免冲突（可移除 CSS 的 opacity 动画，交由 Anime.js 接管）。
+
+#### 3.4 滚动进入视口时淡入（配合 IntersectionObserver）
+
+```javascript
+initScrollReveal() {
+    const items = document.querySelectorAll('.reveal');
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (!entry.isIntersecting) return;
+            animate(entry.target, {
+                opacity: [0, 1],
+                translateY: [30, 0],
+                duration: 600,
+                ease: 'out(2)'
+            });
+            observer.unobserve(entry.target);
+        });
+    }, { threshold: 0.1 });
+    items.forEach(el => observer.observe(el));
+}
+```
+
+#### 3.5 主题切换过渡（v4 支持动画 CSS 变量）⭐ 亮点
+
+主题切换时让 CSS 变量平滑过渡，替换生硬的瞬间跳变：
+
+```javascript
+initThemeTransition() {
+    const onThemeChange = (colors) => {
+        animate(':root', {
+            '--bg-primary': colors['--bg-primary'],
+            '--bg-secondary': colors['--bg-secondary'],
+            '--text-primary': colors['--text-primary'],
+            '--accent': colors['--accent'],
+            '--border': colors['--border'],
+            duration: 500,
+            ease: 'out(2)'
+        });
+    };
+    // 在 theme.js 的 setTheme 中调用 onThemeChange(colors)
+}
+```
+
+#### 3.6 卡片 hover 微交互
+
+在现有 CSS hover 基础上增加"弹性"反馈：
+
+```javascript
+// 事件委托，避免每个卡片绑定监听
+document.addEventListener('mouseover', (e) => {
+    const card = e.target.closest('.card');
+    if (card && !card.dataset.anim) {
+        card.dataset.anim = '1';
+        card.addEventListener('mouseleave', () => {
+            animate(card, { scale: [1.03, 1], duration: 300, ease: 'out(3)' });
+        });
+        animate(card, { scale: [1, 1.03], duration: 300, ease: 'out(3)' });
+    }
+});
+```
+
+#### 3.7 文章页：内容淡入 + 目录高亮过渡
+
+```javascript
+// 文章内容入场
+animate('.article-content > *', {
+    opacity: [0, 1],
+    translateY: [16, 0],
+    duration: 500,
+    delay: stagger(40),
+    ease: 'out(2)'
+});
+
+// 目录激活项过渡（滚动高亮时）
+animate('.toc-list a.active', {
+    backgroundColor: ['rgba(0,0,0,0)', 'var(--glow)'],
+    duration: 300
+});
+```
+
+#### 3.8 AI 聊天窗口开关动画
+
+现有聊天窗口用 CSS transition，可升级为 Anime.js 弹性动画：
+
+```javascript
+// 打开时
+animate('#chatWindow', {
+    scale: [0.92, 1],
+    translateY: [16, 0],
+    opacity: [0, 1],
+    duration: 400,
+    ease: 'out(3)'
+});
+
+// 新消息弹入
+animate('.chat-message:last-child', {
+    scale: [0.95, 1],
+    opacity: [0, 1],
+    duration: 300,
+    ease: 'out(2)'
+});
+```
+
+### 4. 性能与兼容性要点
+
+- **只动画 transform / opacity**：避免动画 `width/height/top/left` 触发重排
+- **视口内才动画**：大量卡片配合 IntersectionObserver，进入视口才执行
+- **尊重 `prefers-reduced-motion`**：用户系统开启"减少动态效果"时全部跳过
+- **优雅降级**：`typeof anime === 'undefined'` 或加载失败时，保留现有 CSS 动画兜底，站点功能不受影响
+- **避免与现有动画冲突**：接入时移除被替代的 CSS/rAF 实现（如 `.card` 的 CSS 渐入、`animateCounter`、打字定时器）
+
+### 5. 实施步骤
+
+1. 下载 `anime.umd.min.js` 到 `js/vendor/`，两个页面引入
+2. 新建 `js/animations.js` 骨架（含 reducedMotion 判断与降级）
+3. 首页：Hero 标题 → 统计数字 → 卡片 stagger → 滚动淡入
+4. 文章页：内容入场 → 目录高亮 → 聊天窗口开关
+5. 全局：主题切换过渡、卡片 hover 微交互
+6. 清理被替代的旧动画代码，回归测试两个页面
+7. 更新项目文档与更新日志
+
+### 6. 优先级建议
+
+| 优先级 | 动画 | 收益 | 工作量 |
+|--------|------|------|--------|
+| P0 | 卡片 stagger 入场 | 首页第一印象 | 小 |
+| P0 | 统计数字动画 | 直观 | 小 |
+| P1 | 主题切换过渡 | 亮点功能 | 中 |
+| P1 | 聊天窗口开关弹性动画 | 交互反馈 | 小 |
+| P2 | Hero 标题逐字动画 | 视觉冲击 | 小 |
+| P2 | 滚动淡入 + 卡片 hover | 细节打磨 | 中 |
+| P3 | 文章内容/目录过渡 | 阅读体验 | 中 |
+
+---
+
+**状态：** AI 助手部分已实施（v2.2.0）；Anime.js 动画方案待评审
 **作者：** 渡鸦NULL
