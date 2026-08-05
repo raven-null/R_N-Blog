@@ -2322,3 +2322,11 @@ body {
     border-color: var(--text-primary);
     color: var(--text-primary);
 }
+
+/* 页脚进入视口时隐藏右侧固定按钮，避免遮挡页脚内容 */
+body.footer-visible .back-to-top,
+body.footer-visible .theme-toggle {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
