@@ -896,7 +896,7 @@ body {
     width: 36px;
     height: 36px;
     border-radius: 50%;
-    background: var(--bg-tertiary) url('../images/system1.jpg') center/cover;
+    background: var(--bg-tertiary) url('../images/TX/03_TX.webp') center/cover;
     border: 2px solid var(--bg-card);
     z-index: 2;
     overflow: hidden;

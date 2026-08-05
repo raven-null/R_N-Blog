@@ -207,10 +207,19 @@ const BlogApp = {
         postsContainer.innerHTML = `<div class="waterfall">${postsHTML}</div>`;
     },
 
+    // 根据作者名字返回对应头像
+    getAuthorAvatar(author) {
+        const name = (author || '').trim();
+        if (name === '渡鸦NULL') return 'images/TX/01_TX.webp';
+        if (name === 'AI') return 'images/TX/02_TX.webp';
+        return 'images/TX/03_TX.webp';
+    },
+
     // 渲染单个文章卡片
     renderPostCard(post) {
         const gradientColors = this.getGradientColors(post.tags || []);
         const dateFormatted = this.formatDate(post.date);
+        const avatarImg = this.getAuthorAvatar(post.author);
 
         return `
             <div class="card" onclick="BlogApp.openPost('${post.filename}')">
@@ -225,7 +234,7 @@ const BlogApp = {
                     </div>
                 `}
                 <div class="card-body">
-                    <div class="card-avatar"></div>
+                    <div class="card-avatar" style="background-image:url('${avatarImg}');"></div>
                     <div class="card-username">${post.author}</div>
                     <div class="card-tag">
                         ${(post.tags || []).map(tag => `<span>${tag}</span>`).join(' ')}
