@@ -31,14 +31,12 @@ const AIChat = {
     sessions: [],
     currentSessionId: null,
     messages: [],
-    feedback: {},
     isWaiting: false,
     abortController: null,
     unreadCount: 0,
 
     // 初始化
     init() {
-        this.loadFeedback();
         this.createChatUI();
         this.bindEvents();
         this.loadSessions();
@@ -670,7 +668,7 @@ const AIChat = {
         this.scrollToBottom(true);
     },
 
-    // 消息快捷操作：复制 / 重新生成 / 反馈
+    // 消息快捷操作：复制 / 重新生成
     addReplyActions(el, text) {
         if (el.querySelector('.chat-reply-actions')) return;
         const body = el.querySelector('.chat-message-body');
@@ -678,23 +676,13 @@ const AIChat = {
         actions.className = 'chat-reply-actions';
         actions.innerHTML = `
             <button class="chat-action-btn chat-copy-btn" title="复制">复制</button>
-            <button class="chat-action-btn chat-regen-btn" title="重新生成">重新生成</button>
-            <button class="chat-action-btn chat-like-btn" title="有帮助">👍</button>
-            <button class="chat-action-btn chat-dislike-btn" title="没帮助">👎</button>`;
+            <button class="chat-action-btn chat-regen-btn" title="重新生成">重新生成</button>`;
         body.appendChild(actions);
 
         actions.querySelector('.chat-copy-btn').addEventListener('click', (e) => {
             this.copyText(text, e.currentTarget).catch(err => console.warn('[AIChat] 复制失败:', err));
         });
         actions.querySelector('.chat-regen-btn').addEventListener('click', () => this.regenerate(el));
-        actions.querySelector('.chat-like-btn').addEventListener('click', () => this.feedback(el, 'up'));
-        actions.querySelector('.chat-dislike-btn').addEventListener('click', () => this.feedback(el, 'down'));
-
-        // 恢复已保存的反馈状态
-        const idx = this.messages.findIndex(m => m.role === 'assistant' && m.content === text);
-        const key = `${this.currentSessionId}:${idx}`;
-        if (this.feedback[key] === 'up') actions.querySelector('.chat-like-btn').classList.add('active');
-        if (this.feedback[key] === 'down') actions.querySelector('.chat-dislike-btn').classList.add('active');
     },
 
     async copyText(text, btn) {
@@ -730,32 +718,6 @@ const AIChat = {
         this.saveSessions();
         if (!userText) return;
         this.sendMessage(userText, { force: true }).catch(err => console.warn('[AIChat] 重新生成失败:', err));
-    },
-
-    // 反馈（点赞/点踩）
-    feedback(el, type) {
-        const raw = el.dataset.raw;
-        const idx = this.messages.findIndex(m => m.role === 'assistant' && m.content === raw);
-        const key = `${this.currentSessionId}:${idx}`;
-        const likeBtn = el.querySelector('.chat-like-btn');
-        const dislikeBtn = el.querySelector('.chat-dislike-btn');
-
-        if (this.feedback[key] === type) {
-            delete this.feedback[key];
-            likeBtn.classList.remove('active');
-            dislikeBtn.classList.remove('active');
-        } else {
-            this.feedback[key] = type;
-            likeBtn.classList.toggle('active', type === 'up');
-            dislikeBtn.classList.toggle('active', type === 'down');
-        }
-        try { localStorage.setItem('chat-feedback', JSON.stringify(this.feedback)); } catch (e) { }
-    },
-
-    loadFeedback() {
-        try {
-            this.feedback = JSON.parse(localStorage.getItem('chat-feedback')) || {};
-        } catch (e) { this.feedback = {}; }
     },
 
     // 会话管理
