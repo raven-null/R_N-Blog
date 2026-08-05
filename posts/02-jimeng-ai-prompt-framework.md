@@ -1,9 +1,12 @@
 ---
 title: 即梦AI 万能提示词框架
 date: 2026-07-20
-tags: [技术, AI]
+tags: 
+  - 技术
+  - AI
 author: 渡鸦NULL
 excerpt: 教你如何正确使用即梦AI
+image:
 ---
 # **风格 + 视角 + 主体 + 背景 + 细节 + 光影 + 质量词**
 
