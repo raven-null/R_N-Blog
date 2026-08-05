@@ -236,6 +236,10 @@
             border-left: 2px solid transparent;
             line-height: 1.4;
             outline: none;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            min-width: 0;
         }
 
         .toc-list a:focus {
@@ -326,11 +330,9 @@
         }
 
         .toc-list .toc-parent-title > a {
-            display: flex;
-            align-items: center;
-            gap: 6px;
             cursor: pointer;
             flex: 1;
+            min-width: 0;
         }
 
         /* 折叠图标 */
@@ -1597,6 +1599,7 @@
                     const a = document.createElement('a');
                     a.href = `#${id}`;
                     a.textContent = heading.textContent;
+                    a.title = heading.textContent;
 
                     // 点击平滑滚动到对应标题
                     a.addEventListener('click', (e) => {
