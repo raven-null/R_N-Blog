@@ -426,7 +426,7 @@ const AIChat = {
             chatWindow.style.transform = '';
         }
         const input = document.getElementById('chatInput');
-        if (input) input.focus();
+        if (input) input.focus({ preventScroll: true });
         this.unreadCount = 0;
         this.updateBadge();
     },
@@ -996,7 +996,7 @@ const AIChat = {
                     input.style.height = Math.min(input.scrollHeight, 100) + 'px';
                     this.updateCharCount();
                     menu.style.display = 'none';
-                    input.focus();
+                    input.focus({ preventScroll: true });
                 });
                 menu.appendChild(item);
             });

@@ -314,7 +314,7 @@ const BlogApp = {
         if (willShow) this.closeTagsPanel();
         dropdown.classList.toggle('show', willShow);
         if (willShow) {
-            setTimeout(() => document.getElementById('searchInput').focus(), 100);
+            setTimeout(() => document.getElementById('searchInput').focus({ preventScroll: true }), 100);
         } else {
             // 关闭时清空搜索
             const input = document.getElementById('searchInput');
