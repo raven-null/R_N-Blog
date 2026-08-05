@@ -20,7 +20,6 @@ const BlogAnimations = {
         // 首页：#posts 为静态容器，卡片异步渲染，由 MutationObserver 接管
         if (document.getElementById('posts') || document.querySelector('.card')) {
             this.initCardEntrance();
-            this.initCardHover();
         }
     },
 
@@ -56,28 +55,41 @@ const BlogAnimations = {
         });
     },
 
-    // 瀑布流卡片错峰入场
+    // 瀑布流卡片入场（首批完整入场，后续渲染仅快速淡入，避免"刷新"感）
     initCardEntrance() {
         document.documentElement.classList.add('anime-ready');
+
+        let batch = 0;
 
         const observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
                 if (!entry.isIntersecting) return;
                 const card = entry.target;
-                anime.animate(card, {
-                    opacity: [0, 1],
-                    translateY: [40, 0],
-                    scale: [0.98, 1],
-                    duration: 700,
-                    ease: 'out(3)'
-                });
+                if (card.dataset.fullEnter) {
+                    delete card.dataset.fullEnter;
+                    anime.animate(card, {
+                        opacity: [0, 1],
+                        translateY: [40, 0],
+                        scale: [0.98, 1],
+                        duration: 700,
+                        ease: 'out(3)'
+                    });
+                } else {
+                    // 非首次渲染：仅快速淡入
+                    anime.animate(card, { opacity: [0, 1], duration: 300, ease: 'out(2)' });
+                }
                 observer.unobserve(card);
             });
         }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
 
         const observeCards = () => {
-            document.querySelectorAll('.card:not([data-anime-entered])').forEach(card => {
+            const cards = document.querySelectorAll('.card:not([data-anime-entered])');
+            if (!cards.length) return;
+            batch++;
+            const full = batch === 1;
+            cards.forEach(card => {
                 card.dataset.animeEntered = '1';
+                if (full) card.dataset.fullEnter = '1';
                 observer.observe(card);
             });
         };
@@ -87,27 +99,6 @@ const BlogAnimations = {
         const container = document.getElementById('posts');
         if (container && typeof MutationObserver !== 'undefined') {
             new MutationObserver(observeCards).observe(container, { childList: true, subtree: true });
-        }
-    },
-
-    // 卡片 hover 微交互
-    initCardHover() {
-        const setup = (card) => {
-            if (card.dataset.hoverAnim) return;
-            card.dataset.hoverAnim = '1';
-            card.addEventListener('mouseenter', () => {
-                anime.animate(card, { translateY: [0, -6], scale: [1, 1.02], duration: 300, ease: 'out(3)' });
-            });
-            card.addEventListener('mouseleave', () => {
-                anime.animate(card, { translateY: [-6, 0], scale: [1.02, 1], duration: 300, ease: 'out(3)' });
-            });
-        };
-        document.querySelectorAll('.card').forEach(setup);
-
-        const container = document.getElementById('posts');
-        if (container && typeof MutationObserver !== 'undefined') {
-            new MutationObserver(() => document.querySelectorAll('.card:not([data-hover-anim])').forEach(setup))
-                .observe(container, { childList: true, subtree: true });
         }
     },
 
