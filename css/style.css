@@ -53,6 +53,50 @@ body {
     transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.8s ease;
 }
 
+/* 顶部导航栏 */
+.top-bar {
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+}
+
+.top-bar-inner {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 40px;
+    gap: 16px;
+}
+
+.top-bar-brand {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--text-primary);
+    text-decoration: none;
+}
+
+.top-bar-links {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.top-bar-links a {
+    font-size: 12px;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.top-bar-links a:hover {
+    color: var(--accent);
+}
+
 .content-wrapper.visible {
     transform: translateY(0);
     opacity: 1;
@@ -1730,6 +1774,28 @@ body {
     .chat-container {
         bottom: 12px;
         right: 12px;
+    }
+
+    /* 顶部导航栏移动端：收窄品牌字距、隐藏链接 */
+    .top-bar {
+        padding: 0 16px;
+    }
+
+    .top-bar-inner {
+        height: 36px;
+    }
+
+    .top-bar-brand {
+        font-size: 12px;
+        letter-spacing: 2px;
+    }
+
+    .top-bar-links {
+        gap: 12px;
+    }
+
+    .top-bar-links a {
+        font-size: 11px;
     }
 
     .chat-toggle {
