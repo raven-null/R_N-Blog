@@ -722,5 +722,100 @@ const visible = showMore ? all.slice(0, MAX_VISIBLE) : all;
 
 ---
 
-**状态：** AI 助手部分已实施（v2.2.0）；Anime.js 动画方案已实施（v2.4.0）；首页改造方案已实施（v2.4.2，P0/P1 项）；标签区改为导航栏"全部标签"面板（v2.4.5）；Hero 重设计已实施（v2.5.0，P0/P1 项）
+## 十一、参考 animejs.com 的动效改造建议
+
+> 参考 [animejs.com](https://animejs.com) 首页展示的动画手法，结合本站现状（Hero 已精简、卡片瀑布流、标签面板、AI 聊天、主题切换），提出可落地的动效改造。
+
+### 1. 借鉴点与对应方案
+
+| animejs.com 特性 | 本站现状 | 改造建议 |
+|------------------|----------|----------|
+| **Scroll Observer**（滚动同步触发） | 卡片入场用 IntersectionObserver | 升级为 Scroll Observer：文章区标题/加载更多按钮滚动进入时同步触发；阅读进度条改为滚动同步（`onScroll({ sync: true })`） |
+| **时间轴 Timeline**（顺序编排） | Hero 入场用多个 CSS animation | 用 `createTimeline()` 编排 Hero 入场：品牌标签 → 副标题 → CTA → 背景渐变，统一节奏 |
+| **关键帧 + 逐行文本揭示** | 已删除大标题 | 品牌标签做"描边绘制/滑动裁切"揭示（`clip-path` 关键帧），增强首屏仪式感 |
+| **SVG 描边绘制（createDrawable）** | 无 SVG 装饰 | Hero 副标题下方加一条 SVG 装饰线，加载时自动"画出来"；或品牌标签下沿加渐变描边 |
+| **运动路径（createMotionPath）** | 粒子 Canvas | 加 1-2 个光点沿隐藏 SVG 路径缓慢运动，作为 Hero 背景点缀（替代被删除的光球） |
+| **网格错峰（stagger grid from:center）** | 瀑布流线性入场 | 标签面板打开时，标签胶囊从中心向两侧错峰弹出；卡片可尝试 `grid` 错峰（瀑布流受限则保留线性） |
+| **弹簧物理（spring）** | CTA/主题按钮 hover 用 CSS | CTA、主题切换按钮 hover 改用弹簧弹性（`spring({ bounce: .6 })`），手感更"弹" |
+| **Draggable API（释放回弹）** | AI 聊天窗口为手写拖拽 | 用 `createDraggable` 实现聊天窗口拖拽 + 释放回弹（`releaseEase: spring`），并保留大小调整逻辑 |
+| **随机/函数值（random）** | 粒子固定参数 | 卡片封面渐变色、装饰元素位置可用 `random()` 生成，每次刷新略有差异 |
+| **媒体查询（Scope）** | 响应式靠 CSS | 用 `createScope({ mediaQueries })` 控制移动端动画开关（如移动端跳过背景光点） |
+
+### 2. 重点方案详情
+
+#### 2.1 Hero 入场时间轴（替换 CSS 动画）
+
+```javascript
+import { createTimeline, spring } from 'animejs';
+
+createTimeline({ defaults: { ease: 'out(3)' } })
+    .add('.hero-tag', { opacity: [0, 1], translateY: [14, 0], duration: 500 })
+    .add('.hero-subtitle', { opacity: [0, 1], translateY: [10, 0], duration: 500 }, '-=300')
+    .add('.hero-cta', { opacity: [0, 1], scale: [0.9, 1], duration: 400 }, '-=250')
+    .add('.scroll-indicator', { opacity: [0, 1], duration: 600 }, '-=150');
+```
+
+#### 2.2 Hero 装饰光点沿路径运动
+
+```javascript
+import { createMotionPath } from 'animejs';
+
+const path = createMotionPath('#heroPath');
+animate('.hero-dot', {
+    x: path.x, y: path.y,
+    duration: 12000,
+    loop: true,
+    ease: 'linear'
+});
+```
+
+#### 2.3 标签面板打开时错峰弹出
+
+```javascript
+import { stagger } from 'animejs';
+
+// tagsDropdown 显示后执行
+animate('.tags-dropdown-list .tag-btn', {
+    opacity: [0, 1],
+    scale: [0.8, 1],
+    delay: stagger(25, { from: 'center' }),
+    duration: 250
+});
+```
+
+#### 2.4 CTA / 主题按钮弹簧 hover
+
+```javascript
+import { spring } from 'animejs';
+
+cta.addEventListener('mouseenter', () => {
+    animate(cta, { scale: [1, 1.05], duration: 400, ease: spring({ bounce: .6 }) });
+});
+cta.addEventListener('mouseleave', () => {
+    animate(cta, { scale: [1.05, 1], duration: 400, ease: spring({ bounce: .6 }) });
+});
+```
+
+### 3. 注意事项
+
+- 本站已加载完整 UMD（含 Scroll/Draggable/SVG 模块），无额外包体积
+- 已实施的内容不重复叠加：卡片入场、主题切换过渡保留现状，避免动画过多造成"满而杂"
+- 全部动画尊重 `prefers-reduced-motion`（沿用 `BlogAnimations.ready` 判断）
+- 移动端：关闭背景光点/装饰线，仅保留时间轴入场与滚动同步
+
+### 4. 优先级
+
+| 优先级 | 事项 | 收益 |
+|--------|------|------|
+| P0 | Hero 入场时间轴（统一节奏） | 首屏质感 |
+| P0 | 标签面板错峰弹出 | 交互反馈 |
+| P1 | 滚动同步（Scroll Observer） | 滚动叙事感 |
+| P1 | CTA/主题按钮弹簧 hover | 手感提升 |
+| P2 | SVG 装饰线绘制 / 光点路径 | Hero 氛围 |
+| P2 | 聊天窗口 Draggable 回弹 | 交互细节 |
+| P3 | 随机函数值 / 媒体查询分支 | 打磨 |
+
+---
+
+**状态：** AI 助手部分已实施（v2.2.0）；Anime.js 动画方案已实施（v2.4.0）；首页改造方案已实施（v2.4.2，P0/P1 项）；标签区改为导航栏"全部标签"面板（v2.4.5）；Hero 重设计已实施（v2.5.0，P0/P1 项）；animejs.com 动效借鉴方案待评审
 **作者：** 渡鸦NULL
