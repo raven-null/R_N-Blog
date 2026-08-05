@@ -891,8 +891,8 @@ body {
 
 .card-author {
     position: relative;
-    height: 44px;
-    margin-bottom: 8px;
+    height: 24px;
+    margin-bottom: 4px;
 }
 
 .card-avatar {
