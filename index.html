@@ -30,7 +30,8 @@
         <header class="top-bar">
             <div class="top-bar-inner">
                 <a href="index.html" class="top-bar-brand">渡鸦_NULL BLOG</a>
-                <div class="top-bar-views">
+                <div class="top-bar-views" id="viewSwitch">
+                    <div class="view-indicator" id="viewIndicator"></div>
                     <button class="view-btn active" data-view="blog" onclick="BlogApp.switchView('blog')">博客</button>
                     <button class="view-btn" data-view="gallery" onclick="BlogApp.switchView('gallery')">图库</button>
                     <button class="view-btn" data-view="dashboard" onclick="BlogApp.switchView('dashboard')">仪表盘</button>
@@ -254,6 +255,9 @@
 
                 const tagsTitle = document.getElementById('tagsDropdownTitle');
                 if (tagsTitle) tagsTitle.textContent = `全部标签（${tagCount} 个）`;
+
+                // 初始化视图滑块指示器位置
+                setTimeout(() => BlogApp.moveIndicator('blog'), 0);
 
                 // Init card observer after posts render
                 setTimeout(() => initCardObserver(), 100);

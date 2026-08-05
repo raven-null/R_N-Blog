@@ -390,6 +390,9 @@ const BlogApp = {
             btn.classList.toggle('active', btn.dataset.view === view);
         });
 
+        // 滑块指示器动画
+        this.moveIndicator(view);
+
         // 标签导航仅博客视图展示
         const navBar = document.getElementById('navBar');
         if (navBar) navBar.style.display = view === 'blog' ? '' : 'none';
@@ -410,6 +413,30 @@ const BlogApp = {
         }
 
         window.scrollTo(0, 0);
+    },
+
+    // 滑块指示器移动到指定视图按钮（Anime.js 动画）
+    moveIndicator(view) {
+        const indicator = document.getElementById('viewIndicator');
+        const btn = document.querySelector('.view-btn[data-view="' + view + '"]');
+        if (!indicator || !btn) return;
+        const wrap = indicator.parentElement;
+        const wrapRect = wrap.getBoundingClientRect();
+        const btnRect = btn.getBoundingClientRect();
+        const left = btnRect.left - wrapRect.left;
+        const width = btnRect.width;
+
+        if (typeof anime !== 'undefined') {
+            anime.animate(indicator, {
+                left: [parseFloat(indicator.style.left) || left, left],
+                width: [parseFloat(indicator.style.width) || width, width],
+                duration: 350,
+                ease: 'out(3)'
+            });
+        } else {
+            indicator.style.left = left + 'px';
+            indicator.style.width = width + 'px';
+        }
     },
 
     // 渲染图库（BG 封面图网格）
@@ -481,6 +508,10 @@ const BlogApp = {
     // 设置事件监听
     setupEventListeners() {
         window.addEventListener('popstate', () => this.handleRoute());
+        // 窗口尺寸变化时同步滑块位置
+        window.addEventListener('resize', () => {
+            this.moveIndicator(this.currentView);
+        });
     },
 
     // 处理 URL 路由（标签）
