@@ -354,13 +354,13 @@ const BlogApp = {
         if (panel) panel.classList.remove('show');
     },
 
-    // 关闭搜索框
+    // 关闭搜索框（仅在已打开时生效，避免重复渲染触发入场动画）
     closeSearch() {
         const dropdown = document.getElementById('searchDropdown');
-        if (!dropdown) return;
+        if (!dropdown || !dropdown.classList.contains('show')) return;
         dropdown.classList.remove('show');
         const input = document.getElementById('searchInput');
-        if (input) {
+        if (input && input.value) {
             input.value = '';
             this.searchPosts('');
         }
