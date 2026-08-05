@@ -21,69 +21,6 @@ const BlogAnimations = {
         if (document.getElementById('posts') || document.querySelector('.card')) {
             this.initCardEntrance();
         }
-        if (document.querySelector('.hero-content')) {
-            this.initHeroEntrance();
-            this.initCtaHover();
-        }
-    },
-
-    // Hero 入场时间轴（品牌胶囊 → 标题逐字 → 副标题 → CTA → 滚动指示）
-    initHeroEntrance() {
-        document.documentElement.classList.add('anime-ready');
-
-        const tag = document.querySelector('.hero-tag');
-        const titleEl = document.querySelector('.hero-title .highlight');
-        const subtitle = document.querySelector('.hero-subtitle');
-        const cta = document.querySelector('.hero-cta');
-        const indicator = document.querySelector('.scroll-indicator');
-
-        // 标题逐字拆分（保留空格）
-        if (titleEl) {
-            const text = titleEl.textContent;
-            titleEl.innerHTML = text.split('').map(c => `<span class="hero-char">${c === ' ' ? '&nbsp;' : c}</span>`).join('');
-        }
-
-        try {
-            const timeline = anime.createTimeline({ defaults: { ease: 'out(3)' } });
-            if (tag) timeline.add(tag, { opacity: [0, 1], translateY: [14, 0], duration: 500 });
-            if (titleEl) {
-                timeline.add('.hero-title .hero-char', {
-                    opacity: [0, 1],
-                    translateY: [18, 0],
-                    duration: 500,
-                    delay: anime.stagger(40, { from: 'center' })
-                }, '-=200');
-            }
-            if (subtitle) timeline.add(subtitle, { opacity: [0, 1], translateY: [10, 0], duration: 500 }, '-=300');
-            if (cta) timeline.add(cta, { opacity: [0, 1], scale: [0.92, 1], duration: 450 }, '-=250');
-            if (indicator) timeline.add(indicator, { opacity: [0, 1], duration: 600 }, '-=150');
-        } catch (e) {
-            // 时间轴失败时回退：逐个淡入
-            [tag, subtitle, cta, indicator].forEach((el, i) => {
-                if (el) anime.animate(el, { opacity: [0, 1], duration: 500, delay: i * 200, ease: 'out(3)' });
-            });
-            if (titleEl) anime.animate('.hero-title .hero-char', { opacity: [0, 1], duration: 400, ease: 'out(3)' });
-        }
-    },
-
-    // CTA 按钮弹簧 hover
-    initCtaHover() {
-        const cta = document.querySelector('.hero-cta');
-        if (!cta) return;
-        cta.addEventListener('mouseenter', () => {
-            try {
-                anime.animate(cta, { scale: [1, 1.05], duration: 400, ease: anime.spring({ bounce: 0.6 }) });
-            } catch (e) {
-                anime.animate(cta, { scale: [1, 1.05], duration: 300, ease: 'out(3)' });
-            }
-        });
-        cta.addEventListener('mouseleave', () => {
-            try {
-                anime.animate(cta, { scale: [1.05, 1], duration: 400, ease: anime.spring({ bounce: 0.6 }) });
-            } catch (e) {
-                anime.animate(cta, { scale: [1.05, 1], duration: 300, ease: 'out(3)' });
-            }
-        });
     },
 
     // 标签面板打开时错峰弹出

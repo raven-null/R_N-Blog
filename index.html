@@ -23,32 +23,6 @@
 
 <body>
 
-    <!-- ===== HERO SECTION (Full Page) ===== -->
-    <section class="hero" id="hero">
-        <!-- Background Gradient Animation -->
-        <div class="hero-bg-gradient"></div>
-
-        <!-- Particles -->
-        <canvas class="hero-particles" id="heroParticles"></canvas>
-
-        <!-- Content -->
-        <div class="hero-content">
-            <div class="hero-tag">渡鸦_NULL BLOG</div>
-            <h1 class="hero-title"><span class="highlight">HELLO, WORLD.</span></h1>
-            <p class="hero-subtitle">只要你不失去你的崇高，整个世界都将向你敞开</p>
-            <a href="#" class="hero-cta" onclick="document.getElementById('contentWrapper').scrollIntoView({ behavior: 'smooth' }); return false;">开始阅读</a>
-        </div>
-
-        <!-- Accent Line -->
-        <div class="hero-accent-line"></div>
-
-        <!-- Scroll indicator -->
-        <div class="scroll-indicator" id="scrollIndicator">
-            <span>Scroll</span>
-            <div class="scroll-arrow"></div>
-        </div>
-    </section>
-
     <!-- ===== CONTENT WRAPPER ===== -->
     <div class="content-wrapper" id="contentWrapper">
 
@@ -141,120 +115,6 @@
     <script src="js/animations.js"></script>
 
     <script>
-        // ===== Hero Particles =====
-        class HeroParticles {
-            constructor(canvas) {
-                this.canvas = canvas;
-                this.ctx = canvas.getContext('2d');
-                this.particles = [];
-                this.mouse = { x: 0, y: 0 };
-                this.cachedAccent = '#ffffff';
-                this.lastColorCheck = 0;
-                this.resize();
-                this.init();
-                this.animate();
-
-                window.addEventListener('resize', () => this.resize());
-                
-                // 鼠标移动事件节流
-                let mouseTimer = null;
-                window.addEventListener('mousemove', (e) => {
-                    if (mouseTimer) return;
-                    mouseTimer = requestAnimationFrame(() => {
-                        this.mouse.x = e.clientX;
-                        this.mouse.y = e.clientY;
-                        mouseTimer = null;
-                    });
-                });
-            }
-
-            resize() {
-                this.canvas.width = window.innerWidth;
-                this.canvas.height = window.innerHeight;
-            }
-
-            init() {
-                const count = Math.min(50, Math.floor(window.innerWidth / 20));
-                this.particles = [];
-                for (let i = 0; i < count; i++) {
-                    this.particles.push({
-                        x: Math.random() * this.canvas.width,
-                        y: Math.random() * this.canvas.height,
-                        vx: (Math.random() - 0.5) * 0.3,
-                        vy: (Math.random() - 0.5) * 0.3,
-                        size: Math.random() * 1.5 + 0.5,
-                        opacity: Math.random() * 0.4 + 0.1
-                    });
-                }
-            }
-
-            animate() {
-                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-
-                // 每秒检查一次主题颜色
-                const now = Date.now();
-                if (now - this.lastColorCheck > 1000) {
-                    const style = getComputedStyle(document.documentElement);
-                    this.cachedAccent = style.getPropertyValue('--accent').trim() || '#ffffff';
-                    this.lastColorCheck = now;
-                }
-
-                const particles = this.particles;
-                const len = particles.length;
-                
-                for (let i = 0; i < len; i++) {
-                    const p = particles[i];
-                    p.x += p.vx;
-                    p.y += p.vy;
-
-                    // Mouse interaction
-                    const dx = this.mouse.x - p.x;
-                    const dy = this.mouse.y - p.y;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-                    if (dist < 150) {
-                        p.x -= dx * 0.01;
-                        p.y -= dy * 0.01;
-                    }
-
-                    // Wrap around
-                    if (p.x < 0) p.x = this.canvas.width;
-                    if (p.x > this.canvas.width) p.x = 0;
-                    if (p.y < 0) p.y = this.canvas.height;
-                    if (p.y > this.canvas.height) p.y = 0;
-
-                    // Draw particle
-                    this.ctx.beginPath();
-                    this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-                    this.ctx.fillStyle = this.hexToRgba(this.cachedAccent, p.opacity);
-                    this.ctx.fill();
-
-                    // Connect nearby particles (优化：限制检查范围)
-                    for (let j = i + 1; j < len && j < i + 10; j++) {
-                        const p2 = particles[j];
-                        const d = Math.sqrt((p.x - p2.x) ** 2 + (p.y - p2.y) ** 2);
-                        if (d < 120) {
-                            this.ctx.beginPath();
-                            this.ctx.moveTo(p.x, p.y);
-                            this.ctx.lineTo(p2.x, p2.y);
-                            this.ctx.strokeStyle = this.hexToRgba(this.cachedAccent, 0.06 * (1 - d / 120));
-                            this.ctx.stroke();
-                        }
-                    }
-                }
-
-                requestAnimationFrame(() => this.animate());
-            }
-
-            hexToRgba(hex, alpha) {
-                hex = hex.replace('#', '');
-                if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
-                const r = parseInt(hex.substring(0, 2), 16);
-                const g = parseInt(hex.substring(2, 4), 16);
-                const b = parseInt(hex.substring(4, 6), 16);
-                return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-            }
-        }
-
         // ===== Scroll Observer =====
         function initScrollObserver() {
             const wrapper = document.getElementById('contentWrapper');
@@ -290,10 +150,6 @@
 
         // ===== Init =====
         document.addEventListener('DOMContentLoaded', () => {
-            // Particles
-            const canvas = document.getElementById('heroParticles');
-            if (canvas) new HeroParticles(canvas);
-
             // Scroll observer
             initScrollObserver();
 
@@ -323,14 +179,6 @@
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                 });
             })();
-
-            // Scroll indicator click
-            const scrollIndicator = document.getElementById('scrollIndicator');
-            if (scrollIndicator) {
-                scrollIndicator.addEventListener('click', () => {
-                    document.getElementById('contentWrapper').scrollIntoView({ behavior: 'smooth' });
-                });
-            }
 
             // ESC to close search
             document.addEventListener('keydown', (e) => {
