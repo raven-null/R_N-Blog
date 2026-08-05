@@ -480,6 +480,7 @@ const BlogApp = {
 
         const posts = this.posts.length;
         const tags = new Set(this.posts.flatMap(p => p.tags || [])).size;
+        const minutes = this.posts.reduce((s, p) => s + Math.max(1, Math.round((p.wordCount || 0) / 300)), 0);
         let images = 0;
         try {
             images = (await this.loadGalleryManifest()).length;
@@ -496,35 +497,14 @@ const BlogApp = {
                 <div class="dashboard-label">标签</div>
             </div>
             <div class="dashboard-card">
-                <div class="dashboard-num"><span id="dashOnline">--</span></div>
-                <div class="dashboard-label">在线人数</div>
+                <div class="dashboard-num">${minutes}</div>
+                <div class="dashboard-label">预计阅读(分钟)</div>
             </div>
             <div class="dashboard-card">
                 <div class="dashboard-num">${images}</div>
                 <div class="dashboard-label">图库图片</div>
             </div>
         `;
-
-        // 在线人数：读取不蒜子站点访客数
-        const onlineEl = document.getElementById('dashOnline');
-        if (onlineEl) {
-            const readOnline = () => {
-                const uv = document.getElementById('busuanzi_site_uv');
-                const v = uv && uv.textContent ? uv.textContent.trim() : '';
-                if (v && v !== '--' && v !== '0') {
-                    onlineEl.textContent = v;
-                    return true;
-                }
-                return false;
-            };
-            if (!readOnline()) {
-                let tries = 0;
-                const timer = setInterval(() => {
-                    tries++;
-                    if (readOnline() || tries > 30) clearInterval(timer);
-                }, 500);
-            }
-        }
 
         // 最近文章（最新 5 篇，按日期倒序）
         const recent = [...this.posts].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
