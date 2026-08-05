@@ -890,5 +890,116 @@ Hero 目前只剩：背景渐变 + 粒子 Canvas + 强调线 + 滚动指示，�
 
 ---
 
-**状态：** AI 助手部分已实施（v2.2.0）；Anime.js 动画方案已实施（v2.4.0）；首页改造方案已实施（v2.4.2，P0/P1 项）；标签区改为导航栏"全部标签"面板（v2.4.5）；Hero 重设计已实施（v2.5.0，P0/P1 项）；animejs.com 动效借鉴已实施（v2.5.2，P0/P1 项）；Hero 区重新设计已实施（v2.6.0，方案 A）
+## 十三、Hero 与内容区"左右切换"方案
+
+> 目标：将"滚动进入内容"改为 Hero 与内容区之间**左右滑动切换**，切换带流畅动画，形成"两页全屏"的沉浸体验。
+
+### 1. 交互概念
+
+把首页做成**横向两页 Pager**：
+
+- **页 1（左）**：Hero（首屏品牌区）
+- **页 2（右）**：内容区（文章瀑布流，内部纵向滚动）
+
+通过左右滑动在两页间切换，而非垂直滚动。
+
+### 2. 页面结构调整
+
+```html
+<div class="pages" id="pages">                    <!-- 横向容器，Anime.js 驱动 translateX -->
+    <section class="page page-hero" id="hero">      <!-- 页 1：现 Hero -->
+        ...
+    </section>
+    <div class="page page-content" id="contentPage"> <!-- 页 2：现 contentWrapper -->
+        <nav class="nav-bar">...</nav>
+        <main class="main-content">...</main>
+        <footer class="footer">...</footer>
+    </div>
+</div>
+```
+
+- `.pages`：`width: 200vw; display: flex;`，两页各 `width: 100vw; height: 100vh`
+- `body { overflow: hidden; }`，内容页内部 `overflow-y: auto`
+- 现有 `#contentWrapper` 改为内容页内部容器
+
+### 3. 切换交互（四选多）
+
+| 触发 | 说明 |
+|------|------|
+| **左右箭头按钮** | 页面两侧悬浮箭头（如 Hero 右侧 `→` 进入内容；内容左侧 `←` 返回） |
+| **键盘 ← →** | 方向键左右切换（可复用现有 WASD 逻辑，新增 `←/→`） |
+| **触屏滑动** | `touchstart/touchmove/touchend` 或 Pointer Events 监听横向滑动阈值 |
+| **CTA / 返回** | Hero 的"开始阅读"→ 切到内容；内容顶部"返回首页"→ 切回 Hero |
+
+### 4. 切换动画（Anime.js）
+
+```javascript
+import { animate } from 'animejs';
+
+function goTo(pageIndex) {                       // 0 = Hero, 1 = 内容
+    animate('#pages', {
+        translateX: [currentX, -pageIndex * window.innerWidth],
+        duration: 550,
+        ease: 'out(3)'                            // 或 spring({ bounce: .35 }) 轻微回弹
+    });
+    currentX = -pageIndex * window.innerWidth;
+}
+```
+
+**动效细节：**
+- 主动画：容器 `translateX` 平滑滑动
+- 辅助动效：进入的面板 `opacity [0→1]` + 轻微 `scale [0.98→1]`，离场面板反向淡出
+- 切换时内容页内的卡片**不重播**入场（沿用 `data-anime-entered` 机制）
+- 尊重 `prefers-reduced-motion`（直接瞬间切换）
+
+### 5. 既有功能适配（关键）
+
+改为分页后，以下依赖"页面滚动"的逻辑需要适配：
+
+| 功能 | 适配方式 |
+|------|----------|
+| 阅读进度条 | 改为监听内容页内部 `scrollTop` |
+| 回到顶部按钮 | 在内容页内滚动生效；回到 Hero 页时隐藏 |
+| 卡片入场 IntersectionObserver | 以内容页为滚动容器（`root` 设为内容页） |
+| 页脚遮挡（footer-visible） | 基于内容页内部滚动位置计算 |
+| 导航栏吸顶 | 在内容页内 `position: sticky` |
+| URL / 锚点 | 页面切换可用 hash 或 history 记录当前页（`#content`） |
+
+### 6. 响应式与移动端
+
+- 移动端隐藏箭头按钮，依赖触屏左右滑动
+- 两页均为 `100vh`（移动端注意地址栏高度，可用 `100dvh`）
+- 内容页内部正常纵向滚动
+
+### 7. 风险与替代方案
+
+- **优点**：沉浸感强、交互新颖、动效展示充分
+- **风险**：与"传统博客纵向滚动"习惯不同；对既有滚动逻辑改动面大，需回归测试
+- **替代**：
+  - 方案 B（保守）：保留纵向滚动，仅在滚动到内容区时叠加一个"滑动进入"过渡动画（容器 translateY 动画）
+  - 方案 C：仅将 Hero 内的 CTA 点击改为"整页左右滑入内容"，其余保持滚动
+
+### 8. 实施步骤
+
+1. 重构 HTML：`.pages` + 两页结构
+2. `body` 禁止滚动，内容页内部滚动，适配 4 类既有功能
+3. 实现 `goTo(index)` 与切换触发（箭头/键盘/触摸/CTA）
+4. Anime.js 切换动画 + 辅助过渡
+5. 移动端滑动 + `100dvh` 适配
+6. 回归测试（卡片入场、搜索/标签、回到顶部、进度条、页脚遮挡）
+
+### 9. 优先级
+
+| 优先级 | 事项 | 收益 |
+|--------|------|------|
+| P0 | `.pages` 两页结构与基础切换 | 核心功能 |
+| P0 | Anime.js 切换动画 | 视觉 |
+| P1 | 箭头/键盘/CTA 触发 | 易用性 |
+| P1 | 既有功能适配（进度条/回顶/卡片/页脚） | 不破坏现状 |
+| P2 | 触屏滑动 + 100dvh | 移动端 |
+| P2 | URL 状态记录 | 可分享 |
+
+---
+
+**状态：** AI 助手部分已实施（v2.2.0）；Anime.js 动画方案已实施（v2.4.0）；首页改造方案已实施（v2.4.2，P0/P1 项）；标签区改为导航栏"全部标签"面板（v2.4.5）；Hero 重设计已实施（v2.5.0，P0/P1 项）；animejs.com 动效借鉴已实施（v2.5.2，P0/P1 项）；Hero 区重新设计已实施（v2.6.0，方案 A）；Hero 与内容区左右切换方案待评审
 **作者：** 渡鸦NULL
