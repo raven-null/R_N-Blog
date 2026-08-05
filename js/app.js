@@ -15,6 +15,8 @@ const BlogApp = {
     filteredPosts: [],
     // 当前选中的标签
     currentTag: null,
+    // 当前视图（博客 / 图库 / 仪表盘）
+    currentView: 'blog',
     // 当前已加载的文章数量（加载更多）
     visibleCount: 10,
 
@@ -375,6 +377,82 @@ const BlogApp = {
     closePanels() {
         this.closeTagsPanel();
         this.closeSearch();
+    },
+
+    // 切换视图（博客 / 图库 / 仪表盘）
+    switchView(view) {
+        const valid = ['blog', 'gallery', 'dashboard'];
+        if (!valid.includes(view) || this.currentView === view) return;
+        this.currentView = view;
+
+        // 按钮激活态
+        document.querySelectorAll('.view-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.view === view);
+        });
+
+        // 标签导航仅博客视图展示
+        const navBar = document.getElementById('navBar');
+        if (navBar) navBar.style.display = view === 'blog' ? '' : 'none';
+
+        // 视图显隐
+        document.querySelectorAll('.view').forEach(v => {
+            v.style.display = v.id === 'view-' + view ? '' : 'none';
+        });
+
+        // 首次进入渲染内容
+        if (view === 'gallery') this.renderGallery();
+        if (view === 'dashboard') this.renderDashboard();
+
+        // 入场动画
+        const activeView = document.getElementById('view-' + view);
+        if (activeView && typeof anime !== 'undefined') {
+            anime.animate(activeView, { opacity: [0, 1], duration: 350, ease: 'out(2)' });
+        }
+
+        window.scrollTo(0, 0);
+    },
+
+    // 渲染图库（BG 封面图网格）
+    renderGallery() {
+        const grid = document.getElementById('galleryGrid');
+        if (!grid || grid.dataset.rendered) return;
+        grid.dataset.rendered = '1';
+        grid.innerHTML = this.bgImages.map((src, i) => `
+            <figure class="gallery-item">
+                <img src="${src}" alt="图片 ${i + 1}" loading="lazy">
+            </figure>
+        `).join('');
+    },
+
+    // 渲染仪表盘（统计卡片）
+    renderDashboard() {
+        const box = document.getElementById('dashboardStats');
+        if (!box || box.dataset.rendered) return;
+        box.dataset.rendered = '1';
+
+        const posts = this.posts.length;
+        const tags = new Set(this.posts.flatMap(p => p.tags || [])).size;
+        const minutes = this.posts.reduce((s, p) => s + Math.max(1, Math.round((p.wordCount || 0) / 300)), 0);
+        const images = this.bgImages.length;
+
+        box.innerHTML = `
+            <div class="dashboard-card">
+                <div class="dashboard-num">${posts}</div>
+                <div class="dashboard-label">文章</div>
+            </div>
+            <div class="dashboard-card">
+                <div class="dashboard-num">${tags}</div>
+                <div class="dashboard-label">标签</div>
+            </div>
+            <div class="dashboard-card">
+                <div class="dashboard-num">${minutes}</div>
+                <div class="dashboard-label">预计阅读(分钟)</div>
+            </div>
+            <div class="dashboard-card">
+                <div class="dashboard-num">${images}</div>
+                <div class="dashboard-label">图库图片</div>
+            </div>
+        `;
     },
 
     // 搜索文章（按标题、摘要、标签匹配）

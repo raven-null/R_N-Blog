@@ -79,22 +79,34 @@ body {
     text-decoration: none;
 }
 
-.top-bar-links {
+.top-bar-views {
     display: flex;
     align-items: center;
-    gap: 20px;
+    gap: 8px;
 }
 
-.top-bar-links a {
+.view-btn {
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-muted);
     font-size: 12px;
     letter-spacing: 1px;
-    color: var(--text-muted);
-    text-decoration: none;
-    transition: color 0.2s;
+    padding: 4px 16px;
+    border-radius: 100px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
 }
 
-.top-bar-links a:hover {
-    color: var(--accent);
+.view-btn:hover {
+    color: var(--text-primary);
+    border-color: var(--text-secondary);
+}
+
+.view-btn.active {
+    background: var(--accent);
+    color: var(--bg-primary);
+    border-color: var(--accent);
 }
 
 .content-wrapper.visible {
@@ -405,6 +417,78 @@ body {
     max-width: 100%;
     margin: 0 auto;
     padding: 40px 48px 80px;
+}
+
+/* ===== 视图切换（博客 / 图库 / 仪表盘） ===== */
+.view {
+    min-height: 40vh;
+}
+
+/* 图库网格 */
+.gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 14px;
+}
+
+.gallery-item {
+    margin: 0;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+}
+
+.gallery-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    aspect-ratio: 3 / 2;
+    transition: transform 0.35s;
+}
+
+.gallery-item:hover img {
+    transform: scale(1.04);
+}
+
+/* 仪表盘统计 */
+.dashboard-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+}
+
+.dashboard-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 28px 20px;
+    text-align: center;
+    transition: border-color 0.25s, transform 0.25s;
+}
+
+.dashboard-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-3px);
+}
+
+.dashboard-num {
+    font-size: 40px;
+    font-weight: 900;
+    color: var(--text-primary);
+    font-family: 'Courier New', monospace;
+    background: linear-gradient(135deg, var(--accent), var(--accent-dim));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.dashboard-label {
+    margin-top: 8px;
+    font-size: 13px;
+    color: var(--text-muted);
+    letter-spacing: 2px;
 }
 
 
@@ -1790,12 +1874,13 @@ body {
         letter-spacing: 2px;
     }
 
-    .top-bar-links {
-        gap: 12px;
+    .top-bar-views {
+        gap: 6px;
     }
 
-    .top-bar-links a {
+    .view-btn {
         font-size: 11px;
+        padding: 3px 12px;
     }
 
     .chat-toggle {
