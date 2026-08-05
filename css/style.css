@@ -32,9 +32,13 @@ body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
     background: var(--bg-primary);
     color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+}
+
+/* 首页固定头部布局：body 禁止滚动，由 .scroll-area 内部滚动 */
+body.home-layout {
     overflow: hidden;
     height: 100vh;
-    -webkit-font-smoothing: antialiased;
 }
 
 ::-webkit-scrollbar { width: 6px; }
