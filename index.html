@@ -384,7 +384,7 @@
             // Scroll observer
             initScrollObserver();
 
-            // 阅读进度条 + 回到顶部按钮
+            // 阅读进度条 + 回到顶部按钮 + 页脚遮挡处理
             (function initScrollUI() {
                 const progress = document.getElementById('readingProgress');
                 const backToTop = document.getElementById('backToTop');
@@ -396,8 +396,14 @@
                     const scrollHeight = doc.scrollHeight - window.innerHeight;
                     progress.style.width = scrollHeight > 0 ? (scrollTop / scrollHeight * 100) + '%' : '0%';
                     backToTop.classList.toggle('show', scrollTop > 400);
+
+                    // 页脚进入视口时隐藏右侧固定按钮，避免遮挡页脚内容
+                    const footer = document.querySelector('.footer');
+                    const footerInView = footer && footer.getBoundingClientRect().top <= window.innerHeight;
+                    document.body.classList.toggle('footer-visible', !!footerInView);
                 };
                 window.addEventListener('scroll', update, { passive: true });
+                window.addEventListener('resize', update);
                 update();
 
                 backToTop.addEventListener('click', () => {
