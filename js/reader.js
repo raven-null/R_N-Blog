@@ -6,7 +6,6 @@
     'use strict';
 
     const STORE = 'reader-settings';
-    const TOC_KEY = 'toc-collapsed';
 
     const MODES = {
         sepia: {
@@ -121,19 +120,12 @@
             }
         });
 
-        // 目录折叠记忆（仅应用初始状态 + 监听保存；折叠逻辑由 ArticleApp 处理）
+        // 目录折叠：默认始终展开，点击由 ArticleApp 切换（不记忆状态）
         const collapseBtn = document.getElementById('tocCollapseBtn');
-        const containers = document.querySelectorAll('.toc-child-container');
-        const parentItems = document.querySelectorAll('.toc-parent');
-        if (collapseBtn && localStorage.getItem(TOC_KEY) === '1') {
-            collapseBtn.classList.add('collapsed');
-            containers.forEach(c => c.classList.add('collapsed'));
-            parentItems.forEach(p => p.classList.add('collapsed'));
-        }
         if (collapseBtn) {
-            new MutationObserver(() => {
-                localStorage.setItem(TOC_KEY, collapseBtn.classList.contains('collapsed') ? '1' : '0');
-            }).observe(collapseBtn, { attributes: true, attributeFilter: ['class'] });
+            collapseBtn.classList.remove('collapsed');
+            document.querySelectorAll('.toc-child-container').forEach(c => c.classList.remove('collapsed'));
+            document.querySelectorAll('.toc-parent').forEach(p => p.classList.remove('collapsed'));
         }
 
         apply();
