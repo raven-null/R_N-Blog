@@ -35,6 +35,8 @@
 
     let settings = loadSettings();
     const root = document.documentElement;
+    // 记录本次由阅读模式设置的变量键，仅清理自己设置过的
+    let appliedModeKeys = [];
 
     function save() {
         try { localStorage.setItem(STORE, JSON.stringify(settings)); } catch (e) { }
@@ -45,10 +47,14 @@
         root.style.setProperty('--reader-line-height', settings.line);
         root.classList.toggle('reader-serif', settings.fontFamily === 'serif');
 
-        // 阅读模式（覆盖主题变量）
-        Object.keys(MODES).forEach(m => Object.keys(MODES[m]).forEach(k => root.style.removeProperty(k)));
+        // 清理此前由阅读模式覆盖的主题变量（不影响 theme.js 自身设置的变量）
+        appliedModeKeys.forEach(k => root.style.removeProperty(k));
+        appliedModeKeys = [];
         if (settings.mode !== 'normal') {
-            Object.entries(MODES[settings.mode]).forEach(([k, v]) => root.style.setProperty(k, v));
+            Object.entries(MODES[settings.mode]).forEach(([k, v]) => {
+                root.style.setProperty(k, v);
+                appliedModeKeys.push(k);
+            });
         }
         root.classList.toggle('reader-mode-sepia', settings.mode === 'sepia');
         root.classList.toggle('reader-mode-dark', settings.mode === 'dark');
@@ -100,7 +106,7 @@
         bind('readerModeDark', () => { settings.mode = settings.mode === 'dark' ? 'normal' : 'dark'; apply(); save(); });
         bind('readerFocus', toggleFocus);
 
-        // 键盘快捷键
+        // 键盘快捷键（避开页面已有的 WASD：w/a/s/d/e/q）
         document.addEventListener('keydown', (e) => {
             const t = e.target;
             if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
@@ -109,27 +115,25 @@
             if (e.key === 'k' || e.key === 'K') { const el = document.querySelector('#article-navigation .nav-card.prev'); if (el) el.click(); return; }
             if (e.key === 't' || e.key === 'T') { window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
             if (e.key === 'b' || e.key === 'B') { window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' }); return; }
-            if (e.key === 'a' || e.key === 'A') { settings.font = Math.min(22, settings.font + 1); apply(); save(); return; }
-            if (e.key === 's' || e.key === 'S') { settings.font = Math.max(13, settings.font - 1); apply(); save(); return; }
             if (e.key === '/') {
                 const inp = document.getElementById('tocSearchInput');
                 if (inp) { e.preventDefault(); inp.focus(); }
             }
         });
 
-        // 目录折叠记忆
+        // 目录折叠记忆（仅应用初始状态 + 监听保存；折叠逻辑由 ArticleApp 处理）
         const collapseBtn = document.getElementById('tocCollapseBtn');
         const containers = document.querySelectorAll('.toc-child-container');
         const parentItems = document.querySelectorAll('.toc-parent');
-        if (localStorage.getItem(TOC_KEY) === '1') {
-            if (collapseBtn) collapseBtn.classList.add('collapsed');
+        if (collapseBtn && localStorage.getItem(TOC_KEY) === '1') {
+            collapseBtn.classList.add('collapsed');
             containers.forEach(c => c.classList.add('collapsed'));
             parentItems.forEach(p => p.classList.add('collapsed'));
         }
         if (collapseBtn) {
-            collapseBtn.addEventListener('click', () => {
-                localStorage.setItem(TOC_KEY, collapseBtn.classList.toggle('collapsed') ? '1' : '0');
-            });
+            new MutationObserver(() => {
+                localStorage.setItem(TOC_KEY, collapseBtn.classList.contains('collapsed') ? '1' : '0');
+            }).observe(collapseBtn, { attributes: true, attributeFilter: ['class'] });
         }
 
         apply();
