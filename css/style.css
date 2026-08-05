@@ -673,6 +673,29 @@ body.home-layout {
     letter-spacing: 1px;
 }
 
+/* 欢迎区日期时间 */
+.dash-clock {
+    margin-left: auto;
+    text-align: right;
+    font-family: 'Courier New', monospace;
+    flex-shrink: 0;
+}
+
+.dash-clock-date {
+    font-size: 13px;
+    color: var(--text-muted);
+    letter-spacing: 1px;
+}
+
+.dash-clock-time {
+    margin-top: 4px;
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--accent);
+    letter-spacing: 1px;
+    text-shadow: 0 0 12px var(--glow);
+}
+
 /* 面板 */
 .dash-panel {
     background: var(--bg-card);
@@ -807,6 +830,10 @@ body.home-layout {
 
     .dash-name {
         font-size: 18px;
+    }
+
+    .dash-clock {
+        display: none;
     }
 
     .dash-grid,

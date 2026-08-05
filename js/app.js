@@ -480,7 +480,7 @@ const BlogApp = {
 
         const posts = this.posts.length;
         const tags = new Set(this.posts.flatMap(p => p.tags || [])).size;
-        const minutes = this.posts.reduce((s, p) => s + Math.max(1, Math.round((p.wordCount || 0) / 300)), 0);
+        const totalWords = this.posts.reduce((s, p) => s + (p.wordCount || 0), 0);
         let images = 0;
         try {
             images = (await this.loadGalleryManifest()).length;
@@ -497,8 +497,8 @@ const BlogApp = {
                 <div class="dashboard-label">标签</div>
             </div>
             <div class="dashboard-card">
-                <div class="dashboard-num">${minutes}</div>
-                <div class="dashboard-label">预计阅读(分钟)</div>
+                <div class="dashboard-num">${totalWords.toLocaleString('zh-CN')}</div>
+                <div class="dashboard-label">总字数</div>
             </div>
             <div class="dashboard-card">
                 <div class="dashboard-num">${images}</div>

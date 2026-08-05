@@ -8,7 +8,7 @@
     <link rel="icon" href="/images/TX/01_TX.webp" type="image/webp">
 
     <!-- Styles -->
-    <link rel="stylesheet" href="css/style.css?v=2.6.20">
+    <link rel="stylesheet" href="css/style.css?v=2.6.21">
 
     <!-- Marked.js -->
     <script src="js/vendor/marked.min.js"></script>
@@ -32,7 +32,7 @@
                 <a href="index.html" class="top-bar-brand">渡鸦_NULL BLOG</a>
                 <div class="top-bar-views" id="viewSwitch">
                     <div class="view-indicator" id="viewIndicator"></div>
-                    <button class="view-btn active" data-view="blog" onclick="BlogApp.switchView('blog')">博客</button>
+                    <button class="view-btn active" data-view="blog" onclick="BlogApp.switchView('blog')">文章</button>
                     <button class="view-btn" data-view="gallery" onclick="BlogApp.switchView('gallery')">图库</button>
                     <button class="view-btn" data-view="dashboard" onclick="BlogApp.switchView('dashboard')">我的</button>
                 </div>
@@ -112,6 +112,10 @@
                             <div class="dash-name">渡鸦NULL</div>
                             <div class="dash-bio">全栈开发者 · 内容创作者 · 终身学习者</div>
                         </div>
+                        <div class="dash-clock" id="dashClock">
+                            <div class="dash-clock-date" id="dashClockDate"></div>
+                            <div class="dash-clock-time" id="dashClockTime"></div>
+                        </div>
                     </div>
 
                     <!-- 统计概览 -->
@@ -190,10 +194,10 @@
     </div>
 
     <!-- Scripts -->
-    <script src="js/theme.js?v=2.6.20"></script>
-    <script src="js/markdown.js?v=2.6.20"></script>
-    <script src="js/app.js?v=2.6.20"></script>
-    <script src="js/animations.js?v=2.6.20"></script>
+    <script src="js/theme.js?v=2.6.21"></script>
+    <script src="js/markdown.js?v=2.6.21"></script>
+    <script src="js/app.js?v=2.6.21"></script>
+    <script src="js/animations.js?v=2.6.21"></script>
 
     <script>
         // ===== Scroll Observer =====
@@ -310,8 +314,23 @@
             }
         }
 
+        // ===== 欢迎区日期时间 =====
+        function updateDashClock() {
+            const dateEl = document.getElementById('dashClockDate');
+            const timeEl = document.getElementById('dashClockTime');
+            if (!dateEl || !timeEl) return;
+            const now = new Date();
+            const week = ['日', '一', '二', '三', '四', '五', '六'][now.getDay()];
+            dateEl.textContent = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} 星期${week}`;
+            timeEl.textContent = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+        }
+
         // ===== Init =====
         document.addEventListener('DOMContentLoaded', () => {
+            // 欢迎区日期时间（每秒更新）
+            updateDashClock();
+            setInterval(updateDashClock, 1000);
+
             // Scroll observer
             initScrollObserver();
 
