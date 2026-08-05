@@ -7,7 +7,7 @@
     <link rel="icon" href="/images/TX/01_TX.webp" type="image/webp">
     
     <!-- 主样式 -->
-    <link rel="stylesheet" href="css/style.css?v=2.6.23">
+    <link rel="stylesheet" href="css/style.css?v=2.6.25">
     
     <!-- Marked.js -->
     <script src="js/vendor/marked.min.js"></script>
@@ -1222,6 +1222,9 @@
         </button>
     </div>
 
+    <!-- 阅读进度条 -->
+    <div class="article-progress" id="articleProgress"></div>
+
     <!-- 主内容 -->
     <div class="article-layout">
         <!-- 左侧目录栏 -->
@@ -1304,6 +1307,26 @@
                 </div>
             </div>
 
+            <!-- 阅读工具栏 -->
+            <div class="reader-toolbar" id="readerToolbar">
+                <div class="reader-toolbar-group">
+                    <button class="reader-btn" id="readerFontDown" title="减小字号">A−</button>
+                    <span class="reader-font-size" id="readerFontSize">16</span>
+                    <button class="reader-btn" id="readerFontUp" title="增大字号">A+</button>
+                </div>
+                <div class="reader-toolbar-sep"></div>
+                <div class="reader-toolbar-group">
+                    <button class="reader-btn" id="readerLineHeight" title="切换行距">行距</button>
+                    <button class="reader-btn" id="readerFontFamily" title="切换字体">衬线</button>
+                </div>
+                <div class="reader-toolbar-sep"></div>
+                <div class="reader-toolbar-group">
+                    <button class="reader-btn" id="readerModeSepia" title="护眼模式">护眼</button>
+                    <button class="reader-btn" id="readerModeDark" title="夜间模式">夜间</button>
+                    <button class="reader-btn" id="readerFocus" title="专注阅读">专注</button>
+                </div>
+            </div>
+
             <!-- 文章头部 -->
             <div class="article-header" id="article-header">
                 <div class="loading-article">
@@ -1325,10 +1348,11 @@
     </div>
 
     <!-- JavaScript -->
-    <script src="js/theme.js?v=2.6.23"></script>
-    <script src="js/markdown.js?v=2.6.23"></script>
-    <script src="js/chat.js?v=2.6.23"></script>
-    <script src="js/animations.js?v=2.6.23"></script>
+    <script src="js/theme.js?v=2.6.25"></script>
+    <script src="js/markdown.js?v=2.6.25"></script>
+    <script src="js/chat.js?v=2.6.25"></script>
+    <script src="js/reader.js?v=2.6.25"></script>
+    <script src="js/animations.js?v=2.6.25"></script>
 
     <script>
         // 文章详情页应用
