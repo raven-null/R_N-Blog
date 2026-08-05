@@ -130,7 +130,7 @@ async function askAI(text, action) {
         translate: `请将以下内容翻译为中文：\n${text}`,
         polish: `请润色以下内容：\n${text}`
     }[action];
-    AIChat.sendExternalMessage(prompt); // 打开窗口并发送
+    AIChat.sendExternal(prompt); // 打开窗口并发送
 }
 ```
 
@@ -229,5 +229,5 @@ config: {
 
 ---
 
-**状态：** 待评审
+**状态：** 已实施（v2.2.0），安全与合规部分暂缓
 **作者：** 渡鸦NULL
