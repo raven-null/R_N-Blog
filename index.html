@@ -8,7 +8,7 @@
     <link rel="icon" href="/images/TX/01_TX.webp" type="image/webp">
 
     <!-- Styles -->
-    <link rel="stylesheet" href="css/style.css?v=2.6.22">
+    <link rel="stylesheet" href="css/style.css?v=2.6.23">
 
     <!-- Marked.js -->
     <script src="js/vendor/marked.min.js"></script>
@@ -29,7 +29,7 @@
         <!-- 顶部导航栏 -->
         <header class="top-bar">
             <div class="top-bar-inner">
-                <a href="index.html" class="top-bar-brand">渡鸦_NULL BLOG</a>
+                <a href="#" class="top-bar-brand" title="切换全屏" onclick="toggleFullscreen(); return false;">渡鸦_NULL BLOG</a>
                 <div class="top-bar-views" id="viewSwitch">
                     <div class="view-indicator" id="viewIndicator"></div>
                     <button class="view-btn active" data-view="blog" onclick="BlogApp.switchView('blog')">文章</button>
@@ -194,10 +194,10 @@
     </div>
 
     <!-- Scripts -->
-    <script src="js/theme.js?v=2.6.22"></script>
-    <script src="js/markdown.js?v=2.6.22"></script>
-    <script src="js/app.js?v=2.6.22"></script>
-    <script src="js/animations.js?v=2.6.22"></script>
+    <script src="js/theme.js?v=2.6.23"></script>
+    <script src="js/markdown.js?v=2.6.23"></script>
+    <script src="js/app.js?v=2.6.23"></script>
+    <script src="js/animations.js?v=2.6.23"></script>
 
     <script>
         // ===== Scroll Observer =====
@@ -311,6 +311,19 @@
                 anime.animate(lb, { opacity: [1, 0], duration: 200, ease: 'in(2)', onComplete: () => { lb.style.display = 'none'; } });
             } else {
                 lb.style.display = 'none';
+            }
+        }
+
+        // ===== 全屏切换 =====
+        function toggleFullscreen() {
+            const el = document.documentElement;
+            const isFull = document.fullscreenElement || document.webkitFullscreenElement;
+            if (isFull) {
+                if (document.exitFullscreen) document.exitFullscreen();
+                else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+            } else {
+                const req = el.requestFullscreen ? el.requestFullscreen() : el.webkitRequestFullscreen && el.webkitRequestFullscreen();
+                if (req && req.catch) req.catch(err => console.warn('全屏请求失败:', err.message));
             }
         }
 
