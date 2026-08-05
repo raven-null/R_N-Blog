@@ -316,9 +316,9 @@ const BlogApp = {
         if (willShow) {
             setTimeout(() => document.getElementById('searchInput').focus({ preventScroll: true }), 100);
         } else {
-            // 关闭时清空搜索
+            // 关闭时仅当有搜索内容才清空并重置渲染（避免空搜索重绘导致瀑布流位移）
             const input = document.getElementById('searchInput');
-            if (input) {
+            if (input && input.value) {
                 input.value = '';
                 this.searchPosts('');
             }
