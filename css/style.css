@@ -115,75 +115,52 @@ body {
 
 .hero-tag {
     display: inline-block;
-    padding: 6px 20px;
+    padding: 8px 24px;
     border: 1px solid var(--border);
     border-radius: 100px;
-    font-size: 12px;
-    letter-spacing: 4px;
+    font-size: 15px;
+    letter-spacing: 5px;
     text-transform: uppercase;
-    color: var(--text-muted);
+    color: var(--text-primary);
+    background: var(--glow);
     margin-bottom: 32px;
     opacity: 0;
     animation: fadeInUp 0.8s ease forwards 0.3s;
 }
 
-.hero-title {
-    font-size: clamp(40px, 8vw, 100px);
-    font-weight: 900;
-    letter-spacing: -2px;
-    line-height: 1.05;
-    color: var(--text-primary);
-    margin-bottom: 24px;
+.hero-subtitle {
+    font-size: clamp(18px, 2.6vw, 26px);
+    color: var(--text-secondary);
+    font-weight: 400;
+    letter-spacing: 3px;
+    max-width: 640px;
+    margin: 0 auto 48px;
+    line-height: 1.7;
     opacity: 0;
     animation: fadeInUp 0.8s ease forwards 0.5s;
 }
 
-.hero-title .highlight {
+/* CTA 主按钮 */
+.hero-cta {
     display: inline-block;
-    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dim) 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-}
-
-.hero-subtitle {
-    font-size: clamp(14px, 2vw, 18px);
-    color: var(--text-muted);
-    font-weight: 400;
+    padding: 12px 40px;
+    border-radius: 100px;
+    border: 1px solid var(--accent);
+    background: var(--accent);
+    color: var(--bg-primary);
+    font-size: 14px;
+    font-weight: 600;
     letter-spacing: 2px;
-    max-width: 500px;
-    margin: 0 auto 48px;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.25s;
     opacity: 0;
     animation: fadeInUp 0.8s ease forwards 0.7s;
 }
 
-/* Stats row */
-.hero-stats {
-    display: flex;
-    justify-content: center;
-    gap: 48px;
-    margin-bottom: 60px;
-    opacity: 0;
-    animation: fadeInUp 0.8s ease forwards 0.9s;
-}
-
-.hero-stat {
-    text-align: center;
-}
-
-.hero-stat-num {
-    font-size: 36px;
-    font-weight: 900;
-    color: var(--text-primary);
-    font-family: 'Courier New', monospace;
-}
-
-.hero-stat-label {
-    font-size: 11px;
-    color: var(--text-muted);
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    margin-top: 4px;
+.hero-cta:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px var(--shadow), 0 0 16px var(--glow);
 }
 
 /* Scroll indicator */
@@ -483,31 +460,6 @@ body {
 .hero-particle-burst:nth-child(4) { --tx: -100px; --ty: 80px; }
 .hero-particle-burst:nth-child(5) { --tx: 50px; --ty: -130px; }
 .hero-particle-burst:nth-child(6) { --tx: -120px; --ty: 40px; }
-
-/* Hero Subtitle Typing Effect */
-.hero-subtitle {
-    position: relative;
-}
-
-.hero-subtitle::after {
-    content: '|';
-    position: absolute;
-    right: -20px;
-    top: 0;
-    color: var(--accent);
-    animation: typingCursor 1s step-end infinite;
-}
-
-@keyframes typingCursor {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0; }
-}
-
-/* Hero Stats Counter Glow */
-.hero-stat-num {
-    position: relative;
-    text-shadow: 0 0 20px var(--glow);
-}
 
 /* Hero Background Gradient Animation */
 .hero-bg-gradient {
@@ -1091,6 +1043,11 @@ body {
     font-size: 12px;
     color: var(--text-muted);
     letter-spacing: 1px;
+}
+
+.footer-stats {
+    margin-left: 8px;
+    color: var(--text-secondary);
 }
 
 .footer-right {
@@ -2292,13 +2249,6 @@ body {
 }
 
 /* ===== Anime.js 动画样式 ===== */
-.hero-char {
-    display: inline-block;
-    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dim) 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-}
 
 /* Anime.js 接管卡片入场/悬停时，关闭原生 CSS 过渡避免冲突 */
 .anime-ready .card,
@@ -2429,12 +2379,4 @@ body {
 .back-to-top:hover {
     border-color: var(--text-primary);
     color: var(--text-primary);
-}
-
-/* 页脚进入视口时隐藏右侧固定按钮，避免遮挡页脚内容 */
-body.footer-visible .back-to-top,
-body.footer-visible .theme-toggle {
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
 }

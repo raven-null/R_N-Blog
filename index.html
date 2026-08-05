@@ -27,40 +27,6 @@
     <section class="hero" id="hero">
         <!-- Background Gradient Animation -->
         <div class="hero-bg-gradient"></div>
-        
-        <!-- Grid Flash Effect -->
-        <div class="hero-grid-flash"></div>
-        
-        <!-- Pulse Rings -->
-        <div class="hero-pulse-ring"></div>
-        <div class="hero-pulse-ring"></div>
-        <div class="hero-pulse-ring"></div>
-        
-        <!-- Floating Lines -->
-        <div class="hero-floating-line"></div>
-        <div class="hero-floating-line"></div>
-        <div class="hero-floating-line"></div>
-        
-        <!-- Particle Burst -->
-        <div class="hero-particle-burst"></div>
-        <div class="hero-particle-burst"></div>
-        <div class="hero-particle-burst"></div>
-        <div class="hero-particle-burst"></div>
-        <div class="hero-particle-burst"></div>
-        <div class="hero-particle-burst"></div>
-
-        <!-- Decorative elements -->
-        <div class="hero-deco-line left"></div>
-        <div class="hero-deco-line right"></div>
-        <div class="hero-corner tl"></div>
-        <div class="hero-corner tr"></div>
-        <div class="hero-corner bl"></div>
-        <div class="hero-corner br"></div>
-
-        <!-- Floating orbs -->
-        <div class="hero-orb hero-orb-1"></div>
-        <div class="hero-orb hero-orb-2"></div>
-        <div class="hero-orb hero-orb-3"></div>
 
         <!-- Particles -->
         <canvas class="hero-particles" id="heroParticles"></canvas>
@@ -68,25 +34,8 @@
         <!-- Content -->
         <div class="hero-content">
             <div class="hero-tag">渡鸦_NULL BLOG</div>
-            <h1 class="hero-title">
-                <span class="highlight" id="heroTitleText" data-text="HELLO">HELLO</span>
-            </h1>
             <p class="hero-subtitle">只要你不失去你的崇高，整个世界都将向你敞开</p>
-
-            <div class="hero-stats">
-                <div class="hero-stat">
-                    <div class="hero-stat-num" id="statPosts">0</div>
-                    <div class="hero-stat-label">Articles</div>
-                </div>
-                <div class="hero-stat">
-                    <div class="hero-stat-num" id="statTags">0</div>
-                    <div class="hero-stat-label">Tags</div>
-                </div>
-                <div class="hero-stat">
-                    <div class="hero-stat-num" id="statWords">0</div>
-                    <div class="hero-stat-label">Words</div>
-                </div>
-            </div>
+            <a href="#" class="hero-cta" id="heroCta" onclick="document.getElementById('contentWrapper').scrollIntoView({ behavior: 'smooth' }); return false;">开始阅读</a>
         </div>
 
         <!-- Accent Line -->
@@ -124,7 +73,7 @@
                             </svg>
                         </button>
                         <div class="tags-dropdown" id="tagsDropdown">
-                            <div class="tags-dropdown-title">全部标签</div>
+                            <div class="tags-dropdown-title" id="tagsDropdownTitle">全部标签</div>
                             <div class="tags-dropdown-list" id="tagsDropdownList"></div>
                         </div>
                     </div>
@@ -162,7 +111,7 @@
 
         <!-- Footer -->
         <footer class="footer">
-            <div class="footer-left">&copy; 渡鸦_NULL BLOG 1.3</div>
+            <div class="footer-left">&copy; 渡鸦_NULL BLOG 1.3<span class="footer-stats" id="footerStats"></span></div>
             <div class="footer-right">
                 <a href="https://github.com/raven-null/R_N-Blog" class="footer-link" target="_blank" rel="noopener">GitHub</a>
                 <a href="feed.xml" class="footer-link" target="_blank" rel="noopener">RSS</a>
@@ -338,43 +287,6 @@
             window._cardObserver = observer;
         }
 
-        // ===== Counter Animation =====
-        function animateCounter(el, target, suffix = '') {
-            const duration = 1500;
-            const start = performance.now();
-
-            function update(now) {
-                const elapsed = now - start;
-                const progress = Math.min(elapsed / duration, 1);
-                const eased = 1 - Math.pow(1 - progress, 3);
-                const current = Math.round(eased * target);
-
-                el.textContent = current + suffix;
-
-                if (progress < 1) {
-                    requestAnimationFrame(update);
-                }
-            }
-
-            requestAnimationFrame(update);
-        }
-
-        // ===== Type Writer Effect =====
-        function typeWriter(el, text, speed = 80) {
-            let i = 0;
-            el.textContent = '';
-
-            function type() {
-                if (i < text.length) {
-                    el.textContent += text.charAt(i);
-                    i++;
-                    setTimeout(type, speed);
-                }
-            }
-
-            type();
-        }
-
         // ===== Init =====
         document.addEventListener('DOMContentLoaded', () => {
             // Particles
@@ -384,7 +296,7 @@
             // Scroll observer
             initScrollObserver();
 
-            // 阅读进度条 + 回到顶部按钮 + 页脚遮挡处理
+            // 阅读进度条 + 回到顶部按钮
             (function initScrollUI() {
                 const progress = document.getElementById('readingProgress');
                 const backToTop = document.getElementById('backToTop');
@@ -396,30 +308,14 @@
                     const scrollHeight = doc.scrollHeight - window.innerHeight;
                     progress.style.width = scrollHeight > 0 ? (scrollTop / scrollHeight * 100) + '%' : '0%';
                     backToTop.classList.toggle('show', scrollTop > 400);
-
-                    // 页脚进入视口时隐藏右侧固定按钮，避免遮挡页脚内容
-                    const footer = document.querySelector('.footer');
-                    const footerInView = footer && footer.getBoundingClientRect().top <= window.innerHeight;
-                    document.body.classList.toggle('footer-visible', !!footerInView);
                 };
                 window.addEventListener('scroll', update, { passive: true });
-                window.addEventListener('resize', update);
                 update();
 
                 backToTop.addEventListener('click', () => {
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                 });
             })();
-
-            // Type writer for hero title（Anime.js 就绪时使用逐字动画）
-            const titleEl = document.getElementById('heroTitleText');
-            if (titleEl) {
-                if (window.BlogAnimations && BlogAnimations.ready) {
-                    setTimeout(() => BlogAnimations.animateHeroTitle(titleEl), 800);
-                } else {
-                    setTimeout(() => typeWriter(titleEl, 'Hello World!', 120), 800);
-                }
-            }
 
             // Scroll indicator click
             const scrollIndicator = document.getElementById('scrollIndicator');
@@ -472,26 +368,18 @@
 
             // Init blog app
             BlogApp.init().then(() => {
-                // Animate stats
+                // 文章数 → 页脚；标签数 → "全部标签"面板标题（字数统计已删除）
                 const totalPosts = BlogApp.posts.length;
-                const allTags = new Set();
-                let totalWords = 0;
-                BlogApp.posts.forEach(post => {
-                    post.tags.forEach(tag => allTags.add(tag));
-                    totalWords += post.wordCount || (post.content ? post.content.length : 0);
-                });
+                const tagCount = BlogApp.posts.reduce((set, post) => {
+                    (post.tags || []).forEach(tag => set.add(tag));
+                    return set;
+                }, new Set()).size;
 
-                const wordsK = Math.round(totalWords / 1000);
+                const footerStats = document.getElementById('footerStats');
+                if (footerStats) footerStats.textContent = ` · 文章 ${totalPosts} 篇`;
 
-                setTimeout(() => {
-                    if (window.BlogAnimations && BlogAnimations.ready) {
-                        BlogAnimations.animateStats(totalPosts, allTags.size, wordsK);
-                    } else {
-                        animateCounter(document.getElementById('statPosts'), totalPosts);
-                        animateCounter(document.getElementById('statTags'), allTags.size);
-                        animateCounter(document.getElementById('statWords'), wordsK, 'k');
-                    }
-                }, 1000);
+                const tagsTitle = document.getElementById('tagsDropdownTitle');
+                if (tagsTitle) tagsTitle.textContent = `全部标签（${tagCount} 个）`;
 
                 // Init card observer after posts render
                 setTimeout(() => initCardObserver(), 100);

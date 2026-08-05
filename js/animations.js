@@ -23,38 +23,6 @@ const BlogAnimations = {
         }
     },
 
-    // Hero 标题逐字动画（由 index.html 调用，替代原打字机效果）
-    animateHeroTitle(el) {
-        if (!this.ready || !el) return;
-        const text = el.dataset.text || 'Hello World!';
-        el.innerHTML = text.split('').map(c => `<span class="hero-char">${c === ' ' ? '&nbsp;' : c}</span>`).join('');
-        anime.animate('.hero-char', {
-            opacity: [0, 1],
-            scale: [2, 1],
-            translateY: [18, 0],
-            duration: 600,
-            delay: anime.stagger(45, { from: 'center' }),
-            ease: 'out(3)'
-        });
-    },
-
-    // 统计数字动画（由 index.html 调用，替代原 animateCounter）
-    animateStats(posts, tags, wordsK) {
-        if (!this.ready) return;
-        const counter = { value: 0 };
-        anime.animate(counter, {
-            value: [0, 1],
-            duration: 1500,
-            ease: 'out(2)',
-            onUpdate: () => {
-                const v = counter.value;
-                document.getElementById('statPosts').textContent = Math.round(posts * v);
-                document.getElementById('statTags').textContent = Math.round(tags * v);
-                document.getElementById('statWords').textContent = Math.round(wordsK * v) + 'k';
-            }
-        });
-    },
-
     // 瀑布流卡片入场（首批完整入场，后续渲染仅快速淡入，避免"刷新"感）
     initCardEntrance() {
         document.documentElement.classList.add('anime-ready');
