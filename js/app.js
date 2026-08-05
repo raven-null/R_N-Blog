@@ -472,7 +472,7 @@ const BlogApp = {
         return this.galleryImages;
     },
 
-    // 渲染仪表盘（统计卡片）
+    // 渲染仪表盘（统计概览 + 最近文章 + 热门标签）
     async renderDashboard() {
         const box = document.getElementById('dashboardStats');
         if (!box || box.dataset.rendered) return;
@@ -486,6 +486,7 @@ const BlogApp = {
             images = (await this.loadGalleryManifest()).length;
         } catch (e) { }
 
+        // 统计概览
         box.innerHTML = `
             <div class="dashboard-card">
                 <div class="dashboard-num">${posts}</div>
@@ -504,6 +505,40 @@ const BlogApp = {
                 <div class="dashboard-label">图库图片</div>
             </div>
         `;
+
+        // 最近文章（最新 5 篇，按日期倒序）
+        const recent = [...this.posts].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
+        const recentEl = document.getElementById('dashRecent');
+        if (recentEl) {
+            recentEl.innerHTML = recent.length ? recent.map(p => `
+                <a class="dash-recent-item" href="article.html?post=${p.filename}">
+                    <span class="dash-recent-title">${p.title}</span>
+                    <span class="dash-recent-date">${this.formatDate(p.date)}</span>
+                </a>
+            `).join('') : '<span style="color:var(--text-muted);font-size:13px;">暂无文章</span>';
+        }
+
+        // 热门标签（Top 8，按文章数）
+        const counts = {};
+        this.posts.forEach(p => (p.tags || []).forEach(t => { counts[t] = (counts[t] || 0) + 1; }));
+        const topTags = Object.keys(counts).sort((a, b) => counts[b] - counts[a]).slice(0, 8);
+        const tagsEl = document.getElementById('dashTags');
+        if (tagsEl) {
+            tagsEl.innerHTML = topTags.length ? topTags.map(tag => `
+                <span class="dash-tag" onclick="BlogApp.switchView('blog'); BlogApp.filterByTag('${tag}');">${tag}</span>
+            `).join('') : '<span style="color:var(--text-muted);font-size:13px;">暂无标签</span>';
+        }
+
+        // 入场动效（Anime.js）
+        if (typeof anime !== 'undefined') {
+            anime.animate('.dashboard .dash-hero, .dashboard .dashboard-card, .dashboard .dash-panel', {
+                opacity: [0, 1],
+                translateY: [16, 0],
+                duration: 500,
+                delay: anime.stagger(60),
+                ease: 'out(2)'
+            });
+        }
     },
 
     // 搜索文章（按标题、摘要、标签匹配）
