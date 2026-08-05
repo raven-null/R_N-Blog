@@ -771,26 +771,7 @@ body {
     color: var(--text-primary);
 }
 
-/* ===== MAIN CONTENT ===== */
-.main-content {
-    max-width: 100%;
-    margin: 0 auto;
-    padding: 40px 48px 80px;
-}
-
-
-
-/* ===== TAGS ===== */
-.tags-section {
-    margin-bottom: 40px;
-}
-
-.tags-wrap {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-}
-
+/* ===== 导航工具按钮组 + 标签面板 ===== */
 .tag-btn {
     padding: 8px 18px;
     border-radius: 100px;
@@ -816,6 +797,88 @@ body {
     border-color: var(--text-primary);
 }
 
+.nav-tools {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.nav-tools-item {
+    position: relative;
+}
+
+.tags-dropdown {
+    position: absolute;
+    top: calc(100% + 12px);
+    right: 0;
+    width: 320px;
+    max-height: 340px;
+    overflow-y: auto;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-8px);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    z-index: 150;
+    box-shadow: 0 12px 40px var(--shadow);
+}
+
+.tags-dropdown.show {
+    opacity: 1;
+    pointer-events: all;
+    transform: translateY(0);
+}
+
+.tags-dropdown::before {
+    content: '';
+    position: absolute;
+    top: -6px;
+    right: 14px;
+    width: 12px;
+    height: 12px;
+    background: var(--bg-secondary);
+    border-left: 1px solid var(--border);
+    border-top: 1px solid var(--border);
+    transform: rotate(45deg);
+}
+
+.tags-dropdown-title {
+    font-size: 12px;
+    color: var(--text-muted);
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+}
+
+.tags-dropdown-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.tags-dropdown-list .tag-btn {
+    padding: 6px 14px;
+    font-size: 12px;
+}
+
+.tags-dropdown-list .tag-count {
+    margin-left: 4px;
+    font-size: 10px;
+    opacity: 0.7;
+}
+
+/* ===== MAIN CONTENT ===== */
+.main-content {
+    max-width: 100%;
+    margin: 0 auto;
+    padding: 40px 48px 80px;
+}
+
+
+
+/* ===== TAGS ===== */
 /* ===== WATERFALL GRID ===== */
 .waterfall {
     column-count: 4;
@@ -1297,7 +1360,16 @@ body {
         right: -16px;
     }
 
+    .tags-dropdown {
+        width: 240px;
+        right: -16px;
+    }
+
     .search-dropdown::before {
+        right: 22px;
+    }
+
+    .tags-dropdown::before {
         right: 22px;
     }
 

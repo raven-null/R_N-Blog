@@ -115,18 +115,32 @@
                     <a href="#" class="nav-link" onclick="BlogApp.filterByTag('生活'); return false;">生活</a>
                     <a href="#" class="nav-link" onclick="BlogApp.filterByTag('AI'); return false;">AI</a>
                 </div>
-                <div class="nav-search-wrapper">
-                    <button class="nav-search-btn" onclick="BlogApp.toggleSearch()" title="Search">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
-                            <circle cx="11" cy="11" r="8" />
-                            <path d="m21 21-4.35-4.35" />
-                        </svg>
-                    </button>
-                    <div class="search-dropdown" id="searchDropdown">
-                        <input type="text" id="searchInput" placeholder="Search articles..."
-                            oninput="BlogApp.searchPosts(this.value)">
-                        <button class="search-dropdown-close" onclick="BlogApp.toggleSearch()">&times;</button>
+                <div class="nav-tools">
+                    <div class="nav-tools-item">
+                        <button class="nav-search-btn" onclick="BlogApp.toggleTagsPanel()" title="标签">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+                                <line x1="7" y1="7" x2="7.01" y2="7"></line>
+                            </svg>
+                        </button>
+                        <div class="tags-dropdown" id="tagsDropdown">
+                            <div class="tags-dropdown-title">全部标签</div>
+                            <div class="tags-dropdown-list" id="tagsDropdownList"></div>
+                        </div>
+                    </div>
+                    <div class="nav-tools-item">
+                        <button class="nav-search-btn" onclick="BlogApp.toggleSearch()" title="Search">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <circle cx="11" cy="11" r="8" />
+                                <path d="m21 21-4.35-4.35" />
+                            </svg>
+                        </button>
+                        <div class="search-dropdown" id="searchDropdown">
+                            <input type="text" id="searchInput" placeholder="Search articles..."
+                                oninput="BlogApp.searchPosts(this.value)">
+                            <button class="search-dropdown-close" onclick="BlogApp.toggleSearch()">&times;</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -134,11 +148,6 @@
 
         <!-- Main Content -->
         <main class="main-content">
-            <!-- Tags -->
-            <div class="tags-section" id="tags">
-                <!-- Dynamic -->
-            </div>
-
             <!-- Posts -->
             <div id="posts">
                 <div class="loading">
@@ -447,12 +456,11 @@
                 }
             });
 
-            // Click outside to close search
+            // Click outside to close panels（搜索框 / 标签面板）
             document.addEventListener('click', (e) => {
-                const wrapper = document.querySelector('.nav-search-wrapper');
-                const dropdown = document.getElementById('searchDropdown');
-                if (dropdown && dropdown.classList.contains('show') && !wrapper.contains(e.target)) {
-                    BlogApp.toggleSearch();
+                const tools = document.querySelector('.nav-tools');
+                if (tools && !tools.contains(e.target)) {
+                    BlogApp.closePanels();
                 }
             });
 

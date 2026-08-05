@@ -141,60 +141,10 @@ const BlogApp = {
         }
     },
 
-    // 渲染页面（标签、导航、文章、分页）
+    // 渲染页面（文章、分页）
     render() {
-        this.renderTags();
-        this.renderNavLinks();
         this.renderPosts();
         this.renderPagination();
-    },
-
-    // 渲染标签筛选栏
-    renderTags() {
-        const tagsContainer = document.getElementById('tags');
-        if (!tagsContainer) return;
-
-        // 收集所有标签
-        const allTags = new Set();
-        this.posts.forEach(post => {
-            (post.tags || []).forEach(tag => allTags.add(tag));
-        });
-
-        // 排除导航栏已展示的主标签，避免重复
-        const excludedTags = this.getMainTags();
-
-        // 过滤掉排除的标签
-        const filteredTags = Array.from(allTags).filter(tag => !excludedTags.includes(tag));
-
-        if (filteredTags.length === 0) {
-            tagsContainer.innerHTML = '';
-            return;
-        }
-
-        const tagsHTML = filteredTags.map(tag => `
-            <button class="tag-btn ${this.currentTag === tag ? 'active' : ''}"
-                    onclick="BlogApp.filterByTag('${tag}')">
-                ${tag}<span class="tag-count">${this.countTag(tag)}</span>
-            </button>
-        `).join('');
-
-        tagsContainer.innerHTML = `
-            <div class="tags-wrap">
-                ${tagsHTML}
-            </div>
-        `;
-    },
-
-    // 获取导航栏展示的主标签（按文章数降序取前 4 个）
-    getMainTags() {
-        const counts = {};
-        this.posts.forEach(p => (p.tags || []).forEach(t => { counts[t] = (counts[t] || 0) + 1; }));
-        return Object.keys(counts).sort((a, b) => counts[b] - counts[a]).slice(0, 4);
-    },
-
-    // 统计某标签的文章数
-    countTag(tag) {
-        return this.posts.filter(p => (p.tags || []).includes(tag)).length;
     },
 
     // 渲染文章瀑布流（支持"加载更多"追加）
@@ -316,26 +266,6 @@ const BlogApp = {
         this.renderPagination();
     },
 
-    // 渲染导航栏标签链接（动态生成 + 数量徽标）
-    renderNavLinks() {
-        const navLinks = document.querySelector('.nav-links');
-        if (!navLinks) return;
-
-        const counts = {};
-        this.posts.forEach(p => (p.tags || []).forEach(t => { counts[t] = (counts[t] || 0) + 1; }));
-        const mainTags = this.getMainTags();
-
-        const makeLink = (tag, label, count) => `
-            <a href="#" class="nav-link ${this.currentTag === tag ? 'active' : ''}"
-               onclick="BlogApp.filterByTag(${tag === null ? 'null' : `'${tag}'`}); return false;">
-                ${label}${count !== null ? `<span class="nav-count">${count}</span>` : ''}
-            </a>`;
-
-        let html = makeLink(null, '全部', this.posts.length);
-        mainTags.forEach(tag => { html += makeLink(tag, tag, counts[tag]); });
-        navLinks.innerHTML = html;
-    },
-
     // 按标签筛选文章
     filterByTag(tag) {
         this.currentTag = tag;
@@ -347,11 +277,24 @@ const BlogApp = {
             this.filteredPosts = [...this.posts];
         }
 
-        this.renderTags();
-        this.renderNavLinks();
         this.renderPosts();
         this.renderPagination();
+        this.updateNavActive();
         this.updateURL();
+        this.closeTagsPanel();
+    },
+
+    // 更新导航栏静态标签链接的激活状态
+    updateNavActive() {
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.classList.remove('active');
+        });
+        const tag = this.currentTag;
+        document.querySelectorAll('.nav-link').forEach(link => {
+            const onclick = link.getAttribute('onclick') || '';
+            if (tag && onclick.includes(`'${tag}'`)) link.classList.add('active');
+            if (!tag && onclick.includes('null')) link.classList.add('active');
+        });
     },
 
     // 打开文章详情页
@@ -359,22 +302,74 @@ const BlogApp = {
         window.location.href = `article.html?post=${filename}`;
     },
 
-    // 切换搜索框显示
+    // 切换搜索框显示（打开时自动关闭标签面板，避免重叠）
     toggleSearch() {
         const dropdown = document.getElementById('searchDropdown');
-        if (dropdown) {
-            dropdown.classList.toggle('show');
-            if (dropdown.classList.contains('show')) {
-                setTimeout(() => document.getElementById('searchInput').focus(), 100);
-            } else {
-                // 关闭时清空搜索
-                const input = document.getElementById('searchInput');
-                if (input) {
-                    input.value = '';
-                    this.searchPosts('');
-                }
+        if (!dropdown) return;
+        const willShow = !dropdown.classList.contains('show');
+        if (willShow) this.closeTagsPanel();
+        dropdown.classList.toggle('show', willShow);
+        if (willShow) {
+            setTimeout(() => document.getElementById('searchInput').focus(), 100);
+        } else {
+            // 关闭时清空搜索
+            const input = document.getElementById('searchInput');
+            if (input) {
+                input.value = '';
+                this.searchPosts('');
             }
         }
+    },
+
+    // 切换标签面板（打开时自动关闭搜索框，避免重叠）
+    toggleTagsPanel() {
+        const panel = document.getElementById('tagsDropdown');
+        if (!panel) return;
+        const willShow = !panel.classList.contains('show');
+        if (willShow) {
+            this.closeSearch();
+            this.renderTagsPanel();
+        }
+        panel.classList.toggle('show', willShow);
+    },
+
+    // 渲染标签面板（全部标签 + 文章数）
+    renderTagsPanel() {
+        const list = document.getElementById('tagsDropdownList');
+        if (!list) return;
+        const counts = {};
+        this.posts.forEach(p => (p.tags || []).forEach(t => { counts[t] = (counts[t] || 0) + 1; }));
+        const tags = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
+        list.innerHTML = tags.map(tag => `
+            <button class="tag-btn ${this.currentTag === tag ? 'active' : ''}"
+                    onclick="BlogApp.filterByTag('${tag}');">
+                ${tag}<span class="tag-count">${counts[tag]}</span>
+            </button>
+        `).join('');
+    },
+
+    // 关闭标签面板
+    closeTagsPanel() {
+        const panel = document.getElementById('tagsDropdown');
+        if (panel) panel.classList.remove('show');
+    },
+
+    // 关闭搜索框
+    closeSearch() {
+        const dropdown = document.getElementById('searchDropdown');
+        if (!dropdown) return;
+        dropdown.classList.remove('show');
+        const input = document.getElementById('searchInput');
+        if (input) {
+            input.value = '';
+            this.searchPosts('');
+        }
+    },
+
+    // 关闭所有面板（搜索框 + 标签面板）
+    closePanels() {
+        this.closeTagsPanel();
+        this.closeSearch();
     },
 
     // 搜索文章（按标题、摘要、标签匹配）
