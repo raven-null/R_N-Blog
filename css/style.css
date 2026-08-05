@@ -66,12 +66,12 @@ body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    height: 40px;
-    gap: 16px;
+    height: 56px;
+    gap: 24px;
 }
 
 .top-bar-brand {
-    font-size: 13px;
+    font-size: 15px;
     font-weight: 700;
     letter-spacing: 3px;
     text-transform: uppercase;
@@ -82,16 +82,16 @@ body {
 .top-bar-views {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 12px;
 }
 
 .view-btn {
     border: 1px solid var(--border);
     background: var(--bg-tertiary);
     color: var(--text-secondary);
-    font-size: 13px;
+    font-size: 14px;
     letter-spacing: 1px;
-    padding: 6px 18px;
+    padding: 8px 24px;
     border-radius: 100px;
     cursor: pointer;
     transition: all 0.2s;
@@ -147,8 +147,8 @@ body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    height: 56px;
-    gap: 16px;
+    height: 64px;
+    gap: 24px;
 }
 
 .nav-brand {
@@ -179,11 +179,11 @@ body {
 .nav-links {
     display: flex;
     align-items: center;
-    gap: 32px;
+    gap: 40px;
 }
 
 .nav-link {
-    font-size: 13px;
+    font-size: 15px;
     color: var(--text-muted);
     text-decoration: none;
     letter-spacing: 1px;
@@ -211,8 +211,8 @@ body {
 }
 
 .nav-search-btn {
-    width: 36px;
-    height: 36px;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
     border: 1px solid var(--border);
     background: transparent;
@@ -343,7 +343,7 @@ body {
 .nav-tools {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 12px;
 }
 
 .nav-tools-item {
@@ -1860,17 +1860,17 @@ body {
         right: 12px;
     }
 
-    /* 顶部导航栏移动端：收窄品牌字距、隐藏链接 */
+    /* 顶部导航栏移动端：收窄品牌字距、缩小按钮 */
     .top-bar {
         padding: 0 16px;
     }
 
     .top-bar-inner {
-        height: 36px;
+        height: 48px;
     }
 
     .top-bar-brand {
-        font-size: 12px;
+        font-size: 13px;
         letter-spacing: 2px;
     }
 
@@ -1879,8 +1879,8 @@ body {
     }
 
     .view-btn {
-        font-size: 11px;
-        padding: 3px 12px;
+        font-size: 12px;
+        padding: 5px 14px;
     }
 
     .chat-toggle {
