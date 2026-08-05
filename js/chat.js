@@ -137,7 +137,13 @@ const AIChat = {
         if (toggle) toggle.addEventListener('click', () => this.toggleWindow());
         if (close) close.addEventListener('click', () => this.closeWindow());
         if (clear) clear.addEventListener('click', () => this.clearChat());
-        if (send) send.addEventListener('click', () => this.isWaiting ? this.stopGeneration() : this.sendMessage());
+        if (send) send.addEventListener('click', () => {
+            if (this.isWaiting) {
+                this.stopGeneration();
+            } else {
+                this.sendMessage().catch(err => console.warn('[AIChat] 发送失败:', err));
+            }
+        });
         if (sessionBtn) sessionBtn.addEventListener('click', (e) => { e.stopPropagation(); this.toggleSessionPanel(); });
         if (sessionNew) sessionNew.addEventListener('click', () => this.newSession());
 
@@ -153,7 +159,7 @@ const AIChat = {
             input.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
-                    this.sendMessage();
+                    this.sendMessage().catch(err => console.warn('[AIChat] 发送失败:', err));
                 }
             });
 
@@ -432,7 +438,7 @@ const AIChat = {
     // 发送外部消息（划词助手等调用）
     sendExternal(prompt) {
         this.openWindow();
-        this.sendMessage(prompt, { force: true });
+        this.sendMessage(prompt, { force: true }).catch(err => console.warn('[AIChat] 发送失败:', err));
     },
 
     // 发送消息
@@ -471,6 +477,7 @@ const AIChat = {
         const streamEl = this.createStreamingMessage();
         let accumulated = '';
         let renderScheduled = false;
+        let lastRenderTime = 0;
         this.abortController = new AbortController();
 
         const scheduleRender = () => {
@@ -478,7 +485,12 @@ const AIChat = {
             renderScheduled = true;
             requestAnimationFrame(() => {
                 renderScheduled = false;
-                this.updateStreamingMessage(streamEl, accumulated);
+                // 限流：至少间隔 50ms 渲染一次，减少 DOM 频繁重排
+                const now = performance.now();
+                if (now - lastRenderTime >= 50) {
+                    lastRenderTime = now;
+                    this.updateStreamingMessage(streamEl, accumulated);
+                }
             });
         };
 
@@ -671,7 +683,9 @@ const AIChat = {
             <button class="chat-action-btn chat-dislike-btn" title="没帮助">👎</button>`;
         body.appendChild(actions);
 
-        actions.querySelector('.chat-copy-btn').addEventListener('click', (e) => this.copyText(text, e.currentTarget));
+        actions.querySelector('.chat-copy-btn').addEventListener('click', (e) => {
+            this.copyText(text, e.currentTarget).catch(err => console.warn('[AIChat] 复制失败:', err));
+        });
         actions.querySelector('.chat-regen-btn').addEventListener('click', () => this.regenerate(el));
         actions.querySelector('.chat-like-btn').addEventListener('click', () => this.feedback(el, 'up'));
         actions.querySelector('.chat-dislike-btn').addEventListener('click', () => this.feedback(el, 'down'));
@@ -715,7 +729,7 @@ const AIChat = {
         el.remove();
         this.saveSessions();
         if (!userText) return;
-        this.sendMessage(userText, { force: true });
+        this.sendMessage(userText, { force: true }).catch(err => console.warn('[AIChat] 重新生成失败:', err));
     },
 
     // 反馈（点赞/点踩）
