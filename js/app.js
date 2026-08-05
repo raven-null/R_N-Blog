@@ -450,10 +450,11 @@ const BlogApp = {
         grid.dataset.rendered = '1';
         try {
             const images = await this.loadGalleryManifest();
+            window.__galleryImages = images;
             grid.innerHTML = images.map((src, i) => `
                 <figure class="gallery-item">
                     <img src="images/R-N-picture/${src}" alt="图片 ${i + 1}" loading="lazy"
-                         onclick="openGalleryLightbox('images/R-N-picture/${src}')">
+                         onclick="openGalleryLightbox('images/R-N-picture/${src}', ${i})">
                 </figure>
             `).join('');
         } catch (e) {

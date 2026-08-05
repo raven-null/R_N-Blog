@@ -132,8 +132,15 @@
 
     <!-- 图库灯箱 -->
     <div class="gallery-lightbox" id="galleryLightbox" onclick="closeGalleryLightbox()">
-        <button class="gallery-lightbox-close" onclick="event.stopPropagation(); closeGalleryLightbox()">&times;</button>
-        <img id="galleryLightboxImg" src="" alt="图片预览">
+        <div class="gallery-lightbox-counter" id="galleryLightboxCounter" onclick="event.stopPropagation()">1 / 0</div>
+        <button class="gallery-lightbox-btn gallery-lightbox-close" title="关闭" onclick="event.stopPropagation(); closeGalleryLightbox()">&times;</button>
+        <button class="gallery-lightbox-btn gallery-lightbox-nav prev" title="上一张" onclick="event.stopPropagation(); galleryLightboxNav(-1)">&#8249;</button>
+        <img id="galleryLightboxImg" src="" alt="图片预览" onclick="event.stopPropagation()">
+        <button class="gallery-lightbox-btn gallery-lightbox-nav next" title="下一张" onclick="event.stopPropagation(); galleryLightboxNav(1)">&#8250;</button>
+        <div class="gallery-lightbox-actions" onclick="event.stopPropagation()">
+            <button class="gallery-lightbox-btn gallery-lightbox-action" id="galleryLightboxSlide" title="幻灯片播放" onclick="toggleGallerySlideshow()">▶ 播放</button>
+            <a class="gallery-lightbox-btn gallery-lightbox-action" id="galleryLightboxDownload" href="#" download title="下载图片" onclick="event.stopPropagation()">下载</a>
+        </div>
     </div>
 
     <!-- Scripts -->
@@ -177,11 +184,18 @@
         }
 
         // ===== 图库灯箱 =====
-        function openGalleryLightbox(src) {
+        window.__galleryImages = [];
+        window.__galleryIndex = 0;
+        let __galleryTimer = null;
+
+        function openGalleryLightbox(src, index) {
             const lb = document.getElementById('galleryLightbox');
             const img = document.getElementById('galleryLightboxImg');
             if (!lb || !img) return;
+            window.__galleryIndex = index || 0;
             img.src = src;
+            updateGalleryLightbox();
+            stopGallerySlideshow();
             lb.style.display = 'flex';
             requestAnimationFrame(() => {
                 lb.classList.add('show');
@@ -192,9 +206,56 @@
             });
         }
 
+        function galleryLightboxNav(dir) {
+            const images = window.__galleryImages;
+            if (!images.length) return;
+            const total = images.length;
+            window.__galleryIndex = (window.__galleryIndex + dir + total) % total;
+            const img = document.getElementById('galleryLightboxImg');
+            const src = 'images/R-N-picture/' + images[window.__galleryIndex];
+            if (typeof anime !== 'undefined') {
+                anime.animate(img, { opacity: [1, 0], duration: 120, ease: 'in(2)', onComplete: () => {
+                    img.src = src;
+                    updateGalleryLightbox();
+                    anime.animate(img, { opacity: [0, 1], scale: [0.96, 1], duration: 220, ease: 'out(2)' });
+                } });
+            } else {
+                img.src = src;
+                updateGalleryLightbox();
+            }
+        }
+
+        function updateGalleryLightbox() {
+            const el = document.getElementById('galleryLightboxCounter');
+            if (el) el.textContent = (window.__galleryIndex + 1) + ' / ' + window.__galleryImages.length;
+            const dl = document.getElementById('galleryLightboxDownload');
+            const img = document.getElementById('galleryLightboxImg');
+            if (dl && img) dl.href = img.src;
+        }
+
+        function toggleGallerySlideshow() {
+            const btn = document.getElementById('galleryLightboxSlide');
+            if (__galleryTimer) {
+                stopGallerySlideshow();
+            } else {
+                __galleryTimer = setInterval(() => galleryLightboxNav(1), 2500);
+                if (btn) btn.textContent = '⏸ 暂停';
+            }
+        }
+
+        function stopGallerySlideshow() {
+            if (__galleryTimer) {
+                clearInterval(__galleryTimer);
+                __galleryTimer = null;
+            }
+            const btn = document.getElementById('galleryLightboxSlide');
+            if (btn) btn.textContent = '▶ 播放';
+        }
+
         function closeGalleryLightbox() {
             const lb = document.getElementById('galleryLightbox');
             if (!lb) return;
+            stopGallerySlideshow();
             lb.classList.remove('show');
             if (typeof anime !== 'undefined') {
                 anime.animate(lb, { opacity: [1, 0], duration: 200, ease: 'in(2)', onComplete: () => { lb.style.display = 'none'; } });
@@ -235,18 +296,21 @@
                 });
             })();
 
-            // ESC to close search / 图库灯箱
+            // ESC 关闭搜索 / 图库灯箱；左右方向键切换图片
             document.addEventListener('keydown', (e) => {
+                const lb = document.getElementById('galleryLightbox');
+                const lbOpen = lb && lb.classList.contains('show');
                 if (e.key === 'Escape') {
                     const dropdown = document.getElementById('searchDropdown');
                     if (dropdown && dropdown.classList.contains('show')) {
                         BlogApp.toggleSearch();
                     }
-                    const lb = document.getElementById('galleryLightbox');
-                    if (lb && lb.classList.contains('show')) {
+                    if (lbOpen) {
                         closeGalleryLightbox();
                     }
                 }
+                if (lbOpen && (e.key === 'ArrowLeft')) galleryLightboxNav(-1);
+                if (lbOpen && (e.key === 'ArrowRight')) galleryLightboxNav(1);
             });
 
             // WASD shortcuts

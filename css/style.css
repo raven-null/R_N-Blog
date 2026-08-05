@@ -498,10 +498,29 @@ body {
 }
 
 .gallery-lightbox img {
-    max-width: 90vw;
-    max-height: 90vh;
+    max-width: 80vw;
+    max-height: 80vh;
     border-radius: 8px;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+    user-select: none;
+    -webkit-user-drag: none;
+}
+
+.gallery-lightbox-btn {
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    background: rgba(0, 0, 0, 0.4);
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: inherit;
+}
+
+.gallery-lightbox-btn:hover {
+    border-color: #fff;
+    background: rgba(0, 0, 0, 0.7);
 }
 
 .gallery-lightbox-close {
@@ -511,21 +530,63 @@ body {
     width: 40px;
     height: 40px;
     border-radius: 50%;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    background: rgba(0, 0, 0, 0.4);
-    color: #fff;
     font-size: 22px;
     line-height: 1;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s;
 }
 
-.gallery-lightbox-close:hover {
-    border-color: #fff;
-    background: rgba(0, 0, 0, 0.7);
+/* 左右切换 */
+.gallery-lightbox-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    font-size: 28px;
+    line-height: 1;
+}
+
+.gallery-lightbox-nav.prev {
+    left: 24px;
+}
+
+.gallery-lightbox-nav.next {
+    right: 24px;
+}
+
+/* 页码 */
+.gallery-lightbox-counter {
+    position: absolute;
+    top: 22px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 13px;
+    font-family: 'Courier New', monospace;
+    letter-spacing: 1px;
+    padding: 5px 14px;
+    border-radius: 100px;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* 底部操作按钮（幻灯片 / 下载） */
+.gallery-lightbox-actions {
+    position: absolute;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 10px;
+}
+
+.gallery-lightbox-action {
+    padding: 8px 18px;
+    border-radius: 100px;
+    font-size: 13px;
+    letter-spacing: 1px;
+    text-decoration: none;
+    line-height: 1.4;
 }
 
 /* 仪表盘统计 */
