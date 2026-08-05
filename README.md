@@ -100,7 +100,7 @@ image: images/cover.jpg  # 可选，封面图片路径
 将图片放入 `images/` 文件夹，在Markdown中引用：
 
 ```markdown
-![图片说明文字](images/your-image.jpg)
+![图片说明文字](images/assets/01-blog-usage-guide/1.jpg)
 ```
 
 - 图片说明文字（alt文本）会自动显示在图片下方作为说明

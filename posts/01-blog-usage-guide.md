@@ -181,7 +181,7 @@ function hello() {
 ### 3.7 图片
 
 ```markdown
-![图片说明文字](images/your-image.jpg)
+![图片说明文字](images/assets/01-blog-usage-guide/1.jpg)
 ```
 
 图片说明文字会自动显示在图片下方作为说明。
@@ -219,12 +219,12 @@ images/
 ### 4.2 在文章中引用
 
 ```markdown
-![这是图片说明](images/your-image.jpg)
+![这是图片说明](images/assets/01-blog-usage-guide/1.jpg)
 ```
 
 - `!` 表示这是图片
 - `[这是图片说明]` 方括号内是图片描述，会显示在图片下方
-- `(images/your-image.jpg)` 是图片路径
+- `(images/assets/01-blog-usage-guide/1.jpg)` 是图片路径
 
 ### 4.3 图片说明文字的作用
 
