@@ -17,6 +17,8 @@ const BlogApp = {
     currentTag: null,
     // 当前视图（博客 / 图库 / 仪表盘）
     currentView: 'blog',
+    // 图库图片清单缓存
+    galleryImages: null,
     // 当前已加载的文章数量（加载更多）
     visibleCount: 10,
 
@@ -441,20 +443,35 @@ const BlogApp = {
         }
     },
 
-    // 渲染图库（BG 封面图网格）
-    renderGallery() {
+    // 渲染图库（读取 images/R-N-picture 目录清单）
+    async renderGallery() {
         const grid = document.getElementById('galleryGrid');
         if (!grid || grid.dataset.rendered) return;
         grid.dataset.rendered = '1';
-        grid.innerHTML = this.bgImages.map((src, i) => `
-            <figure class="gallery-item">
-                <img src="${src}" alt="图片 ${i + 1}" loading="lazy">
-            </figure>
-        `).join('');
+        try {
+            const images = await this.loadGalleryManifest();
+            grid.innerHTML = images.map((src, i) => `
+                <figure class="gallery-item">
+                    <img src="images/R-N-picture/${src}" alt="图片 ${i + 1}" loading="lazy">
+                </figure>
+            `).join('');
+        } catch (e) {
+            grid.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:40px;">图库加载失败</p>';
+        }
+    },
+
+    // 加载图库清单（images/R-N-picture/manifest.json，缓存复用）
+    async loadGalleryManifest() {
+        if (this.galleryImages) return this.galleryImages;
+        const res = await fetch('images/R-N-picture/manifest.json');
+        if (!res.ok) throw new Error('manifest load failed');
+        const images = await res.json();
+        this.galleryImages = Array.isArray(images) ? images : [];
+        return this.galleryImages;
     },
 
     // 渲染仪表盘（统计卡片）
-    renderDashboard() {
+    async renderDashboard() {
         const box = document.getElementById('dashboardStats');
         if (!box || box.dataset.rendered) return;
         box.dataset.rendered = '1';
@@ -462,7 +479,10 @@ const BlogApp = {
         const posts = this.posts.length;
         const tags = new Set(this.posts.flatMap(p => p.tags || [])).size;
         const minutes = this.posts.reduce((s, p) => s + Math.max(1, Math.round((p.wordCount || 0) / 300)), 0);
-        const images = this.bgImages.length;
+        let images = 0;
+        try {
+            images = (await this.loadGalleryManifest()).length;
+        } catch (e) { }
 
         box.innerHTML = `
             <div class="dashboard-card">
