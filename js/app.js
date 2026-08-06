@@ -23,6 +23,8 @@ const BlogApp = {
     recommendItems: null,
     // 当前推荐筛选类型
     currentRecommendFilter: 'all',
+    // 当前推荐搜索关键词
+    currentRecommendQuery: '',
     // 当前已加载的文章数量（加载更多）
     visibleCount: 10,
 
@@ -507,18 +509,26 @@ const BlogApp = {
         return items;
     },
 
-    // 绘制推荐卡片
+    // 绘制推荐胶囊
     drawRecommend(items, opts) {
         const grid = document.getElementById('recommendGrid');
         if (!grid) return;
         const filter = this.currentRecommendFilter;
-        const filtered = filter === 'all' ? items : items.filter(i => i.type === filter);
+        const q = this.currentRecommendQuery;
+        const filtered = items.filter(item => {
+            if (filter !== 'all' && item.type !== filter) return false;
+            if (q) {
+                const hay = `${item.title || ''} ${item.desc || ''} ${item.source || ''}`.toLowerCase();
+                if (!hay.includes(q)) return false;
+            }
+            return true;
+        });
 
         if (!filtered.length) {
             grid.innerHTML = `
                 <div style="text-align:center;padding:80px 20px;color:var(--text-muted);">
                     <div style="font-size:48px;margin-bottom:16px;opacity:0.3;">∅</div>
-                    <p>该分类暂无推荐</p>
+                    <p>${q ? '未找到匹配的推荐' : '该分类暂无推荐'}</p>
                 </div>
             `;
             return;
@@ -526,7 +536,7 @@ const BlogApp = {
 
         grid.innerHTML = filtered.map(item => this.renderRecommendCard(item)).join('');
 
-        // 入场动效：首次完整 stagger，筛选重渲染仅快速淡入
+        // 入场动效：首次完整 stagger，筛选/搜索重渲染仅快速淡入
         const cards = grid.querySelectorAll('.recommend-card');
         if (typeof anime !== 'undefined' && cards.length) {
             if (opts && opts.first) {
@@ -613,6 +623,36 @@ const BlogApp = {
         if (this.recommendItems) {
             this.drawRecommend(this.recommendItems);
         }
+    },
+
+    // 切换推荐搜索框显示
+    toggleRecommendSearch() {
+        const box = document.getElementById('recommendSearch');
+        if (!box) return;
+        const willShow = !box.classList.contains('show');
+        box.classList.toggle('show', willShow);
+        if (willShow) {
+            setTimeout(() => {
+                const input = document.getElementById('recommendSearchInput');
+                if (input) input.focus({ preventScroll: true });
+            }, 100);
+        } else {
+            this.clearRecommendSearch();
+        }
+    },
+
+    // 清空推荐搜索
+    clearRecommendSearch() {
+        const input = document.getElementById('recommendSearchInput');
+        if (input && input.value) input.value = '';
+        this.currentRecommendQuery = '';
+        if (this.recommendItems) this.drawRecommend(this.recommendItems);
+    },
+
+    // 搜索推荐（按标题 / 理由 / 平台匹配，与类型筛选叠加）
+    searchRecommend(query) {
+        this.currentRecommendQuery = (query || '').trim().toLowerCase();
+        if (this.recommendItems) this.drawRecommend(this.recommendItems);
     },
 
     // 将推荐对象转义为 HTML 属性安全的 JSON 字符串（用于内联 onclick 传参）
