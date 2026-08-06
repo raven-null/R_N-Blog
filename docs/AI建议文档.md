@@ -1266,7 +1266,7 @@ function goTo(pageIndex) {                       // 0 = Hero, 1 = 内容
 
 # "推荐"页面设计方案
 
-> 目标：在顶部视图栏"图库"与"我的"之间新增一个「推荐」视图，集中展示博主推荐的文章、视频、网页与应用，形成"看文章 → 看图库 → 看推荐 → 看我的"的完整内容闭环。
+> 目标：在顶部视图栏"图库"与"我的"之间新增一个「推荐」视图，集中展示博主从**其他网页**收集推荐的文章、视频、网页与应用；视频卡点击后**在页面内直接播放**（用视频链接的 embed 形式实现）。形成"看文章 → 看图库 → 看推荐 → 看我的"的完整内容闭环。
 
 ### 1. 现状
 
@@ -1278,23 +1278,25 @@ function goTo(pageIndex) {                       // 0 = Hero, 1 = 内容
 
 - **内容集中**：把散落在各处的"好东西"汇总成一屏，方便访客与作者快速取用
 - **类型分明**：文章 / 视频 / 网页 / 应用 四大类，一眼可辨
+- **外部聚合**：四类推荐全部来自**外部网页链接**，不依赖站内文章
+- **视频可播**：视频卡点击后在**页面内播放**，用视频链接的 embed 形式实现，不跳走
 - **零后端**：沿用纯前端方案，用 JSON 数据文件驱动，改动数据即可更新页面
 - **风格统一**：卡片语言与瀑布流、图库一致，动效复用 Anime.js
 
 ### 3. 内容分类与字段设计
 
-推荐项统一存于 `data/recommendations.json`（示例）：
+四类推荐均来自**外部网页**，统一存于 `data/recommendations.json`（示例）：
 
 ```json
 [
   {
     "id": "r01",
     "type": "article",
-    "title": "即梦AI 万能提示词框架",
-    "desc": "我写的提示词方法论，推荐入门即梦的同学先看这篇",
-    "url": "article.html?post=02-jimeng-ai-prompt-framework.md",
-    "image": "images/BG/01_BG.webp",
-    "tags": ["AI", "写作"],
+    "title": "A Complete Guide to CSS Grid",
+    "desc": "讲得最清楚的 CSS Grid 教程，图解详细",
+    "url": "https://css-tricks.com/snippets/css/complete-guide-grid/",
+    "image": "images/recommend/article-01.webp",
+    "tags": ["前端"],
     "rating": 5
   },
   {
@@ -1303,9 +1305,11 @@ function goTo(pageIndex) {                       // 0 = Hero, 1 = 内容
     "title": "GitHub Actions 入门到实战",
     "desc": "保姆级 CI/CD 教程，适合第一次接触自动化部署",
     "url": "https://www.bilibili.com/video/BVxxxx",
+    "embed": "//player.bilibili.com/player.html?bvid=BVxxxx&autoplay=1&danmaku=0",
     "image": "images/recommend/video-01.webp",
     "source": "bilibili",
-    "tags": ["开发"]
+    "tags": ["开发"],
+    "rating": 5
   }
 ]
 ```
@@ -1315,11 +1319,22 @@ function goTo(pageIndex) {                       // 0 = Hero, 1 = 内容
 | `type` | ✅ | `article` / `video` / `web` / `app` 四选一 |
 | `title` | ✅ | 推荐项标题 |
 | `desc` | 推荐 | 一句话推荐理由 / 简介 |
-| `url` | ✅ | 点击跳转地址；站内文章可用 `article.html?post=xxx.md` |
+| `url` | ✅ | 点击跳转的外部链接（http/https） |
+| `embed` | 视频必填 | 视频**嵌入播放链接**，点击卡片时在页面内 iframe 播放 |
 | `image` | 可选 | 封面/图标，无图时用类型默认图标兜底 |
 | `source` | 可选 | 视频平台标识（bilibili / youtube 等），用于显示角标 |
 | `tags` | 可选 | 标签，用于筛选 |
 | `rating` | 可选 | 推荐指数 1-5，用于排序与展示 |
+
+**视频"用链接实现播放"的 embed 获取方式：**
+
+| 平台 | 页面链接（`url`） | embed 嵌入链接（`embed`） |
+|------|----------|---------------------------|
+| Bilibili | `https://www.bilibili.com/video/BVxxxx` | `//player.bilibili.com/player.html?bvid=BVxxxx&autoplay=1&danmaku=0` |
+| YouTube | `https://www.youtube.com/watch?v=ID` | `//www.youtube.com/embed/ID?autoplay=1` |
+| 支持 iframe 的其它平台 | 原页面链接 | 该平台官方 embed 链接 |
+
+> 原则：**一切靠链接实现**——每条视频存两个链接：`url`（原页面，供跳转）与 `embed`（可播放的嵌入链接，供页面内播放）。
 
 ### 4. 视图结构（HTML 示意）
 
@@ -1360,15 +1375,15 @@ function goTo(pageIndex) {                       // 0 = Hero, 1 = 内容
 └─────────────────────────────┘
 ```
 
-| 类型 | 角标颜色 | 卡片右下角补充 |
+| 类型 | 角标颜色 | 卡片补充 |
 |------|----------|----------------|
-| 文章 article | 主题强调色 | 打开站内文章 |
-| 视频 video | 红/蓝（平台色） | 平台来源图标（bilibili/youtube） |
+| 文章 article | 主题强调色 | 外链 ↗（打开原网页文章） |
+| 视频 video | 红/蓝（平台色） | 播放 ▶（页面内播放）+ 平台来源图标 |
 | 网页 web | 青绿 | 外链 ↗ |
 | 应用 app | 紫色 | 外链 ↗ / 平台徽标 |
 
 - 无封面图时按类型显示默认 SVG 图标（`images/recommend/icon-{type}.svg`）
-- 视频卡 hover 可选"快速预览"：点击后在灯箱内嵌播放器 iframe（复用图库灯箱改造），移动端则直接跳转
+- **视频卡是"播放卡"**：封面叠加播放按钮 ▶ 与平台角标；点击卡片 → 页面内灯箱用 `embed` 链接播放（不跳转）；卡片角部另有"在新窗口打开原链接"小按钮。移动端小屏可直接跳转原页面
 
 ### 6. 视觉与动效（Anime.js）
 
@@ -1380,129 +1395,107 @@ function goTo(pageIndex) {                       // 0 = Hero, 1 = 内容
 ### 7. 交互设计
 
 - **筛选**：点击类型胶囊即时过滤（本地数据，无需重新 fetch）
-- **打开**：站内文章 `target=_self` 跳文章页；外部链接 `target=_blank + rel="noopener"` 新窗口打开
-- **视频预览（可选增强）**：点击视频卡 → 灯箱内播放 Bilibili/YouTube 内嵌 iframe，支持 ESC 关闭（复用 `galleryLightbox` 加一个 video 容器）
+- **打开**：文章 / 网页 / 应用卡 `target=_blank + rel="noopener"` 新窗口打开外部链接
+- **视频播放（核心）**：点击视频卡 → 打开页面内播放灯箱，把 `embed` 链接注入 iframe 播放（`autoplay=1`）；ESC / 关闭按钮退出并清空 iframe `src` 停止播放；灯箱底部放"去原页面看"链接
 - **排序**：默认按 `rating` 降序 → 同分按录入顺序；后续可加"按时间/评分"切换
 
 ### 8. 推荐内容的更新维护方案（核心）
 
-> 更新推荐的核心诉求：**新增站内文章时能自动上榜，外部资源改动最小化，失效链接可检测，且缓存不失效。**
+> 推荐全部来自外部网页、属人工收集内容，更新关键是：**单文件维护、改动即生效、失效链接可检、缓存自动失效。**
 
-#### 8.1 双来源数据模型
+#### 8.1 单来源数据模型（推荐采用）
 
-推荐数据拆为「自动来源」与「手动来源」，由构建脚本合并生成最终文件：
+不需要"源文件 + 构建"两层，直接维护最终文件 `data/recommendations.json`：
 
 ```
-posts/*.md（frontmatter 标记）
-        │  扫描提取
+data/recommendations.json  ← 唯一的维护入口（手动编辑）
+        │  页面 fetch（缓存 key 取内容哈希）
         ▼
-build-recommendations.js  ──合并──►  data/recommendations.json（页面只读）
-        ▲
-data/recommendations-source.json（手动维护外部资源）
+    #view-recommend 渲染
 ```
 
-- **来源 A：站内文章（自动）**：文章 frontmatter 新增可选字段 `recommend`，脚本自动归集为 `article` 类型：
+- 新增 / 修改 / 下架都在这一个文件里完成，改完推送即可，**无需构建脚本**
+- 需要播放的视频，在对应条目补 `embed` 链接（获取方式见第 3 节）
 
-```yaml
-recommend: true            # 是否进入推荐
-recommendRating: 5         # 推荐指数 1-5（默认 3）
-recommendDesc: 推荐理由    # 不填则用 excerpt
-recommendTags: [AI, 写作]  # 可选，推荐页标签
-```
-
-  脚本自动填充：title / date / image / url（`article.html?post=文件名`）/ excerpt。
-
-- **来源 B：外部资源（手动）**：维护 `data/recommendations-source.json`，只放 video / web / app 三类（article 类尽量走来源 A，避免重复维护）：
-
-```json
-{
-  "items": [
-    { "type": "video", "title": "...", "url": "...", "desc": "...", "source": "bilibili", "rating": 5 },
-    { "type": "web",   "title": "...", "url": "...", "desc": "...", "rating": 4 }
-  ]
-}
-```
-
-#### 8.2 构建脚本 `scripts/build-recommendations.js`
+#### 8.2 校验与健康检查脚本（可选，`scripts/check-recommendations.js`）
 
 ```bash
-node scripts/build-recommendations.js            # 合并生成
-node scripts/build-recommendations.js --check    # 合并 + 链接健康检查
-node scripts/build-recommendations.js --dry      # 只输出结果，不写文件
+node scripts/check-recommendations.js            # 字段合法性校验
+node scripts/check-recommendations.js --check    # 校验 + 外链/embed 健康检查
 ```
 
 职责：
-1. 扫描 `posts/*.md` 提取 `recommend` 标记文章
-2. 读取 `data/recommendations-source.json` 外部条目
-3. **字段校验**：`type`/`url` 必填；`url` 必须是站内 `article.html?...` 或 http(s) 外链；非法条目打印警告并跳过
-4. **排序**：`rating` 降序 → 同分按 `date` 降序 → 再按录入顺序
-5. 写入 `data/recommendations.json`（含 `_version` 自增，用于缓存失效）
-6. `--check` 模式：对全部外链发 HEAD 请求，报告 4xx/5xx/超时，便于清理失效链接
+1. **字段校验**：`type`/`url` 必填；`type` 必须是四类之一；视频必须有 `embed`；`url`/`embed` 必须是 http(s) 或 `//` 开头；非法条目打印警告
+2. **去重校验**：`id`/`url` 重复时告警
+3. **健康检查**（`--check`）：对 `url` 与 `embed` 发 HEAD 请求，报告 4xx/5xx/超时，便于清理失效推荐
+
+> 脚本只做质量把关、不生成内容，仅在需要时运行。
 
 #### 8.3 日常更新流程（工作流）
 
-**场景一：发布新文章并想让它上榜**
+**场景一：新增一条外部推荐**
 ```bash
-# 文章 frontmatter 加 recommend: true
-node scripts/build-recommendations.js
-git add . && git commit -m "发布新文章并更新推荐" && git push origin main
+# 编辑 data/recommendations.json 追加条目（视频记得补 embed）
+node scripts/check-recommendations.js      # 可选，先本地校验
+git add . && git commit -m "新增推荐" && git push origin main
 ```
 
-**场景二：新增外部视频/网页/应用**
+**场景二：修改推荐语 / 星级 / 封面 / embed**
 ```bash
-# 编辑 data/recommendations-source.json 追加条目
-node scripts/build-recommendations.js
+# 直接改 data/recommendations.json 对应条目
 git add . && git commit -m "更新推荐" && git push origin main
 ```
 
-**场景三：调整推荐语 / 星级 / 下架**
-- 站内文章：改 frontmatter 的 `recommendDesc` / `recommendRating`，或去掉 `recommend` 字段下架
-- 外部资源：改 `recommendations-source.json`
-- 改完重跑脚本 + 推送
+**场景三：下架（链接失效或不再推荐）**
+```bash
+# 删除 data/recommendations.json 中对应条目
+git add . && git commit -m "下架推荐" && git push origin main
+```
 
 **场景四：定期体检失效链接**（建议每月）
 ```bash
-node scripts/build-recommendations.js --check
+node scripts/check-recommendations.js --check
 ```
 
 #### 8.4 缓存与版本控制
 
-- `recommendations.json` 顶部内置 `_version`（构建脚本自增），`loadRecommend` 以 `_version` 作为 sessionStorage 缓存 key（如 `recommend-data-v{_version}`），数据更新后缓存自动失效
-- 与首页文章缓存同策略：资源链接继续带 `?v=` 查询参数（当前 `2.6.31`），发布后强制刷新兜底
+- 不使用手写版本号：页面把 JSON 内容做哈希作为 sessionStorage 缓存 key（如 `recommend-data-{hash}`），**内容一变哈希即变，缓存自动失效**，天然免维护
+- 视频封面若引用外站图片，配合 `loading="lazy"`，加载失败时回退为类型图标
+- 兜底：发布后强制刷新（Ctrl+F5）仍可强制更新
 
 #### 8.5 排序策略（供后续优化）
 
 | 策略 | 说明 |
 |------|------|
 | 评分优先（默认） | 按 `rating` 降序，人工可控 |
-| 最新优先 | 按 `date` 降序，新推荐自然靠前 |
-| 自动「每周精选」（可选） | 脚本每周随机置顶 1-3 条，配合 `_version` 变更触发缓存刷新 |
+| 最新优先 | 条目加 `date` 后按时间倒序 |
+| 自动「每周精选」（可选） | 脚本每周随机置顶 1-3 条，仅重排，不改数据 |
 
-> 推荐先落地 8.1-8.3（手动 JSON + 脚本合并），`--check` 与周精选作为 P2 增强。
+> 推荐先落地 8.1/8.3（单文件直接维护 + 推送即生效），`check` 脚本与周精选作为 P2 增强。
 
 ### 9. 实施步骤
 
-1. 新建 `data/recommendations-source.json`，录入首批外部推荐（video/web/app）
-2. 新建 `scripts/build-recommendations.js`：扫描站内 `recommend` 标记 + 合并外部源 → 生成 `data/recommendations.json`（含 `_version`）
-3. `index.html`：视图按钮加「推荐」、新增 `#view-recommend` 结构、预留筛选栏与网格容器
-4. `js/app.js`：`switchView` 的 `valid` 数组加 `recommend`；新增 `loadRecommend`（fetch JSON，按 `_version` 缓存）与 `renderRecommend(filter)`；筛选按钮事件委托
-5. `css/style.css`：推荐页筛选栏、卡片网格、类型角标、rating 星标样式（跟随主题变量）
+1. 新建 `data/recommendations.json`，录入首批外部推荐（article/video/web/app 各若干，视频条目补 `embed`）
+2. `index.html`：视图按钮加「推荐」、新增 `#view-recommend` 结构、预留筛选栏与网格容器
+3. `js/app.js`：`switchView` 的 `valid` 数组加 `recommend`；新增 `loadRecommend`（fetch JSON，内容哈希做缓存 key）与 `renderRecommend(filter)`；筛选按钮事件委托
+4. `css/style.css`：推荐页筛选栏、卡片网格、类型角标、rating 星标、视频播放按钮样式（跟随主题变量）
+5. `js/app.js`：视频播放灯箱（复用 `galleryLightbox` 结构，注入 `embed` iframe；ESC/关闭时清空 src 停止播放）
 6. `js/animations.js`：推荐卡片 stagger 入场 + 筛选重渲染淡入
-7. 视频灯箱预览（P1 可选）：复用 `galleryLightbox` 增加 iframe 容器
+7. 新建 `scripts/check-recommendations.js`（字段校验 + `--check` 健康检查）
 8. 更新《博客完整使用手册》（含推荐页维护流程）、项目文档与更新日志，推送上线
 
 ### 10. 优先级
 
 | 优先级 | 事项 | 收益 |
 |--------|------|------|
-| P0 | 构建脚本（双来源合并 + 校验 + `_version`） | 更新机制根基 |
-| P0 | 视图按钮 + `#view-recommend` 渲染 | 核心功能 |
-| P0 | 类型筛选 + 打开链接 | 可用性 |
-| P1 | 类型角标 / rating / 无图兜底图标 | 信息密度与观感 |
+| P0 | `data/recommendations.json` + 视图按钮 + `#view-recommend` 渲染 | 核心功能 |
+| P0 | 视频卡片页面内播放（embed iframe 灯箱） | 核心需求 |
+| P0 | 类型筛选 + 外链新窗口打开 | 可用性 |
+| P1 | 类型角标 / rating / 无图兜底图标 / 播放按钮 | 信息密度与观感 |
 | P1 | 卡片 stagger 入场动效 | 质感 |
-| P1 | `_version` 缓存失效机制 | 更新即时生效 |
-| P2 | `--check` 链接健康检查 | 清理失效推荐 |
-| P2 | 视频灯箱内嵌播放 / 每周精选 | 观看体验与新鲜感 |
+| P1 | 内容哈希缓存失效机制 | 更新即时生效 |
+| P2 | `check` 脚本（字段校验 + 链接体检） | 维护质量 |
+| P2 | 每周精选排序 | 新鲜感 |
 
 ---
 
