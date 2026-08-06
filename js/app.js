@@ -15,14 +15,10 @@ const BlogApp = {
     filteredPosts: [],
     // 当前选中的标签
     currentTag: null,
-    // 当前视图（博客 / 图库 / 推荐 / 仪表盘）
+    // 当前视图（博客 / 图库 / 仪表盘）
     currentView: 'blog',
     // 图库图片清单缓存
     galleryImages: null,
-    // 推荐数据缓存
-    recommendItems: null,
-    // 当前推荐筛选类型
-    currentRecommendFilter: 'all',
     // 当前已加载的文章数量（加载更多）
     visibleCount: 10,
 
@@ -385,9 +381,9 @@ const BlogApp = {
         this.closeSearch();
     },
 
-    // 切换视图（博客 / 图库 / 推荐 / 仪表盘）
+    // 切换视图（博客 / 图库 / 仪表盘）
     switchView(view) {
-        const valid = ['blog', 'gallery', 'recommend', 'dashboard'];
+        const valid = ['blog', 'gallery', 'dashboard'];
         if (!valid.includes(view) || this.currentView === view) return;
         this.currentView = view;
 
@@ -410,7 +406,6 @@ const BlogApp = {
 
         // 首次进入渲染内容
         if (view === 'gallery') this.renderGallery();
-        if (view === 'recommend') this.renderRecommend();
         if (view === 'dashboard') this.renderDashboard();
 
         // 入场动画
@@ -477,125 +472,65 @@ const BlogApp = {
         return this.galleryImages;
     },
 
-    // 渲染推荐视图（读取 data/recommendations.json，按类型筛选）
-    async renderRecommend() {
-        const grid = document.getElementById('recommendGrid');
-        if (!grid || grid.dataset.rendered) return;
-        grid.dataset.rendered = '1';
+    // 渲染资讯推荐（读取 data/recommendations.json，新闻卡片）
+    async renderNews() {
+        const box = document.getElementById('dashNews');
+        if (!box || box.dataset.rendered) return;
+        box.dataset.rendered = '1';
         try {
-            const items = await this.loadRecommend();
-            this.recommendItems = items;
-            this.drawRecommend(items, { first: true });
+            const items = await this.loadNews();
+            if (!items.length) {
+                box.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:30px;">暂无资讯</p>';
+                return;
+            }
+            box.innerHTML = items.map(item => this.renderNewsCard(item)).join('');
+            // 入场动效（Anime.js）
+            if (typeof anime !== 'undefined') {
+                anime.animate(box.querySelectorAll('.news-card'), {
+                    opacity: [0, 1],
+                    translateY: [16, 0],
+                    duration: 500,
+                    delay: anime.stagger(40),
+                    ease: 'out(2)'
+                });
+            }
         } catch (e) {
-            grid.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:40px;">推荐数据加载失败</p>';
+            box.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:30px;">资讯加载失败</p>';
         }
     },
 
-    // 加载推荐数据（内容哈希作为缓存 key，内容一变缓存自动失效）
-    async loadRecommend() {
+    // 加载资讯数据
+    async loadNews() {
         const res = await fetch('data/recommendations.json');
-        if (!res.ok) throw new Error('recommendations load failed');
+        if (!res.ok) throw new Error('news load failed');
         const text = await res.text();
         let items;
         try {
             items = JSON.parse(text);
         } catch (e) {
-            throw new Error('recommendations parse failed');
+            throw new Error('news parse failed');
         }
-        if (!Array.isArray(items)) throw new Error('recommendations format error');
-        // 保持录入顺序（已在 JSON 中按需排序）
-        return items;
+        return Array.isArray(items) ? items : [];
     },
 
-    // 绘制推荐卡片
-    drawRecommend(items, opts) {
-        const grid = document.getElementById('recommendGrid');
-        if (!grid) return;
-        const filter = this.currentRecommendFilter;
-        const filtered = filter === 'all' ? items : items.filter(i => i.type === filter);
-
-        if (!filtered.length) {
-            grid.innerHTML = `
-                <div style="text-align:center;padding:80px 20px;color:var(--text-muted);">
-                    <div style="font-size:48px;margin-bottom:16px;opacity:0.3;">∅</div>
-                    <p>该分类暂无推荐</p>
-                </div>
-            `;
-            return;
-        }
-
-        grid.innerHTML = filtered.map(item => this.renderRecommendCard(item)).join('');
-
-        // 入场动效：首次完整 stagger，筛选重渲染仅快速淡入
-        const cards = grid.querySelectorAll('.recommend-card');
-        if (typeof anime !== 'undefined' && cards.length) {
-            if (opts && opts.first) {
-                anime.animate(cards, {
-                    opacity: [0, 1],
-                    translateY: [24, 0],
-                    scale: [0.98, 1],
-                    duration: 500,
-                    delay: anime.stagger(50),
-                    ease: 'out(3)'
-                });
-            } else {
-                anime.animate(cards, { opacity: [0, 1], duration: 300, ease: 'out(2)' });
-            }
-        }
-    },
-
-    // 渲染单张推荐胶囊（图标 + 标题 + 平台标识 + 操作按钮）
-    renderRecommendCard(item) {
-        const type = item.type || 'web';
-        const sourceBadge = type === 'video' && item.source
-            ? `<span class="rec-source">${this.esc(item.source)}</span>` : '';
-        const icon = this.typeIcon(type);
-
-        // 视频：点击胶囊页面内播放
-        if (type === 'video') {
-            return `
-                <div class="recommend-card rec-video" title="${this.esc(item.desc || item.title)}" onclick="openVideoLightbox(${this.escapeAttr(item)})">
-                    <span class="rec-type-icon rec-type-icon-${type}">${icon}</span>
-                    <span class="rec-title">${this.esc(item.title)}</span>
-                    ${sourceBadge}
-                    <span class="rec-open rec-play">${this.playIcon()}</span>
-                    <a class="rec-open rec-external" href="${item.url}" target="_blank" rel="noopener" title="在新窗口打开原页面"
-                       onclick="event.stopPropagation()">${this.externalIcon()}</a>
-                </div>
-            `;
-        }
-
+    // 渲染单张资讯卡片
+    renderNewsCard(item) {
+        const category = this.esc(item.category || '资讯');
+        const source = this.esc(item.source || '');
+        const date = item.date ? this.formatShortDate(item.date) : '';
         return `
-            <a class="recommend-card rec-link" href="${item.url}" target="_blank" rel="noopener" title="${this.esc(item.desc || item.title)}">
-                <span class="rec-type-icon rec-type-icon-${type}">${icon}</span>
-                <span class="rec-title">${this.esc(item.title)}</span>
-                <span class="rec-open rec-external">${this.externalIcon()}</span>
+            <a class="news-card" href="${item.url}" target="_blank" rel="noopener">
+                <div class="news-card-head">
+                    <span class="news-cat">${category}</span>
+                    <span class="news-meta">${source}${date ? ' · ' + date : ''}</span>
+                </div>
+                <div class="news-card-title">${this.esc(item.title)}</div>
+                ${item.summary ? `<div class="news-card-summary">${this.esc(item.summary)}</div>` : ''}
             </a>
         `;
     },
 
-    // 类型图标（内联 SVG）
-    typeIcon(type) {
-        const icons = {
-            article: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="14" y2="17"/></svg>',
-            video: '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 4 20 12 6 20"/></svg>',
-            web: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
-            app: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>'
-        };
-        return icons[type] || icons.web;
-    },
-
-    // 播放图标（内联 SVG）
-    playIcon() {
-        return '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 4 20 12 6 20"/></svg>';
-    },
-
-    // 外链图标（内联 SVG）
-    externalIcon() {
-        return '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>';
-    },
-
-    // HTML 转义（用于卡片文本与 title 属性）
+    // HTML 转义（用于卡片文本）
     esc(str) {
         return String(str || '')
             .replace(/&/g, '&amp;')
@@ -604,27 +539,7 @@ const BlogApp = {
             .replace(/"/g, '&quot;');
     },
 
-    // 按类型筛选推荐
-    filterRecommend(type) {
-        this.currentRecommendFilter = type;
-        document.querySelectorAll('.rec-filter-btn').forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.type === type);
-        });
-        if (this.recommendItems) {
-            this.drawRecommend(this.recommendItems);
-        }
-    },
-
-    // 将推荐对象转义为 HTML 属性安全的 JSON 字符串（用于内联 onclick 传参）
-    escapeAttr(item) {
-        return JSON.stringify(item)
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;');
-    },
-
-    // 渲染仪表盘（统计概览 + 最近文章 + 热门标签）
+    // 渲染仪表盘（统计概览 + 资讯推荐 + 关于）
     async renderDashboard() {
         const box = document.getElementById('dashboardStats');
         if (!box || box.dataset.rendered) return;
@@ -658,28 +573,8 @@ const BlogApp = {
             </div>
         `;
 
-        // 最近文章（最新 5 篇，按日期倒序）
-        const recent = [...this.posts].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
-        const recentEl = document.getElementById('dashRecent');
-        if (recentEl) {
-            recentEl.innerHTML = recent.length ? recent.map(p => `
-                <a class="dash-recent-item" href="article.html?post=${p.filename}">
-                    <span class="dash-recent-title">${p.title}</span>
-                    <span class="dash-recent-date">${this.formatDate(p.date)}</span>
-                </a>
-            `).join('') : '<span style="color:var(--text-muted);font-size:13px;">暂无文章</span>';
-        }
-
-        // 热门标签（Top 8，按文章数）
-        const counts = {};
-        this.posts.forEach(p => (p.tags || []).forEach(t => { counts[t] = (counts[t] || 0) + 1; }));
-        const topTags = Object.keys(counts).sort((a, b) => counts[b] - counts[a]).slice(0, 8);
-        const tagsEl = document.getElementById('dashTags');
-        if (tagsEl) {
-            tagsEl.innerHTML = topTags.length ? topTags.map(tag => `
-                <span class="dash-tag" onclick="BlogApp.switchView('blog'); BlogApp.filterByTag('${tag}');">${tag}</span>
-            `).join('') : '<span style="color:var(--text-muted);font-size:13px;">暂无标签</span>';
-        }
+        // 资讯推荐
+        this.renderNews();
 
         // 入场动效（Anime.js）
         if (typeof anime !== 'undefined') {
@@ -784,6 +679,15 @@ const BlogApp = {
         const month = String(date.getMonth() + 1).padStart(2, '0');
         const day = String(date.getDate()).padStart(2, '0');
         return `${year}.${month}.${day}`;
+    },
+
+    // 格式化短日期为 MM-DD
+    formatShortDate(dateStr) {
+        const date = new Date(dateStr);
+        if (isNaN(date.getTime())) return dateStr;
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${month}-${day}`;
     }
 };
 

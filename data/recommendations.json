@@ -1,76 +1,74 @@
 [
     {
-        "id": "a01",
-        "type": "article",
-        "title": "阮一峰的网络日志",
-        "desc": "持续更新的中文技术博客，覆盖 Web 开发与科技评论",
-        "url": "https://www.ruanyifeng.com/blog/"
+        "id": "n01",
+        "title": "字节跳动发布新一代视频生成模型，长镜头叙事能力显著提升",
+        "url": "https://www.36kr.com/",
+        "source": "36氪",
+        "category": "科技",
+        "date": "2026-08-05",
+        "summary": "新模型在生成时长与镜头一致性上取得突破，已开放部分用户试用。"
     },
     {
-        "id": "a02",
-        "type": "article",
-        "title": "A Complete Guide to Flexbox",
-        "desc": "CSS-Tricks 的 Flexbox 完全指南，图解清晰、可交互演示",
-        "url": "https://css-tricks.com/snippets/css/a-guide-to-flexbox/"
+        "id": "n02",
+        "title": "GitHub 发布 2026 年度开发者报告：AI 辅助编程占比持续上升",
+        "url": "https://github.blog/",
+        "source": "GitHub Blog",
+        "category": "开发",
+        "date": "2026-08-04",
+        "summary": "报告显示 AI 辅助代码提交占比稳步增长，开源贡献地域分布出现新趋势。"
     },
     {
-        "id": "v01",
-        "type": "video",
-        "title": "【官方 MV】Never Gonna Give You Up",
-        "desc": "B 站播放过亿的经典 MV，互联网老梗之源（演示条目）",
-        "url": "https://www.bilibili.com/video/BV1GJ411x7h7",
-        "embed": "//player.bilibili.com/player.html?bvid=BV1GJ411x7h7&autoplay=1&danmaku=0",
-        "source": "bilibili"
+        "id": "n03",
+        "title": "CSS 容器查询实战：让组件根据父容器尺寸自适应布局",
+        "url": "https://css-tricks.com/",
+        "source": "CSS-Tricks",
+        "category": "前端",
+        "date": "2026-08-03",
+        "summary": "本文用完整实例讲解容器查询的用法、兼容性与常见踩坑。"
     },
     {
-        "id": "v02",
-        "type": "video",
-        "title": "Never Gonna Give You Up - Rick Astley",
-        "desc": "YouTube 官方频道原版 MV，跨平台演示条目",
-        "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-        "embed": "//www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1",
-        "source": "youtube"
+        "id": "n04",
+        "title": "量子位：大模型推理成本一年下降近十倍",
+        "url": "https://www.qbitai.com/",
+        "source": "量子位",
+        "category": "AI",
+        "date": "2026-08-02",
+        "summary": "量化、蒸馏与硬件迭代共同推动推理成本持续走低，小团队也能跑大模型。"
     },
     {
-        "id": "w01",
-        "type": "web",
-        "title": "Excalidraw",
-        "desc": "手绘风格在线白板，画流程图与架构图的神器",
-        "url": "https://excalidraw.com/"
+        "id": "n05",
+        "title": "少数派：效率工具正在回归「做减法」的设计趋势",
+        "url": "https://sspai.com/",
+        "source": "少数派",
+        "category": "产品",
+        "date": "2026-08-01",
+        "summary": "越来越多工具回归单一场景与简洁交互，而非一味堆砌功能。"
     },
     {
-        "id": "w02",
-        "type": "web",
-        "title": "GitHub Explore",
-        "desc": "发现优秀开源项目与前沿技术的官方入口",
-        "url": "https://github.com/explore"
+        "id": "n06",
+        "title": "虎嗅：AI 硬件赛道进入洗牌期，体验与生态成胜负手",
+        "url": "https://www.huxiu.com/",
+        "source": "虎嗅",
+        "category": "科技",
+        "date": "2026-07-30",
+        "summary": "资本退潮后，真正以体验与生态取胜的厂商开始浮现。"
     },
     {
-        "id": "w03",
-        "type": "web",
-        "title": "MDN Web Docs",
-        "desc": "Web 开发者最权威的文档站，HTML/CSS/JS 查 API 首选",
-        "url": "https://developer.mozilla.org/"
+        "id": "n07",
+        "title": "阮一峰：科技爱好者周刊（第 300 期）",
+        "url": "https://www.ruanyifeng.com/blog/",
+        "source": "阮一峰的网络日志",
+        "category": "互联网",
+        "date": "2026-07-28",
+        "summary": "本期荐文：端侧 AI、浏览器新特性与一组实用的开源工具。"
     },
     {
-        "id": "p01",
-        "type": "app",
-        "title": "Visual Studio Code",
-        "desc": "微软出品的轻量强大编辑器，前端与全栈开发首选",
-        "url": "https://code.visualstudio.com/"
-    },
-    {
-        "id": "p02",
-        "type": "app",
-        "title": "Obsidian",
-        "desc": "本地优先的双链笔记应用，个人知识库管理神器",
-        "url": "https://obsidian.md/"
-    },
-    {
-        "id": "p03",
-        "type": "app",
-        "title": "Everything",
-        "desc": "Windows 秒级文件名搜索工具，装机必备",
-        "url": "https://www.voidtools.com/"
+        "id": "n08",
+        "title": "MDN：2026 年 Web 平台新特性一览",
+        "url": "https://developer.mozilla.org/",
+        "source": "MDN",
+        "category": "前端",
+        "date": "2026-07-26",
+        "summary": "View Transitions、锚点定位等新 API 在主流浏览器全面落地。"
     }
 ]

@@ -1,8 +1,8 @@
 /**
- * 推荐数据校验与健康检查
+ * 资讯数据校验与健康检查
  * 用法：
  *   node scripts/check-recommendations.js            # 字段合法性校验
- *   node scripts/check-recommendations.js --check    # 校验 + 外链/embed 健康检查
+ *   node scripts/check-recommendations.js --check    # 校验 + 外链健康检查
  */
 const fs = require('fs');
 const path = require('path');
@@ -10,7 +10,6 @@ const http = require('http');
 const https = require('https');
 
 const file = path.join(__dirname, '..', 'data', 'recommendations.json');
-const VALID_TYPES = ['article', 'video', 'web', 'app'];
 
 if (!fs.existsSync(file)) {
     console.error('文件不存在:', file);
@@ -35,6 +34,7 @@ const seenIds = new Set();
 const seenUrls = new Set();
 
 const isLink = (v) => /^(https?:)?\/\//.test(v);
+const isDate = (v) => /^\d{4}-\d{2}-\d{2}$/.test(v);
 
 items.forEach((it, i) => {
     const at = `[第 ${i + 1} 条 ${it.title || it.id || '(未命名)'}]`;
@@ -42,10 +42,6 @@ items.forEach((it, i) => {
     if (!it.id) errors.push(`${at} 缺少 id`);
     else if (seenIds.has(it.id)) errors.push(`${at} id 重复: ${it.id}`);
     else seenIds.add(it.id);
-
-    if (!VALID_TYPES.includes(it.type)) {
-        errors.push(`${at} type 非法: ${it.type || '(空)'}（应为 ${VALID_TYPES.join('/')}）`);
-    }
 
     if (!it.title) errors.push(`${at} 缺少 title`);
 
@@ -57,12 +53,16 @@ items.forEach((it, i) => {
         seenUrls.add(it.url);
     }
 
-    if (it.type === 'video' && (!it.embed || !isLink(it.embed))) {
-        errors.push(`${at} 视频必须提供 embed 播放链接`);
+    if (it.source && typeof it.source !== 'string') {
+        errors.push(`${at} source 应为字符串`);
     }
 
-    if (it.embed && !isLink(it.embed)) {
-        errors.push(`${at} embed 必须是 http(s) 或 // 开头`);
+    if (it.category && typeof it.category !== 'string') {
+        errors.push(`${at} category 应为字符串`);
+    }
+
+    if (it.date && !isDate(it.date)) {
+        errors.push(`${at} date 格式应为 YYYY-MM-DD: ${it.date}`);
     }
 });
 
@@ -72,7 +72,7 @@ if (errors.length) {
     process.exit(1);
 }
 
-console.log(`✓ 校验通过：${items.length} 条推荐，字段合法、无重复 id/url`);
+console.log(`✓ 校验通过：${items.length} 条资讯，字段合法、无重复 id/url`);
 
 // 健康检查
 if (process.argv.includes('--check')) {
@@ -89,12 +89,7 @@ if (process.argv.includes('--check')) {
     });
 
     (async () => {
-        const checks = [];
-        items.forEach(it => {
-            if (it.url) checks.push(urlCheck(it.url));
-            if (it.embed) checks.push(urlCheck(it.embed));
-        });
-        const results = await Promise.all(checks);
+        const results = await Promise.all(items.filter(it => it.url).map(it => urlCheck(it.url)));
         const bad = results.filter(r => !r.ok);
         if (bad.length) {
             console.error(`\n⚠ 发现 ${bad.length} 个无法访问的链接：`);

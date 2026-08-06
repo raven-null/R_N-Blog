@@ -8,7 +8,7 @@
 - 📝 **Markdown 文章** - `posts` 目录丢入 `.md` 文件即可显示
 - 🏷️ **标签体系** - 标签按钮弹出面板，展示全部标签及文章计数，支持筛选
 - 🎨 **十套主题** - Dark / Light / Cyberpunk / Sepia / Neon / Nord / Dracula / Ocean / Forest / Sunset，自动持久化
-- 🖼️ **四视图** - 文章（瀑布流卡片）/ 图库（灯箱相册）/ 推荐（外链精选）/ 我的（个人仪表盘），顶栏滑块切换
+- 🖼️ **三视图** - 文章（瀑布流卡片）/ 图库（灯箱相册）/ 我的（个人仪表盘 + 资讯推荐），顶栏滑块切换
 - 📚 **阅读体验** - 阅读工具栏（字号 / 行距 / 字体 / 护眼 / 夜间 / 专注）、目录、进度条
 - ⚡ **动画** - Anime.js 驱动卡片入场、视图切换等动效
 - 🤖 **AI 助手** - 内置智谱 GLM-4 对话助手，支持流式输出与划词问答
@@ -97,11 +97,10 @@ node scripts/build-gallery.js
 
 运行完成后提交生成的文件即可，图库支持灯箱查看、左右切换、下载、幻灯片放映与页码跳转。
 
-## ⭐ 推荐维护
+## 📰 资讯维护
 
-推荐视图展示 `data/recommendations.json` 中的外部精选内容（文章 / 视频 / 网页 / 应用），直接编辑该文件提交推送即可，缓存按内容哈希自动失效：
+「我的」视图内置资讯推荐模块，展示 `data/recommendations.json` 中的精选网站新闻（分类 / 来源 / 日期 / 标题 / 摘要），直接编辑该文件提交推送即可：
 
-- 视频条目需填 `embed` 嵌入播放链接（B 站 `//player.bilibili.com/player.html?bvid=BVxxx`；YouTube `//www.youtube.com/embed/ID`），点击视频卡在页面内播放
 - 校验：`node scripts/check-recommendations.js`（`--check` 追加链接体检）
 
 ## 🎨 主题
