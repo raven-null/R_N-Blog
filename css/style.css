@@ -593,6 +593,259 @@ body.home-layout {
     line-height: 1.4;
 }
 
+/* ===== 推荐页 ===== */
+.recommend-filter {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 28px;
+}
+
+.rec-filter-btn {
+    padding: 8px 22px;
+    border-radius: 100px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+
+.rec-filter-btn:hover {
+    border-color: var(--text-secondary);
+    color: var(--text-secondary);
+}
+
+.rec-filter-btn.active {
+    background: var(--text-primary);
+    color: var(--bg-primary);
+    border-color: var(--text-primary);
+}
+
+.recommend-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 16px;
+}
+
+.recommend-card {
+    position: relative;
+    display: block;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    text-decoration: none;
+    color: inherit;
+    transition: border-color 0.25s, transform 0.25s, box-shadow 0.25s;
+    cursor: pointer;
+}
+
+.recommend-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-4px);
+    box-shadow: 0 12px 32px var(--shadow);
+}
+
+.rec-card-cover {
+    position: relative;
+    height: 150px;
+    background: linear-gradient(145deg, var(--bg-tertiary), var(--bg-card));
+    overflow: hidden;
+}
+
+.rec-card-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.35s;
+}
+
+.recommend-card:hover .rec-card-cover img {
+    transform: scale(1.04);
+}
+
+.rec-type {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    padding: 4px 12px;
+    border-radius: 100px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    color: #fff;
+    background: var(--text-muted);
+}
+
+.rec-type-article { background: #5b7cfa; }
+.rec-type-video   { background: #fb7299; }
+.rec-type-web     { background: #2bb3a3; }
+.rec-type-app     { background: #8f6bff; }
+
+.rec-play {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.55);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-left: 4px;
+    backdrop-filter: blur(2px);
+    transition: transform 0.25s, background 0.25s;
+}
+
+.recommend-card:hover .rec-play {
+    transform: translate(-50%, -50%) scale(1.1);
+    background: rgba(0, 0, 0, 0.75);
+}
+
+.rec-open {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.45);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    line-height: 1;
+    text-decoration: none;
+    transition: background 0.2s, transform 0.2s;
+}
+
+.rec-open:hover {
+    background: rgba(0, 0, 0, 0.75);
+    transform: scale(1.08);
+}
+
+.rec-card-body {
+    padding: 16px 18px 18px;
+}
+
+.rec-card-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
+    line-height: 1.4;
+    margin-bottom: 8px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.rec-card-desc {
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.6;
+    margin-bottom: 12px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.rec-card-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.rec-stars {
+    color: #f5b301;
+    font-size: 13px;
+    letter-spacing: 1px;
+}
+
+.rec-tag {
+    padding: 3px 10px;
+    border-radius: 100px;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 11px;
+}
+
+.rec-source {
+    padding: 3px 10px;
+    border-radius: 100px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #fb7299;
+    border: 1px solid rgba(251, 114, 153, 0.4);
+}
+
+/* 推荐视频播放灯箱 */
+.video-lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 2100;
+    background: rgba(0, 0, 0, 0.92);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 16px;
+    padding: 24px;
+    opacity: 0;
+}
+
+.video-lightbox.show {
+    display: flex;
+    opacity: 1;
+}
+
+.video-lightbox-frame {
+    width: min(880px, 92vw);
+    aspect-ratio: 16 / 9;
+    background: #000;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+}
+
+.video-lightbox-frame iframe {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    display: block;
+}
+
+.video-lightbox-title {
+    max-width: min(880px, 92vw);
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.85);
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.video-lightbox-actions {
+    display: flex;
+    gap: 10px;
+}
+
 /* 仪表盘统计 */
 .dashboard-stats {
     display: grid;

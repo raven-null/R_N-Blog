@@ -15,10 +15,14 @@ const BlogApp = {
     filteredPosts: [],
     // 当前选中的标签
     currentTag: null,
-    // 当前视图（博客 / 图库 / 仪表盘）
+    // 当前视图（博客 / 图库 / 推荐 / 仪表盘）
     currentView: 'blog',
     // 图库图片清单缓存
     galleryImages: null,
+    // 推荐数据缓存
+    recommendItems: null,
+    // 当前推荐筛选类型
+    currentRecommendFilter: 'all',
     // 当前已加载的文章数量（加载更多）
     visibleCount: 10,
 
@@ -381,9 +385,9 @@ const BlogApp = {
         this.closeSearch();
     },
 
-    // 切换视图（博客 / 图库 / 仪表盘）
+    // 切换视图（博客 / 图库 / 推荐 / 仪表盘）
     switchView(view) {
-        const valid = ['blog', 'gallery', 'dashboard'];
+        const valid = ['blog', 'gallery', 'recommend', 'dashboard'];
         if (!valid.includes(view) || this.currentView === view) return;
         this.currentView = view;
 
@@ -406,6 +410,7 @@ const BlogApp = {
 
         // 首次进入渲染内容
         if (view === 'gallery') this.renderGallery();
+        if (view === 'recommend') this.renderRecommend();
         if (view === 'dashboard') this.renderDashboard();
 
         // 入场动画
@@ -470,6 +475,156 @@ const BlogApp = {
         const images = await res.json();
         this.galleryImages = Array.isArray(images) ? images : [];
         return this.galleryImages;
+    },
+
+    // 渲染推荐视图（读取 data/recommendations.json，按类型筛选）
+    async renderRecommend() {
+        const grid = document.getElementById('recommendGrid');
+        if (!grid || grid.dataset.rendered) return;
+        grid.dataset.rendered = '1';
+        try {
+            const items = await this.loadRecommend();
+            this.recommendItems = items;
+            this.drawRecommend(items, { first: true });
+        } catch (e) {
+            grid.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:40px;">推荐数据加载失败</p>';
+        }
+    },
+
+    // 加载推荐数据（内容哈希作为缓存 key，内容一变缓存自动失效）
+    async loadRecommend() {
+        const res = await fetch('data/recommendations.json');
+        if (!res.ok) throw new Error('recommendations load failed');
+        const text = await res.text();
+        let items;
+        try {
+            items = JSON.parse(text);
+        } catch (e) {
+            throw new Error('recommendations parse failed');
+        }
+        if (!Array.isArray(items)) throw new Error('recommendations format error');
+        // 按 rating 降序 → 同分按录入顺序
+        return items.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+    },
+
+    // 绘制推荐卡片
+    drawRecommend(items, opts) {
+        const grid = document.getElementById('recommendGrid');
+        if (!grid) return;
+        const filter = this.currentRecommendFilter;
+        const filtered = filter === 'all' ? items : items.filter(i => i.type === filter);
+
+        if (!filtered.length) {
+            grid.innerHTML = `
+                <div style="text-align:center;padding:80px 20px;color:var(--text-muted);">
+                    <div style="font-size:48px;margin-bottom:16px;opacity:0.3;">∅</div>
+                    <p>该分类暂无推荐</p>
+                </div>
+            `;
+            return;
+        }
+
+        grid.innerHTML = filtered.map(item => this.renderRecommendCard(item)).join('');
+
+        // 入场动效：首次完整 stagger，筛选重渲染仅快速淡入
+        const cards = grid.querySelectorAll('.recommend-card');
+        if (typeof anime !== 'undefined' && cards.length) {
+            if (opts && opts.first) {
+                anime.animate(cards, {
+                    opacity: [0, 1],
+                    translateY: [24, 0],
+                    scale: [0.98, 1],
+                    duration: 500,
+                    delay: anime.stagger(50),
+                    ease: 'out(3)'
+                });
+            } else {
+                anime.animate(cards, { opacity: [0, 1], duration: 300, ease: 'out(2)' });
+            }
+        }
+    },
+
+    // 渲染单张推荐卡片
+    renderRecommendCard(item) {
+        const type = item.type || 'web';
+        const typeLabel = { article: '文章', video: '视频', web: '网页', app: '应用' }[type] || '推荐';
+        const stars = this.renderStars(item.rating || 0);
+        const sourceBadge = type === 'video' && item.source
+            ? `<span class="rec-source">${item.source}</span>` : '';
+        const playOverlay = type === 'video'
+            ? `<div class="rec-play"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 4 20 12 6 20"/></svg></div>` : '';
+        const image = item.image || `images/recommend/icon-${type}.svg`;
+
+        const body = `
+            <div class="rec-card-body">
+                <div class="rec-card-title">${item.title}</div>
+                ${item.desc ? `<div class="rec-card-desc">${item.desc}</div>` : ''}
+                <div class="rec-card-meta">
+                    <span class="rec-stars">${stars}</span>
+                    ${(item.tags || []).map(t => `<span class="rec-tag">${t}</span>`).join('')}
+                    ${sourceBadge}
+                </div>
+            </div>
+        `;
+
+        // 视频：点击卡片站内播放
+        if (type === 'video') {
+            return `
+                <div class="recommend-card rec-video" onclick="openVideoLightbox(${this.escapeAttr(item)})">
+                    <div class="rec-card-cover">
+                        <img src="${image}" alt="${item.title}" loading="lazy"
+                             onerror="this.onerror=null;this.src='images/recommend/icon-video.svg';">
+                        ${playOverlay}
+                        <span class="rec-type rec-type-${type}">${typeLabel}</span>
+                    </div>
+                    ${body}
+                    <a class="rec-open" href="${item.url}" target="_blank" rel="noopener" title="在新窗口打开原页面"
+                       onclick="event.stopPropagation()">↗</a>
+                </div>
+            `;
+        }
+
+        return `
+            <a class="recommend-card rec-link" href="${item.url}" target="_blank" rel="noopener">
+                <div class="rec-card-cover">
+                    <img src="${image}" alt="${item.title}" loading="lazy"
+                         onerror="this.onerror=null;this.src='images/recommend/icon-${type}.svg';">
+                    <span class="rec-type rec-type-${type}">${typeLabel}</span>
+                </div>
+                ${body}
+                <span class="rec-open">↗</span>
+            </a>
+        `;
+    },
+
+    // 渲染星级（★☆☆☆）
+    renderStars(rating) {
+        const n = Math.min(5, Math.max(0, Math.round(rating || 0)));
+        let html = '';
+        for (let i = 1; i <= 5; i++) {
+            html += i <= n ? '★' : '☆';
+        }
+        return html;
+    },
+
+    // 按类型筛选推荐
+    filterRecommend(type) {
+        this.currentRecommendFilter = type;
+        document.querySelectorAll('.rec-filter-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.type === type);
+        });
+        if (this.recommendItems) {
+            this.drawRecommend(this.recommendItems);
+        }
+    },
+
+    // 将推荐对象转义为 HTML 属性安全的 JSON 字符串（用于内联 onclick 传参）
+    escapeAttr(item) {
+        return JSON.stringify(item)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
     },
 
     // 渲染仪表盘（统计概览 + 最近文章 + 热门标签）

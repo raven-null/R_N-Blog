@@ -8,7 +8,7 @@
     <link rel="icon" href="/images/TX/01_TX.webp" type="image/webp">
 
     <!-- Styles -->
-    <link rel="stylesheet" href="css/style.css?v=2.6.31">
+    <link rel="stylesheet" href="css/style.css?v=2.6.38">
 
     <!-- Marked.js -->
     <script src="js/vendor/marked.min.js"></script>
@@ -34,6 +34,7 @@
                     <div class="view-indicator" id="viewIndicator"></div>
                     <button class="view-btn active" data-view="blog" onclick="BlogApp.switchView('blog')">文章</button>
                     <button class="view-btn" data-view="gallery" onclick="BlogApp.switchView('gallery')">图库</button>
+                    <button class="view-btn" data-view="recommend" onclick="BlogApp.switchView('recommend')">推荐</button>
                     <button class="view-btn" data-view="dashboard" onclick="BlogApp.switchView('dashboard')">我的</button>
                 </div>
             </div>
@@ -99,6 +100,23 @@
                 <!-- 视图：图库 -->
                 <section class="view view-gallery" id="view-gallery" style="display:none;">
                     <div class="gallery-grid" id="galleryGrid"></div>
+                </section>
+
+                <!-- 视图：推荐 -->
+                <section class="view view-recommend" id="view-recommend" style="display:none;">
+                    <div class="recommend-filter" id="recommendFilter">
+                        <button class="rec-filter-btn active" data-type="all" onclick="BlogApp.filterRecommend('all')">全部</button>
+                        <button class="rec-filter-btn" data-type="article" onclick="BlogApp.filterRecommend('article')">文章</button>
+                        <button class="rec-filter-btn" data-type="video" onclick="BlogApp.filterRecommend('video')">视频</button>
+                        <button class="rec-filter-btn" data-type="web" onclick="BlogApp.filterRecommend('web')">网页</button>
+                        <button class="rec-filter-btn" data-type="app" onclick="BlogApp.filterRecommend('app')">应用</button>
+                    </div>
+                    <div class="recommend-grid" id="recommendGrid">
+                        <div class="loading">
+                            <div class="loading-spinner"></div>
+                            <p>Loading...</p>
+                        </div>
+                    </div>
                 </section>
 
             <!-- 视图：仪表盘 -->
@@ -193,11 +211,23 @@
         </div>
     </div>
 
+    <!-- 推荐视频播放灯箱 -->
+    <div class="video-lightbox" id="videoLightbox" onclick="closeVideoLightbox()">
+        <div class="video-lightbox-title" id="videoLightboxTitle" onclick="event.stopPropagation()"></div>
+        <div class="video-lightbox-frame" onclick="event.stopPropagation()">
+            <iframe id="videoLightboxFrame" src="" title="视频播放" allow="autoplay; fullscreen; encrypted-media" frameborder="0" allowfullscreen></iframe>
+        </div>
+        <div class="video-lightbox-actions" onclick="event.stopPropagation()">
+            <a class="gallery-lightbox-btn gallery-lightbox-action" id="videoLightboxOpen" href="#" target="_blank" rel="noopener" onclick="event.stopPropagation()">去原页面看</a>
+            <button class="gallery-lightbox-btn gallery-lightbox-action" id="videoLightboxClose" onclick="closeVideoLightbox()">关闭</button>
+        </div>
+    </div>
+
     <!-- Scripts -->
-    <script src="js/theme.js?v=2.6.31"></script>
-    <script src="js/markdown.js?v=2.6.31"></script>
-    <script src="js/app.js?v=2.6.31"></script>
-    <script src="js/animations.js?v=2.6.31"></script>
+    <script src="js/theme.js?v=2.6.38"></script>
+    <script src="js/markdown.js?v=2.6.38"></script>
+    <script src="js/app.js?v=2.6.38"></script>
+    <script src="js/animations.js?v=2.6.38"></script>
 
     <script>
         // ===== Scroll Observer =====
@@ -314,6 +344,41 @@
             }
         }
 
+        // ===== 推荐视频播放灯箱 =====
+        function openVideoLightbox(item) {
+            const lb = document.getElementById('videoLightbox');
+            const frame = document.getElementById('videoLightboxFrame');
+            const title = document.getElementById('videoLightboxTitle');
+            const open = document.getElementById('videoLightboxOpen');
+            if (!lb || !frame) return;
+            const src = item.embed || item.url || '';
+            if (!src) return;
+            if (title) title.textContent = item.title || '';
+            if (open) open.href = item.url || src;
+            frame.src = src;
+            lb.style.display = 'flex';
+            requestAnimationFrame(() => {
+                lb.classList.add('show');
+                if (typeof anime !== 'undefined') {
+                    anime.animate(lb, { opacity: [0, 1], duration: 250, ease: 'out(2)' });
+                }
+            });
+        }
+
+        function closeVideoLightbox() {
+            const lb = document.getElementById('videoLightbox');
+            if (!lb) return;
+            const frame = document.getElementById('videoLightboxFrame');
+            lb.classList.remove('show');
+            // 清空 iframe src 停止播放
+            if (frame) frame.src = '';
+            if (typeof anime !== 'undefined') {
+                anime.animate(lb, { opacity: [1, 0], duration: 200, ease: 'in(2)', onComplete: () => { lb.style.display = 'none'; } });
+            } else {
+                lb.style.display = 'none';
+            }
+        }
+
         // ===== 全屏切换 =====
         function toggleFullscreen() {
             const el = document.documentElement;
@@ -374,10 +439,12 @@
                 });
             })();
 
-            // ESC 关闭搜索 / 图库灯箱；左右方向键切换图片
+            // ESC 关闭搜索 / 图库灯箱 / 视频灯箱；左右方向键切换图片
             document.addEventListener('keydown', (e) => {
                 const lb = document.getElementById('galleryLightbox');
                 const lbOpen = lb && lb.classList.contains('show');
+                const vlb = document.getElementById('videoLightbox');
+                const vlbOpen = vlb && vlb.classList.contains('show');
                 if (e.key === 'Escape') {
                     const dropdown = document.getElementById('searchDropdown');
                     if (dropdown && dropdown.classList.contains('show')) {
@@ -385,6 +452,9 @@
                     }
                     if (lbOpen) {
                         closeGalleryLightbox();
+                    }
+                    if (vlbOpen) {
+                        closeVideoLightbox();
                     }
                 }
                 if (lbOpen && (e.key === 'ArrowLeft')) galleryLightboxNav(-1);
