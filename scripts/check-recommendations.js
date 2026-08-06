@@ -64,10 +64,6 @@ items.forEach((it, i) => {
     if (it.embed && !isLink(it.embed)) {
         errors.push(`${at} embed 必须是 http(s) 或 // 开头`);
     }
-
-    if (it.rating != null && (typeof it.rating !== 'number' || it.rating < 1 || it.rating > 5)) {
-        errors.push(`${at} rating 必须在 1-5 之间: ${it.rating}`);
-    }
 });
 
 if (errors.length) {

@@ -96,7 +96,7 @@ node scripts/build-gallery.js
 
 ### 4.2 推荐胶囊
 
-每条推荐以胶囊（药丸）横条形式展示：左侧类型图标（文章蓝 / 视频粉 / 网页青 / 应用紫圆标）+ 标题 + 右侧星级与标签。
+每条推荐以胶囊（药丸）横条形式展示：左侧类型图标（文章蓝 / 视频粉 / 网页青 / 应用紫圆标）+ 标题，右侧为操作按钮。
 
 - **文章 / 网页 / 应用**：点击胶囊在新窗口打开原网页链接
 - **视频**：点击胶囊在页面内弹出播放器（用视频链接的嵌入形式），支持自动播放、ESC 或「关闭」停止播放；胶囊右侧 `外链图标` 可到原页面观看，`播放图标` 立即播放
@@ -113,8 +113,6 @@ node scripts/build-gallery.js
 | `url` | ✅ | 外部链接（http/https） |
 | `embed` | 视频必填 | 视频嵌入播放链接（B 站：`//player.bilibili.com/player.html?bvid=BVxxx`；YouTube：`//www.youtube.com/embed/ID`） |
 | `source` | 可选 | 视频平台标识（bilibili / youtube） |
-| `tags` | 可选 | 标签 |
-| `rating` | 可选 | 推荐指数 1-5，用于排序展示 |
 
 > 新增 / 修改 / 下架推荐：直接编辑 `data/recommendations.json` 后提交推送即可；页面缓存按内容哈希自动失效，改动即生效。可运行 `node scripts/check-recommendations.js`（`--check` 附加链接体检）校验数据。
 

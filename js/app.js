@@ -503,8 +503,8 @@ const BlogApp = {
             throw new Error('recommendations parse failed');
         }
         if (!Array.isArray(items)) throw new Error('recommendations format error');
-        // 按 rating 降序 → 同分按录入顺序
-        return items.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+        // 保持录入顺序（已在 JSON 中按需排序）
+        return items;
     },
 
     // 绘制推荐卡片
@@ -544,22 +544,20 @@ const BlogApp = {
         }
     },
 
-    // 渲染单张推荐卡片（胶囊形式：图标 + 标题 + 星级/标签 + 操作按钮）
+    // 渲染单张推荐胶囊（图标 + 标题 + 平台标识 + 操作按钮）
     renderRecommendCard(item) {
         const type = item.type || 'web';
-        const stars = this.renderStars(item.rating || 0);
         const sourceBadge = type === 'video' && item.source
             ? `<span class="rec-source">${this.esc(item.source)}</span>` : '';
-        const tags = (item.tags || []).map(t => `<span class="rec-tag">${this.esc(t)}</span>`).join('');
         const icon = this.typeIcon(type);
 
-        // 视频：点击卡片页面内播放
+        // 视频：点击胶囊页面内播放
         if (type === 'video') {
             return `
                 <div class="recommend-card rec-video" title="${this.esc(item.desc || item.title)}" onclick="openVideoLightbox(${this.escapeAttr(item)})">
                     <span class="rec-type-icon rec-type-icon-${type}">${icon}</span>
                     <span class="rec-title">${this.esc(item.title)}</span>
-                    <span class="rec-meta">${stars}${tags}${sourceBadge}</span>
+                    ${sourceBadge}
                     <span class="rec-open rec-play">${this.playIcon()}</span>
                     <a class="rec-open rec-external" href="${item.url}" target="_blank" rel="noopener" title="在新窗口打开原页面"
                        onclick="event.stopPropagation()">${this.externalIcon()}</a>
@@ -571,7 +569,6 @@ const BlogApp = {
             <a class="recommend-card rec-link" href="${item.url}" target="_blank" rel="noopener" title="${this.esc(item.desc || item.title)}">
                 <span class="rec-type-icon rec-type-icon-${type}">${icon}</span>
                 <span class="rec-title">${this.esc(item.title)}</span>
-                <span class="rec-meta">${stars}${tags}</span>
                 <span class="rec-open rec-external">${this.externalIcon()}</span>
             </a>
         `;
@@ -605,16 +602,6 @@ const BlogApp = {
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;');
-    },
-
-    // 渲染星级（★☆☆☆）
-    renderStars(rating) {
-        const n = Math.min(5, Math.max(0, Math.round(rating || 0)));
-        let html = '';
-        for (let i = 1; i <= 5; i++) {
-            html += i <= n ? '★' : '☆';
-        }
-        return `<span class="rec-stars">${html}</span>`;
     },
 
     // 按类型筛选推荐
