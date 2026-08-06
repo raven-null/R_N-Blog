@@ -228,10 +228,12 @@ const MarkdownParser = {
         return text;
     },
     
-    // 提取第一张图片
+    // 提取第一张图片（跳过代码块与行内代码，避免把语法示例当作真实图片）
     extractFirstImage(content) {
+        const noCodeBlocks = content.replace(/```[\s\S]*?```/g, '');
+        const noInlineCode = noCodeBlocks.replace(/`[^`]*`/g, '');
         const imageRegex = /!\[([^\]]*)\]\(([^)]+)\)/;
-        const match = content.match(imageRegex);
+        const match = noInlineCode.match(imageRegex);
         return match ? match[2] : null;
     }
 };
