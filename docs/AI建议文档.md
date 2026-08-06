@@ -1384,36 +1384,125 @@ function goTo(pageIndex) {                       // 0 = Hero, 1 = 内容
 - **视频预览（可选增强）**：点击视频卡 → 灯箱内播放 Bilibili/YouTube 内嵌 iframe，支持 ESC 关闭（复用 `galleryLightbox` 加一个 video 容器）
 - **排序**：默认按 `rating` 降序 → 同分按录入顺序；后续可加"按时间/评分"切换
 
-### 8. 数据维护
+### 8. 推荐内容的更新维护方案（核心）
 
-| 方式 | 说明 |
+> 更新推荐的核心诉求：**新增站内文章时能自动上榜，外部资源改动最小化，失效链接可检测，且缓存不失效。**
+
+#### 8.1 双来源数据模型
+
+推荐数据拆为「自动来源」与「手动来源」，由构建脚本合并生成最终文件：
+
+```
+posts/*.md（frontmatter 标记）
+        │  扫描提取
+        ▼
+build-recommendations.js  ──合并──►  data/recommendations.json（页面只读）
+        ▲
+data/recommendations-source.json（手动维护外部资源）
+```
+
+- **来源 A：站内文章（自动）**：文章 frontmatter 新增可选字段 `recommend`，脚本自动归集为 `article` 类型：
+
+```yaml
+recommend: true            # 是否进入推荐
+recommendRating: 5         # 推荐指数 1-5（默认 3）
+recommendDesc: 推荐理由    # 不填则用 excerpt
+recommendTags: [AI, 写作]  # 可选，推荐页标签
+```
+
+  脚本自动填充：title / date / image / url（`article.html?post=文件名`）/ excerpt。
+
+- **来源 B：外部资源（手动）**：维护 `data/recommendations-source.json`，只放 video / web / app 三类（article 类尽量走来源 A，避免重复维护）：
+
+```json
+{
+  "items": [
+    { "type": "video", "title": "...", "url": "...", "desc": "...", "source": "bilibili", "rating": 5 },
+    { "type": "web",   "title": "...", "url": "...", "desc": "...", "rating": 4 }
+  ]
+}
+```
+
+#### 8.2 构建脚本 `scripts/build-recommendations.js`
+
+```bash
+node scripts/build-recommendations.js            # 合并生成
+node scripts/build-recommendations.js --check    # 合并 + 链接健康检查
+node scripts/build-recommendations.js --dry      # 只输出结果，不写文件
+```
+
+职责：
+1. 扫描 `posts/*.md` 提取 `recommend` 标记文章
+2. 读取 `data/recommendations-source.json` 外部条目
+3. **字段校验**：`type`/`url` 必填；`url` 必须是站内 `article.html?...` 或 http(s) 外链；非法条目打印警告并跳过
+4. **排序**：`rating` 降序 → 同分按 `date` 降序 → 再按录入顺序
+5. 写入 `data/recommendations.json`（含 `_version` 自增，用于缓存失效）
+6. `--check` 模式：对全部外链发 HEAD 请求，报告 4xx/5xx/超时，便于清理失效链接
+
+#### 8.3 日常更新流程（工作流）
+
+**场景一：发布新文章并想让它上榜**
+```bash
+# 文章 frontmatter 加 recommend: true
+node scripts/build-recommendations.js
+git add . && git commit -m "发布新文章并更新推荐" && git push origin main
+```
+
+**场景二：新增外部视频/网页/应用**
+```bash
+# 编辑 data/recommendations-source.json 追加条目
+node scripts/build-recommendations.js
+git add . && git commit -m "更新推荐" && git push origin main
+```
+
+**场景三：调整推荐语 / 星级 / 下架**
+- 站内文章：改 frontmatter 的 `recommendDesc` / `recommendRating`，或去掉 `recommend` 字段下架
+- 外部资源：改 `recommendations-source.json`
+- 改完重跑脚本 + 推送
+
+**场景四：定期体检失效链接**（建议每月）
+```bash
+node scripts/build-recommendations.js --check
+```
+
+#### 8.4 缓存与版本控制
+
+- `recommendations.json` 顶部内置 `_version`（构建脚本自增），`loadRecommend` 以 `_version` 作为 sessionStorage 缓存 key（如 `recommend-data-v{_version}`），数据更新后缓存自动失效
+- 与首页文章缓存同策略：资源链接继续带 `?v=` 查询参数（当前 `2.6.31`），发布后强制刷新兜底
+
+#### 8.5 排序策略（供后续优化）
+
+| 策略 | 说明 |
 |------|------|
-| 手动编辑 `data/recommendations.json` | 最简，直接改 JSON 后推送即可 |
-| 脚本生成（可选） | 仿 `scripts/build-gallery.js` 提供 `scripts/build-recommendations.js`，从约定文件夹扫描 |
-| 站内文章一键推荐（可选） | 文章 frontmatter 加 `recommend: true`，脚本自动归集为 `article` 类型 |
+| 评分优先（默认） | 按 `rating` 降序，人工可控 |
+| 最新优先 | 按 `date` 降序，新推荐自然靠前 |
+| 自动「每周精选」（可选） | 脚本每周随机置顶 1-3 条，配合 `_version` 变更触发缓存刷新 |
 
-> 推荐先用手动 JSON，稳定后再考虑脚本化。
+> 推荐先落地 8.1-8.3（手动 JSON + 脚本合并），`--check` 与周精选作为 P2 增强。
 
 ### 9. 实施步骤
 
-1. 新建 `data/recommendations.json`，录入首批推荐（含 4 类各若干条）
-2. `index.html`：视图按钮加「推荐」、新增 `#view-recommend` 结构、预留筛选栏与网格容器
-3. `js/app.js`：`switchView` 的 `valid` 数组加 `recommend`；新增 `loadRecommend`（fetch JSON）与 `renderRecommend(filter)`；筛选按钮事件委托
-4. `css/style.css`：推荐页筛选栏、卡片网格、类型角标、rating 星标样式（跟随主题变量）
-5. `js/animations.js`：推荐卡片 stagger 入场 + 筛选重渲染淡入
-6. 视频灯箱预览（P1 可选）：复用 `galleryLightbox` 增加 iframe 容器
-7. 更新《博客完整使用手册》、项目文档与更新日志，推送上线
+1. 新建 `data/recommendations-source.json`，录入首批外部推荐（video/web/app）
+2. 新建 `scripts/build-recommendations.js`：扫描站内 `recommend` 标记 + 合并外部源 → 生成 `data/recommendations.json`（含 `_version`）
+3. `index.html`：视图按钮加「推荐」、新增 `#view-recommend` 结构、预留筛选栏与网格容器
+4. `js/app.js`：`switchView` 的 `valid` 数组加 `recommend`；新增 `loadRecommend`（fetch JSON，按 `_version` 缓存）与 `renderRecommend(filter)`；筛选按钮事件委托
+5. `css/style.css`：推荐页筛选栏、卡片网格、类型角标、rating 星标样式（跟随主题变量）
+6. `js/animations.js`：推荐卡片 stagger 入场 + 筛选重渲染淡入
+7. 视频灯箱预览（P1 可选）：复用 `galleryLightbox` 增加 iframe 容器
+8. 更新《博客完整使用手册》（含推荐页维护流程）、项目文档与更新日志，推送上线
 
 ### 10. 优先级
 
 | 优先级 | 事项 | 收益 |
 |--------|------|------|
-| P0 | JSON 数据 + 视图按钮 + `#view-recommend` 渲染 | 核心功能 |
+| P0 | 构建脚本（双来源合并 + 校验 + `_version`） | 更新机制根基 |
+| P0 | 视图按钮 + `#view-recommend` 渲染 | 核心功能 |
 | P0 | 类型筛选 + 打开链接 | 可用性 |
 | P1 | 类型角标 / rating / 无图兜底图标 | 信息密度与观感 |
 | P1 | 卡片 stagger 入场动效 | 质感 |
-| P2 | 视频灯箱内嵌播放 | 观看体验 |
-| P2 | 脚本生成 / 站内文章一键推荐 | 维护效率 |
+| P1 | `_version` 缓存失效机制 | 更新即时生效 |
+| P2 | `--check` 链接健康检查 | 清理失效推荐 |
+| P2 | 视频灯箱内嵌播放 / 每周精选 | 观看体验与新鲜感 |
 
 ---
 
