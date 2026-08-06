@@ -1264,5 +1264,158 @@ function goTo(pageIndex) {                       // 0 = Hero, 1 = 内容
 
 ---
 
-**状态：** AI 助手部分已实施（v2.2.0）；Anime.js 动画方案已实施（v2.4.0）；首页改造方案已实施（v2.4.2，P0/P1 项）；标签区改为导航栏"全部标签"面板（v2.4.5）；Hero 重设计已实施（v2.5.0，P0/P1 项）；animejs.com 动效借鉴已实施（v2.5.2，P0/P1 项）；Hero 区重新设计已实施（v2.6.0，方案 A）；Hero 与内容区左右切换方案待评审；省去 Hero 区方案已实施（v2.6.3，方案 A）；"我的"个人仪表盘已实施（v2.6.16）；文章页阅读体验已实施（v2.6.25）
+# "推荐"页面设计方案
+
+> 目标：在顶部视图栏"图库"与"我的"之间新增一个「推荐」视图，集中展示博主推荐的文章、视频、网页与应用，形成"看文章 → 看图库 → 看推荐 → 看我的"的完整内容闭环。
+
+### 1. 现状
+
+- 顶部视图栏现有三个视图：文章 / 图库 / 我的（`index.html:35-37`）
+- 视图切换由 `BlogApp.switchView(view)` 统一管理（`js/app.js:385`），标签导航仅文章视图显示
+- 图库采用"JSON manifest + 静态扫描"模式：图片放文件夹、脚本生成 `manifest.json`、页面据此渲染，推荐页可复用这套模式
+
+### 2. 设计目标
+
+- **内容集中**：把散落在各处的"好东西"汇总成一屏，方便访客与作者快速取用
+- **类型分明**：文章 / 视频 / 网页 / 应用 四大类，一眼可辨
+- **零后端**：沿用纯前端方案，用 JSON 数据文件驱动，改动数据即可更新页面
+- **风格统一**：卡片语言与瀑布流、图库一致，动效复用 Anime.js
+
+### 3. 内容分类与字段设计
+
+推荐项统一存于 `data/recommendations.json`（示例）：
+
+```json
+[
+  {
+    "id": "r01",
+    "type": "article",
+    "title": "即梦AI 万能提示词框架",
+    "desc": "我写的提示词方法论，推荐入门即梦的同学先看这篇",
+    "url": "article.html?post=02-jimeng-ai-prompt-framework.md",
+    "image": "images/BG/01_BG.webp",
+    "tags": ["AI", "写作"],
+    "rating": 5
+  },
+  {
+    "id": "v01",
+    "type": "video",
+    "title": "GitHub Actions 入门到实战",
+    "desc": "保姆级 CI/CD 教程，适合第一次接触自动化部署",
+    "url": "https://www.bilibili.com/video/BVxxxx",
+    "image": "images/recommend/video-01.webp",
+    "source": "bilibili",
+    "tags": ["开发"]
+  }
+]
+```
+
+| 字段 | 必填 | 说明 |
+|------|------|------|
+| `type` | ✅ | `article` / `video` / `web` / `app` 四选一 |
+| `title` | ✅ | 推荐项标题 |
+| `desc` | 推荐 | 一句话推荐理由 / 简介 |
+| `url` | ✅ | 点击跳转地址；站内文章可用 `article.html?post=xxx.md` |
+| `image` | 可选 | 封面/图标，无图时用类型默认图标兜底 |
+| `source` | 可选 | 视频平台标识（bilibili / youtube 等），用于显示角标 |
+| `tags` | 可选 | 标签，用于筛选 |
+| `rating` | 可选 | 推荐指数 1-5，用于排序与展示 |
+
+### 4. 视图结构（HTML 示意）
+
+```html
+<!-- 视图按钮：文章 / 图库 / 推荐 / 我的 -->
+<button class="view-btn" data-view="recommend" onclick="BlogApp.switchView('recommend')">推荐</button>
+
+<!-- 推荐视图 -->
+<section class="view view-recommend" id="view-recommend" style="display:none;">
+  <div class="recommend-filter" id="recommendFilter">
+    <button class="rec-filter-btn active" data-type="all">全部</button>
+    <button class="rec-filter-btn" data-type="article">文章</button>
+    <button class="rec-filter-btn" data-type="video">视频</button>
+    <button class="rec-filter-btn" data-type="web">网页</button>
+    <button class="rec-filter-btn" data-type="app">应用</button>
+  </div>
+  <div class="recommend-grid" id="recommendGrid"></div>
+</section>
+```
+
+- `switchView` 的 `valid` 数组增加 `'recommend'`，首次进入调用 `renderRecommend()`
+- 切换视图时沿用现有：按钮激活态、滑块指示器、内容淡入动画
+- 推荐视图与图库一致**隐藏标签导航栏**
+
+### 5. 布局与卡片设计
+
+**筛选栏**：视图顶部一排类型胶囊（全部/文章/视频/网页/应用），点击筛选，当前项高亮；与标签面板视觉语言一致。
+
+**卡片网格**（CSS Grid，自适应列数，与图库瀑布流呼应）：
+
+```
+┌─────────────────────────────┐
+│ [图标/封面]        [类型角标] │   ← 类型角标颜色区分
+│ 标题                         │
+│ 一句话推荐理由（最多 2 行省略） │
+│ ★★★★☆   [标签]  [来源图标]  │   ← rating / tags / source
+│        [打开 ↗]             │
+└─────────────────────────────┘
+```
+
+| 类型 | 角标颜色 | 卡片右下角补充 |
+|------|----------|----------------|
+| 文章 article | 主题强调色 | 打开站内文章 |
+| 视频 video | 红/蓝（平台色） | 平台来源图标（bilibili/youtube） |
+| 网页 web | 青绿 | 外链 ↗ |
+| 应用 app | 紫色 | 外链 ↗ / 平台徽标 |
+
+- 无封面图时按类型显示默认 SVG 图标（`images/recommend/icon-{type}.svg`）
+- 视频卡 hover 可选"快速预览"：点击后在灯箱内嵌播放器 iframe（复用图库灯箱改造），移动端则直接跳转
+
+### 6. 视觉与动效（Anime.js）
+
+- **卡片入场**：`opacity [0,1] + translateY [24,0] + scale [0.98,1]`，`stagger(50)` 错峰，与瀑布流入场一致
+- **筛选切换**：重渲染时卡片快速淡入（沿用 `data-anime-entered` 机制，避免重复"刷新"动画）
+- **rating 星标**：hover 微放大；类型角标 hover 轻微上浮
+- 全部尊重 `prefers-reduced-motion`；移动端网格自动降为 1-2 列
+
+### 7. 交互设计
+
+- **筛选**：点击类型胶囊即时过滤（本地数据，无需重新 fetch）
+- **打开**：站内文章 `target=_self` 跳文章页；外部链接 `target=_blank + rel="noopener"` 新窗口打开
+- **视频预览（可选增强）**：点击视频卡 → 灯箱内播放 Bilibili/YouTube 内嵌 iframe，支持 ESC 关闭（复用 `galleryLightbox` 加一个 video 容器）
+- **排序**：默认按 `rating` 降序 → 同分按录入顺序；后续可加"按时间/评分"切换
+
+### 8. 数据维护
+
+| 方式 | 说明 |
+|------|------|
+| 手动编辑 `data/recommendations.json` | 最简，直接改 JSON 后推送即可 |
+| 脚本生成（可选） | 仿 `scripts/build-gallery.js` 提供 `scripts/build-recommendations.js`，从约定文件夹扫描 |
+| 站内文章一键推荐（可选） | 文章 frontmatter 加 `recommend: true`，脚本自动归集为 `article` 类型 |
+
+> 推荐先用手动 JSON，稳定后再考虑脚本化。
+
+### 9. 实施步骤
+
+1. 新建 `data/recommendations.json`，录入首批推荐（含 4 类各若干条）
+2. `index.html`：视图按钮加「推荐」、新增 `#view-recommend` 结构、预留筛选栏与网格容器
+3. `js/app.js`：`switchView` 的 `valid` 数组加 `recommend`；新增 `loadRecommend`（fetch JSON）与 `renderRecommend(filter)`；筛选按钮事件委托
+4. `css/style.css`：推荐页筛选栏、卡片网格、类型角标、rating 星标样式（跟随主题变量）
+5. `js/animations.js`：推荐卡片 stagger 入场 + 筛选重渲染淡入
+6. 视频灯箱预览（P1 可选）：复用 `galleryLightbox` 增加 iframe 容器
+7. 更新《博客完整使用手册》、项目文档与更新日志，推送上线
+
+### 10. 优先级
+
+| 优先级 | 事项 | 收益 |
+|--------|------|------|
+| P0 | JSON 数据 + 视图按钮 + `#view-recommend` 渲染 | 核心功能 |
+| P0 | 类型筛选 + 打开链接 | 可用性 |
+| P1 | 类型角标 / rating / 无图兜底图标 | 信息密度与观感 |
+| P1 | 卡片 stagger 入场动效 | 质感 |
+| P2 | 视频灯箱内嵌播放 | 观看体验 |
+| P2 | 脚本生成 / 站内文章一键推荐 | 维护效率 |
+
+---
+
+**状态：** AI 助手部分已实施（v2.2.0）；Anime.js 动画方案已实施（v2.4.0）；首页改造方案已实施（v2.4.2，P0/P1 项）；标签区改为导航栏"全部标签"面板（v2.4.5）；Hero 重设计已实施（v2.5.0，P0/P1 项）；animejs.com 动效借鉴已实施（v2.5.2，P0/P1 项）；Hero 区重新设计已实施（v2.6.0，方案 A）；Hero 与内容区左右切换方案待评审；省去 Hero 区方案已实施（v2.6.3，方案 A）；"我的"个人仪表盘已实施（v2.6.16）；文章页阅读体验已实施（v2.6.25）；"推荐"页面设计方案待评审
 **作者：** 渡鸦NULL
