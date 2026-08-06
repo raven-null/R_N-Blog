@@ -8,7 +8,7 @@
     <link rel="icon" href="/images/TX/01_TX.webp" type="image/webp">
 
     <!-- Styles -->
-    <link rel="stylesheet" href="css/style.css?v=2.6.41">
+    <link rel="stylesheet" href="css/style.css?v=2.6.40">
 
     <!-- Marked.js -->
     <script src="js/vendor/marked.min.js"></script>
@@ -104,35 +104,17 @@
 
                 <!-- 视图：推荐 -->
                 <section class="view view-recommend" id="view-recommend" style="display:none;">
-                    <div class="recommend-layout">
-                        <aside class="recommend-filter" id="recommendFilter">
-                            <div class="recommend-filter-title">分类</div>
-                            <button class="rec-filter-btn active" data-type="all" onclick="BlogApp.filterRecommend('all')">全部</button>
-                            <button class="rec-filter-btn" data-type="article" onclick="BlogApp.filterRecommend('article')">文章</button>
-                            <button class="rec-filter-btn" data-type="video" onclick="BlogApp.filterRecommend('video')">视频</button>
-                            <button class="rec-filter-btn" data-type="web" onclick="BlogApp.filterRecommend('web')">网页</button>
-                            <button class="rec-filter-btn" data-type="app" onclick="BlogApp.filterRecommend('app')">应用</button>
-                        </aside>
-                        <div class="recommend-main">
-                            <div class="recommend-toolbar">
-                                <div class="recommend-search" id="recommendSearch">
-                                    <input type="text" id="recommendSearchInput" placeholder="搜索推荐..."
-                                           oninput="BlogApp.searchRecommend(this.value)">
-                                    <button class="recommend-search-clear" title="清除搜索" onclick="BlogApp.clearRecommendSearch()">&times;</button>
-                                </div>
-                                <button class="recommend-search-btn" id="recommendSearchBtn" onclick="BlogApp.toggleRecommendSearch()" title="搜索推荐">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                                        <circle cx="11" cy="11" r="8"/>
-                                        <path d="m21 21-4.35-4.35"/>
-                                    </svg>
-                                </button>
-                            </div>
-                            <div class="recommend-grid" id="recommendGrid">
-                                <div class="loading">
-                                    <div class="loading-spinner"></div>
-                                    <p>Loading...</p>
-                                </div>
-                            </div>
+                    <div class="recommend-filter" id="recommendFilter">
+                        <button class="rec-filter-btn active" data-type="all" onclick="BlogApp.filterRecommend('all')">全部</button>
+                        <button class="rec-filter-btn" data-type="article" onclick="BlogApp.filterRecommend('article')">文章</button>
+                        <button class="rec-filter-btn" data-type="video" onclick="BlogApp.filterRecommend('video')">视频</button>
+                        <button class="rec-filter-btn" data-type="web" onclick="BlogApp.filterRecommend('web')">网页</button>
+                        <button class="rec-filter-btn" data-type="app" onclick="BlogApp.filterRecommend('app')">应用</button>
+                    </div>
+                    <div class="recommend-grid" id="recommendGrid">
+                        <div class="loading">
+                            <div class="loading-spinner"></div>
+                            <p>Loading...</p>
                         </div>
                     </div>
                 </section>
@@ -242,10 +224,10 @@
     </div>
 
     <!-- Scripts -->
-    <script src="js/theme.js?v=2.6.41"></script>
-    <script src="js/markdown.js?v=2.6.41"></script>
-    <script src="js/app.js?v=2.6.41"></script>
-    <script src="js/animations.js?v=2.6.41"></script>
+    <script src="js/theme.js?v=2.6.40"></script>
+    <script src="js/markdown.js?v=2.6.40"></script>
+    <script src="js/app.js?v=2.6.40"></script>
+    <script src="js/animations.js?v=2.6.40"></script>
 
     <script>
         // ===== Scroll Observer =====
@@ -467,10 +449,6 @@
                     const dropdown = document.getElementById('searchDropdown');
                     if (dropdown && dropdown.classList.contains('show')) {
                         BlogApp.toggleSearch();
-                    }
-                    const rSearch = document.getElementById('recommendSearch');
-                    if (rSearch && rSearch.classList.contains('show')) {
-                        BlogApp.toggleRecommendSearch();
                     }
                     if (lbOpen) {
                         closeGalleryLightbox();

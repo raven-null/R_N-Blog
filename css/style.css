@@ -594,40 +594,19 @@ body.home-layout {
 }
 
 /* ===== 推荐页 ===== */
-.recommend-layout {
-    display: flex;
-    align-items: flex-start;
-    gap: 28px;
-    max-width: 1080px;
-    margin: 0 auto;
-}
-
 .recommend-filter {
-    flex-shrink: 0;
-    width: 140px;
-    position: sticky;
-    top: 16px;
     display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding: 16px;
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-}
-
-.recommend-filter-title {
-    font-size: 12px;
-    color: var(--text-muted);
-    letter-spacing: 1px;
-    margin-bottom: 4px;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 28px;
 }
 
 .rec-filter-btn {
-    width: 100%;
-    padding: 9px 14px;
+    padding: 8px 22px;
     border-radius: 100px;
-    border: 1px solid transparent;
+    border: 1px solid var(--border);
     background: transparent;
     color: var(--text-muted);
     font-size: 13px;
@@ -636,12 +615,11 @@ body.home-layout {
     cursor: pointer;
     transition: all 0.2s;
     font-family: inherit;
-    text-align: center;
 }
 
 .rec-filter-btn:hover {
+    border-color: var(--text-secondary);
     color: var(--text-secondary);
-    border-color: var(--border);
 }
 
 .rec-filter-btn.active {
@@ -650,88 +628,12 @@ body.home-layout {
     border-color: var(--text-primary);
 }
 
-.recommend-main {
-    flex: 1;
-    min-width: 0;
-}
-
-.recommend-toolbar {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 10px;
-    margin-bottom: 16px;
-}
-
-.recommend-search {
-    display: none;
-    align-items: center;
-    gap: 4px;
-    padding: 0 12px;
-    height: 38px;
-    border: 1px solid var(--border);
-    border-radius: 100px;
-    background: var(--bg-card);
-    transition: all 0.2s;
-}
-
-.recommend-search.show {
-    display: flex;
-}
-
-.recommend-search:focus-within {
-    border-color: var(--accent);
-}
-
-.recommend-search input {
-    width: 200px;
-    border: none;
-    outline: none;
-    background: transparent;
-    color: var(--text-primary);
-    font-size: 13px;
-    font-family: inherit;
-}
-
-.recommend-search-clear {
-    border: none;
-    background: transparent;
-    color: var(--text-muted);
-    font-size: 16px;
-    line-height: 1;
-    cursor: pointer;
-    padding: 2px 4px;
-}
-
-.recommend-search-clear:hover {
-    color: var(--text-primary);
-}
-
-.recommend-search-btn {
-    flex-shrink: 0;
-    width: 38px;
-    height: 38px;
-    border-radius: 50%;
-    border: 1px solid var(--border);
-    background: transparent;
-    color: var(--text-muted);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s;
-}
-
-.recommend-search-btn:hover {
-    color: var(--text-primary);
-    border-color: var(--accent);
-}
-
 .recommend-grid {
     display: flex;
     flex-direction: column;
     gap: 10px;
     max-width: 920px;
+    margin: 0 auto;
 }
 
 .recommend-card {
@@ -820,31 +722,6 @@ body.home-layout {
 
 .recommend-card:hover .rec-open.rec-play {
     background: #fb7299;
-}
-
-/* 小屏：筛选栏回到顶部横向排列 */
-@media (max-width: 768px) {
-    .recommend-layout {
-        flex-direction: column;
-        gap: 16px;
-    }
-    .recommend-filter {
-        width: 100%;
-        position: static;
-        flex-direction: row;
-        flex-wrap: wrap;
-        padding: 12px;
-    }
-    .recommend-filter-title {
-        width: 100%;
-    }
-    .rec-filter-btn {
-        width: auto;
-        padding: 7px 18px;
-    }
-    .recommend-search input {
-        width: 120px;
-    }
 }
 
 @media (max-width: 640px) {
