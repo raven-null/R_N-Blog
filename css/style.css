@@ -629,150 +629,71 @@ body.home-layout {
 }
 
 .recommend-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-    gap: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: 920px;
+    margin: 0 auto;
 }
 
 .recommend-card {
     position: relative;
-    display: block;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 18px 10px 12px;
     background: var(--bg-card);
     border: 1px solid var(--border);
-    border-radius: 14px;
-    overflow: hidden;
+    border-radius: 999px;
     text-decoration: none;
     color: inherit;
-    transition: border-color 0.25s, transform 0.25s, box-shadow 0.25s;
     cursor: pointer;
+    transition: border-color 0.25s, transform 0.25s, box-shadow 0.25s;
 }
 
 .recommend-card:hover {
     border-color: var(--accent);
-    transform: translateY(-4px);
-    box-shadow: 0 12px 32px var(--shadow);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 28px var(--shadow);
 }
 
-.rec-card-cover {
-    position: relative;
-    height: 150px;
-    background: linear-gradient(145deg, var(--bg-tertiary), var(--bg-card));
-    overflow: hidden;
-}
-
-.rec-card-cover img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-    transition: transform 0.35s;
-}
-
-.recommend-card:hover .rec-card-cover img {
-    transform: scale(1.04);
-}
-
-.rec-type {
-    position: absolute;
-    top: 12px;
-    left: 12px;
-    padding: 4px 12px;
-    border-radius: 100px;
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 1px;
-    color: #fff;
-    background: var(--text-muted);
-}
-
-.rec-type-article { background: #5b7cfa; }
-.rec-type-video   { background: #fb7299; }
-.rec-type-web     { background: #2bb3a3; }
-.rec-type-app     { background: #8f6bff; }
-
-.rec-play {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 52px;
-    height: 52px;
+.rec-type-icon {
+    flex-shrink: 0;
+    width: 38px;
+    height: 38px;
     border-radius: 50%;
-    background: rgba(0, 0, 0, 0.55);
-    color: #fff;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding-left: 4px;
-    backdrop-filter: blur(2px);
-    transition: transform 0.25s, background 0.25s;
-}
-
-.recommend-card:hover .rec-play {
-    transform: translate(-50%, -50%) scale(1.1);
-    background: rgba(0, 0, 0, 0.75);
-}
-
-.rec-open {
-    position: absolute;
-    top: 12px;
-    right: 12px;
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    background: rgba(0, 0, 0, 0.45);
     color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 15px;
-    line-height: 1;
-    text-decoration: none;
-    transition: background 0.2s, transform 0.2s;
 }
 
-.rec-open:hover {
-    background: rgba(0, 0, 0, 0.75);
-    transform: scale(1.08);
-}
+.rec-type-icon-article { background: #5b7cfa; }
+.rec-type-icon-video   { background: #fb7299; }
+.rec-type-icon-web     { background: #2bb3a3; }
+.rec-type-icon-app     { background: #8f6bff; }
 
-.rec-card-body {
-    padding: 16px 18px 18px;
-}
-
-.rec-card-title {
-    font-size: 15px;
+.rec-title {
+    flex: 1;
+    min-width: 0;
+    font-size: 14px;
     font-weight: 600;
     color: var(--text-primary);
-    line-height: 1.4;
-    margin-bottom: 8px;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
+    white-space: nowrap;
     overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-.rec-card-desc {
-    font-size: 13px;
-    color: var(--text-muted);
-    line-height: 1.6;
-    margin-bottom: 12px;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-}
-
-.rec-card-meta {
+.rec-meta {
     display: flex;
     align-items: center;
-    flex-wrap: wrap;
     gap: 8px;
+    flex-shrink: 0;
 }
 
 .rec-stars {
     color: #f5b301;
-    font-size: 13px;
+    font-size: 12px;
     letter-spacing: 1px;
 }
 
@@ -782,6 +703,7 @@ body.home-layout {
     border: 1px solid var(--border);
     color: var(--text-muted);
     font-size: 11px;
+    white-space: nowrap;
 }
 
 .rec-source {
@@ -792,6 +714,53 @@ body.home-layout {
     letter-spacing: 1px;
     color: #fb7299;
     border: 1px solid rgba(251, 114, 153, 0.4);
+    white-space: nowrap;
+}
+
+.rec-open {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--glow);
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    text-decoration: none;
+}
+
+.recommend-card:hover .rec-open {
+    color: var(--text-primary);
+    background: var(--border-light);
+}
+
+.rec-open.rec-play {
+    color: #fff;
+    background: var(--text-muted);
+    padding-left: 2px;
+}
+
+.recommend-card:hover .rec-open.rec-play {
+    background: #fb7299;
+}
+
+@media (max-width: 640px) {
+    .recommend-card {
+        gap: 10px;
+        padding: 8px 12px 8px 8px;
+    }
+    .rec-meta .rec-tag {
+        display: none;
+    }
+    .rec-stars {
+        font-size: 11px;
+    }
+    .rec-type-icon {
+        width: 34px;
+        height: 34px;
+    }
 }
 
 /* 推荐视频播放灯箱 */

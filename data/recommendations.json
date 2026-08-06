@@ -5,7 +5,6 @@
         "title": "阮一峰的网络日志",
         "desc": "持续更新的中文技术博客，覆盖 Web 开发与科技评论",
         "url": "https://www.ruanyifeng.com/blog/",
-        "image": "images/recommend/icon-article.svg",
         "tags": ["技术"],
         "rating": 5
     },
@@ -15,7 +14,6 @@
         "title": "A Complete Guide to Flexbox",
         "desc": "CSS-Tricks 的 Flexbox 完全指南，图解清晰、可交互演示",
         "url": "https://css-tricks.com/snippets/css/a-guide-to-flexbox/",
-        "image": "images/recommend/icon-article.svg",
         "tags": ["前端"],
         "rating": 5
     },
@@ -26,7 +24,6 @@
         "desc": "B 站播放过亿的经典 MV，互联网老梗之源（演示条目）",
         "url": "https://www.bilibili.com/video/BV1GJ411x7h7",
         "embed": "//player.bilibili.com/player.html?bvid=BV1GJ411x7h7&autoplay=1&danmaku=0",
-        "image": "images/recommend/icon-video.svg",
         "source": "bilibili",
         "tags": ["娱乐"],
         "rating": 4
@@ -38,7 +35,6 @@
         "desc": "YouTube 官方频道原版 MV，跨平台演示条目",
         "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
         "embed": "//www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1",
-        "image": "images/recommend/icon-video.svg",
         "source": "youtube",
         "tags": ["娱乐"],
         "rating": 4
@@ -49,7 +45,6 @@
         "title": "Excalidraw",
         "desc": "手绘风格在线白板，画流程图与架构图的神器",
         "url": "https://excalidraw.com/",
-        "image": "images/recommend/icon-web.svg",
         "tags": ["工具"],
         "rating": 5
     },
@@ -59,7 +54,6 @@
         "title": "GitHub Explore",
         "desc": "发现优秀开源项目与前沿技术的官方入口",
         "url": "https://github.com/explore",
-        "image": "images/recommend/icon-web.svg",
         "tags": ["开发"],
         "rating": 5
     },
@@ -69,7 +63,6 @@
         "title": "MDN Web Docs",
         "desc": "Web 开发者最权威的文档站，HTML/CSS/JS 查 API 首选",
         "url": "https://developer.mozilla.org/",
-        "image": "images/recommend/icon-web.svg",
         "tags": ["前端"],
         "rating": 5
     },
@@ -79,7 +72,6 @@
         "title": "Visual Studio Code",
         "desc": "微软出品的轻量强大编辑器，前端与全栈开发首选",
         "url": "https://code.visualstudio.com/",
-        "image": "images/recommend/icon-app.svg",
         "tags": ["开发"],
         "rating": 5
     },
@@ -89,7 +81,6 @@
         "title": "Obsidian",
         "desc": "本地优先的双链笔记应用，个人知识库管理神器",
         "url": "https://obsidian.md/",
-        "image": "images/recommend/icon-app.svg",
         "tags": ["笔记"],
         "rating": 5
     },
@@ -99,7 +90,6 @@
         "title": "Everything",
         "desc": "Windows 秒级文件名搜索工具，装机必备",
         "url": "https://www.voidtools.com/",
-        "image": "images/recommend/icon-app.svg",
         "tags": ["效率"],
         "rating": 4
     }

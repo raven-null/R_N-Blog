@@ -544,57 +544,67 @@ const BlogApp = {
         }
     },
 
-    // 渲染单张推荐卡片
+    // 渲染单张推荐卡片（胶囊形式：图标 + 标题 + 星级/标签 + 操作按钮）
     renderRecommendCard(item) {
         const type = item.type || 'web';
-        const typeLabel = { article: '文章', video: '视频', web: '网页', app: '应用' }[type] || '推荐';
         const stars = this.renderStars(item.rating || 0);
         const sourceBadge = type === 'video' && item.source
-            ? `<span class="rec-source">${item.source}</span>` : '';
-        const playOverlay = type === 'video'
-            ? `<div class="rec-play"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 4 20 12 6 20"/></svg></div>` : '';
-        const image = item.image || `images/recommend/icon-${type}.svg`;
+            ? `<span class="rec-source">${this.esc(item.source)}</span>` : '';
+        const tags = (item.tags || []).map(t => `<span class="rec-tag">${this.esc(t)}</span>`).join('');
+        const icon = this.typeIcon(type);
 
-        const body = `
-            <div class="rec-card-body">
-                <div class="rec-card-title">${item.title}</div>
-                ${item.desc ? `<div class="rec-card-desc">${item.desc}</div>` : ''}
-                <div class="rec-card-meta">
-                    <span class="rec-stars">${stars}</span>
-                    ${(item.tags || []).map(t => `<span class="rec-tag">${t}</span>`).join('')}
-                    ${sourceBadge}
-                </div>
-            </div>
-        `;
-
-        // 视频：点击卡片站内播放
+        // 视频：点击卡片页面内播放
         if (type === 'video') {
             return `
-                <div class="recommend-card rec-video" onclick="openVideoLightbox(${this.escapeAttr(item)})">
-                    <div class="rec-card-cover">
-                        <img src="${image}" alt="${item.title}" loading="lazy"
-                             onerror="this.onerror=null;this.src='images/recommend/icon-video.svg';">
-                        ${playOverlay}
-                        <span class="rec-type rec-type-${type}">${typeLabel}</span>
-                    </div>
-                    ${body}
-                    <a class="rec-open" href="${item.url}" target="_blank" rel="noopener" title="在新窗口打开原页面"
-                       onclick="event.stopPropagation()">↗</a>
+                <div class="recommend-card rec-video" title="${this.esc(item.desc || item.title)}" onclick="openVideoLightbox(${this.escapeAttr(item)})">
+                    <span class="rec-type-icon rec-type-icon-${type}">${icon}</span>
+                    <span class="rec-title">${this.esc(item.title)}</span>
+                    <span class="rec-meta">${stars}${tags}${sourceBadge}</span>
+                    <span class="rec-open rec-play">${this.playIcon()}</span>
+                    <a class="rec-open rec-external" href="${item.url}" target="_blank" rel="noopener" title="在新窗口打开原页面"
+                       onclick="event.stopPropagation()">${this.externalIcon()}</a>
                 </div>
             `;
         }
 
         return `
-            <a class="recommend-card rec-link" href="${item.url}" target="_blank" rel="noopener">
-                <div class="rec-card-cover">
-                    <img src="${image}" alt="${item.title}" loading="lazy"
-                         onerror="this.onerror=null;this.src='images/recommend/icon-${type}.svg';">
-                    <span class="rec-type rec-type-${type}">${typeLabel}</span>
-                </div>
-                ${body}
-                <span class="rec-open">↗</span>
+            <a class="recommend-card rec-link" href="${item.url}" target="_blank" rel="noopener" title="${this.esc(item.desc || item.title)}">
+                <span class="rec-type-icon rec-type-icon-${type}">${icon}</span>
+                <span class="rec-title">${this.esc(item.title)}</span>
+                <span class="rec-meta">${stars}${tags}</span>
+                <span class="rec-open rec-external">${this.externalIcon()}</span>
             </a>
         `;
+    },
+
+    // 类型图标（内联 SVG）
+    typeIcon(type) {
+        const icons = {
+            article: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="14" y2="17"/></svg>',
+            video: '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 4 20 12 6 20"/></svg>',
+            web: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
+            app: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>'
+        };
+        return icons[type] || icons.web;
+    },
+
+    // 播放图标（内联 SVG）
+    playIcon() {
+        return '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 4 20 12 6 20"/></svg>';
+    },
+
+    // 外链图标（内联 SVG）
+    externalIcon() {
+        return '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>';
+    },
+
+    // HTML 转义（用于卡片文本与 title 属性）
+    esc(str) {
+        return String(str || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
     },
 
     // 渲染星级（★☆☆☆）
@@ -604,7 +614,7 @@ const BlogApp = {
         for (let i = 1; i <= 5; i++) {
             html += i <= n ? '★' : '☆';
         }
-        return html;
+        return `<span class="rec-stars">${html}</span>`;
     },
 
     // 按类型筛选推荐
