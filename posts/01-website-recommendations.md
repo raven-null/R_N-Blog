@@ -61,7 +61,7 @@ image:
 
 **GitHub上一个开源的虚拟手绘风格白板**，仓库地址是 https://github.com/excalidraw/excalidraw?tab=readme-ov-file
 
-![示意图](images/assets/01-website recommendations/1.webp)
+![示意图](images/assets/01-website-recommendations/1.webp)
 
 
 ## [力扣 (LeetCode)](https://leetcode.cn/)
