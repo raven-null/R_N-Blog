@@ -7,7 +7,7 @@
     <link rel="icon" href="/images/TX/01_TX.webp" type="image/webp">
     
     <!-- 主样式 -->
-    <link rel="stylesheet" href="css/style.css?v=2.6.64">
+    <link rel="stylesheet" href="css/style.css?v=2.6.65">
     
     <!-- Marked.js -->
     <script src="js/vendor/marked.min.js"></script>
@@ -1657,11 +1657,11 @@
     </div>
 
     <!-- JavaScript -->
-    <script src="js/theme.js?v=2.6.64"></script>
-    <script src="js/markdown.js?v=2.6.64"></script>
-    <script src="js/chat.js?v=2.6.64"></script>
-    <script src="js/reader.js?v=2.6.64"></script>
-    <script src="js/animations.js?v=2.6.64"></script>
+    <script src="js/theme.js?v=2.6.65"></script>
+    <script src="js/markdown.js?v=2.6.65"></script>
+    <script src="js/chat.js?v=2.6.65"></script>
+    <script src="js/reader.js?v=2.6.65"></script>
+    <script src="js/animations.js?v=2.6.65"></script>
 
     <script>
         // 文章详情页应用
@@ -2299,7 +2299,7 @@
                                 <span class="comment-item-time">${this.formatCommentDate(c.createdAt)}</span>
                             </div>
                             <div class="comment-item-content">${this.esc(c.content)}</div>
-                            ${c.image ? `<img class="comment-item-image" src="${this.esc(c.image)}" alt="留言图片" loading="lazy">` : ''}
+                            ${c.image ? `<img class="comment-item-image" src="${this.esc(this.commentImageSrc(c.image))}" alt="留言图片" loading="lazy">` : ''}
                         </div>
                     `).join('');
                 } catch (e) {
@@ -2367,6 +2367,14 @@
             // 留言头像首字符
             escName(name) {
                 return String(name || '客').charAt(0).toUpperCase();
+            },
+
+            // 留言图片 URL：相对路径（/api/image?key=...）补全为后端完整地址
+            commentImageSrc(url) {
+                if (!url) return '';
+                if (/^https?:\/\//.test(url)) return url;
+                if (url.startsWith('/api/')) return this.apiBase + url;
+                return url;
             },
 
             // 格式化留言时间

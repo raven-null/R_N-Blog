@@ -673,7 +673,7 @@ const BlogApp = {
                         <span class="comment-item-time">${this.formatCommentDate(c.createdAt)}</span>
                     </div>
                     <div class="comment-item-content">${this.esc(c.content)}</div>
-                    ${c.image ? `<img class="comment-item-image" src="${this.esc(c.image)}" alt="留言图片" loading="lazy">` : ''}
+                    ${c.image ? `<img class="comment-item-image" src="${this.esc(this.commentImageSrc(c.image))}" alt="留言图片" loading="lazy">` : ''}
                 </div>
             `).join('');
         } catch (e) {
@@ -732,6 +732,14 @@ const BlogApp = {
     // 留言头像首字符
     escName(name) {
         return String(name || '客').charAt(0).toUpperCase();
+    },
+
+    // 留言图片 URL：相对路径（/api/image?key=...）补全为后端完整地址
+    commentImageSrc(url) {
+        if (!url) return '';
+        if (/^https?:\/\//.test(url)) return url;
+        if (url.startsWith('/api/')) return this.config.apiBase + url;
+        return url;
     },
 
     // 格式化留言时间
