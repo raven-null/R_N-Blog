@@ -178,7 +178,7 @@ node scripts/build-gallery.js
 
 - **主题**：在 `js/theme.js` 的 `themes` 对象中添加主题（`name` / `icon` / `colors` CSS 变量）
 - **AI 助手**：在 `js/chat.js` 中修改系统提示词（人格）与 API Key（`config.apiKey`）
-- **每页文章数**：修改 `js/app.js` 中 `config` 的 `postsPerPage` 字段
+- **每页文章数**：文章一次性全部加载，无需分页（`js/app.js` 直接渲染全部卡片）
 
 ## 📖 文档
 

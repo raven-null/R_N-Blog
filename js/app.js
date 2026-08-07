@@ -5,8 +5,7 @@
 const BlogApp = {
     // 配置项
     config: {
-        postsDirectory: 'posts',
-        postsPerPage: 10
+        postsDirectory: 'posts'
     },
 
     // 所有文章
@@ -19,8 +18,6 @@ const BlogApp = {
     currentView: 'blog',
     // 图库图片清单缓存
     galleryImages: null,
-    // 当前已加载的文章数量（加载更多）
-    visibleCount: 10,
 
     // 初始化应用
     async init() {
@@ -164,13 +161,12 @@ const BlogApp = {
         }
     },
 
-    // 渲染页面（文章、分页）
+    // 渲染页面（文章）
     render() {
         this.renderPosts();
-        this.renderPagination();
     },
 
-    // 渲染文章瀑布流（支持"加载更多"追加）
+    // 渲染文章瀑布流（一次性渲染全部）
     renderPosts() {
         const postsContainer = document.getElementById('posts');
         if (!postsContainer) return;
@@ -185,20 +181,8 @@ const BlogApp = {
             return;
         }
 
-        const end = Math.min(this.visibleCount, this.filteredPosts.length);
-
-        // 首次渲染或筛选重置时替换，否则追加新批次
-        const wrap = postsContainer.querySelector('.waterfall');
-        if (!wrap || end <= this.config.postsPerPage) {
-            const postsHTML = this.filteredPosts.slice(0, end).map(post => this.renderPostCard(post)).join('');
-            postsContainer.innerHTML = `<div class="waterfall">${postsHTML}</div>`;
-        } else {
-            const start = Math.max(0, end - this.config.postsPerPage);
-            const newHTML = this.filteredPosts.slice(start, end).map(post => this.renderPostCard(post)).join('');
-            const tmp = document.createElement('div');
-            tmp.innerHTML = newHTML;
-            while (tmp.firstChild) wrap.appendChild(tmp.firstChild);
-        }
+        const postsHTML = this.filteredPosts.map(post => this.renderPostCard(post)).join('');
+        postsContainer.innerHTML = `<div class="waterfall">${postsHTML}</div>`;
     },
 
     // 根据作者名字返回对应头像
@@ -250,43 +234,9 @@ const BlogApp = {
         `;
     },
 
-    // 渲染加载更多按钮
-    renderPagination() {
-        const paginationContainer = document.getElementById('pagination');
-        if (!paginationContainer) return;
-
-        const total = this.filteredPosts.length;
-        if (total <= this.config.postsPerPage) {
-            paginationContainer.innerHTML = '';
-            return;
-        }
-
-        if (this.visibleCount < total) {
-            paginationContainer.innerHTML = `
-                <div class="pagination-wrap">
-                    <button class="load-more-btn" onclick="BlogApp.loadMore()">加载更多</button>
-                </div>
-            `;
-        } else {
-            paginationContainer.innerHTML = `
-                <div class="pagination-wrap">
-                    <span class="load-more-done">已加载全部 ${total} 篇</span>
-                </div>
-            `;
-        }
-    },
-
-    // 加载更多文章
-    loadMore() {
-        this.visibleCount += this.config.postsPerPage;
-        this.renderPosts();
-        this.renderPagination();
-    },
-
     // 按标签筛选文章
     filterByTag(tag) {
         this.currentTag = tag;
-        this.visibleCount = this.config.postsPerPage;
 
         if (tag) {
             this.filteredPosts = this.posts.filter(post => (post.tags || []).includes(tag));
@@ -295,7 +245,6 @@ const BlogApp = {
         }
 
         this.renderPosts();
-        this.renderPagination();
         this.updateNavActive();
         this.updateURL();
         this.closeTagsPanel();
@@ -571,9 +520,7 @@ const BlogApp = {
             );
         }
 
-        this.visibleCount = this.config.postsPerPage;
         this.renderPosts();
-        this.renderPagination();
     },
 
     // 滚动到页面顶部
