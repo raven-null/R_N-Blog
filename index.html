@@ -8,7 +8,7 @@
     <link rel="icon" href="/images/TX/01_TX.webp" type="image/webp">
 
     <!-- Styles -->
-    <link rel="stylesheet" href="css/style.css?v=2.6.67">
+    <link rel="stylesheet" href="css/style.css?v=2.6.68">
 
     <!-- Marked.js -->
     <script src="js/vendor/marked.min.js"></script>
@@ -226,11 +226,17 @@
         </div>
     </div>
 
+    <!-- 留言图片灯箱 -->
+    <div class="gallery-lightbox" id="commentImageLightbox" onclick="closeCommentImageLightbox()">
+        <button class="gallery-lightbox-btn gallery-lightbox-close" title="关闭" onclick="event.stopPropagation(); closeCommentImageLightbox()">&times;</button>
+        <img id="commentImageLightboxImg" src="" alt="留言图片" onclick="event.stopPropagation()">
+    </div>
+
     <!-- Scripts -->
-    <script src="js/theme.js?v=2.6.67"></script>
-    <script src="js/markdown.js?v=2.6.67"></script>
-    <script src="js/app.js?v=2.6.67"></script>
-    <script src="js/animations.js?v=2.6.67"></script>
+    <script src="js/theme.js?v=2.6.68"></script>
+    <script src="js/markdown.js?v=2.6.68"></script>
+    <script src="js/app.js?v=2.6.68"></script>
+    <script src="js/animations.js?v=2.6.68"></script>
 
     <script>
         // ===== Scroll Observer =====
@@ -347,6 +353,33 @@
             }
         }
 
+        // ===== 留言图片灯箱 =====
+        function openCommentImageLightbox(img) {
+            const lb = document.getElementById('commentImageLightbox');
+            const lightboxImg = document.getElementById('commentImageLightboxImg');
+            if (!lb || !lightboxImg) return;
+            lightboxImg.src = img.src;
+            lb.style.display = 'flex';
+            requestAnimationFrame(() => {
+                lb.classList.add('show');
+                if (typeof anime !== 'undefined') {
+                    anime.animate(lightboxImg, { scale: [0.85, 1], opacity: [0, 1], duration: 300, ease: 'out(3)' });
+                    anime.animate(lb, { opacity: [0, 1], duration: 250, ease: 'out(2)' });
+                }
+            });
+        }
+
+        function closeCommentImageLightbox() {
+            const lb = document.getElementById('commentImageLightbox');
+            if (!lb) return;
+            lb.classList.remove('show');
+            if (typeof anime !== 'undefined') {
+                anime.animate(lb, { opacity: [1, 0], duration: 200, ease: 'in(2)', onComplete: () => { lb.style.display = 'none'; } });
+            } else {
+                lb.style.display = 'none';
+            }
+        }
+
         // ===== 全屏切换 =====
         function toggleFullscreen() {
             const el = document.documentElement;
@@ -407,10 +440,12 @@
                 });
             })();
 
-            // ESC 关闭搜索 / 图库灯箱；左右方向键切换图片
+            // ESC 关闭搜索 / 图库灯箱 / 留言图片灯箱；左右方向键切换图片
             document.addEventListener('keydown', (e) => {
                 const lb = document.getElementById('galleryLightbox');
                 const lbOpen = lb && lb.classList.contains('show');
+                const clb = document.getElementById('commentImageLightbox');
+                const clbOpen = clb && clb.classList.contains('show');
                 if (e.key === 'Escape') {
                     const dropdown = document.getElementById('searchDropdown');
                     if (dropdown && dropdown.classList.contains('show')) {
@@ -418,6 +453,9 @@
                     }
                     if (lbOpen) {
                         closeGalleryLightbox();
+                    }
+                    if (clbOpen) {
+                        closeCommentImageLightbox();
                     }
                 }
                 if (lbOpen && (e.key === 'ArrowLeft')) galleryLightboxNav(-1);

@@ -7,7 +7,7 @@
     <link rel="icon" href="/images/TX/01_TX.webp" type="image/webp">
     
     <!-- 主样式 -->
-    <link rel="stylesheet" href="css/style.css?v=2.6.67">
+    <link rel="stylesheet" href="css/style.css?v=2.6.68">
     
     <!-- Marked.js -->
     <script src="js/vendor/marked.min.js"></script>
@@ -1660,11 +1660,11 @@
     </div>
 
     <!-- JavaScript -->
-    <script src="js/theme.js?v=2.6.67"></script>
-    <script src="js/markdown.js?v=2.6.67"></script>
-    <script src="js/chat.js?v=2.6.67"></script>
-    <script src="js/reader.js?v=2.6.67"></script>
-    <script src="js/animations.js?v=2.6.67"></script>
+    <script src="js/theme.js?v=2.6.68"></script>
+    <script src="js/markdown.js?v=2.6.68"></script>
+    <script src="js/chat.js?v=2.6.68"></script>
+    <script src="js/reader.js?v=2.6.68"></script>
+    <script src="js/animations.js?v=2.6.68"></script>
 
     <script>
         // 文章详情页应用
@@ -2302,7 +2302,7 @@
                                 <span class="comment-item-time">${this.formatCommentDate(c.createdAt)}</span>
                             </div>
                             <div class="comment-item-content">${this.esc(c.content)}</div>
-                            ${c.image ? `<img class="comment-item-image" src="${this.esc(this.commentImageSrc(c.image))}" alt="留言图片" loading="lazy">` : ''}
+                            ${c.image ? `<img class="comment-item-image" src="${this.esc(this.commentImageSrc(c.image))}" alt="留言图片" loading="lazy" onclick="openLightbox(this)" style="cursor:zoom-in">` : ''}
                         </div>
                     `).join('');
                 } catch (e) {

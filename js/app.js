@@ -673,7 +673,7 @@ const BlogApp = {
                         <span class="comment-item-time">${this.formatCommentDate(c.createdAt)}</span>
                     </div>
                     <div class="comment-item-content">${this.esc(c.content)}</div>
-                    ${c.image ? `<img class="comment-item-image" src="${this.esc(this.commentImageSrc(c.image))}" alt="留言图片" loading="lazy">` : ''}
+                    ${c.image ? `<img class="comment-item-image" src="${this.esc(this.commentImageSrc(c.image))}" alt="留言图片" loading="lazy" onclick="openCommentImageLightbox(this)" style="cursor:zoom-in">` : ''}
                 </div>
             `).join('');
         } catch (e) {
