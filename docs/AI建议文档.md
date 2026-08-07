@@ -1502,13 +1502,16 @@ node scripts/check-recommendations.js --check
 # 资讯推荐「每日更新」自动化方案
 
 > 结论先行：**能做到每日更新**，但靠人工每天手动编辑 `data/recommendations.json` 不现实（每天要挑选、写摘要、改 JSON、推送）。真正可行的路线是**用 GitHub Actions 定时抓取 RSS 自动生成资讯**，人工只做质量把关。本文给出三个梯度的方案，推荐方案一。
+>
+> 扩展需求：**资讯点击后进入文章页站内阅读**（类似阅读文章体验，而非跳外链）。该需求可以并进本方案实现——给每条资讯补充 `content` 正文，文章页复用现有阅读渲染能力即可。
 
 ### 1. 现状与可行性分析
 
-- 当前资讯由 `data/recommendations.json` 单一文件手动维护，字段为 `id/title/url/source/category/date/summary`（v2.6.43 改版后字段），页面直接 fetch 渲染，无后端
+- 当前资讯由 `data/recommendations.json` 单一文件手动维护，字段为 `id/title/url/source/category/date/summary`（v2.6.43 改版后字段），页面直接 fetch 渲染，无后端；点击资讯卡当前为**外链跳转**（`target="_blank"`），无站内阅读
 - **纯人工做不到每日更新**：平均每条资讯要经历「找新闻 → 写标题/摘要 → 编辑 JSON → 校验 → 推送」约 5~10 分钟，每日 8~10 条 ≈ 1 小时起步，且难以坚持
 - **每日更新具备自动化基础**：① 站点是 GitHub Pages 静态站，天然适合"定时脚本提交 → Pages 自动部署"；② 主要来源（36氪/量子位/少数派/虎嗅/阮一峰/MDN/GitHub Blog）都有公开 RSS/Atom 源；③ 数据格式简单，脚本生成即可
-- 因此结论：**可行方案 = GitHub Actions 定时抓取 + 脚本生成 + 自动提交**，实现"每天早晨自动更新当日资讯"
+- **站内阅读同样可行**：① 文章页 `article.html` 已有完整 Markdown 渲染（marked + 目录/进度条/字号等阅读体验），只需支持"从 `recommendations.json` 按 id 加载正文"；② RSS 的 `description` 通常包含正文（部分站点为摘要），抓取时转成 Markdown 存为 `content` 即可，无需访问外站页面；③ 摘要型来源（如 36氪）正文不完整，可降级为「仅摘要 + 原文外链」
+- 因此结论：**可行方案 = GitHub Actions 定时抓取 + 脚本生成（含正文）+ 自动提交**，实现"每天早晨自动更新当日资讯"，且资讯可站内阅读
 
 ### 2. 方案一（推荐）：GitHub Actions 每日定时自动更新
 
@@ -1520,23 +1523,47 @@ GitHub Actions 定时任务（每日 08:00）
         ▼
 scripts/update-news.js 运行
         │  2. 并发抓取各来源 RSS
-        │  3. 解析 → 映射分类/来源 → 去重 → 截断摘要
-        │  4. 与已有数据合并、按 date 降序、裁剪到上限（如 12 条）
+        │  3. 解析 → 映射分类/来源 → 去重
+        │  4. description 去 HTML → 转 Markdown 存 content（站内阅读正文）
+        │  5. 摘要截断；与已有数据合并、按 date 降序、裁剪到上限（如 12 条）
         ▼
    data/recommendations.json 重写
-        │  5. 调用 check-recommendations.js 校验
+        │  6. 调用 check-recommendations.js 校验
         ▼
    校验通过 → git commit + push → GitHub Pages 自动部署
 ```
+
+**资讯数据模型（新增 `content` 字段支持站内阅读）：**
+
+```json
+{
+  "id": "n01",
+  "title": "字节跳动发布新一代视频生成模型",
+  "url": "https://www.36kr.com/",
+  "source": "36氪",
+  "category": "科技",
+  "date": "2026-08-05",
+  "summary": "新模型在生成时长与镜头一致性上取得突破。",
+  "content": "（Markdown 正文，供文章页站内阅读；摘要型来源可省略，点击则跳原文外链）"
+}
+```
+
+| 字段 | 必填 | 说明 |
+|------|------|------|
+| `id` | ✅ | 唯一标识，文章页用 `?post=n01&type=news` 定位 |
+| `title` / `url` / `source` / `category` / `date` | ✅ | 与现状一致 |
+| `summary` | 推荐 | 卡片摘要（已有） |
+| `content` | 可选 | **Markdown 正文**。有此字段 → 点击进入文章页站内阅读；无此字段 → 点击跳 `url` 外链 |
 
 **自动化脚本 `scripts/update-news.js` 职责：**
 
 1. **抓取**：并发请求各来源 RSS（Node 内置 `https`，无需额外依赖），超时与失败降级（单个来源失败不影响整体）
 2. **解析**：用正则/简易 XML 解析提取 `title / link / pubDate / description`（项目无后端、保持零依赖，手写轻量解析即可）
 3. **映射**：每个来源配置一张表，输出 `source`（来源名）与 `category`（科技/开发/前端/AI/产品/互联网…），无匹配时归入「资讯」
-4. **摘要**：从 `description` 去除 HTML 标签、截断到 ~60 字，不足则省略 `summary`
-5. **去重合并**：按 `url` 去重；把新抓取条目与 `data/recommendations.json` 已有条目合并，按 `date` 降序，裁剪到上限（默认 12 条）
-6. **落盘与自检**：重写 JSON（保持字段合法），随后执行 `node scripts/check-recommendations.js` 校验，失败则中止不提交
+4. **正文提取**：`description` 去 HTML 标签（保留段落/列表/链接），转成 Markdown 写入 `content`；正文过短（如纯摘要 < 200 字）时判定为摘要型来源，省略 `content`
+5. **摘要**：从 `description` 去除 HTML 标签、截断到 ~60 字，不足则省略 `summary`
+6. **去重合并**：按 `url` 去重；把新抓取条目与 `data/recommendations.json` 已有条目合并，按 `date` 降序，裁剪到上限（默认 12 条）
+7. **落盘与自检**：重写 JSON（保持字段合法），随后执行 `node scripts/check-recommendations.js` 校验，失败则中止不提交
 
 **来源配置示例（写入脚本常量或独立配置）：**
 
@@ -1551,6 +1578,28 @@ scripts/update-news.js 运行
 | GitHub Blog | `https://github.blog/feed/` | 开发 |
 
 > RSS 地址可能变化，上线前需逐个确认可用；个别站点无 RSS 或无正确分类时，可将该来源标记为「需要人工补充」并在工作流中剔除。
+
+### 2.1 资讯站内阅读（文章页复用，随本方案一并实施）
+
+> 目标：点击资讯卡后在 `article.html` 内以文章阅读体验展示资讯正文（目录 / 进度条 / 字号调节 / 阅读模式全部复用），而不是跳外链；无正文的资讯仍跳外链。
+
+**文章页支持资讯正文：**
+
+1. `article.html` 的 `loadArticle` 增加分支：URL 参数带 `type=news`（如 `article.html?post=n01&type=news`）时，改为 fetch `data/recommendations.json` 并按 `id` 匹配
+2. 找到后构造与普通文章一致的对象：`title=资讯title`、`date=资讯date`、`tags=[category]`、`author=source`、`content=资讯content`，走现有 `renderArticle()` 渲染，阅读体验零改动复用
+3. 无 `content` 或未找到条目时：提示"原文无正文"，并提供「前往原文」按钮跳 `url`
+4. 目录、进度条、字号、阅读模式等全部自动生效（复用同一套渲染管线）；「上一篇/下一篇」导航在资讯模式下隐藏（资讯不进入 `allPosts`）
+
+**资讯卡点击行为（仪表盘）：**
+
+- 有 `content` → `location.href = 'article.html?post=<id>&type=news'`（站内阅读）
+- 无 `content` → 维持外链 `target="_blank"`（原文跳转）
+- 卡片可增加「站内阅读」/「原文」双入口图标，供用户选择
+
+**缓存与校验配套：**
+
+- 文章页的 `blog-posts-cache-v2` 不含资讯，不受影响；资讯正文随 `recommendations.json` 内容哈希自动失效（与 8.4 一致）
+- `scripts/check-recommendations.js` 校验同步更新：`content` 存在时必须是字符串；`id` 必须唯一（作为站内路由键）
 
 **工作流文件 `.github/workflows/update-news.yml`：**
 
@@ -1598,16 +1647,17 @@ jobs:
 
 ### 3. 方案二：半自动「一条命令更新」（本地运行）
 
-不引入 GitHub Actions，改为本地脚本一键拉取生成，人工审核后推送：
+不引入 GitHub Actions，改为本地脚本一键拉取生成（含正文 `content`），人工审核后推送：
 
 ```bash
-node scripts/update-news.js      # 抓取 RSS 生成 recommendations.json
+node scripts/update-news.js      # 抓取 RSS 生成 recommendations.json（含站内阅读正文）
 node scripts/check-recommendations.js --check
 git add . && git commit -m "更新每日资讯" && git push origin main
 ```
 
 - 适合不想开自动化、但想省掉"手写 JSON"的工作量；每天花 2~3 分钟跑一遍 + 人工抽几条润色即可
 - 实现成本与方案一相同（同一个 `update-news.js`），只是触发方式从"定时"变"手动"
+- 站内阅读功能（2.1 节）为前端一次性改造，与更新方式无关，两种方案均可使用
 
 ### 4. 方案三：维持人工，但优化手工流程
 
@@ -1617,19 +1667,23 @@ git add . && git commit -m "更新每日资讯" && git push origin main
 
 ### 5. 实施步骤（方案一为例）
 
-1. 新建 `scripts/update-news.js`：来源映射表 + RSS 抓取/解析 + 合并去重 + 落盘自检
+1. 新建 `scripts/update-news.js`：来源映射表 + RSS 抓取/解析 + 正文转 Markdown + 合并去重 + 落盘自检
 2. 确认各来源 RSS 可用性（逐个 curl 验证），剔除无效来源
-3. 新增 `.github/workflows/update-news.yml` 定时工作流
-4. 本地先跑一次脚本验证生成结果与 `check-recommendations.js` 兼容
-5. 推送后触发一次 `workflow_dispatch` 验证流水线；观察次日定时是否自动提交部署
-6. 同步更新《博客完整使用手册》/操作文档维护流程、项目文档与更新日志
+3. `article.html` 站内阅读改造（2.1 节）：`loadArticle` 支持 `type=news` 按 id 从 `recommendations.json` 加载，资讯模式下隐藏上下篇导航
+4. `js/app.js` 资讯卡点击逻辑：有 `content` 进文章页、无 `content` 跳外链；`scripts/check-recommendations.js` 同步校验 `content`/`id` 唯一
+5. 新增 `.github/workflows/update-news.yml` 定时工作流
+6. 本地先跑一次脚本验证生成结果（含 `content`）与 `check-recommendations.js` 兼容
+7. 推送后触发一次 `workflow_dispatch` 验证流水线；观察次日定时是否自动提交部署
+8. 同步更新《博客完整使用手册》/操作文档维护流程、项目文档与更新日志
 
 ### 6. 优先级
 
 | 优先级 | 事项 | 收益 |
 |--------|------|------|
-| P0 | `update-news.js` 抓取/解析/去重/落盘 | 核心能力 |
+| P0 | `update-news.js` 抓取/解析/正文提取/去重/落盘 | 核心能力 |
 | P0 | `.github/workflows/update-news.yml` 定时任务 | 每日自动更新 |
+| P0 | `article.html` 站内阅读（`type=news` 加载资讯正文） | 阅读体验升级 |
+| P0 | 资讯卡点击分流（有正文站内读 / 无正文跳外链） | 功能闭环 |
 | P1 | 来源映射表 + 分类规则维护 | 内容质量 |
 | P1 | 手动触发 + 人工润色覆盖入口 | 兜底可控 |
 | P2 | 自动摘要去 HTML / 关键词白名单过滤 | 打磨 |
@@ -1637,5 +1691,5 @@ git add . && git commit -m "更新每日资讯" && git push origin main
 
 ---
 
-**状态：** AI 助手部分已实施（v2.2.0）；Anime.js 动画方案已实施（v2.4.0）；首页改造方案已实施（v2.4.2，P0/P1 项）；标签区改为导航栏"全部标签"面板（v2.4.5）；Hero 重设计已实施（v2.5.0，P0/P1 项）；animejs.com 动效借鉴已实施（v2.5.2，P0/P1 项）；Hero 区重新设计已实施（v2.6.0，方案 A）；Hero 与内容区左右切换方案待评审；省去 Hero 区方案已实施（v2.6.3，方案 A）；"我的"个人仪表盘已实施（v2.6.16）；文章页阅读体验已实施（v2.6.25）；"推荐"页面设计方案已改版并入「我的」仪表盘资讯推荐模块（v2.6.43，仅保留网站资讯，以新闻卡片呈现）；「资讯每日更新」自动化方案已写入本文档（待实施）
+**状态：** AI 助手部分已实施（v2.2.0）；Anime.js 动画方案已实施（v2.4.0）；首页改造方案已实施（v2.4.2，P0/P1 项）；标签区改为导航栏"全部标签"面板（v2.4.5）；Hero 重设计已实施（v2.5.0，P0/P1 项）；animejs.com 动效借鉴已实施（v2.5.2，P0/P1 项）；Hero 区重新设计已实施（v2.6.0，方案 A）；Hero 与内容区左右切换方案待评审；省去 Hero 区方案已实施（v2.6.3，方案 A）；"我的"个人仪表盘已实施（v2.6.16）；文章页阅读体验已实施（v2.6.25）；"推荐"页面设计方案已改版并入「我的」仪表盘资讯推荐模块（v2.6.43，仅保留网站资讯，以新闻卡片呈现）；「资讯每日更新」自动化方案已写入本文档（待实施，含资讯站内阅读扩展 2.1 节）
 **作者：** 渡鸦NULL
