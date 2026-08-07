@@ -925,24 +925,24 @@ body.home-layout {
 .comment-form textarea {
     min-height: 100px;
     resize: vertical;
+}
+
+/* 文本框 + 发表按钮并排 */
+.comment-form-main {
+    display: flex;
+    align-items: stretch;
+    gap: 12px;
     margin-bottom: 12px;
 }
 
-.comment-form-footer {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    flex-wrap: wrap;
+.comment-form-main textarea {
+    flex: 1;
+    min-width: 0;
+    margin-bottom: 0;
 }
 
-.comment-tip {
-    color: var(--text-muted);
-    font-size: 12px;
-}
-
-.comment-form button {
-    padding: 10px 28px;
+.comment-form-main button {
+    padding: 10px 20px;
     border: 1px solid var(--border-light);
     border-radius: 8px;
     background: transparent;
@@ -951,23 +951,43 @@ body.home-layout {
     cursor: pointer;
     transition: all 0.2s;
     flex-shrink: 0;
+    align-self: flex-end;
     font-family: inherit;
+    white-space: nowrap;
 }
 
-.comment-form button:hover {
+.comment-form-main button:hover {
     border-color: var(--accent);
     color: var(--accent);
     box-shadow: 0 0 12px var(--glow);
 }
 
-.comment-form button:disabled {
+.comment-form-main button:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+}
+
+.comment-form-footer {
+    display: flex;
+    align-items: center;
+}
+
+.comment-tip {
+    color: var(--text-muted);
+    font-size: 12px;
 }
 
 @media (max-width: 700px) {
     .comment-form-row {
         flex-direction: column;
+    }
+
+    .comment-form-main {
+        flex-direction: column;
+    }
+
+    .comment-form-main button {
+        align-self: stretch;
     }
 }
 
