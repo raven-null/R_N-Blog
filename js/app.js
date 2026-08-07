@@ -200,22 +200,16 @@ const BlogApp = {
         const wordCount = post.wordCount || 0;
         const readTime = Math.max(1, Math.round(wordCount / 300));
 
-        // 3 天内发布的文章显示 NEW 徽标
-        const isNew = post.date && (Date.now() - new Date(post.date).getTime()) < 3 * 24 * 60 * 60 * 1000;
-        const newBadge = isNew ? '<span class="card-new">NEW</span>' : '';
-
         return `
             <div class="card" onclick="BlogApp.openPost('${post.filename}')">
                 ${post.image ? `
                     <div class="card-img">
                         <img src="${post.image}" alt="${post.title}" class="img-placeholder" loading="lazy"
                              onerror="this.style.display='none';this.parentElement.style.background='linear-gradient(145deg, ${gradientColors[0]}, ${gradientColors[1]})';">
-                        ${newBadge}
                     </div>
                 ` : `
                     <div class="card-img" style="height: ${this.getRandomHeight()}px; background: linear-gradient(145deg, ${gradientColors[0]}, ${gradientColors[1]});">
                         <div class="big-text">${this.getCardIcon(post.tags || [])}</div>
-                        ${newBadge}
                     </div>
                 `}
                 <div class="card-body">
