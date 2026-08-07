@@ -8,7 +8,7 @@
     <link rel="icon" href="/images/TX/01_TX.webp" type="image/webp">
 
     <!-- Styles -->
-    <link rel="stylesheet" href="css/style.css?v=2.6.58">
+    <link rel="stylesheet" href="css/style.css?v=2.6.59">
 
     <!-- Marked.js -->
     <script src="js/vendor/marked.min.js"></script>
@@ -140,6 +140,25 @@
                     <!-- 统计概览 -->
                     <div class="dashboard-stats" id="dashboardStats"></div>
 
+                    <!-- 留言区 -->
+                    <div class="dash-panel comment-section" id="comment-section">
+                        <div class="dash-panel-title">留言</div>
+                        <div class="comment-list" id="comment-list">
+                            <div class="comment-empty">加载留言中...</div>
+                        </div>
+                        <form class="comment-form" id="comment-form">
+                            <div class="comment-form-row">
+                                <input type="text" id="comment-name" placeholder="昵称 *" maxlength="32" required>
+                                <input type="text" id="comment-email" placeholder="邮箱（可选，不会被公开）" maxlength="200">
+                            </div>
+                            <textarea id="comment-content" placeholder="写下你的留言... *（支持纯文本，最长 5000 字）" maxlength="5000" required></textarea>
+                            <div class="comment-form-footer">
+                                <span class="comment-tip" id="comment-tip"></span>
+                                <button type="submit" id="comment-submit">发表留言</button>
+                            </div>
+                        </form>
+                    </div>
+
                     <!-- 关于 -->
                     <div class="dash-bottom">
                         <div class="dash-panel">
@@ -193,10 +212,10 @@
     </div>
 
     <!-- Scripts -->
-    <script src="js/theme.js?v=2.6.58"></script>
-    <script src="js/markdown.js?v=2.6.58"></script>
-    <script src="js/app.js?v=2.6.58"></script>
-    <script src="js/animations.js?v=2.6.58"></script>
+    <script src="js/theme.js?v=2.6.59"></script>
+    <script src="js/markdown.js?v=2.6.59"></script>
+    <script src="js/app.js?v=2.6.59"></script>
+    <script src="js/animations.js?v=2.6.59"></script>
 
     <script>
         // ===== Scroll Observer =====

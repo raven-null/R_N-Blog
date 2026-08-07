@@ -573,6 +573,107 @@ const BlogApp = {
                 ease: 'out(2)'
             });
         }
+
+        // 初始化留言区（postId 固定为 dashboard）
+        this.initComments('dashboard');
+    },
+
+    // ===================== 留言区（我的视图） =====================
+
+    // 初始化留言区
+    async initComments(postId) {
+        const section = document.getElementById('comment-section');
+        if (!section || section.dataset.ready) return;
+        section.dataset.ready = '1';
+        this.commentPostId = postId;
+        await this.loadComments();
+        const form = document.getElementById('comment-form');
+        if (form) form.addEventListener('submit', (e) => this.submitComment(e));
+    },
+
+    // 加载留言
+    async loadComments() {
+        const list = document.getElementById('comment-list');
+        if (!list) return;
+        try {
+            const res = await fetch(`${this.config.apiBase}/api/comments?postId=${encodeURIComponent(this.commentPostId)}`);
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const data = await res.json();
+            const comments = (data && Array.isArray(data.comments)) ? data.comments : [];
+            if (!comments.length) {
+                list.innerHTML = '<div class="comment-empty">还没有留言，来抢沙发~</div>';
+                return;
+            }
+            list.innerHTML = comments.map(c => `
+                <div class="comment-item">
+                    <div class="comment-item-head">
+                        <div class="comment-item-name">
+                            <span class="avatar">${this.escName(c.name || '客')}</span>
+                            <span>${this.esc(c.name || '匿名')}</span>
+                        </div>
+                        <span class="comment-item-time">${this.formatCommentDate(c.createdAt)}</span>
+                    </div>
+                    <div class="comment-item-content">${this.esc(c.content)}</div>
+                </div>
+            `).join('');
+        } catch (e) {
+            console.warn('留言加载失败:', e);
+            list.innerHTML = '<div class="comment-empty">留言功能暂时不可用</div>';
+            const form = document.getElementById('comment-form');
+            if (form) form.style.display = 'none';
+        }
+    },
+
+    // 提交留言
+    async submitComment(e) {
+        e.preventDefault();
+        const nameInput = document.getElementById('comment-name');
+        const emailInput = document.getElementById('comment-email');
+        const contentInput = document.getElementById('comment-content');
+        const submitBtn = document.getElementById('comment-submit');
+        const tip = document.getElementById('comment-tip');
+        const name = (nameInput.value || '').trim();
+        const email = (emailInput.value || '').trim();
+        const content = (contentInput.value || '').trim();
+        if (!name || !content) return;
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = '提交中...';
+        if (tip) tip.textContent = '';
+        try {
+            const res = await fetch(`${this.config.apiBase}/api/comments`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ postId: this.commentPostId, name, email, content })
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok || !data || data.status !== 'success') {
+                throw new Error((data && data.message) || '提交失败');
+            }
+            nameInput.value = '';
+            emailInput.value = '';
+            contentInput.value = '';
+            if (tip) tip.textContent = '✓ 留言成功';
+            await this.loadComments();
+        } catch (err) {
+            if (tip) tip.textContent = '✗ ' + (err.message || '留言失败，请稍后再试');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = '发表留言';
+        }
+    },
+
+    // 留言头像首字符
+    escName(name) {
+        return String(name || '客').charAt(0).toUpperCase();
+    },
+
+    // 格式化留言时间
+    formatCommentDate(ts) {
+        const d = new Date(ts);
+        if (isNaN(d.getTime())) return '';
+        const pad = n => String(n).padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
     },
 
     // 搜索文章（按标题、摘要、标签匹配）
