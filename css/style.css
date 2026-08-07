@@ -927,17 +927,27 @@ body.home-layout {
     resize: vertical;
 }
 
-/* 文本框占满一行 */
+/* 文本框 + 右侧按钮列 */
 .comment-form-main {
-    display: block;
+    display: flex;
+    align-items: stretch;
+    gap: 12px;
     margin-bottom: 12px;
 }
 
 .comment-form-main textarea {
-    width: 100%;
+    flex: 1;
+    min-width: 0;
     min-height: 100px;
     resize: vertical;
-    box-sizing: border-box;
+}
+
+.comment-form-side {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex-shrink: 0;
+    justify-content: flex-end;
 }
 
 .comment-form-footer {
@@ -950,18 +960,11 @@ body.home-layout {
     font-size: 12px;
 }
 
-/* 上传图片 + 发表留言 并排 */
-.comment-form-tools {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 12px;
-    flex-wrap: wrap;
-}
-
+/* 上传图片 + 发表留言（文本框右侧） */
 .comment-upload {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 6px;
     padding: 9px 16px;
     border: 1px dashed var(--border-light);
@@ -970,6 +973,7 @@ body.home-layout {
     font-size: 13px;
     cursor: pointer;
     transition: all 0.2s;
+    white-space: nowrap;
 }
 
 .comment-upload:hover {
@@ -977,7 +981,7 @@ body.home-layout {
     color: var(--accent);
 }
 
-.comment-form-tools #comment-submit {
+.comment-form-side #comment-submit {
     padding: 9px 20px;
     border: 1px solid var(--border-light);
     border-radius: 8px;
@@ -986,18 +990,17 @@ body.home-layout {
     font-size: 13px;
     cursor: pointer;
     transition: all 0.2s;
-    margin-left: auto;
     font-family: inherit;
     white-space: nowrap;
 }
 
-.comment-form-tools #comment-submit:hover {
+.comment-form-side #comment-submit:hover {
     border-color: var(--accent);
     color: var(--accent);
     box-shadow: 0 0 12px var(--glow);
 }
 
-.comment-form-tools #comment-submit:disabled {
+.comment-form-side #comment-submit:disabled {
     opacity: 0.6;
     cursor: not-allowed;
 }
@@ -1047,8 +1050,14 @@ body.home-layout {
         flex-direction: column;
     }
 
-    .comment-form-tools #comment-submit {
-        margin-left: 0;
+    .comment-form-main {
+        flex-direction: column;
+    }
+
+    .comment-form-side {
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: center;
     }
 }
 
