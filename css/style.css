@@ -666,6 +666,22 @@ body.home-layout {
     overflow: hidden;
 }
 
+.news-read {
+    display: inline-block;
+    margin-top: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--accent);
+    opacity: 0;
+    transform: translateY(2px);
+    transition: opacity 0.25s, transform 0.25s;
+}
+
+.news-card:hover .news-read {
+    opacity: 1;
+    transform: translateY(0);
+}
+
 /* 仪表盘统计 */
 .dashboard-stats {
     display: grid;

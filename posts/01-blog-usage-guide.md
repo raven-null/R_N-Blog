@@ -91,7 +91,10 @@ node scripts/build-gallery.js
 
 ### 4.1 资讯卡片
 
-每张资讯卡片包含：分类徽标（科技 / 开发 / 前端 / AI 等）、来源与日期、标题（点击在新窗口打开原文）、一句话摘要，卡片悬停有上浮与高亮效果。
+每张资讯卡片包含：分类徽标（科技 / 开发 / 前端 / AI 等）、来源与日期、标题、一句话摘要，卡片悬停有上浮与高亮效果。
+
+- **有正文（`content`）的资讯**：点击进入**文章页站内阅读**，享受完整阅读体验（目录、进度条、字号调节、阅读模式），卡片悬停显示「站内阅读 →」
+- **无正文的资讯**：点击在新窗口打开原文链接
 
 ### 4.2 数据来源
 
@@ -99,14 +102,20 @@ node scripts/build-gallery.js
 
 | 字段 | 必填 | 说明 |
 |------|------|------|
+| `id` | ✅ | 唯一标识（如 `n01`），站内阅读的路由键 |
 | `title` | ✅ | 新闻标题 |
 | `url` | ✅ | 原文链接（http/https） |
 | `source` | ✅ | 来源网站 / 媒体名称 |
 | `category` | 推荐 | 资讯分类（如 科技 / 开发 / AI） |
 | `date` | 推荐 | 发布日期，格式 YYYY-MM-DD |
 | `summary` | 可选 | 一句话摘要 |
+| `content` | 可选 | **Markdown 正文**，存在时资讯支持站内阅读 |
 
-> 新增 / 修改 / 下架资讯：直接编辑 `data/recommendations.json` 后提交推送即可。可运行 `node scripts/check-recommendations.js`（`--check` 附加链接体检）校验数据。
+### 4.3 更新方式
+
+- **自动（推荐）**：GitHub Actions 每天 08:00 抓取各来源 RSS（36氪 / 量子位 / 少数派 / 虎嗅 / 阮一峰 / CSS-Tricks / GitHub Blog）自动生成并提交，无需手动操作
+- **手动**：编辑 `data/recommendations.json` 后提交推送即可；本地预览 `node scripts/update-news.js --dry`
+- 校验：`node scripts/check-recommendations.js`（`--check` 附加链接体检）
 
 ---
 

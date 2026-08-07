@@ -99,8 +99,14 @@ node scripts/build-gallery.js
 
 ## 📰 资讯维护
 
-「我的」视图内置资讯推荐模块，展示 `data/recommendations.json` 中的精选网站新闻（分类 / 来源 / 日期 / 标题 / 摘要），直接编辑该文件提交推送即可：
+「我的」视图内置资讯推荐模块，展示 `data/recommendations.json` 中的精选网站新闻（分类 / 来源 / 日期 / 标题 / 摘要），有 `content`（正文）的资讯点击后进入文章页站内阅读，无正文的点击新窗口打开原文。
 
+**两种维护方式：**
+
+1. **自动（推荐，每日更新）**：GitHub Actions 每天 08:00 运行 `node scripts/update-news.js` 抓取各来源 RSS 自动生成并提交；也可在 Actions 页面手动触发 `Update News Daily`
+2. **手动**：直接编辑 `data/recommendations.json` 提交推送即可
+
+- 本地生成：`node scripts/update-news.js`（`--dry` 预览不落盘）
 - 校验：`node scripts/check-recommendations.js`（`--check` 追加链接体检）
 
 ## 🎨 主题

@@ -1,74 +1,110 @@
 [
     {
-        "id": "n01",
-        "title": "字节跳动发布新一代视频生成模型，长镜头叙事能力显著提升",
-        "url": "https://www.36kr.com/",
-        "source": "36氪",
-        "category": "科技",
-        "date": "2026-08-05",
-        "summary": "新模型在生成时长与镜头一致性上取得突破，已开放部分用户试用。"
-    },
-    {
-        "id": "n02",
-        "title": "GitHub 发布 2026 年度开发者报告：AI 辅助编程占比持续上升",
-        "url": "https://github.blog/",
-        "source": "GitHub Blog",
-        "category": "开发",
-        "date": "2026-08-04",
-        "summary": "报告显示 AI 辅助代码提交占比稳步增长，开源贡献地域分布出现新趋势。"
-    },
-    {
-        "id": "n03",
-        "title": "CSS 容器查询实战：让组件根据父容器尺寸自适应布局",
-        "url": "https://css-tricks.com/",
-        "source": "CSS-Tricks",
-        "category": "前端",
-        "date": "2026-08-03",
-        "summary": "本文用完整实例讲解容器查询的用法、兼容性与常见踩坑。"
-    },
-    {
-        "id": "n04",
-        "title": "量子位：大模型推理成本一年下降近十倍",
-        "url": "https://www.qbitai.com/",
+        "title": "阿里推出国内首个AI语音平台CosyVoice Studio，将语义理解融入语音能力",
+        "url": "https://www.qbitai.com/2026/08/468324.html",
         "source": "量子位",
         "category": "AI",
-        "date": "2026-08-02",
-        "summary": "量化、蒸馏与硬件迭代共同推动推理成本持续走低，小团队也能跑大模型。"
+        "date": "2026-08-07",
+        "summary": "AI语音“听、说、创”一站式满足",
+        "id": "n09"
     },
     {
-        "id": "n05",
-        "title": "少数派：效率工具正在回归「做减法」的设计趋势",
-        "url": "https://sspai.com/",
+        "title": "AI批量轰炸苹果bug赏金计划，审核团队已下线",
+        "url": "https://www.qbitai.com/2026/08/466738.html",
+        "source": "量子位",
+        "category": "AI",
+        "date": "2026-08-07",
+        "id": "n10"
+    },
+    {
+        "title": "openJiuwen发布业界首个企业级分布式蜂群架构，联合邮储成功落地金融生产环境",
+        "url": "https://www.qbitai.com/2026/08/468305.html",
+        "source": "量子位",
+        "category": "AI",
+        "date": "2026-08-07",
+        "summary": "从「能用」走向「规模化落地」",
+        "id": "n11"
+    },
+    {
+        "title": "AI圈功能狂卷，付费寥寥，Keep正在试一条新路",
+        "url": "https://www.qbitai.com/2026/08/467878.html",
+        "source": "量子位",
+        "category": "AI",
+        "date": "2026-08-07",
+        "summary": "AI卷向运动赛道，Keep的新答卷能否跑通？",
+        "id": "n12"
+    },
+    {
+        "title": "阿里视频大模型Wan3.0开启公测：文档、ppt也能变视频",
+        "url": "https://www.qbitai.com/2026/08/467877.html",
+        "source": "量子位",
+        "category": "AI",
+        "date": "2026-08-07",
+        "summary": "8月6日，阿里巴巴视频生成大模型Wan 3.0开启公测",
+        "id": "n13"
+    },
+    {
+        "title": "[限时优惠] 数据分析：用好 Excel 中的数据透视表",
+        "url": "https://sspai.com/post/113108",
         "source": "少数派",
         "category": "产品",
-        "date": "2026-08-01",
-        "summary": "越来越多工具回归单一场景与简洁交互，而非一味堆砌功能。"
+        "date": "2026-08-07",
+        "summary": "编注：本文为Microsoft365工具生值包内随附专属定制教程的免费试读内容。接上级经销商通知，微软将于本月提高Mic…",
+        "id": "n14"
     },
     {
-        "id": "n06",
-        "title": "虎嗅：AI 硬件赛道进入洗牌期，体验与生态成胜负手",
-        "url": "https://www.huxiu.com/",
-        "source": "虎嗅",
-        "category": "科技",
-        "date": "2026-07-30",
-        "summary": "资本退潮后，真正以体验与生态取胜的厂商开始浮现。"
+        "title": "角落新声｜从合租到整租，我在客厅听见了自己的声音",
+        "url": "https://sspai.com/post/113144",
+        "source": "少数派",
+        "category": "产品",
+        "date": "2026-08-07",
+        "summary": "当我坐下来，这个小角落就慢慢有了属于我的声音。查看全文",
+        "id": "n15"
     },
     {
-        "id": "n07",
-        "title": "阮一峰：科技爱好者周刊（第 300 期）",
-        "url": "https://www.ruanyifeng.com/blog/",
+        "title": "派早报：Bose 发布新款 QuietComfort 头戴式耳机等",
+        "url": "https://sspai.com/post/113162",
+        "source": "少数派",
+        "category": "产品",
+        "date": "2026-08-07",
+        "summary": "Black Forest Labs 正式推出 FLUX 3 视频生成模型，研究人员发现 iCloud Private R…",
+        "id": "n16"
+    },
+    {
+        "title": "科技爱好者周刊（第 407 期）：国家为什么需要开源软件？",
+        "url": "http://www.ruanyifeng.com/blog/2026/08/weekly-issue-407.html",
         "source": "阮一峰的网络日志",
         "category": "互联网",
-        "date": "2026-07-28",
-        "summary": "本期荐文：端侧 AI、浏览器新特性与一组实用的开源工具。"
+        "date": "2026-08-07",
+        "summary": "这里记录每周值得分享的科技内容，周五发布。...",
+        "id": "n17"
     },
     {
-        "id": "n08",
-        "title": "MDN：2026 年 Web 平台新特性一览",
-        "url": "https://developer.mozilla.org/",
-        "source": "MDN",
+        "title": "新玩意 248｜少数派的编辑们最近买了啥？",
+        "url": "https://sspai.com/post/113139",
+        "source": "少数派",
+        "category": "产品",
+        "date": "2026-08-06",
+        "summary": "编注：很多读者都会好奇少数派的编辑们到底平时都「买了啥」。我们希望通过「编辑部的新玩意」介绍编辑部成员们最近在用的新奇产…",
+        "id": "n18"
+    },
+    {
+        "title": "TDS REVIEW | vivo TWS 5 Pro 降噪真无线耳机体验",
+        "url": "https://sspai.com/post/112916",
+        "source": "少数派",
+        "category": "产品",
+        "date": "2026-08-06",
+        "summary": "这篇文章是TDSStudio在少数派上的第27篇文章，依然是全平台首发。在去年的年度企划之一「中价位TWS横评」中，vi…",
+        "id": "n19"
+    },
+    {
+        "title": "2026 State of CSS, Devs Surveys",
+        "url": "https://css-tricks.com/2026-state-of-css-devs-surveys/",
+        "source": "CSS-Tricks",
         "category": "前端",
-        "date": "2026-07-26",
-        "summary": "View Transitions、锚点定位等新 API 在主流浏览器全面落地。"
+        "date": "2026-08-06",
+        "summary": "A few notes and takeaways from the 2026 State of CSS survey …",
+        "content": "A few notes and takeaways from the 2026 State of CSS survey results, including a nice CSS-Tricks cameo!\n\n[2026 State of CSS, Devs Surveys](https://css-tricks.com/2026-state-of-css-devs-surveys/) originally handwritten and published with love on [CSS-Tricks](https://css-tricks.com). You should really [get the newsletter](https://css-tricks.com/newsletters/) as well.",
+        "id": "n20"
     }
 ]

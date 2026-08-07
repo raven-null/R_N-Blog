@@ -512,14 +512,20 @@ const BlogApp = {
         const category = this.esc(item.category || '资讯');
         const source = this.esc(item.source || '');
         const date = item.date ? this.formatShortDate(item.date) : '';
+        const hasContent = !!(item.content && item.content.trim());
+        const href = hasContent
+            ? `article.html?post=${encodeURIComponent(item.id)}&type=news`
+            : item.url;
+        const target = hasContent ? '' : 'target="_blank" rel="noopener"';
         return `
-            <a class="news-card" href="${item.url}" target="_blank" rel="noopener">
+            <a class="news-card" href="${href}" ${target}>
                 <div class="news-card-head">
                     <span class="news-cat">${category}</span>
                     <span class="news-meta">${source}${date ? ' · ' + date : ''}</span>
                 </div>
                 <div class="news-card-title">${this.esc(item.title)}</div>
                 ${item.summary ? `<div class="news-card-summary">${this.esc(item.summary)}</div>` : ''}
+                ${hasContent ? '<span class="news-read">站内阅读 →</span>' : ''}
             </a>
         `;
     },

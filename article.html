@@ -7,7 +7,7 @@
     <link rel="icon" href="/images/TX/01_TX.webp" type="image/webp">
     
     <!-- 主样式 -->
-    <link rel="stylesheet" href="css/style.css?v=2.6.50">
+    <link rel="stylesheet" href="css/style.css?v=2.6.51">
     
     <!-- Marked.js -->
     <script src="js/vendor/marked.min.js"></script>
@@ -831,6 +831,17 @@
             text-decoration: none;
         }
 
+        .error-state .error-actions {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .error-state .back-link.secondary {
+            color: var(--text-secondary);
+        }
+
         /* ===== 响应式 ===== */
 
         /* 文章页隐藏全局浮动按钮 */
@@ -1348,11 +1359,11 @@
     </div>
 
     <!-- JavaScript -->
-    <script src="js/theme.js?v=2.6.50"></script>
-    <script src="js/markdown.js?v=2.6.50"></script>
-    <script src="js/chat.js?v=2.6.50"></script>
-    <script src="js/reader.js?v=2.6.50"></script>
-    <script src="js/animations.js?v=2.6.50"></script>
+    <script src="js/theme.js?v=2.6.51"></script>
+    <script src="js/markdown.js?v=2.6.51"></script>
+    <script src="js/chat.js?v=2.6.51"></script>
+    <script src="js/reader.js?v=2.6.51"></script>
+    <script src="js/animations.js?v=2.6.51"></script>
 
     <script>
         // 文章详情页应用
@@ -1371,6 +1382,7 @@
                 // 从 URL 获取文章文件名
                 const urlParams = new URLSearchParams(window.location.search);
                 const postFile = urlParams.get('post');
+                const isNews = urlParams.get('type') === 'news';
 
                 if (!postFile) {
                     this.showError('未指定文章');
@@ -1378,14 +1390,53 @@
                 }
 
                 // 加载文章和文章列表
-                await this.loadArticle(postFile);
-                // 异步加载文章列表，不阻塞文章渲染
-                this.loadAllPosts().then(() => this.renderNavigation());
+                await this.loadArticle(postFile, isNews);
+                // 异步加载文章列表，不阻塞文章渲染（资讯模式不加载，避免上下篇导航错乱）
+                if (!isNews) {
+                    this.loadAllPosts().then(() => this.renderNavigation());
+                } else {
+                    const nav = document.getElementById('article-navigation');
+                    if (nav) nav.style.display = 'none';
+                }
+            },
+
+            // 加载资讯正文（从 data/recommendations.json 按 id 匹配）
+            async loadNewsArticle(id) {
+                const res = await fetch('data/recommendations.json');
+                if (!res.ok) throw new Error('HTTP 错误: ' + res.status);
+                const items = await res.json();
+                const item = (Array.isArray(items) ? items : []).find(it => it.id === id);
+                if (!item) throw new Error('未找到该资讯');
+                if (!item.content) {
+                    const err = new Error('该资讯暂无正文');
+                    err.noContent = true;
+                    err.sourceUrl = item.url;
+                    err.sourceName = item.source;
+                    throw err;
+                }
+                this.currentPost = {
+                    filename: id,
+                    title: item.title,
+                    date: item.date,
+                    update: null,
+                    tags: item.category ? [item.category] : [],
+                    author: item.source || '资讯',
+                    content: item.content,
+                    frontmatter: {},
+                    isNews: true
+                };
+                this.renderArticle();
+                document.title = `${this.currentPost.title} - 我的博客`;
             },
 
             // 加载单篇文章
-            async loadArticle(filename) {
+            async loadArticle(filename, isNews) {
                 try {
+                    if (isNews) {
+                        await this.loadNewsArticle(filename);
+                        return;
+                    }
+
                     const filePath = `posts/${filename}`;
                     const response = await fetch(filePath);
 
@@ -1412,7 +1463,13 @@
 
                 } catch (error) {
                     console.error('加载文章失败:', error);
-                    this.showError('文章加载失败');
+                    if (error.noContent) {
+                        const nav = document.getElementById('article-navigation');
+                        if (nav) nav.style.display = 'none';
+                        this.showNewsNoContent(error.sourceUrl, error.sourceName);
+                    } else {
+                        this.showError('文章加载失败');
+                    }
                 }
             },
 
@@ -1818,6 +1875,24 @@
                         <div class="icon">❌</div>
                         <div class="message">${message}</div>
                         <a href="index.html" class="back-link">返回首页</a>
+                    </div>
+                `;
+            },
+
+            // 资讯无正文时提示并引导前往原文
+            showNewsNoContent(sourceUrl, sourceName) {
+                const header = document.getElementById('article-header');
+                const content = document.getElementById('article-content');
+
+                header.innerHTML = '';
+                content.innerHTML = `
+                    <div class="error-state">
+                        <div class="icon">ℹ️</div>
+                        <div class="message">该资讯暂无站内正文（来源仅提供摘要）</div>
+                        <div class="error-actions">
+                            <a href="${sourceUrl || '#'}" target="_blank" rel="noopener" class="back-link">前往原文阅读 ↗</a>
+                            <a href="index.html" class="back-link secondary">返回首页</a>
+                        </div>
                     </div>
                 `;
             },

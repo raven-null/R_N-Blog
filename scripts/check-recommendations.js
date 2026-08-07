@@ -64,6 +64,14 @@ items.forEach((it, i) => {
     if (it.date && !isDate(it.date)) {
         errors.push(`${at} date 格式应为 YYYY-MM-DD: ${it.date}`);
     }
+
+    if (it.content !== undefined && typeof it.content !== 'string') {
+        errors.push(`${at} content 应为字符串（Markdown 正文）`);
+    }
+
+    if (it.summary !== undefined && typeof it.summary !== 'string') {
+        errors.push(`${at} summary 应为字符串`);
+    }
 });
 
 if (errors.length) {
