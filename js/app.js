@@ -474,25 +474,25 @@ const BlogApp = {
         }
     },
 
-    // 根据资讯分类动态生成筛选按钮
+    // 根据新闻出品方动态生成筛选按钮
     buildNewsFilter(items) {
         const box = document.getElementById('newsFilter');
         if (!box) return;
-        const cats = new Set(items.map(it => it.category).filter(Boolean));
+        const sources = new Set(items.map(it => it.source).filter(Boolean));
         box.innerHTML = '<button class="news-filter-btn active" data-cat="all" onclick="BlogApp.filterNews(\'all\')">全部</button>' +
-            [...cats].map(c => `<button class="news-filter-btn" data-cat="${this.esc(c)}" onclick="BlogApp.filterNews('${this.esc(c)}')">${this.esc(c)}</button>`).join('');
+            [...sources].map(s => `<button class="news-filter-btn" data-cat="${this.esc(s)}" onclick="BlogApp.filterNews('${this.esc(s)}')">${this.esc(s)}</button>`).join('');
     },
 
-    // 筛选资讯（全部 / 分类）
-    filterNews(cat) {
+    // 筛选资讯（全部 / 出品方）
+    filterNews(src) {
         document.querySelectorAll('#newsFilter .news-filter-btn').forEach(b => {
-            b.classList.toggle('active', b.dataset.cat === cat);
+            b.classList.toggle('active', b.dataset.cat === src);
         });
-        const items = cat === 'all' ? this.newsItems : this.newsItems.filter(it => it.category === cat);
+        const items = src === 'all' ? this.newsItems : this.newsItems.filter(it => it.source === src);
         this.renderNewsList(items);
     },
 
-    // 渲染资讯列表（一行一条：分类徽标 + 标题 + 来源 · 日期）
+    // 渲染资讯列表（一行一条：出品方徽标 + 标题 + 出品方 · 日期）
     renderNewsList(items) {
         const list = document.getElementById('newsList');
         if (!list) return;
@@ -502,7 +502,7 @@ const BlogApp = {
         }
         list.innerHTML = items.map(it => `
             <a class="news-item" href="${it.url || '#'}" target="_blank" rel="noopener">
-                <span class="news-item-cat">${this.esc(it.category || '资讯')}</span>
+                <span class="news-item-cat">${this.esc(it.source || it.category || '资讯')}</span>
                 <span class="news-item-title">${this.esc(it.title)}</span>
                 <span class="news-item-meta">${this.esc(it.source || '')}${it.date ? ' · ' + this.formatDate(it.date) : ''}</span>
             </a>

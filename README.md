@@ -99,7 +99,7 @@ node scripts/build-gallery.js
 
 ## 📰 资讯维护
 
-资讯在「**每日新闻**」视图以列表形式展示（位于图库与我的之间），顶部按分类筛选。数据优先来自后端 NewsNow API（`/api/news`），失败时回退本地 `data/recommendations.json`；点击新闻在新窗口打开原文或站内阅读。
+资讯在「**每日新闻**」视图以列表形式展示（位于图库与我的之间），顶部按**新闻出品方**筛选。数据优先来自后端 NewsNow API（`/api/news`），失败时回退本地 `data/recommendations.json`；点击新闻在新窗口打开原文或站内阅读。
 
 **两种维护方式：**
 
