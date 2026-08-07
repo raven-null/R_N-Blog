@@ -5,7 +5,9 @@
 const BlogApp = {
     // 配置项
     config: {
-        postsDirectory: 'posts'
+        postsDirectory: 'posts',
+        // 后端 API 地址（Netlify 部署的后端）
+        apiBase: 'https://r-n-blog-server.netlify.app'
     },
 
     // 所有文章
@@ -33,7 +35,7 @@ const BlogApp = {
     async loadPosts() {
         try {
             // 检查缓存（带版本号，旧缓存自动失效）
-            const CACHE_KEY = 'blog-posts-data-v6';
+            const CACHE_KEY = 'blog-posts-data-v7';
             const cachedData = sessionStorage.getItem(CACHE_KEY);
             if (cachedData) {
                 this.posts = JSON.parse(cachedData);
@@ -63,7 +65,10 @@ const BlogApp = {
                     excerpt: item.summary || (item.content ? item.content.slice(0, 80) : ''),
                     image: this.getRandomBgImage(item.id),
                     wordCount: item.content ? item.content.length : 0,
-                    isNews: true
+                    isNews: true,
+                    // 后端资讯仅提供链接（无正文）→ 卡片点击直接新窗口打开原文
+                    isExternal: !!item.url && !item.content,
+                    url: item.url || ''
                 });
             }
             
@@ -82,7 +87,9 @@ const BlogApp = {
                     excerpt: p.excerpt,
                     image: p.image,
                     wordCount: p.wordCount || 0,
-                    isNews: !!p.isNews
+                    isNews: !!p.isNews,
+                    isExternal: !!p.isExternal,
+                    url: p.url || ''
                 }));
                 sessionStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
             } catch (e) {
@@ -263,8 +270,13 @@ const BlogApp = {
         });
     },
 
-    // 打开文章详情页（资讯卡片进入站内阅读）
+    // 打开文章详情页（资讯卡片进入站内阅读；后端资讯无正文 → 新窗口打开原文）
     openPost(filename, isNews) {
+        const post = this.posts.find(p => p.filename === filename);
+        if (post && post.isExternal && post.url) {
+            window.open(post.url, '_blank', 'noopener');
+            return;
+        }
         if (isNews) {
             window.location.href = `article.html?post=${encodeURIComponent(filename)}&type=news`;
         } else {
@@ -438,8 +450,34 @@ const BlogApp = {
         return this.galleryImages;
     },
 
-    // 加载资讯数据
+    // 加载资讯数据（优先后端 NewsNow 资讯 API，失败回退本地 recommendations.json）
     async loadNews() {
+        // 后端 API（NewsNow 聚合资讯）
+        try {
+            const res = await fetch(`${this.config.apiBase}/api/news?flat=1&limit=80`);
+            if (res.ok) {
+                const data = await res.json();
+                if (data && data.status === 'success' && Array.isArray(data.items)) {
+                    return data.items.map(item => {
+                        let date = item.date || '';
+                        if (date && typeof date !== 'string') date = new Date(date).toISOString().slice(0, 10);
+                        return {
+                            id: item.id,
+                            title: item.title,
+                            date,
+                            category: item.category,
+                            source: item.source,
+                            summary: item.summary || '',
+                            url: item.url || ''
+                        };
+                    });
+                }
+            }
+        } catch (e) {
+            console.warn('后端资讯加载失败，回退本地数据:', e);
+        }
+
+        // 回退：本地 recommendations.json
         const res = await fetch('data/recommendations.json');
         if (!res.ok) throw new Error('news load failed');
         const text = await res.text();
