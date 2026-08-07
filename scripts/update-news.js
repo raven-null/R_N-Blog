@@ -153,6 +153,114 @@ function makeContent(desc) {
     return md;
 }
 
+// ---------- 原文正文提取（RSS 仅摘要时增强） ----------
+
+// 常见站点噪音（导航/侧栏/相关阅读/版权/分享等）
+const NOISE_RE = /(扫码|关注公众号|来源[:：]|编辑[:：]|责任编辑|声明|未经.*授权|版权所有|转载|相关阅读|热门文章|上一篇|下一篇|返回顶部|广告|推广|搜索[:：]|分享至|打开App|下载客户端|加微信|QQ群|加入我们|商务合作|关于我们|菜单|首页|资讯|智能车|智库|活动|AIGC)/;
+
+// 取文档中"最长连续正文段落"（去噪音、去短段），返回拼接文本
+function extractParagraphRun(html) {
+    const clean = html
+        .replace(/<script[\s\S]*?<\/script>/gi, '')
+        .replace(/<style[\s\S]*?<\/style>/gi, '')
+        .replace(/<!--[\s\S]*?-->/g, '')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/&[a-z]+;/gi, ' ')
+        .split('\n')
+        .map(s => s.replace(/\s+/g, ' ').trim())
+        .filter(Boolean);
+
+    // 找出连续正文块：累计长度最大的连续序列
+    let best = [];
+    let cur = [];
+    let bestLen = 0;
+    for (const line of clean) {
+        if (line.length >= 15 && !NOISE_RE.test(line)) {
+            cur.push(line);
+        } else {
+            const len = cur.join('').length;
+            if (len > bestLen) { bestLen = len; best = cur; }
+            cur = [];
+        }
+    }
+    const len = cur.join('').length;
+    if (len > bestLen) { bestLen = len; best = cur; }
+    return best;
+}
+
+// 从 HTML 中裁剪出最可能的正文容器，返回其内部 HTML
+function extractMainHtml(html) {
+    const pick = (re) => {
+        const m = html.match(re);
+        return m ? m[1] || m[0] : '';
+    };
+    // 优先精确容器（避免匹配到整页 main/body 引入导航侧栏）
+    const patterns = [
+        /<article[\s>][\s\S]*?<\/article>/i,
+        /<div[^>]*class=["'][^"']*\bartcontent\b[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,
+        /<div[^>]*class=["'][^"']*\barticle-content\b[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,
+        /<div[^>]*class=["'][^"']*\bpost-content\b[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,
+        /<div[^>]*class=["'][^"']*\bentry-content\b[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,
+        /<div[^>]*class=["'][^"']*\bcontent\b[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,
+        /<div[^>]*class=["'][^"']*\barticle\b[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,
+        /<div[^>]*id=["'](?:content|article|post|main)[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,
+        /<main[\s>][\s\S]*?<\/main>/i
+    ];
+    for (const re of patterns) {
+        const raw = pick(re);
+        const txt = stripTags(raw).replace(/\s+/g, '').length;
+        if (txt > MIN_CONTENT_LEN) return raw;
+    }
+    return '';
+}
+
+// 从正文 HTML 中提取文本段落（去脚本/样式/注释），用于回退
+function textParagraphs(html) {
+    return html
+        .replace(/<script[\s\S]*?<\/script>/gi, '')
+        .replace(/<style[\s\S]*?<\/style>/gi, '')
+        .replace(/<!--[\s\S]*?-->/g, '')
+        .replace(/<p[^>]*>[\s\S]*?<\/p>/gi, m => m + '\n')
+        .replace(/<br\s*\/?>/gi, '\n')
+        .replace(/<\/h[1-6]>/gi, '\n\n')
+        .replace(/<\/li>/gi, '\n')
+        .replace(/<\/tr>/gi, '\n');
+}
+
+// 抓取原文页面正文（供摘要型来源补全 content）
+async function fetchArticleContent(url, sourceName) {
+    try {
+        const html = await fetchText(url, 20000);
+        if (!html) return '';
+
+        // 先尝试精确容器；若命中且正文长度足够则直接用
+        const raw = extractMainHtml(html);
+        if (raw) {
+            const md = htmlToMarkdown(raw);
+            const textLen = stripTags(raw).replace(/\s+/g, '').length;
+            if (md && textLen >= MIN_CONTENT_LEN) return md;
+        }
+
+        // 容器识别失败或正文过短：退化用"最长连续正文段落"
+        const runs = extractParagraphRun(html);
+        if (runs.join('').length >= MIN_CONTENT_LEN) {
+            return runs.join('\n\n');
+        }
+
+        // 最终回退：正文区域前 N 段
+        const paragraphs = textParagraphs(html)
+            .split('\n')
+            .map(s => s.replace(/<[^>]+>/g, '').replace(/[ \t]+/g, ' ').trim())
+            .filter(s => s.length >= 20);
+        const clean = paragraphs.filter((s, i) => i === 0 ? true : !NOISE_RE.test(s)).slice(0, 12);
+        if (clean.join('').length < MIN_CONTENT_LEN) return '';
+        return clean.join('\n\n');
+    } catch (e) {
+        console.warn(`  ↳ ${sourceName} 正文抓取失败：${e.message}`);
+        return '';
+    }
+}
+
 async function main() {
     const dry = process.argv.includes('--dry');
 
@@ -197,6 +305,21 @@ async function main() {
             fresh.push(item);
         }
     }
+
+    // 增强：RSS 仅摘要的条目，尝试抓取原文页面补全正文（限并发 3）
+    console.log('· 开始抓取原文正文（摘要型来源增强）...');
+    const concurrency = 3;
+    let index = 0;
+    const work = fresh.filter(it => !it.content && it.url);
+    const worker = async () => {
+        while (index < work.length) {
+            const item = work[index++];
+            console.log(`  ↳ ${item.source}：${item.title.slice(0, 30)}...`);
+            const body = await fetchArticleContent(item.url, item.source);
+            if (body) item.content = body;
+        }
+    };
+    await Promise.all(Array.from({ length: Math.min(concurrency, work.length) }, () => worker()));
 
     // 合并：新抓取优先，旧条目保留（按 url 去重）
     const seen = new Set();
