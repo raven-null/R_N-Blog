@@ -61,7 +61,7 @@ const BlogApp = {
                     tags,
                     author: item.source || '资讯',
                     excerpt: item.summary || (item.content ? item.content.slice(0, 80) : ''),
-                    image: '',
+                    image: this.getRandomBgImage(item.id),
                     wordCount: item.content ? item.content.length : 0,
                     isNews: true
                 });
