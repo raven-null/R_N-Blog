@@ -35,7 +35,7 @@ const BlogApp = {
     async loadPosts() {
         try {
             // 检查缓存（带版本号，旧缓存自动失效）
-            const CACHE_KEY = 'blog-posts-data-v7';
+            const CACHE_KEY = 'blog-posts-data-v8';
             const cachedData = sessionStorage.getItem(CACHE_KEY);
             if (cachedData) {
                 this.posts = JSON.parse(cachedData);
@@ -50,27 +50,6 @@ const BlogApp = {
             const promises = postFiles.map(file => this.loadPost(file));
             const results = await Promise.all(promises);
             this.posts = results.filter(post => post !== null);
-
-            // 合并资讯为卡片（与普通文章同视图展示，带「资讯」标签）
-            const news = await this.loadNews();
-            for (const item of news) {
-                const tags = ['资讯'];
-                if (item.category) tags.push(item.category);
-                this.posts.push({
-                    filename: item.id,
-                    title: item.title,
-                    date: item.date || '',
-                    tags,
-                    author: item.source || '资讯',
-                    excerpt: item.summary || (item.content ? item.content.slice(0, 80) : ''),
-                    image: this.getRandomBgImage(item.id),
-                    wordCount: item.content ? item.content.length : 0,
-                    isNews: true,
-                    // 后端资讯仅提供链接（无正文）→ 卡片点击直接新窗口打开原文
-                    isExternal: !!item.url && !item.content,
-                    url: item.url || ''
-                });
-            }
             
             // 按日期降序排序
             this.posts.sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -86,10 +65,7 @@ const BlogApp = {
                     author: p.author,
                     excerpt: p.excerpt,
                     image: p.image,
-                    wordCount: p.wordCount || 0,
-                    isNews: !!p.isNews,
-                    isExternal: !!p.isExternal,
-                    url: p.url || ''
+                    wordCount: p.wordCount || 0
                 }));
                 sessionStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
             } catch (e) {
@@ -211,7 +187,7 @@ const BlogApp = {
         const readTime = Math.max(1, Math.round(wordCount / 300));
 
         return `
-            <div class="card" onclick="BlogApp.openPost('${post.filename}', ${post.isNews ? 'true' : 'false'})">
+            <div class="card" onclick="BlogApp.openPost('${post.filename}')">
                 ${post.image ? `
                     <div class="card-img">
                         <img src="${post.image}" alt="${post.title}" class="img-placeholder" loading="lazy"
@@ -271,17 +247,8 @@ const BlogApp = {
     },
 
     // 打开文章详情页（资讯卡片进入站内阅读；后端资讯无正文 → 新窗口打开原文）
-    openPost(filename, isNews) {
-        const post = this.posts.find(p => p.filename === filename);
-        if (post && post.isExternal && post.url) {
-            window.open(post.url, '_blank', 'noopener');
-            return;
-        }
-        if (isNews) {
-            window.location.href = `article.html?post=${encodeURIComponent(filename)}&type=news`;
-        } else {
-            window.location.href = `article.html?post=${filename}`;
-        }
+    openPost(filename) {
+        window.location.href = `article.html?post=${filename}`;
     },
 
     // 切换搜索框显示（打开时自动关闭标签面板，避免重叠）
@@ -359,9 +326,9 @@ const BlogApp = {
         this.closeSearch();
     },
 
-    // 切换视图（博客 / 图库 / 仪表盘）
+    // 切换视图（博客 / 图库 / 每日新闻 / 仪表盘）
     switchView(view) {
-        const valid = ['blog', 'gallery', 'dashboard'];
+        const valid = ['blog', 'gallery', 'news', 'dashboard'];
         if (!valid.includes(view) || this.currentView === view) return;
         this.currentView = view;
 
@@ -384,6 +351,7 @@ const BlogApp = {
 
         // 首次进入渲染内容
         if (view === 'gallery') this.renderGallery();
+        if (view === 'news') this.renderNewsView();
         if (view === 'dashboard') this.renderDashboard();
 
         // 入场动画
@@ -490,6 +458,68 @@ const BlogApp = {
         return Array.isArray(items) ? items : [];
     },
 
+    // 渲染每日新闻视图（列表式，无卡片图片）
+    async renderNewsView() {
+        const list = document.getElementById('newsList');
+        if (!list || list.dataset.rendered) return;
+        list.dataset.rendered = '1';
+        try {
+            const items = await this.loadNews();
+            this.newsItems = items;
+            this.buildNewsFilter(items);
+            this.renderNewsList(items);
+        } catch (e) {
+            console.error('资讯加载失败:', e);
+            list.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:40px;">资讯加载失败</p>';
+        }
+    },
+
+    // 根据资讯分类动态生成筛选按钮
+    buildNewsFilter(items) {
+        const box = document.getElementById('newsFilter');
+        if (!box) return;
+        const cats = new Set(items.map(it => it.category).filter(Boolean));
+        box.innerHTML = '<button class="news-filter-btn active" data-cat="all" onclick="BlogApp.filterNews(\'all\')">全部</button>' +
+            [...cats].map(c => `<button class="news-filter-btn" data-cat="${this.esc(c)}" onclick="BlogApp.filterNews('${this.esc(c)}')">${this.esc(c)}</button>`).join('');
+    },
+
+    // 筛选资讯（全部 / 分类）
+    filterNews(cat) {
+        document.querySelectorAll('#newsFilter .news-filter-btn').forEach(b => {
+            b.classList.toggle('active', b.dataset.cat === cat);
+        });
+        const items = cat === 'all' ? this.newsItems : this.newsItems.filter(it => it.category === cat);
+        this.renderNewsList(items);
+    },
+
+    // 渲染资讯列表（一行一条：分类徽标 + 标题 + 来源 · 日期）
+    renderNewsList(items) {
+        const list = document.getElementById('newsList');
+        if (!list) return;
+        if (!items.length) {
+            list.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:40px;">暂无资讯</p>';
+            return;
+        }
+        list.innerHTML = items.map(it => `
+            <a class="news-item" href="${it.url || '#'}" target="_blank" rel="noopener">
+                <span class="news-item-cat">${this.esc(it.category || '资讯')}</span>
+                <span class="news-item-title">${this.esc(it.title)}</span>
+                <span class="news-item-meta">${this.esc(it.source || '')}${it.date ? ' · ' + this.formatDate(it.date) : ''}</span>
+            </a>
+        `).join('');
+
+        // 入场动效（Anime.js）
+        if (typeof anime !== 'undefined') {
+            anime.animate(list.querySelectorAll('.news-item'), {
+                opacity: [0, 1],
+                translateX: [20, 0],
+                duration: 400,
+                delay: anime.stagger(25),
+                ease: 'out(2)'
+            });
+        }
+    },
+
     // HTML 转义（用于卡片文本）
     esc(str) {
         return String(str || '')
@@ -499,7 +529,7 @@ const BlogApp = {
             .replace(/"/g, '&quot;');
     },
 
-    // 渲染仪表盘（统计概览 + 资讯推荐 + 关于）
+    // 渲染仪表盘（统计概览 + 关于）
     async renderDashboard() {
         const box = document.getElementById('dashboardStats');
         if (!box || box.dataset.rendered) return;

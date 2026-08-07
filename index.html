@@ -8,7 +8,7 @@
     <link rel="icon" href="/images/TX/01_TX.webp" type="image/webp">
 
     <!-- Styles -->
-    <link rel="stylesheet" href="css/style.css?v=2.6.57">
+    <link rel="stylesheet" href="css/style.css?v=2.6.58">
 
     <!-- Marked.js -->
     <script src="js/vendor/marked.min.js"></script>
@@ -34,6 +34,7 @@
                     <div class="view-indicator" id="viewIndicator"></div>
                     <button class="view-btn active" data-view="blog" onclick="BlogApp.switchView('blog')">文章</button>
                     <button class="view-btn" data-view="gallery" onclick="BlogApp.switchView('gallery')">图库</button>
+                    <button class="view-btn" data-view="news" onclick="BlogApp.switchView('news')">每日新闻</button>
                     <button class="view-btn" data-view="dashboard" onclick="BlogApp.switchView('dashboard')">我的</button>
                 </div>
             </div>
@@ -47,7 +48,6 @@
                     <a href="#" class="nav-link" onclick="BlogApp.filterByTag('技术'); return false;">技术</a>
                     <a href="#" class="nav-link" onclick="BlogApp.filterByTag('生活'); return false;">生活</a>
                     <a href="#" class="nav-link" onclick="BlogApp.filterByTag('AI'); return false;">AI</a>
-                    <a href="#" class="nav-link" onclick="BlogApp.filterByTag('资讯'); return false;">资讯</a>
                 </div>
                 <div class="nav-tools">
                     <div class="nav-tools-item">
@@ -99,6 +99,25 @@
                 <!-- 视图：图库 -->
                 <section class="view view-gallery" id="view-gallery" style="display:none;">
                     <div class="gallery-grid" id="galleryGrid"></div>
+                </section>
+
+                <!-- 视图：每日新闻 -->
+                <section class="view view-news" id="view-news" style="display:none;">
+                    <div class="news-feed">
+                        <div class="news-feed-head">
+                            <div class="news-feed-title">每日新闻</div>
+                            <div class="news-feed-filter" id="newsFilter">
+                                <button class="news-filter-btn active" data-cat="all" onclick="BlogApp.filterNews('all')">全部</button>
+                            </div>
+                            <div class="news-feed-date" id="newsFeedDate"></div>
+                        </div>
+                        <div class="news-list" id="newsList">
+                            <div class="loading">
+                                <div class="loading-spinner"></div>
+                                <p>Loading...</p>
+                            </div>
+                        </div>
+                    </div>
                 </section>
 
             <!-- 视图：仪表盘 -->
@@ -174,10 +193,10 @@
     </div>
 
     <!-- Scripts -->
-    <script src="js/theme.js?v=2.6.57"></script>
-    <script src="js/markdown.js?v=2.6.57"></script>
-    <script src="js/app.js?v=2.6.57"></script>
-    <script src="js/animations.js?v=2.6.57"></script>
+    <script src="js/theme.js?v=2.6.58"></script>
+    <script src="js/markdown.js?v=2.6.58"></script>
+    <script src="js/app.js?v=2.6.58"></script>
+    <script src="js/animations.js?v=2.6.58"></script>
 
     <script>
         // ===== Scroll Observer =====
@@ -318,11 +337,23 @@
             timeEl.textContent = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
         }
 
+        // ===== 每日新闻视图日期 =====
+        function updateNewsFeedDate() {
+            const el = document.getElementById('newsFeedDate');
+            if (!el) return;
+            const now = new Date();
+            const week = ['日', '一', '二', '三', '四', '五', '六'][now.getDay()];
+            el.textContent = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} 星期${week}`;
+        }
+
         // ===== Init =====
         document.addEventListener('DOMContentLoaded', () => {
             // 欢迎区日期时间（每秒更新）
             updateDashClock();
             setInterval(updateDashClock, 1000);
+
+            // 每日新闻视图日期
+            updateNewsFeedDate();
 
             // Scroll observer
             initScrollObserver();
