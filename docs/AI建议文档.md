@@ -1499,5 +1499,143 @@ node scripts/check-recommendations.js --check
 
 ---
 
-**状态：** AI 助手部分已实施（v2.2.0）；Anime.js 动画方案已实施（v2.4.0）；首页改造方案已实施（v2.4.2，P0/P1 项）；标签区改为导航栏"全部标签"面板（v2.4.5）；Hero 重设计已实施（v2.5.0，P0/P1 项）；animejs.com 动效借鉴已实施（v2.5.2，P0/P1 项）；Hero 区重新设计已实施（v2.6.0，方案 A）；Hero 与内容区左右切换方案待评审；省去 Hero 区方案已实施（v2.6.3，方案 A）；"我的"个人仪表盘已实施（v2.6.16）；文章页阅读体验已实施（v2.6.25）；"推荐"页面设计方案已改版并入「我的」仪表盘资讯推荐模块（v2.6.43，仅保留网站资讯，以新闻卡片呈现）
+# 资讯推荐「每日更新」自动化方案
+
+> 结论先行：**能做到每日更新**，但靠人工每天手动编辑 `data/recommendations.json` 不现实（每天要挑选、写摘要、改 JSON、推送）。真正可行的路线是**用 GitHub Actions 定时抓取 RSS 自动生成资讯**，人工只做质量把关。本文给出三个梯度的方案，推荐方案一。
+
+### 1. 现状与可行性分析
+
+- 当前资讯由 `data/recommendations.json` 单一文件手动维护，字段为 `id/title/url/source/category/date/summary`（v2.6.43 改版后字段），页面直接 fetch 渲染，无后端
+- **纯人工做不到每日更新**：平均每条资讯要经历「找新闻 → 写标题/摘要 → 编辑 JSON → 校验 → 推送」约 5~10 分钟，每日 8~10 条 ≈ 1 小时起步，且难以坚持
+- **每日更新具备自动化基础**：① 站点是 GitHub Pages 静态站，天然适合"定时脚本提交 → Pages 自动部署"；② 主要来源（36氪/量子位/少数派/虎嗅/阮一峰/MDN/GitHub Blog）都有公开 RSS/Atom 源；③ 数据格式简单，脚本生成即可
+- 因此结论：**可行方案 = GitHub Actions 定时抓取 + 脚本生成 + 自动提交**，实现"每天早晨自动更新当日资讯"
+
+### 2. 方案一（推荐）：GitHub Actions 每日定时自动更新
+
+**整体流程：**
+
+```
+GitHub Actions 定时任务（每日 08:00）
+        │  1. 检出仓库
+        ▼
+scripts/update-news.js 运行
+        │  2. 并发抓取各来源 RSS
+        │  3. 解析 → 映射分类/来源 → 去重 → 截断摘要
+        │  4. 与已有数据合并、按 date 降序、裁剪到上限（如 12 条）
+        ▼
+   data/recommendations.json 重写
+        │  5. 调用 check-recommendations.js 校验
+        ▼
+   校验通过 → git commit + push → GitHub Pages 自动部署
+```
+
+**自动化脚本 `scripts/update-news.js` 职责：**
+
+1. **抓取**：并发请求各来源 RSS（Node 内置 `https`，无需额外依赖），超时与失败降级（单个来源失败不影响整体）
+2. **解析**：用正则/简易 XML 解析提取 `title / link / pubDate / description`（项目无后端、保持零依赖，手写轻量解析即可）
+3. **映射**：每个来源配置一张表，输出 `source`（来源名）与 `category`（科技/开发/前端/AI/产品/互联网…），无匹配时归入「资讯」
+4. **摘要**：从 `description` 去除 HTML 标签、截断到 ~60 字，不足则省略 `summary`
+5. **去重合并**：按 `url` 去重；把新抓取条目与 `data/recommendations.json` 已有条目合并，按 `date` 降序，裁剪到上限（默认 12 条）
+6. **落盘与自检**：重写 JSON（保持字段合法），随后执行 `node scripts/check-recommendations.js` 校验，失败则中止不提交
+
+**来源配置示例（写入脚本常量或独立配置）：**
+
+| source | RSS 地址（示例） | 默认分类 |
+|--------|----------------|---------|
+| 36氪 | `https://36kr.com/feed` | 科技 |
+| 量子位 | `https://www.qbitai.com/feed` | AI |
+| 少数派 | `https://sspai.com/feed` | 产品 |
+| 虎嗅 | `https://www.huxiu.com/rss/0.xml` | 科技 |
+| 阮一峰的网络日志 | `https://www.ruanyifeng.com/blog/atom.xml` | 互联网 |
+| MDN | `https://developer.mozilla.org/zh-CN/feed/` | 前端 |
+| GitHub Blog | `https://github.blog/feed/` | 开发 |
+
+> RSS 地址可能变化，上线前需逐个确认可用；个别站点无 RSS 或无正确分类时，可将该来源标记为「需要人工补充」并在工作流中剔除。
+
+**工作流文件 `.github/workflows/update-news.yml`：**
+
+```yaml
+name: Update News Daily
+on:
+  schedule:
+    - cron: "0 0 * * *"     # 每天 08:00（UTC+8），UTC 为 00:00
+  workflow_dispatch:       # 支持手动触发
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write      # 允许脚本自动提交
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: node scripts/update-news.js
+      - name: Commit & push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/recommendations.json
+          git diff --cached --quiet || git commit -m "每日资讯自动更新 $(date +%F)"
+          git push
+```
+
+**本方案的优点：**
+
+- **零人工**：每日定时生成、自动提交、自动部署，无需手动操作
+- **改动即生效**：页面缓存 key 为内容哈希（见 8.4），JSON 一变哈希即变，读者刷新即见新资讯
+- **失败不破坏**：抓取失败/校验不过都不会覆盖现有数据（脚本只在成功时落盘）
+- **可随时干预**：`workflow_dispatch` 手动触发，或直接手动编辑 JSON 推送覆盖
+
+**本方案的局限与对策：**
+
+| 局限 | 对策 |
+|------|------|
+| 依赖各站点 RSS 稳定可用 | 来源独立降级；定期 `node scripts/check-recommendations.js --check` 体检 |
+| 自动摘要为截断，可能不达人工水准 | 保留人工润色入口：可随时手动改 JSON 推送覆盖 |
+| 分类映射可能不准确 | 映射表内维护，个别条目可在 JSON 中手动修正 `category` |
+| 每日抓取可能取到重复/低质内容 | 去重 + 保留上限 12 条；结合白名单过滤关键词 |
+
+### 3. 方案二：半自动「一条命令更新」（本地运行）
+
+不引入 GitHub Actions，改为本地脚本一键拉取生成，人工审核后推送：
+
+```bash
+node scripts/update-news.js      # 抓取 RSS 生成 recommendations.json
+node scripts/check-recommendations.js --check
+git add . && git commit -m "更新每日资讯" && git push origin main
+```
+
+- 适合不想开自动化、但想省掉"手写 JSON"的工作量；每天花 2~3 分钟跑一遍 + 人工抽几条润色即可
+- 实现成本与方案一相同（同一个 `update-news.js`），只是触发方式从"定时"变"手动"
+
+### 4. 方案三：维持人工，但优化手工流程
+
+- 优点：质量完全可控、零脚本维护
+- 改善手段：固定来源清单（如上面 7 个站点）每天浏览 → 复制标题链接 → 用模板补全字段 → `check` 脚本兜底
+- 适合资讯量少（每周几条）或对自动化持保守态度的场景
+
+### 5. 实施步骤（方案一为例）
+
+1. 新建 `scripts/update-news.js`：来源映射表 + RSS 抓取/解析 + 合并去重 + 落盘自检
+2. 确认各来源 RSS 可用性（逐个 curl 验证），剔除无效来源
+3. 新增 `.github/workflows/update-news.yml` 定时工作流
+4. 本地先跑一次脚本验证生成结果与 `check-recommendations.js` 兼容
+5. 推送后触发一次 `workflow_dispatch` 验证流水线；观察次日定时是否自动提交部署
+6. 同步更新《博客完整使用手册》/操作文档维护流程、项目文档与更新日志
+
+### 6. 优先级
+
+| 优先级 | 事项 | 收益 |
+|--------|------|------|
+| P0 | `update-news.js` 抓取/解析/去重/落盘 | 核心能力 |
+| P0 | `.github/workflows/update-news.yml` 定时任务 | 每日自动更新 |
+| P1 | 来源映射表 + 分类规则维护 | 内容质量 |
+| P1 | 手动触发 + 人工润色覆盖入口 | 兜底可控 |
+| P2 | 自动摘要去 HTML / 关键词白名单过滤 | 打磨 |
+| P2 | 更新日报（如更新后发 Issue 摘要） | 可追踪 |
+
+---
+
+**状态：** AI 助手部分已实施（v2.2.0）；Anime.js 动画方案已实施（v2.4.0）；首页改造方案已实施（v2.4.2，P0/P1 项）；标签区改为导航栏"全部标签"面板（v2.4.5）；Hero 重设计已实施（v2.5.0，P0/P1 项）；animejs.com 动效借鉴已实施（v2.5.2，P0/P1 项）；Hero 区重新设计已实施（v2.6.0，方案 A）；Hero 与内容区左右切换方案待评审；省去 Hero 区方案已实施（v2.6.3，方案 A）；"我的"个人仪表盘已实施（v2.6.16）；文章页阅读体验已实施（v2.6.25）；"推荐"页面设计方案已改版并入「我的」仪表盘资讯推荐模块（v2.6.43，仅保留网站资讯，以新闻卡片呈现）；「资讯每日更新」自动化方案已写入本文档（待实施）
 **作者：** 渡鸦NULL
