@@ -36,7 +36,7 @@ const BlogApp = {
     async loadPosts() {
         try {
             // 检查缓存（带版本号，旧缓存自动失效）
-            const CACHE_KEY = 'blog-posts-data-v4';
+            const CACHE_KEY = 'blog-posts-data-v5';
             const cachedData = sessionStorage.getItem(CACHE_KEY);
             if (cachedData) {
                 this.posts = JSON.parse(cachedData);
@@ -51,6 +51,24 @@ const BlogApp = {
             const promises = postFiles.map(file => this.loadPost(file));
             const results = await Promise.all(promises);
             this.posts = results.filter(post => post !== null);
+
+            // 合并资讯为卡片（与普通文章同视图展示，带「资讯」标签）
+            const news = await this.loadNews();
+            for (const item of news) {
+                const tags = ['资讯'];
+                if (item.category) tags.push(item.category);
+                this.posts.push({
+                    filename: item.id,
+                    title: item.title,
+                    date: item.date || '',
+                    tags,
+                    author: item.source || '资讯',
+                    excerpt: item.summary || (item.content ? item.content.slice(0, 80) : ''),
+                    image: '',
+                    wordCount: item.content ? item.content.length : 0,
+                    isNews: true
+                });
+            }
             
             // 按日期降序排序
             this.posts.sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -66,7 +84,8 @@ const BlogApp = {
                     author: p.author,
                     excerpt: p.excerpt,
                     image: p.image,
-                    wordCount: p.wordCount || 0
+                    wordCount: p.wordCount || 0,
+                    isNews: !!p.isNews
                 }));
                 sessionStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
             } catch (e) {
@@ -201,7 +220,7 @@ const BlogApp = {
         const readTime = Math.max(1, Math.round(wordCount / 300));
 
         return `
-            <div class="card" onclick="BlogApp.openPost('${post.filename}')">
+            <div class="card" onclick="BlogApp.openPost('${post.filename}', ${post.isNews ? 'true' : 'false'})">
                 ${post.image ? `
                     <div class="card-img">
                         <img src="${post.image}" alt="${post.title}" class="img-placeholder" loading="lazy"
@@ -295,9 +314,13 @@ const BlogApp = {
         });
     },
 
-    // 打开文章详情页
-    openPost(filename) {
-        window.location.href = `article.html?post=${filename}`;
+    // 打开文章详情页（资讯卡片进入站内阅读）
+    openPost(filename, isNews) {
+        if (isNews) {
+            window.location.href = `article.html?post=${encodeURIComponent(filename)}&type=news`;
+        } else {
+            window.location.href = `article.html?post=${filename}`;
+        }
     },
 
     // 切换搜索框显示（打开时自动关闭标签面板，避免重叠）
@@ -466,33 +489,6 @@ const BlogApp = {
         return this.galleryImages;
     },
 
-    // 渲染资讯推荐（读取 data/recommendations.json，新闻卡片）
-    async renderNews() {
-        const box = document.getElementById('dashNews');
-        if (!box || box.dataset.rendered) return;
-        box.dataset.rendered = '1';
-        try {
-            const items = await this.loadNews();
-            if (!items.length) {
-                box.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:30px;">暂无资讯</p>';
-                return;
-            }
-            box.innerHTML = items.map(item => this.renderNewsCard(item)).join('');
-            // 入场动效（Anime.js）
-            if (typeof anime !== 'undefined') {
-                anime.animate(box.querySelectorAll('.news-card'), {
-                    opacity: [0, 1],
-                    translateY: [16, 0],
-                    duration: 500,
-                    delay: anime.stagger(40),
-                    ease: 'out(2)'
-                });
-            }
-        } catch (e) {
-            box.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:30px;">资讯加载失败</p>';
-        }
-    },
-
     // 加载资讯数据
     async loadNews() {
         const res = await fetch('data/recommendations.json');
@@ -505,29 +501,6 @@ const BlogApp = {
             throw new Error('news parse failed');
         }
         return Array.isArray(items) ? items : [];
-    },
-
-    // 渲染单张资讯卡片
-    renderNewsCard(item) {
-        const category = this.esc(item.category || '资讯');
-        const source = this.esc(item.source || '');
-        const date = item.date ? this.formatShortDate(item.date) : '';
-        const hasContent = !!(item.content && item.content.trim());
-        const href = hasContent
-            ? `article.html?post=${encodeURIComponent(item.id)}&type=news`
-            : item.url;
-        const target = hasContent ? '' : 'target="_blank" rel="noopener"';
-        return `
-            <a class="news-card" href="${href}" ${target}>
-                <div class="news-card-head">
-                    <span class="news-cat">${category}</span>
-                    <span class="news-meta">${source}${date ? ' · ' + date : ''}</span>
-                </div>
-                <div class="news-card-title">${this.esc(item.title)}</div>
-                ${item.summary ? `<div class="news-card-summary">${this.esc(item.summary)}</div>` : ''}
-                ${hasContent ? '<span class="news-read">站内阅读 →</span>' : ''}
-            </a>
-        `;
     },
 
     // HTML 转义（用于卡片文本）
@@ -572,9 +545,6 @@ const BlogApp = {
                 <div class="dashboard-label">图库图片</div>
             </div>
         `;
-
-        // 资讯推荐
-        this.renderNews();
 
         // 入场动效（Anime.js）
         if (typeof anime !== 'undefined') {
@@ -649,6 +619,7 @@ const BlogApp = {
             'AI':   ['#1a1a1a', '#252525'],
             '生活': ['#181818', '#282828'],
             '学习': ['#1c1c1c', '#2c2c2c'],
+            '资讯': ['#12222a', '#1c3540'],
             '默认': ['#151515', '#222222']
         };
         for (const tag of tags) {
@@ -664,6 +635,7 @@ const BlogApp = {
             'AI':   '◇',
             '生活': '○',
             '学习': '△',
+            '资讯': '●',
             '默认': '□'
         };
         for (const tag of tags) {
@@ -679,15 +651,6 @@ const BlogApp = {
         const month = String(date.getMonth() + 1).padStart(2, '0');
         const day = String(date.getDate()).padStart(2, '0');
         return `${year}.${month}.${day}`;
-    },
-
-    // 格式化短日期为 MM-DD
-    formatShortDate(dateStr) {
-        const date = new Date(dateStr);
-        if (isNaN(date.getTime())) return dateStr;
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        return `${month}-${day}`;
     }
 };
 
