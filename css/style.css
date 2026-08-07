@@ -927,44 +927,17 @@ body.home-layout {
     resize: vertical;
 }
 
-/* 文本框 + 发表按钮并排 */
+/* 文本框占满一行 */
 .comment-form-main {
-    display: flex;
-    align-items: stretch;
-    gap: 12px;
+    display: block;
     margin-bottom: 12px;
 }
 
 .comment-form-main textarea {
-    flex: 1;
-    min-width: 0;
-    margin-bottom: 0;
-}
-
-.comment-form-main button {
-    padding: 10px 20px;
-    border: 1px solid var(--border-light);
-    border-radius: 8px;
-    background: transparent;
-    color: var(--text-secondary);
-    font-size: 14px;
-    cursor: pointer;
-    transition: all 0.2s;
-    flex-shrink: 0;
-    align-self: flex-end;
-    font-family: inherit;
-    white-space: nowrap;
-}
-
-.comment-form-main button:hover {
-    border-color: var(--accent);
-    color: var(--accent);
-    box-shadow: 0 0 12px var(--glow);
-}
-
-.comment-form-main button:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
+    width: 100%;
+    min-height: 100px;
+    resize: vertical;
+    box-sizing: border-box;
 }
 
 .comment-form-footer {
@@ -977,7 +950,7 @@ body.home-layout {
     font-size: 12px;
 }
 
-/* 上传图片 */
+/* 上传图片 + 发表留言 并排 */
 .comment-form-tools {
     display: flex;
     align-items: center;
@@ -990,11 +963,11 @@ body.home-layout {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 6px 14px;
+    padding: 9px 16px;
     border: 1px dashed var(--border-light);
     border-radius: 8px;
     color: var(--text-muted);
-    font-size: 12px;
+    font-size: 13px;
     cursor: pointer;
     transition: all 0.2s;
 }
@@ -1002,6 +975,31 @@ body.home-layout {
 .comment-upload:hover {
     border-color: var(--accent);
     color: var(--accent);
+}
+
+.comment-form-tools #comment-submit {
+    padding: 9px 20px;
+    border: 1px solid var(--border-light);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-left: auto;
+    font-family: inherit;
+    white-space: nowrap;
+}
+
+.comment-form-tools #comment-submit:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: 0 0 12px var(--glow);
+}
+
+.comment-form-tools #comment-submit:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 
 .comment-image-preview {
@@ -1049,12 +1047,8 @@ body.home-layout {
         flex-direction: column;
     }
 
-    .comment-form-main {
-        flex-direction: column;
-    }
-
-    .comment-form-main button {
-        align-self: stretch;
+    .comment-form-tools #comment-submit {
+        margin-left: 0;
     }
 }
 

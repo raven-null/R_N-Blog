@@ -7,7 +7,7 @@
     <link rel="icon" href="/images/TX/01_TX.webp" type="image/webp">
     
     <!-- 主样式 -->
-    <link rel="stylesheet" href="css/style.css?v=2.6.65">
+    <link rel="stylesheet" href="css/style.css?v=2.6.66">
     
     <!-- Marked.js -->
     <script src="js/vendor/marked.min.js"></script>
@@ -978,43 +978,17 @@
             resize: vertical;
         }
 
-        /* 文本框 + 发表按钮并排 */
+        /* 文本框占满一行 */
         .comment-form-main {
-            display: flex;
-            align-items: stretch;
-            gap: 12px;
+            display: block;
             margin-bottom: 12px;
         }
 
         .comment-form-main textarea {
-            flex: 1;
-            min-width: 0;
-            margin-bottom: 0;
-        }
-
-        .comment-form-main button {
-            padding: 10px 20px;
-            border: 1px solid rgba(124, 58, 237, 0.3);
-            border-radius: 8px;
-            background: linear-gradient(135deg, rgba(124, 58, 237, 0.15), rgba(124, 58, 237, 0.05));
-            color: var(--accent);
-            font-size: 14px;
-            cursor: pointer;
-            transition: all 0.2s;
-            flex-shrink: 0;
-            align-self: flex-end;
-            white-space: nowrap;
-            font-family: inherit;
-        }
-
-        .comment-form-main button:hover {
-            border-color: var(--accent);
-            box-shadow: 0 0 12px var(--glow);
-        }
-
-        .comment-form-main button:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
+            width: 100%;
+            min-height: 100px;
+            resize: vertical;
+            box-sizing: border-box;
         }
 
         .comment-form-footer {
@@ -1027,7 +1001,7 @@
             font-size: 12px;
         }
 
-        /* 上传图片 */
+        /* 上传图片 + 发表留言 并排 */
         .comment-form-tools {
             display: flex;
             align-items: center;
@@ -1040,11 +1014,11 @@
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            padding: 6px 14px;
+            padding: 9px 16px;
             border: 1px dashed var(--border-light);
             border-radius: 8px;
             color: var(--text-muted);
-            font-size: 12px;
+            font-size: 13px;
             cursor: pointer;
             transition: all 0.2s;
         }
@@ -1052,6 +1026,30 @@
         .comment-upload:hover {
             border-color: var(--accent);
             color: var(--accent);
+        }
+
+        .comment-form-tools #comment-submit {
+            padding: 9px 20px;
+            border: 1px solid rgba(124, 58, 237, 0.3);
+            border-radius: 8px;
+            background: linear-gradient(135deg, rgba(124, 58, 237, 0.15), rgba(124, 58, 237, 0.05));
+            color: var(--accent);
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-left: auto;
+            font-family: inherit;
+            white-space: nowrap;
+        }
+
+        .comment-form-tools #comment-submit:hover {
+            border-color: var(--accent);
+            box-shadow: 0 0 12px var(--glow);
+        }
+
+        .comment-form-tools #comment-submit:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
         }
 
         .comment-image-preview {
@@ -1094,12 +1092,8 @@
                 flex-direction: column;
             }
 
-            .comment-form-main {
-                flex-direction: column;
-            }
-
-            .comment-form-main button {
-                align-self: stretch;
+            .comment-form-tools #comment-submit {
+                margin-left: 0;
             }
         }
 
@@ -1626,7 +1620,6 @@
                     </div>
                     <div class="comment-form-main">
                         <textarea id="comment-content" placeholder="写下你的留言... *（支持纯文本，最长 5000 字）" maxlength="5000" required></textarea>
-                        <button type="submit" id="comment-submit">发表留言</button>
                     </div>
                     <div class="comment-form-tools">
                         <label class="comment-upload" title="上传图片（jpg/png/gif/webp，≤2MB）">
@@ -1642,6 +1635,7 @@
                             <img id="comment-image-thumb" alt="已选图片">
                             <button type="button" id="comment-image-remove" title="移除图片">&times;</button>
                         </div>
+                        <button type="submit" id="comment-submit">发表留言</button>
                     </div>
                     <div class="comment-form-footer">
                         <span class="comment-tip" id="comment-tip"></span>
@@ -1657,11 +1651,11 @@
     </div>
 
     <!-- JavaScript -->
-    <script src="js/theme.js?v=2.6.65"></script>
-    <script src="js/markdown.js?v=2.6.65"></script>
-    <script src="js/chat.js?v=2.6.65"></script>
-    <script src="js/reader.js?v=2.6.65"></script>
-    <script src="js/animations.js?v=2.6.65"></script>
+    <script src="js/theme.js?v=2.6.66"></script>
+    <script src="js/markdown.js?v=2.6.66"></script>
+    <script src="js/chat.js?v=2.6.66"></script>
+    <script src="js/reader.js?v=2.6.66"></script>
+    <script src="js/animations.js?v=2.6.66"></script>
 
     <script>
         // 文章详情页应用
