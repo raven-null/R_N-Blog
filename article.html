@@ -6,8 +6,8 @@
     <title>文章详情 - 我的博客</title>
     <link rel="icon" href="/images/TX/01_TX.webp" type="image/webp">
     
-    <!-- 主样式 -->
-    <link rel="stylesheet" href="css/style.css?v=2.6.56">
+    <!-- 主样�?-->
+    <link rel="stylesheet" href="css/style.css?v=2.6.57">
     
     <!-- Marked.js -->
     <script src="js/vendor/marked.min.js"></script>
@@ -40,7 +40,7 @@
             z-index: 100;
         }
 
-        /* 返回按钮：固定在侧边栏顶部 */
+        /* 返回按钮：固定在侧边栏顶�?*/
         .toc-sidebar .back-button {
             display: flex;
             align-items: center;
@@ -65,7 +65,7 @@
             color: var(--accent);
         }
 
-        /* 顶部操作栏 */
+        /* 顶部操作�?*/
         .sidebar-top-bar {
             display: flex;
             align-items: center;
@@ -101,7 +101,7 @@
             color: var(--accent);
         }
 
-        /* 返回上一页按钮 - 大尺寸 */
+        /* 返回上一页按�?- 大尺�?*/
         .sidebar-go-back {
             width: auto;
             height: 40px;
@@ -140,7 +140,7 @@
             width: 0;
         }
 
-        /* 目录头部（固定不滚动） */
+        /* 目录头部（固定不滚动�?*/
         .toc-header {
             position: sticky;
             top: 0;
@@ -167,7 +167,7 @@
             margin-left: auto;
         }
 
-        /* 目录列表容器（可滚动） */
+        /* 目录列表容器（可滚动�?*/
         .toc-list-wrapper {
             flex: 1;
             min-height: 0;
@@ -183,7 +183,7 @@
             height: 0;
         }
 
-        /* 目录搜索框 */
+        /* 目录搜索�?*/
         .toc-search {
             flex: 1;
             position: relative;
@@ -301,7 +301,7 @@
             transform: rotate(-90deg);
         }
 
-        /* 折叠状态的子目录 */
+        /* 折叠状态的子目�?*/
         .toc-list .toc-child {
             overflow: hidden;
             transition: max-height 0.3s ease, opacity 0.2s ease;
@@ -320,7 +320,7 @@
             margin: 0;
         }
 
-        /* 可折叠的父级目录项 */
+        /* 可折叠的父级目录�?*/
         .toc-list .toc-parent {
             position: relative;
         }
@@ -582,7 +582,7 @@
             -webkit-box-decoration-break: clone;
         }
 
-        /* 代码块 */
+        /* 代码�?*/
         .article-content .code-block {
             margin: 16px 0;
             border: 1px solid var(--border);
@@ -802,14 +802,14 @@
             text-align: right;
         }
 
-        /* 加载状态 */
+        /* 加载状�?*/
         .loading-article {
             text-align: center;
             padding: 60px 20px;
             color: var(--text-muted);
         }
 
-        /* 错误状态 */
+        /* 错误状�?*/
         .error-state {
             text-align: center;
             padding: 60px 20px;
@@ -842,7 +842,7 @@
             color: var(--text-secondary);
         }
 
-        /* ===== 留言区 ===== */
+        /* ===== 留言�?===== */
         .comment-section {
             background: var(--bg-secondary);
             border-radius: 16px;
@@ -1015,7 +1015,7 @@
             }
         }
 
-        /* ===== 响应式 ===== */
+        /* ===== 响应�?===== */
 
         /* 文章页隐藏全局浮动按钮 */
         .theme-toggle {
@@ -1167,7 +1167,7 @@
                 display: none;
             }
 
-            /* 右侧悬浮球 */
+            /* 右侧悬浮�?*/
             .mobile-float-ball {
                 position: fixed;
                 right: 16px;
@@ -1366,7 +1366,7 @@
         </svg>
     </div>
 
-    <!-- 移动端弹出菜单 -->
+    <!-- 移动端弹出菜�?-->
     <div class="mobile-menu-popup" id="mobileMenuPopup">
         <button class="mobile-menu-btn" onclick="showSidebar()" title="目录">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1375,7 +1375,7 @@
                 <line x1="3" y1="18" x2="21" y2="18"></line>
             </svg>
         </button>
-        <button class="mobile-menu-btn" id="mobileGoBack" onclick="history.back()" title="返回上一页">
+        <button class="mobile-menu-btn" id="mobileGoBack" onclick="history.back()" title="返回上一�?>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="15 18 9 12 15 6"></polyline>
             </svg>
@@ -1406,16 +1406,16 @@
         </button>
     </div>
 
-    <!-- 阅读进度条 -->
+    <!-- 阅读进度�?-->
     <div class="article-progress" id="articleProgress"></div>
 
-    <!-- 主内容 -->
+    <!-- 主内�?-->
     <div class="article-layout">
-        <!-- 左侧目录栏 -->
+        <!-- 左侧目录�?-->
         <aside class="toc-sidebar" id="tocSidebar" style="display: none;">
-            <!-- 顶部操作栏 -->
+            <!-- 顶部操作�?-->
             <div class="sidebar-top-bar">
-                <button class="sidebar-action-btn sidebar-go-back" id="sidebarGoBack" title="返回上一页">
+                <button class="sidebar-action-btn sidebar-go-back" id="sidebarGoBack" title="返回上一�?>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <polyline points="15 18 9 12 15 6"></polyline>
                     </svg>
@@ -1429,7 +1429,7 @@
                         </svg>
                     </a>
                     <button class="sidebar-action-btn" id="sidebarThemeToggle" title="切换主题">
-                        ◐
+                        �?
                     </button>
                     <button class="sidebar-action-btn" id="sidebarChatToggle" title="AI 助手">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1448,7 +1448,7 @@
                                 <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
                             </svg>
                         </div>
-                        <button class="toc-collapse-btn" id="tocCollapseBtn" title="折叠子目录">
+                        <button class="toc-collapse-btn" id="tocCollapseBtn" title="折叠子目�?>
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <polyline points="6 9 12 15 18 9"></polyline>
                             </svg>
@@ -1457,7 +1457,7 @@
                 </div>
                 <div class="toc-list-wrapper">
                     <ul class="toc-list" id="toc-list">
-                        <!-- 由 JavaScript 动态生成 -->
+                        <!-- �?JavaScript 动态生�?-->
                     </ul>
                 </div>
             </div>
@@ -1465,9 +1465,9 @@
 
         <!-- 右侧主内容区 -->
         <div class="article-main">
-            <!-- 移动端返回按钮（侧边栏隐藏时显示） -->
+            <!-- 移动端返回按钮（侧边栏隐藏时显示�?-->
             <div class="mobile-top-bar">
-                <button class="sidebar-action-btn sidebar-go-back" id="mobileGoBack" title="返回上一页">
+                <button class="sidebar-action-btn sidebar-go-back" id="mobileGoBack" title="返回上一�?>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <polyline points="15 18 9 12 15 6"></polyline>
                     </svg>
@@ -1481,7 +1481,7 @@
                         </svg>
                     </a>
                     <button class="sidebar-action-btn" id="mobileThemeToggle" title="切换主题">
-                        ◐
+                        �?
                     </button>
                     <button class="sidebar-action-btn" id="mobileChatToggle" title="AI 助手">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1491,10 +1491,10 @@
                 </div>
             </div>
 
-            <!-- 阅读工具栏 -->
+            <!-- 阅读工具�?-->
             <div class="reader-toolbar" id="readerToolbar">
                 <div class="reader-toolbar-group">
-                    <button class="reader-btn" id="readerFontDown" title="减小字号">A−</button>
+                    <button class="reader-btn" id="readerFontDown" title="减小字号">A�?/button>
                     <span class="reader-font-size" id="readerFontSize">16</span>
                     <button class="reader-btn" id="readerFontUp" title="增大字号">A+</button>
                 </div>
@@ -1515,16 +1515,16 @@
             <div class="article-header" id="article-header">
                 <div class="loading-article">
                     <div class="loading-spinner"></div>
-                    <p>加载文章中...</p>
+                    <p>加载文章�?..</p>
                 </div>
             </div>
 
             <!-- 文章内容 -->
             <div class="article-content" id="article-content">
-                <!-- 由 JavaScript 动态生成 -->
+                <!-- �?JavaScript 动态生�?-->
             </div>
 
-            <!-- 留言区 -->
+            <!-- 留言�?-->
             <div class="comment-section" id="comment-section" style="display:none;">
                 <div class="comment-header">
                     <h3>留言</h3>
@@ -1534,9 +1534,9 @@
                 <form class="comment-form" id="comment-form">
                     <div class="comment-form-row">
                         <input type="text" id="comment-name" placeholder="昵称 *" maxlength="32" required>
-                        <input type="text" id="comment-email" placeholder="邮箱（可选，不会被公开）" maxlength="200">
+                        <input type="text" id="comment-email" placeholder="邮箱（可选，不会被公开�? maxlength="200">
                     </div>
-                    <textarea id="comment-content" placeholder="写下你的留言... *（支持纯文本，最长 5000 字）" maxlength="5000" required></textarea>
+                    <textarea id="comment-content" placeholder="写下你的留言... *（支持纯文本，最�?5000 字）" maxlength="5000" required></textarea>
                     <div class="comment-form-footer">
                         <span class="comment-tip" id="comment-tip"></span>
                         <button type="submit" id="comment-submit">发表留言</button>
@@ -1546,20 +1546,20 @@
 
             <!-- 文章导航 -->
             <div class="article-navigation" id="article-navigation">
-                <!-- 由 JavaScript 动态生成 -->
+                <!-- �?JavaScript 动态生�?-->
             </div>
         </div>
     </div>
 
     <!-- JavaScript -->
-    <script src="js/theme.js?v=2.6.56"></script>
-    <script src="js/markdown.js?v=2.6.56"></script>
-    <script src="js/chat.js?v=2.6.56"></script>
-    <script src="js/reader.js?v=2.6.56"></script>
-    <script src="js/animations.js?v=2.6.56"></script>
+    <script src="js/theme.js?v=2.6.57"></script>
+    <script src="js/markdown.js?v=2.6.57"></script>
+    <script src="js/chat.js?v=2.6.57"></script>
+    <script src="js/reader.js?v=2.6.57"></script>
+    <script src="js/animations.js?v=2.6.57"></script>
 
     <script>
-        // 文章详情页应用
+        // 文章详情页应�?
         const ArticleApp = {
             // 当前文章数据
             currentPost: null,
@@ -1567,32 +1567,32 @@
             // 后端 API 地址（Netlify 部署的后端）
             apiBase: 'https://r-n-blog-server.netlify.app',
 
-            // 当前留言所属文章 ID
+            // 当前留言所属文�?ID
             postId: null,
 
             // 所有文章列表（用于上下篇导航）
             allPosts: [],
 
-            // 初始化应用
+            // 初始化应�?
             async init() {
                 ThemeManager.init();
                 ThemeManager.createThemeToggle();
 
-                // 从 URL 获取文章文件名
+                // �?URL 获取文章文件�?
                 const urlParams = new URLSearchParams(window.location.search);
                 const postFile = urlParams.get('post');
                 const isNews = urlParams.get('type') === 'news';
 
                 if (!postFile) {
-                    this.showError('未指定文章');
+                    this.showError('未指定文�?);
                     return;
                 }
 
-                // 加载文章和文章列表
+                // 加载文章和文章列�?
                 await this.loadArticle(postFile, isNews);
-                // 初始化留言区（普通文章与站内资讯均可留言）
+                // 初始化留言区（普通文章与站内资讯均可留言�?
                 this.initComments(postFile);
-                // 异步加载文章列表，不阻塞文章渲染（资讯模式不加载，避免上下篇导航错乱）
+                // 异步加载文章列表，不阻塞文章渲染（资讯模式不加载，避免上下篇导航错乱�?
                 if (!isNews) {
                     this.loadAllPosts().then(() => this.renderNavigation());
                 } else {
@@ -1601,7 +1601,7 @@
                 }
             },
 
-            // 加载资讯正文（从 data/recommendations.json 按 id 匹配）
+            // 加载资讯正文（从 data/recommendations.json �?id 匹配�?
             async loadNewsArticle(id) {
                 const res = await fetch('data/recommendations.json');
                 if (!res.ok) throw new Error('HTTP 错误: ' + res.status);
@@ -1609,7 +1609,7 @@
                 const item = (Array.isArray(items) ? items : []).find(it => it.id === id);
                 if (!item) throw new Error('未找到该资讯');
                 if (!item.content) {
-                    const err = new Error('该资讯暂无正文');
+                    const err = new Error('该资讯暂无正�?);
                     err.noContent = true;
                     err.sourceUrl = item.url;
                     err.sourceName = item.source;
@@ -1677,7 +1677,7 @@
             // 加载所有文章（用于上下篇导航）
             async loadAllPosts() {
                 try {
-                    // 检查缓存（带版本号，旧缓存自动失效）
+                    // 检查缓存（带版本号，旧缓存自动失效�?
                     const cachedData = sessionStorage.getItem('blog-posts-cache-v2');
                     if (cachedData) {
                         this.allPosts = JSON.parse(cachedData);
@@ -1713,7 +1713,7 @@
                         const results = await Promise.all(promises);
                         this.allPosts = results.filter(post => post !== null);
 
-                        // 按日期降序排序
+                        // 按日期降序排�?
                         this.allPosts.sort((a, b) => new Date(b.date) - new Date(a.date));
                         
                         // 缓存结果
@@ -1724,7 +1724,7 @@
                 }
             },
 
-            // 渲染文章头部和正文
+            // 渲染文章头部和正�?
             renderArticle() {
                 const header = document.getElementById('article-header');
                 const content = document.getElementById('article-content');
@@ -1760,7 +1760,7 @@
                                 <polyline points="1 20 1 14 7 14"></polyline>
                                 <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
                             </svg>
-                            <span>更新于 ${this.formatDate(this.currentPost.update)}</span>
+                            <span>更新�?${this.formatDate(this.currentPost.update)}</span>
                         </div>
                         ` : ''}
                         <div class="meta-item">
@@ -1768,7 +1768,7 @@
                                 <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
                                 <line x1="7" y1="7" x2="7.01" y2="7"></line>
                             </svg>
-                            <span>${this.currentPost.tags.length} 个标签</span>
+                            <span>${this.currentPost.tags.length} 个标�?/span>
                         </div>
                     </div>
                     ${this.currentPost.tags.length > 0 ? `
@@ -1782,16 +1782,16 @@
                 const html = MarkdownParser.parseMarkdown(this.currentPost.content);
                 content.innerHTML = html;
 
-                // 文章内容入场动画（Anime.js）
+                // 文章内容入场动画（Anime.js�?
                 if (window.BlogAnimations && BlogAnimations.ready) {
                     BlogAnimations.animateArticleContent(content);
                 }
 
-                // 延迟高亮代码块，不阻塞渲染
+                // 延迟高亮代码块，不阻塞渲�?
                 requestAnimationFrame(() => {
                     if (typeof hljs !== 'undefined') {
                         const blocks = content.querySelectorAll('pre code');
-                        // 分批处理代码块
+                        // 分批处理代码�?
                         const batchSize = 10;
                         for (let i = 0; i < blocks.length; i += batchSize) {
                             const batch = Array.from(blocks).slice(i, i + batchSize);
@@ -1812,10 +1812,10 @@
                 const tocSidebar = document.getElementById('tocSidebar');
                 const tocList = document.getElementById('toc-list');
 
-                // 获取所有标题元素
+                // 获取所有标题元�?
                 const headings = content.querySelectorAll('h1, h2, h3, h4, h5, h6');
 
-                // 没有标题则隐藏目录
+                // 没有标题则隐藏目�?
                 if (headings.length === 0) {
                     tocSidebar.style.display = 'none';
                     return;
@@ -1850,7 +1850,7 @@
                     const level = parseInt(heading.tagName.charAt(1));
                     li.className = `toc-${heading.tagName.toLowerCase()}`;
 
-                    // 判断是否为子目录项（h3、h4、h5、h6）
+                    // 判断是否为子目录项（h3、h4、h5、h6�?
                     if (level >= 3) {
                         li.classList.add('toc-child-item');
                         if (childContainer) {
@@ -1859,14 +1859,14 @@
                             tocList.appendChild(li);
                         }
                     } else {
-                        // h1 或 h2 作为父级目录
+                        // h1 �?h2 作为父级目录
                         tocList.appendChild(li);
                         
-                        // 只有当确实有子标题时才添加折叠功能
+                        // 只有当确实有子标题时才添加折叠功�?
                         if (parentHasChildren[index]) {
                             li.classList.add('toc-parent');
                             
-                            // 创建标题容器（包含链接和折叠图标）
+                            // 创建标题容器（包含链接和折叠图标�?
                             const titleDiv = document.createElement('div');
                             titleDiv.className = 'toc-parent-title';
                             li.appendChild(titleDiv);
@@ -1878,7 +1878,7 @@
                             toggleIcon.title = '折叠/展开';
                             titleDiv.appendChild(toggleIcon);
                             
-                            // 创建子容器
+                            // 创建子容�?
                             childContainer = document.createElement('ul');
                             childContainer.className = 'toc-child toc-child-container';
                             li.appendChild(childContainer);
@@ -1892,7 +1892,7 @@
                     a.textContent = heading.textContent;
                     a.title = heading.textContent;
 
-                    // 点击平滑滚动到对应标题
+                    // 点击平滑滚动到对应标�?
                     a.addEventListener('click', (e) => {
                         e.preventDefault();
                         heading.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1907,17 +1907,17 @@
                     }
                 });
 
-                // 初始化折叠功能
+                // 初始化折叠功�?
                 this.initTocCollapse();
 
-                // 监听滚动，高亮当前可见标题
+                // 监听滚动，高亮当前可见标�?
                 this.initScrollHighlight(headings);
 
-                // 初始化目录搜索
+                // 初始化目录搜�?
                 this.initTocSearch();
             },
 
-            // 初始化目录折叠功能
+            // 初始化目录折叠功�?
             initTocCollapse() {
                 const collapseBtn = document.getElementById('tocCollapseBtn');
                 const childContainers = document.querySelectorAll('.toc-child-container');
@@ -1984,7 +1984,7 @@
                 });
             },
 
-            // 滚动时高亮当前所在目录项，并自动滚动目录到可见位置
+            // 滚动时高亮当前所在目录项，并自动滚动目录到可见位�?
             initScrollHighlight(headings) {
                 const tocLinks = document.querySelectorAll('.toc-list a');
                 const tocContainer = document.querySelector('.toc-list-wrapper');
@@ -1993,7 +1993,7 @@
                 const observer = new IntersectionObserver((entries) => {
                     entries.forEach(entry => {
                         if (entry.isIntersecting) {
-                            // 移除所有高亮
+                            // 移除所有高�?
                             tocLinks.forEach(link => link.classList.remove('active'));
                             // 高亮当前标题对应的目录项
                             const index = Array.from(headings).indexOf(entry.target);
@@ -2001,21 +2001,21 @@
                                 const activeLink = tocLinks[index];
                                 activeLink.classList.add('active');
 
-                                // 计算目录项相对于滚动容器的位置
+                                // 计算目录项相对于滚动容器的位�?
                                 const containerRect = tocContainer.getBoundingClientRect();
                                 const linkRect = activeLink.getBoundingClientRect();
                                 const linkRelativeTop = linkRect.top - containerRect.top;
                                 const linkBottom = linkRelativeTop + linkRect.height;
                                 const containerHeight = containerRect.height;
 
-                                // 目标滚动位置：让高亮项居中显示
+                                // 目标滚动位置：让高亮项居中显�?
                                 const targetScroll = tocContainer.scrollTop + linkRelativeTop - containerHeight / 2 + linkRect.height / 2;
 
-                                // 如果当前项在视口上半部分之外，滚动使其居中
+                                // 如果当前项在视口上半部分之外，滚动使其居�?
                                 if (linkRelativeTop < 60) {
                                     tocContainer.scrollTo({ top: targetScroll, behavior: 'smooth' });
                                 }
-                                // 如果当前项在视口下半部分之外，滚动使其居中
+                                // 如果当前项在视口下半部分之外，滚动使其居�?
                                 else if (linkBottom > containerHeight - 60) {
                                     tocContainer.scrollTo({ top: targetScroll, behavior: 'smooth' });
                                 }
@@ -2027,7 +2027,7 @@
                 headings.forEach(heading => observer.observe(heading));
             },
 
-            // 渲染上下篇导航
+            // 渲染上下篇导�?
             renderNavigation() {
                 const navigation = document.getElementById('article-navigation');
 
@@ -2052,13 +2052,13 @@
                 navigation.innerHTML = `
                     ${prevPost ? `
                         <a href="article.html?post=${prevPost.filename}" class="nav-card prev">
-                            <div class="nav-label">← 上一篇</div>
+                            <div class="nav-label">�?上一�?/div>
                             <div class="nav-title">${prevPost.title}</div>
                         </a>
                     ` : '<div></div>'}
                     ${nextPost ? `
                         <a href="article.html?post=${nextPost.filename}" class="nav-card next">
-                            <div class="nav-label">下一篇 →</div>
+                            <div class="nav-label">下一�?�?/div>
                             <div class="nav-title">${nextPost.title}</div>
                         </a>
                     ` : '<div></div>'}
@@ -2073,7 +2073,7 @@
                 header.innerHTML = '';
                 content.innerHTML = `
                     <div class="error-state">
-                        <div class="icon">❌</div>
+                        <div class="icon">�?/div>
                         <div class="message">${message}</div>
                         <a href="index.html" class="back-link">返回首页</a>
                     </div>
@@ -2091,14 +2091,14 @@
                         <div class="icon">ℹ️</div>
                         <div class="message">该资讯暂无站内正文（来源仅提供摘要）</div>
                         <div class="error-actions">
-                            <a href="${sourceUrl || '#'}" target="_blank" rel="noopener" class="back-link">前往原文阅读 ↗</a>
+                            <a href="${sourceUrl || '#'}" target="_blank" rel="noopener" class="back-link">前往原文阅读 �?/a>
                             <a href="index.html" class="back-link secondary">返回首页</a>
                         </div>
                     </div>
                 `;
             },
 
-            // 初始化留言区
+            // 初始化留言�?
             async initComments(postId) {
                 const section = document.getElementById('comment-section');
                 if (!section) return;
@@ -2128,7 +2128,7 @@
                         <div class="comment-item">
                             <div class="comment-item-head">
                                 <div class="comment-item-name">
-                                    <span class="avatar">${this.escName(c.name || '客')}</span>
+                                    <span class="avatar">${this.escName(c.name || '�?)}</span>
                                     <span>${this.esc(c.name || '匿名')}</span>
                                 </div>
                                 <span class="comment-item-time">${this.formatCommentDate(c.createdAt)}</span>
@@ -2138,7 +2138,7 @@
                     `).join('');
                 } catch (e) {
                     console.warn('留言加载失败:', e);
-                    list.innerHTML = '<div class="comment-empty">留言功能暂时不可用</div>';
+                    list.innerHTML = '<div class="comment-empty">留言功能暂时不可�?/div>';
                     const form = document.getElementById('comment-form');
                     if (form) form.style.display = 'none';
                 }
@@ -2158,7 +2158,7 @@
                 if (!name || !content) return;
 
                 submitBtn.disabled = true;
-                submitBtn.textContent = '提交中...';
+                submitBtn.textContent = '提交�?..';
                 if (tip) tip.textContent = '';
                 try {
                     const res = await fetch(`${this.apiBase}/api/comments`, {
@@ -2173,10 +2173,10 @@
                     nameInput.value = '';
                     emailInput.value = '';
                     contentInput.value = '';
-                    if (tip) tip.textContent = '✓ 留言成功';
+                    if (tip) tip.textContent = '�?留言成功';
                     await this.loadComments();
                 } catch (err) {
-                    if (tip) tip.textContent = '✗ ' + (err.message || '留言失败，请稍后再试');
+                    if (tip) tip.textContent = '�?' + (err.message || '留言失败，请稍后再试');
                 } finally {
                     submitBtn.disabled = false;
                     submitBtn.textContent = '发表留言';
@@ -2192,9 +2192,9 @@
                     .replace(/"/g, '&quot;');
             },
 
-            // 留言头像首字符
+            // 留言头像首字�?
             escName(name) {
-                return String(name || '客').charAt(0).toUpperCase();
+                return String(name || '�?).charAt(0).toUpperCase();
             },
 
             // 格式化留言时间
@@ -2220,7 +2220,7 @@
             ArticleApp.init();
             AIChat.init();
 
-            // 侧边栏主题切换按钮
+            // 侧边栏主题切换按�?
             const sidebarThemeBtn = document.getElementById('sidebarThemeToggle');
             const mobileThemeBtn = document.getElementById('mobileThemeToggle');
             const updateThemeIcons = () => {
@@ -2239,7 +2239,7 @@
                 if (chatWindow) chatWindow.classList.toggle('show');
             });
 
-            // 返回上一页按钮
+            // 返回上一页按�?
             const sidebarGoBack = document.getElementById('sidebarGoBack');
             const mobileGoBack = document.getElementById('mobileGoBack');
             const goBack = () => {
@@ -2269,7 +2269,7 @@
             return Promise.resolve();
         }
 
-        // 复制代码块内容
+        // 复制代码块内�?
         function copyCode(btn) {
             const codeBlock = btn.closest('.code-block');
             if (!codeBlock) return;
@@ -2277,7 +2277,7 @@
             if (!code) return;
             copyToClipboard(code.textContent).then(() => {
                 const span = btn.querySelector('span');
-                if (span) span.textContent = '已复制';
+                if (span) span.textContent = '已复�?;
                 btn.classList.add('copied');
                 setTimeout(() => {
                     if (span) span.textContent = '复制';
@@ -2286,18 +2286,18 @@
             });
         }
 
-        // 复制引用块内容
+        // 复制引用块内�?
         function copyQuote(btn) {
             const blockquote = btn.closest('.quote-block');
             if (!blockquote) return;
-            // 获取引用内容，排除按钮文字
+            // 获取引用内容，排除按钮文�?
             const clone = blockquote.cloneNode(true);
             const btnInClone = clone.querySelector('.copy-btn-quote');
             if (btnInClone) btnInClone.remove();
             const text = clone.textContent.trim();
             copyToClipboard(text).then(() => {
                 const span = btn.querySelector('span');
-                if (span) span.textContent = '已复制';
+                if (span) span.textContent = '已复�?;
                 btn.classList.add('copied');
                 setTimeout(() => {
                     if (span) span.textContent = '复制';
@@ -2401,7 +2401,7 @@
             document.getElementById('lightboxImg').style.cursor = 'grab';
         });
 
-        // 移动端菜单功能
+        // 移动端菜单功�?
         window.menuVisible = false;
 
         function toggleMobileMenu() {
@@ -2420,7 +2420,7 @@
             }
         }
 
-        // 显示侧边栏（目录）
+        // 显示侧边栏（目录�?
         function showSidebar() {
             var sidebar = document.getElementById('tocSidebar');
             var overlay = document.getElementById('sidebarOverlay');
@@ -2436,7 +2436,7 @@
             window.menuVisible = false;
         }
 
-        // 关闭侧边栏
+        // 关闭侧边�?
         function closeSidebar() {
             const sidebar = document.getElementById('tocSidebar');
             const overlay = document.getElementById('sidebarOverlay');
@@ -2477,14 +2477,14 @@
             }
         }
 
-        // 检测屏幕尺寸，显示/隐藏移动端元素
+        // 检测屏幕尺寸，显示/隐藏移动端元�?
         function checkMobileView() {
             const width = window.innerWidth;
             const floatBall = document.getElementById('mobileFloatBall');
             const menuPopup = document.getElementById('mobileMenuPopup');
             const tocSidebar = document.getElementById('tocSidebar');
 
-            // 当侧边栏隐藏时（宽度<773），显示悬浮球
+            // 当侧边栏隐藏时（宽度<773），显示悬浮�?
             if (width < 773) {
                 floatBall.style.setProperty('display', 'flex', 'important');
             } else {
