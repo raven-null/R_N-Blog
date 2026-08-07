@@ -8,8 +8,10 @@
 - 📝 **Markdown 文章** - `posts` 目录丢入 `.md` 文件即可显示
 - 🏷️ **标签体系** - 标签按钮弹出面板，展示全部标签及文章计数，支持筛选
 - 🎨 **十套主题** - Dark / Light / Cyberpunk / Sepia / Neon / Nord / Dracula / Ocean / Forest / Sunset，自动持久化
-- 🖼️ **四视图** - 文章（瀑布流卡片）/ 图库（灯箱相册）/ 每日新闻（资讯列表）/ 我的（个人仪表盘），顶栏滑块切换
-- 📚 **阅读体验** - 阅读工具栏（字号 / 行距 / 字体 / 护眼 / 夜间 / 专注）、目录、进度条
+- 🖼️ **四视图** - 文章（瀑布流卡片）/ 图库（灯箱相册）/ 每日新闻（资讯列表，按出品方筛选）/ 我的（个人仪表盘），顶栏滑块切换
+- 📰 **每日新闻** - 后端 NewsNow API 聚合 17 个热门来源，每小时更新；失败自动回退本地数据；按新闻出品方筛选
+- 💬 **留言系统** - 文章页与「我的」仪表盘均支持留言，数据存于后端 Netlify Blobs（`/api/comments`）
+- 📚 **阅读体验** - 阅读工具栏（字号 / 行距 / 字体 / 护眼 / 夜间 / 专注）、目录、进度条、代码复制、图片灯箱
 - ⚡ **动画** - Anime.js 驱动卡片入场、视图切换等动效
 - 🤖 **AI 助手** - 内置智谱 GLM-4 对话助手，支持流式输出与划词问答
 - 📱 **响应式** - 适配各种屏幕尺寸，移动端悬浮球快捷操作
@@ -30,6 +32,8 @@ python -m http.server 8080
 # 右键 index.html -> Open with Live Server
 ```
 
+> 本地运行无后端时，每日新闻与留言会显示"功能暂时不可用"或回退本地数据；完整功能需部署后端（见下文「后端服务」）。
+
 ### 部署到 GitHub Pages
 
 1. Fork 或克隆本仓库
@@ -37,6 +41,13 @@ python -m http.server 8080
 3. 在仓库 Settings 中启用 GitHub Pages，Source 选择 `main` 分支、目录 `/ (root)`
 4. 根目录的 `feed.xml` 提供 RSS 订阅
 5. 等待数分钟即可通过域名访问
+
+### 后端服务（可选，用于资讯与留言）
+
+每日新闻与留言功能依赖 Netlify 后端（`https://r-n-blog-server.netlify.app`，代码在独立仓库 `02-blog-server`）。后端不可用时：
+
+- **每日新闻**：自动回退读取本地 `data/recommendations.json`
+- **留言**：显示「留言功能暂时不可用」
 
 ## 📝 添加文章
 
@@ -97,17 +108,25 @@ node scripts/build-gallery.js
 
 运行完成后提交生成的文件即可，图库支持灯箱查看、左右切换、下载、幻灯片放映与页码跳转。
 
-## 📰 资讯维护
+## 📰 每日新闻
 
-资讯在「**每日新闻**」视图以列表形式展示（位于图库与我的之间），顶部按**新闻出品方**筛选。数据优先来自后端 NewsNow API（`/api/news`），失败时回退本地 `data/recommendations.json`；点击新闻在新窗口打开原文或站内阅读。
+「每日新闻」视图以**列表形式**展示聚合资讯（无卡片图片），顶部按**新闻出品方**筛选。数据优先来自后端 NewsNow API（`/api/news`，聚合 17 个热门来源、每小时更新），失败时回退本地 `data/recommendations.json`；点击新闻在新窗口打开原文或站内阅读。
 
-**两种维护方式：**
+**更新方式：**
 
 1. **自动（推荐，每日更新）**：GitHub Actions 每天 08:00 运行 `node scripts/update-news.js` 抓取各来源 RSS 自动生成并提交；也可在 Actions 页面手动触发 `Update News Daily`
 2. **手动**：直接编辑 `data/recommendations.json` 提交推送即可
 
 - 本地生成：`node scripts/update-news.js`（`--dry` 预览不落盘）
 - 校验：`node scripts/check-recommendations.js`（`--check` 追加链接体检）
+
+## 💬 留言
+
+文章页底部与「我的」仪表盘均提供留言功能：
+
+- 填写**昵称**（必填）与**留言内容**（必填），邮箱可选（不会被公开）
+- 数据通过后端 `/api/comments` 存于 **Netlify Blobs**，按 `postId` 隔离（文章用文件名，仪表盘用 `dashboard`）
+- 单篇文章最多 500 条；内容最多 5000 字；超 3 个链接视为垃圾信息会被拦截
 
 ## 🎨 主题
 
@@ -150,20 +169,27 @@ node scripts/build-gallery.js
 ## 📁 项目结构
 
 ```
-├── index.html / article.html    # 首页 / 文章详情页
+├── index.html / article.html    # 首页（四视图）/ 文章详情页（含留言区）
 ├── feed.xml / CNAME / .nojekyll # RSS / 自定义域名 / Jekyll 关闭标记
+├── .github/workflows/
+│   └── update-news.yml          # 每日资讯自动更新（GitHub Actions）
 ├── css/
 │   ├── style.css                # 主样式（主题、响应式）
 │   └── highlight-github-dark.min.css  # 代码高亮
 ├── js/
-│   ├── app.js                   # 首页逻辑（加载、筛选、搜索、分页）
+│   ├── app.js                   # 首页逻辑（加载、筛选、搜索、四视图、资讯、留言）
 │   ├── markdown.js              # Markdown 解析（frontmatter、渲染）
 │   ├── theme.js                 # 主题管理（10 套主题、持久化）
 │   ├── chat.js                  # AI 助手（流式、多会话、划词问答）
 │   ├── reader.js                # 文章阅读（目录、工具栏、快捷键、进度）
 │   ├── animations.js            # Anime.js 动画
 │   └── vendor/                  # anime.umd.min.js / marked.min.js / highlight.min.js
-├── scripts/build-gallery.js     # 图库索引生成脚本
+├── scripts/
+│   ├── build-gallery.js         # 图库索引生成脚本
+│   ├── update-news.js           # 资讯自动更新（抓取 RSS 生成 recommendations.json）
+│   └── check-recommendations.js # 资讯数据校验 / 链接体检
+├── data/
+│   └── recommendations.json     # 本地资讯数据（后端失败时回退）
 ├── images/
 │   ├── BG/                      # 封面图
 │   ├── R-N-picture/             # 图库图片（生成 manifest.json）
@@ -178,7 +204,8 @@ node scripts/build-gallery.js
 
 - **主题**：在 `js/theme.js` 的 `themes` 对象中添加主题（`name` / `icon` / `colors` CSS 变量）
 - **AI 助手**：在 `js/chat.js` 中修改系统提示词（人格）与 API Key（`config.apiKey`）
-- **每页文章数**：文章一次性全部加载，无需分页（`js/app.js` 直接渲染全部卡片）
+- **后端地址**：`js/app.js` 与 `article.html` 中的 `apiBase`（默认 `https://r-n-blog-server.netlify.app`）
+- **新闻来源**：`scripts/update-news.js` 的 `SOURCES` 数组（名称 + RSS 地址 + 默认分类）
 
 ## 📖 文档
 
@@ -194,5 +221,5 @@ MIT License
 
 ---
 
-**最后更新：** 2026-08-05
+**最后更新：** 2026-08-07
 **维护者：** 渡鸦NULL
