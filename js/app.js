@@ -33,7 +33,7 @@ const BlogApp = {
     async loadPosts() {
         try {
             // 检查缓存（带版本号，旧缓存自动失效）
-            const CACHE_KEY = 'blog-posts-data-v5';
+            const CACHE_KEY = 'blog-posts-data-v6';
             const cachedData = sessionStorage.getItem(CACHE_KEY);
             if (cachedData) {
                 this.posts = JSON.parse(cachedData);
