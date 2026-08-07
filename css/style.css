@@ -977,6 +977,73 @@ body.home-layout {
     font-size: 12px;
 }
 
+/* 上传图片 */
+.comment-form-tools {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+}
+
+.comment-upload {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border: 1px dashed var(--border-light);
+    border-radius: 8px;
+    color: var(--text-muted);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.comment-upload:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.comment-image-preview {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 10px;
+}
+
+.comment-image-preview img {
+    max-height: 48px;
+    max-width: 96px;
+    border-radius: 6px;
+    object-fit: cover;
+}
+
+.comment-image-preview button {
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 16px;
+    cursor: pointer;
+    line-height: 1;
+    padding: 2px;
+}
+
+.comment-image-preview button:hover {
+    color: var(--accent);
+}
+
+.comment-item-image {
+    margin-top: 10px;
+    max-width: 100%;
+    max-height: 320px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    cursor: zoom-in;
+}
+
 @media (max-width: 700px) {
     .comment-form-row {
         flex-direction: column;

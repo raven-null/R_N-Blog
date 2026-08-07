@@ -589,6 +589,65 @@ const BlogApp = {
         await this.loadComments();
         const form = document.getElementById('comment-form');
         if (form) form.addEventListener('submit', (e) => this.submitComment(e));
+        this.commentImageData = null;
+        const fileInput = document.getElementById('comment-image');
+        if (fileInput) fileInput.addEventListener('change', (e) => this.onCommentImageSelect(e));
+        const removeBtn = document.getElementById('comment-image-remove');
+        if (removeBtn) removeBtn.addEventListener('click', () => this.clearCommentImage());
+    },
+
+    // 选择图片 → 本地预览（待提交时再上传）
+    onCommentImageSelect(e) {
+        const file = e.target.files && e.target.files[0];
+        const tip = document.getElementById('comment-tip');
+        if (!file) return;
+        const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        if (!validTypes.includes(file.type)) {
+            if (tip) tip.textContent = '✗ 仅支持 jpg / png / gif / webp 图片';
+            e.target.value = '';
+            return;
+        }
+        if (file.size > 2 * 1024 * 1024) {
+            if (tip) tip.textContent = '✗ 图片过大（限 2MB）';
+            e.target.value = '';
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = () => {
+            this.commentImageData = reader.result;
+            const preview = document.getElementById('comment-image-preview');
+            const thumb = document.getElementById('comment-image-thumb');
+            if (preview) preview.style.display = 'flex';
+            if (thumb) thumb.src = reader.result;
+            if (tip) tip.textContent = '';
+        };
+        reader.readAsDataURL(file);
+    },
+
+    // 移除已选图片
+    clearCommentImage() {
+        this.commentImageData = null;
+        const preview = document.getElementById('comment-image-preview');
+        if (preview) preview.style.display = 'none';
+        const fileInput = document.getElementById('comment-image');
+        if (fileInput) fileInput.value = '';
+    },
+
+    // 上传图片到后端，返回图片 URL
+    async uploadCommentImage() {
+        if (!this.commentImageData) return '';
+        const mime = (this.commentImageData.match(/^data:(.+?);base64/) || [])[1] || 'image/png';
+        const base64 = this.commentImageData.replace(/^data:.+?;base64,/, '');
+        const res = await fetch(`${this.config.apiBase}/api/upload`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ data: base64, mime })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data || data.status !== 'success' || !data.url) {
+            throw new Error((data && data.message) || '图片上传失败');
+        }
+        return data.url;
     },
 
     // 加载留言
@@ -614,6 +673,7 @@ const BlogApp = {
                         <span class="comment-item-time">${this.formatCommentDate(c.createdAt)}</span>
                     </div>
                     <div class="comment-item-content">${this.esc(c.content)}</div>
+                    ${c.image ? `<img class="comment-item-image" src="${this.esc(c.image)}" alt="留言图片" loading="lazy">` : ''}
                 </div>
             `).join('');
         } catch (e) {
@@ -641,10 +701,15 @@ const BlogApp = {
         submitBtn.textContent = '提交中...';
         if (tip) tip.textContent = '';
         try {
+            let imageUrl = '';
+            if (this.commentImageData) {
+                if (tip) tip.textContent = '正在上传图片...';
+                imageUrl = await this.uploadCommentImage();
+            }
             const res = await fetch(`${this.config.apiBase}/api/comments`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ postId: this.commentPostId, name, email, content })
+                body: JSON.stringify({ postId: this.commentPostId, name, email, content, image: imageUrl || undefined })
             });
             const data = await res.json().catch(() => ({}));
             if (!res.ok || !data || data.status !== 'success') {
@@ -653,6 +718,7 @@ const BlogApp = {
             nameInput.value = '';
             emailInput.value = '';
             contentInput.value = '';
+            this.clearCommentImage();
             if (tip) tip.textContent = '✓ 留言成功';
             await this.loadComments();
         } catch (err) {

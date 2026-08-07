@@ -125,7 +125,8 @@ node scripts/build-gallery.js
 文章页底部与「我的」仪表盘均提供留言功能：
 
 - 填写**昵称**（必填）与**留言内容**（必填），邮箱可选（不会被公开）
-- 数据通过后端 `/api/comments` 存于 **Netlify Blobs**，按 `postId` 隔离（文章用文件名，仪表盘用 `dashboard`）
+- **支持上传图片**：可附带 1 张图片（jpg/png/gif/webp，≤2MB），留言列表中显示
+- 数据通过后端 `/api/comments` 存于 **Netlify Blobs**，按 `postId` 隔离（文章用文件名，仪表盘用 `dashboard`）；图片经 `/api/upload` 存于独立 Blobs
 - 单篇文章最多 500 条；内容最多 5000 字；超 3 个链接视为垃圾信息会被拦截
 
 ## 🎨 主题
