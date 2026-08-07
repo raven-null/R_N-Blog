@@ -474,21 +474,6 @@ body.home-layout {
     border-bottom: 1px solid var(--border);
 }
 
-.news-feed-title {
-    font-size: 18px;
-    font-weight: 800;
-    letter-spacing: 2px;
-    color: var(--text-primary);
-}
-
-.news-feed-date {
-    margin-left: auto;
-    font-size: 12px;
-    color: var(--text-muted);
-    font-family: 'Courier New', monospace;
-    letter-spacing: 1px;
-}
-
 .news-feed-filter {
     display: flex;
     gap: 8px;
