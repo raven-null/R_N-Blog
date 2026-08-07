@@ -7,7 +7,7 @@
     <link rel="icon" href="/images/TX/01_TX.webp" type="image/webp">
     
     <!-- 主样式 -->
-    <link rel="stylesheet" href="css/style.css?v=2.6.47">
+    <link rel="stylesheet" href="css/style.css?v=2.6.48">
     
     <!-- Marked.js -->
     <script src="js/vendor/marked.min.js"></script>
@@ -1348,11 +1348,11 @@
     </div>
 
     <!-- JavaScript -->
-    <script src="js/theme.js?v=2.6.47"></script>
-    <script src="js/markdown.js?v=2.6.47"></script>
-    <script src="js/chat.js?v=2.6.47"></script>
-    <script src="js/reader.js?v=2.6.47"></script>
-    <script src="js/animations.js?v=2.6.47"></script>
+    <script src="js/theme.js?v=2.6.48"></script>
+    <script src="js/markdown.js?v=2.6.48"></script>
+    <script src="js/chat.js?v=2.6.48"></script>
+    <script src="js/reader.js?v=2.6.48"></script>
+    <script src="js/animations.js?v=2.6.48"></script>
 
     <script>
         // 文章详情页应用
@@ -1419,8 +1419,8 @@
             // 加载所有文章（用于上下篇导航）
             async loadAllPosts() {
                 try {
-                    // 检查缓存
-                    const cachedData = sessionStorage.getItem('blog-posts-cache');
+                    // 检查缓存（带版本号，旧缓存自动失效）
+                    const cachedData = sessionStorage.getItem('blog-posts-cache-v2');
                     if (cachedData) {
                         this.allPosts = JSON.parse(cachedData);
                         return;
@@ -1459,7 +1459,7 @@
                         this.allPosts.sort((a, b) => new Date(b.date) - new Date(a.date));
                         
                         // 缓存结果
-                        sessionStorage.setItem('blog-posts-cache', JSON.stringify(this.allPosts));
+                        sessionStorage.setItem('blog-posts-cache-v2', JSON.stringify(this.allPosts));
                     }
                 } catch (error) {
                     console.warn('加载文章列表失败:', error);
