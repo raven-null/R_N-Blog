@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ï»¿<!DOCTYPE html>
 <html lang="zh-CN">
 
 <head>
@@ -26,15 +26,15 @@
     <!-- ===== CONTENT WRAPPER ===== -->
     <div class="content-wrapper" id="contentWrapper">
 
-        <!-- ¶¥²¿µ¼º½À¸ -->
+        <!-- é¡¶éƒ¨å¯¼èˆªæ  -->
         <header class="top-bar">
             <div class="top-bar-inner">
-                <a href="#" class="top-bar-brand" title="ÇÐ»»È«ÆÁ" onclick="toggleFullscreen(); return false;">¶ÉÑ»_NULL BLOG</a>
+                <a href="#" class="top-bar-brand" title="åˆ‡æ¢å…¨å±" onclick="toggleFullscreen(); return false;">æ¸¡é¸¦_NULL BLOG</a>
                 <div class="top-bar-views" id="viewSwitch">
                     <div class="view-indicator" id="viewIndicator"></div>
-                    <button class="view-btn active" data-view="blog" onclick="BlogApp.switchView('blog')">ÎÄÕÂ</button>
-                    <button class="view-btn" data-view="gallery" onclick="BlogApp.switchView('gallery')">Í¼¿â</button>
-                    <button class="view-btn" data-view="dashboard" onclick="BlogApp.switchView('dashboard')">ÎÒµÄ</button>
+                    <button class="view-btn active" data-view="blog" onclick="BlogApp.switchView('blog')">æ–‡ç« </button>
+                    <button class="view-btn" data-view="gallery" onclick="BlogApp.switchView('gallery')">å›¾åº“</button>
+                    <button class="view-btn" data-view="dashboard" onclick="BlogApp.switchView('dashboard')">æˆ‘çš„</button>
                 </div>
             </div>
         </header>
@@ -43,22 +43,22 @@
         <nav class="nav-bar" id="navBar">
             <div class="nav-inner">
                 <div class="nav-links">
-                    <a href="#" class="nav-link active" onclick="BlogApp.filterByTag(null); return false;">È«²¿</a>
-                    <a href="#" class="nav-link" onclick="BlogApp.filterByTag('¼¼Êõ'); return false;">¼¼Êõ</a>
-                    <a href="#" class="nav-link" onclick="BlogApp.filterByTag('Éú»î'); return false;">Éú»î</a>
+                    <a href="#" class="nav-link active" onclick="BlogApp.filterByTag(null); return false;">å…¨éƒ¨</a>
+                    <a href="#" class="nav-link" onclick="BlogApp.filterByTag('æŠ€æœ¯'); return false;">æŠ€æœ¯</a>
+                    <a href="#" class="nav-link" onclick="BlogApp.filterByTag('ç”Ÿæ´»'); return false;">ç”Ÿæ´»</a>
                     <a href="#" class="nav-link" onclick="BlogApp.filterByTag('AI'); return false;">AI</a>
-                    <a href="#" class="nav-link" onclick="BlogApp.filterByTag('×ÊÑ¶'); return false;">×ÊÑ¶</a>
+                    <a href="#" class="nav-link" onclick="BlogApp.filterByTag('èµ„è®¯'); return false;">èµ„è®¯</a>
                 </div>
                 <div class="nav-tools">
                     <div class="nav-tools-item">
-                        <button class="nav-search-btn" onclick="BlogApp.toggleTagsPanel()" title="±êÇ©">
+                        <button class="nav-search-btn" onclick="BlogApp.toggleTagsPanel()" title="æ ‡ç­¾">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
                                 <line x1="7" y1="7" x2="7.01" y2="7"></line>
                             </svg>
                         </button>
                         <div class="tags-dropdown" id="tagsDropdown">
-                            <div class="tags-dropdown-title" id="tagsDropdownTitle">È«²¿±êÇ©</div>
+                            <div class="tags-dropdown-title" id="tagsDropdownTitle">å…¨éƒ¨æ ‡ç­¾</div>
                             <div class="tags-dropdown-list" id="tagsDropdownList"></div>
                         </div>
                     </div>
@@ -80,13 +80,13 @@
             </div>
         </nav>
 
-        <!-- ¿É¹ö¶¯ÄÚÈÝÇø£¨¹ö¶¯Ìõ½öÔÚ´ËÇøÓòÄÚÏÔÊ¾£© -->
+        <!-- å¯æ»šåŠ¨å†…å®¹åŒºï¼ˆæ»šåŠ¨æ¡ä»…åœ¨æ­¤åŒºåŸŸå†…æ˜¾ç¤ºï¼‰ -->
         <div class="scroll-area" id="scrollArea">
 
             <!-- Main Content -->
             <main class="main-content">
 
-                <!-- ÊÓÍ¼£º²©¿Í -->
+                <!-- è§†å›¾ï¼šåšå®¢ -->
                 <section class="view view-blog" id="view-blog">
                     <div id="posts">
                         <div class="loading">
@@ -96,21 +96,21 @@
                     </div>
                 </section>
 
-                <!-- ÊÓÍ¼£ºÍ¼¿â -->
+                <!-- è§†å›¾ï¼šå›¾åº“ -->
                 <section class="view view-gallery" id="view-gallery" style="display:none;">
                     <div class="gallery-grid" id="galleryGrid"></div>
                 </section>
 
-            <!-- ÊÓÍ¼£ºÒÇ±íÅÌ -->
+            <!-- è§†å›¾ï¼šä»ªè¡¨ç›˜ -->
             <section class="view view-dashboard" id="view-dashboard" style="display:none;">
                 <div class="dashboard">
 
-                    <!-- »¶Ó­Çø -->
+                    <!-- æ¬¢è¿ŽåŒº -->
                     <div class="dash-hero">
-                        <img class="dash-avatar" src="images/TX/01_TX.webp" alt="¶ÉÑ»NULL">
+                        <img class="dash-avatar" src="images/TX/01_TX.webp" alt="æ¸¡é¸¦NULL">
                         <div class="dash-identity">
-                            <div class="dash-name">¶ÉÑ»NULL</div>
-                            <div class="dash-bio">È«Õ»¿ª·¢Õß ¡¤ ÄÚÈÝ´´×÷Õß ¡¤ ÖÕÉíÑ§Ï°Õß</div>
+                            <div class="dash-name">æ¸¡é¸¦NULL</div>
+                            <div class="dash-bio">å…¨æ ˆå¼€å‘è€… Â· å†…å®¹åˆ›ä½œè€… Â· ç»ˆèº«å­¦ä¹ è€…</div>
                         </div>
                         <div class="dash-clock" id="dashClock">
                             <div class="dash-clock-date" id="dashClockDate"></div>
@@ -118,17 +118,17 @@
                         </div>
                     </div>
 
-                    <!-- Í³¼Æ¸ÅÀÀ -->
+                    <!-- ç»Ÿè®¡æ¦‚è§ˆ -->
                     <div class="dashboard-stats" id="dashboardStats"></div>
 
-                    <!-- ¹ØÓÚ -->
+                    <!-- å…³äºŽ -->
                     <div class="dash-bottom">
                         <div class="dash-panel">
-                            <div class="dash-panel-title">¹ØÓÚ</div>
+                            <div class="dash-panel-title">å…³äºŽ</div>
                             <div class="dash-about-info">
-                                <span>°æ±¾ v2.0</span>
-                                <span>´¿Ç°¶Ë ¡¤ GitHub Pages</span>
-                                <span>×îºó¸üÐÂ 2026-08-06</span>
+                                <span>ç‰ˆæœ¬ v2.0</span>
+                                <span>çº¯å‰ç«¯ Â· GitHub Pages</span>
+                                <span>æœ€åŽæ›´æ–° 2026-08-06</span>
                             </div>
                         </div>
                     </div>
@@ -139,7 +139,7 @@
 
             <!-- Footer -->
             <footer class="footer">
-                <div class="footer-left">&copy; ¶ÉÑ»_NULL BLOG 2.0</div>
+                <div class="footer-left">&copy; æ¸¡é¸¦_NULL BLOG 2.0</div>
                 <div class="footer-right">
                     <a href="https://github.com/raven-null/R_N-Blog" class="footer-link" target="_blank" rel="noopener">GitHub</a>
                     <a href="feed.xml" class="footer-link" target="_blank" rel="noopener">RSS</a>
@@ -149,27 +149,27 @@
         </div>
     </div>
 
-    <!-- ÔÄ¶Á½ø¶ÈÌõ -->
+    <!-- é˜…è¯»è¿›åº¦æ¡ -->
     <div class="reading-progress" id="readingProgress"></div>
 
-    <!-- »Øµ½¶¥²¿°´Å¥ -->
-    <button class="back-to-top" id="backToTop" title="»Øµ½¶¥²¿">
+    <!-- å›žåˆ°é¡¶éƒ¨æŒ‰é’® -->
+    <button class="back-to-top" id="backToTop" title="å›žåˆ°é¡¶éƒ¨">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="12" y1="19" x2="12" y2="5"></line>
             <polyline points="5 12 12 5 19 12"></polyline>
         </svg>
     </button>
 
-    <!-- Í¼¿âµÆÏä -->
+    <!-- å›¾åº“ç¯ç®± -->
     <div class="gallery-lightbox" id="galleryLightbox" onclick="closeGalleryLightbox()">
         <div class="gallery-lightbox-counter" id="galleryLightboxCounter" onclick="event.stopPropagation()">1 / 0</div>
-        <button class="gallery-lightbox-btn gallery-lightbox-close" title="¹Ø±Õ" onclick="event.stopPropagation(); closeGalleryLightbox()">&times;</button>
-        <button class="gallery-lightbox-btn gallery-lightbox-nav prev" title="ÉÏÒ»ÕÅ" onclick="event.stopPropagation(); galleryLightboxNav(-1)">&#8249;</button>
-        <img id="galleryLightboxImg" src="" alt="Í¼Æ¬Ô¤ÀÀ" onclick="event.stopPropagation()">
-        <button class="gallery-lightbox-btn gallery-lightbox-nav next" title="ÏÂÒ»ÕÅ" onclick="event.stopPropagation(); galleryLightboxNav(1)">&#8250;</button>
+        <button class="gallery-lightbox-btn gallery-lightbox-close" title="å…³é—­" onclick="event.stopPropagation(); closeGalleryLightbox()">&times;</button>
+        <button class="gallery-lightbox-btn gallery-lightbox-nav prev" title="ä¸Šä¸€å¼ " onclick="event.stopPropagation(); galleryLightboxNav(-1)">&#8249;</button>
+        <img id="galleryLightboxImg" src="" alt="å›¾ç‰‡é¢„è§ˆ" onclick="event.stopPropagation()">
+        <button class="gallery-lightbox-btn gallery-lightbox-nav next" title="ä¸‹ä¸€å¼ " onclick="event.stopPropagation(); galleryLightboxNav(1)">&#8250;</button>
         <div class="gallery-lightbox-actions" onclick="event.stopPropagation()">
-            <button class="gallery-lightbox-btn gallery-lightbox-action" id="galleryLightboxSlide" title="»ÃµÆÆ¬²¥·Å" onclick="toggleGallerySlideshow()">? ²¥·Å</button>
-            <a class="gallery-lightbox-btn gallery-lightbox-action" id="galleryLightboxDownload" href="#" download title="ÏÂÔØÍ¼Æ¬" onclick="event.stopPropagation()">ÏÂÔØ</a>
+            <button class="gallery-lightbox-btn gallery-lightbox-action" id="galleryLightboxSlide" title="å¹»ç¯ç‰‡æ’­æ”¾" onclick="toggleGallerySlideshow()">â–¶ æ’­æ”¾</button>
+            <a class="gallery-lightbox-btn gallery-lightbox-action" id="galleryLightboxDownload" href="#" download title="ä¸‹è½½å›¾ç‰‡" onclick="event.stopPropagation()">ä¸‹è½½</a>
         </div>
     </div>
 
@@ -213,7 +213,7 @@
             window._cardObserver = observer;
         }
 
-        // ===== Í¼¿âµÆÏä =====
+        // ===== å›¾åº“ç¯ç®± =====
         window.__galleryImages = [];
         window.__galleryIndex = 0;
         let __galleryTimer = null;
@@ -269,7 +269,7 @@
                 stopGallerySlideshow();
             } else {
                 __galleryTimer = setInterval(() => galleryLightboxNav(1), 2500);
-                if (btn) btn.textContent = '? ÔÝÍ£';
+                if (btn) btn.textContent = 'â¸ æš‚åœ';
             }
         }
 
@@ -279,7 +279,7 @@
                 __galleryTimer = null;
             }
             const btn = document.getElementById('galleryLightboxSlide');
-            if (btn) btn.textContent = '? ²¥·Å';
+            if (btn) btn.textContent = 'â–¶ æ’­æ”¾';
         }
 
         function closeGalleryLightbox() {
@@ -294,7 +294,7 @@
             }
         }
 
-        // ===== È«ÆÁÇÐ»» =====
+        // ===== å…¨å±åˆ‡æ¢ =====
         function toggleFullscreen() {
             const el = document.documentElement;
             const isFull = document.fullscreenElement || document.webkitFullscreenElement;
@@ -303,31 +303,31 @@
                 else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
             } else {
                 const req = el.requestFullscreen ? el.requestFullscreen() : el.webkitRequestFullscreen && el.webkitRequestFullscreen();
-                if (req && req.catch) req.catch(err => console.warn('È«ÆÁÇëÇóÊ§°Ü:', err.message));
+                if (req && req.catch) req.catch(err => console.warn('å…¨å±è¯·æ±‚å¤±è´¥:', err.message));
             }
         }
 
-        // ===== »¶Ó­ÇøÈÕÆÚÊ±¼ä =====
+        // ===== æ¬¢è¿ŽåŒºæ—¥æœŸæ—¶é—´ =====
         function updateDashClock() {
             const dateEl = document.getElementById('dashClockDate');
             const timeEl = document.getElementById('dashClockTime');
             if (!dateEl || !timeEl) return;
             const now = new Date();
-            const week = ['ÈÕ', 'Ò»', '¶þ', 'Èý', 'ËÄ', 'Îå', 'Áù'][now.getDay()];
-            dateEl.textContent = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ÐÇÆÚ${week}`;
+            const week = ['æ—¥', 'ä¸€', 'äºŒ', 'ä¸‰', 'å››', 'äº”', 'å…­'][now.getDay()];
+            dateEl.textContent = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} æ˜ŸæœŸ${week}`;
             timeEl.textContent = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
         }
 
         // ===== Init =====
         document.addEventListener('DOMContentLoaded', () => {
-            // »¶Ó­ÇøÈÕÆÚÊ±¼ä£¨Ã¿Ãë¸üÐÂ£©
+            // æ¬¢è¿ŽåŒºæ—¥æœŸæ—¶é—´ï¼ˆæ¯ç§’æ›´æ–°ï¼‰
             updateDashClock();
             setInterval(updateDashClock, 1000);
 
             // Scroll observer
             initScrollObserver();
 
-            // ÔÄ¶Á½ø¶ÈÌõ + »Øµ½¶¥²¿°´Å¥ + Ò³½ÅÕÚµ²´¦Àí£¨¹ö¶¯·¢ÉúÔÚ #scrollArea£©
+            // é˜…è¯»è¿›åº¦æ¡ + å›žåˆ°é¡¶éƒ¨æŒ‰é’® + é¡µè„šé®æŒ¡å¤„ç†ï¼ˆæ»šåŠ¨å‘ç”Ÿåœ¨ #scrollAreaï¼‰
             (function initScrollUI() {
                 const progress = document.getElementById('readingProgress');
                 const backToTop = document.getElementById('backToTop');
@@ -340,7 +340,7 @@
                     progress.style.width = scrollHeight > 0 ? (scrollTop / scrollHeight * 100) + '%' : '0%';
                     backToTop.classList.toggle('show', scrollTop > 400);
 
-                    // Ò³½Å½øÈëÊÓ¿ÚÊ±Òþ²ØÓÒ²à¹Ì¶¨°´Å¥£¬±ÜÃâÕÚµ²Ò³½ÅÄÚÈÝ
+                    // é¡µè„šè¿›å…¥è§†å£æ—¶éšè—å³ä¾§å›ºå®šæŒ‰é’®ï¼Œé¿å…é®æŒ¡é¡µè„šå†…å®¹
                     const footer = document.querySelector('.footer');
                     const footerInView = !!footer && footer.getBoundingClientRect().top <= window.innerHeight;
                     document.body.classList.toggle('footer-visible', footerInView);
@@ -354,7 +354,7 @@
                 });
             })();
 
-            // ESC ¹Ø±ÕËÑË÷ / Í¼¿âµÆÏä£»×óÓÒ·½Ïò¼üÇÐ»»Í¼Æ¬
+            // ESC å…³é—­æœç´¢ / å›¾åº“ç¯ç®±ï¼›å·¦å³æ–¹å‘é”®åˆ‡æ¢å›¾ç‰‡
             document.addEventListener('keydown', (e) => {
                 const lb = document.getElementById('galleryLightbox');
                 const lbOpen = lb && lb.classList.contains('show');
@@ -394,7 +394,7 @@
                 }
             });
 
-            // Click outside to close panels£¨ËÑË÷¿ò / ±êÇ©Ãæ°å£©
+            // Click outside to close panelsï¼ˆæœç´¢æ¡† / æ ‡ç­¾é¢æ¿ï¼‰
             document.addEventListener('click', (e) => {
                 const tools = document.querySelector('.nav-tools');
                 if (tools && !tools.contains(e.target)) {
@@ -404,7 +404,7 @@
 
             // Init blog app
             BlogApp.init().then(() => {
-                // ÎÄÕÂÊý ¡ú Ò³½Å£»±êÇ©Êý ¡ú "È«²¿±êÇ©"Ãæ°å±êÌâ£¨×ÖÊýÍ³¼ÆÒÑÉ¾³ý£©
+                // æ–‡ç« æ•° â†’ é¡µè„šï¼›æ ‡ç­¾æ•° â†’ "å…¨éƒ¨æ ‡ç­¾"é¢æ¿æ ‡é¢˜ï¼ˆå­—æ•°ç»Ÿè®¡å·²åˆ é™¤ï¼‰
                 const totalPosts = BlogApp.posts.length;
                 const tagCount = BlogApp.posts.reduce((set, post) => {
                     (post.tags || []).forEach(tag => set.add(tag));
@@ -412,12 +412,12 @@
                 }, new Set()).size;
 
                 const footerStats = document.getElementById('footerStats');
-                if (footerStats) footerStats.textContent = ` ¡¤ ÎÄÕÂ ${totalPosts} Æª`;
+                if (footerStats) footerStats.textContent = ` Â· æ–‡ç«  ${totalPosts} ç¯‡`;
 
                 const tagsTitle = document.getElementById('tagsDropdownTitle');
-                if (tagsTitle) tagsTitle.textContent = `È«²¿±êÇ©£¨${tagCount} ¸ö£©`;
+                if (tagsTitle) tagsTitle.textContent = `å…¨éƒ¨æ ‡ç­¾ï¼ˆ${tagCount} ä¸ªï¼‰`;
 
-                // ³õÊ¼»¯ÊÓÍ¼»¬¿éÖ¸Ê¾Æ÷Î»ÖÃ
+                // åˆå§‹åŒ–è§†å›¾æ»‘å—æŒ‡ç¤ºå™¨ä½ç½®
                 setTimeout(() => BlogApp.moveIndicator('blog'), 0);
 
                 // Init card observer after posts render
@@ -438,7 +438,7 @@
 
     </script>
 
-    <!-- ²»Ëâ×ÓÍ³¼Æ -->
+    <!-- ä¸è’œå­ç»Ÿè®¡ -->
     <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
 </body>
 
