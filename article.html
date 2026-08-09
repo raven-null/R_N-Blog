@@ -1913,12 +1913,16 @@
                     BlogAnimations.animateArticleContent(content);
                 }
 
+                // 首屏代码块立即高亮
+                requestAnimationFrame(() => this.highlightVisibleBlocks(content));
+
                 // 剩余段落用 requestIdleCallback 渐进追加
                 if (sections.length > 0) {
                     const appendNext = () => {
                         if (sections.length === 0) {
-                            // 全部渲染完成后高亮剩余代码块
+                            // 全部渲染完成后：高亮剩余代码块 + 生成完整目录
                             this.highlightRemainingBlocks(content);
+                            requestAnimationFrame(() => this.generateTableOfContents());
                             return;
                         }
                         const chunk = sections.splice(0, 2).join('');
@@ -1934,13 +1938,10 @@
                     } else {
                         setTimeout(appendNext, 0);
                     }
+                } else {
+                    // 短文无增量渲染，直接生成目录
+                    requestAnimationFrame(() => this.generateTableOfContents());
                 }
-
-                // 首屏代码块立即高亮，其余用 IntersectionObserver 懒高亮
-                requestAnimationFrame(() => this.highlightVisibleBlocks(content));
-
-                // 延迟生成目录
-                requestAnimationFrame(() => this.generateTableOfContents());
             },
 
             // 高亮视口内可见的代码块（首屏立即 + 滚动时按需）
