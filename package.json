@@ -20,7 +20,8 @@
     "dayjs": "1.11.13",
     "fast-xml-parser": "^5.4.1",
     "md5": "^2.3.0",
-    "ofetch": "^1.5.1"
+    "ofetch": "^1.5.1",
+    "sharp": "^0.33.5"
   },
   "devDependencies": {
     "@types/md5": "^2.3.6",
