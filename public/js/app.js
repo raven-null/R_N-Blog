@@ -31,11 +31,10 @@ const BlogApp = {
         this.handleRoute();
     },
 
-    // 加载所有文章
+    // 加载所有文章（静态文件 + Blobs 后台文章）
     async loadPosts() {
         try {
-            // 检查缓存（带版本号，旧缓存自动失效）
-            const CACHE_KEY = 'blog-posts-data-v10';
+            const CACHE_KEY = 'blog-posts-data-v11';
             const cachedData = sessionStorage.getItem(CACHE_KEY);
             if (cachedData) {
                 this.posts = JSON.parse(cachedData);
@@ -43,21 +42,27 @@ const BlogApp = {
                 return;
             }
 
-            const postFiles = await this.getPostFiles();
             this.posts = [];
-            
-            // 并行加载所有文章
-            const promises = postFiles.map(file => this.loadPost(file));
-            const results = await Promise.all(promises);
-            this.posts = results.filter(post => post !== null);
-            
+
+            // 并行加载：静态文件 + Blobs 后台文章
+            const [staticResults, blobResults] = await Promise.all([
+                this.loadStaticPosts(),
+                this.loadBlobPosts(),
+            ]);
+
+            // 合并，Blobs 文章优先（按 id 去重）
+            const staticIds = new Set(staticResults.map(p => p.id));
+            const allPosts = [...staticResults, ...blobResults.filter(p => !staticIds.has(p.id))];
+            this.posts = allPosts.filter(p => p !== null);
+
             // 按日期降序排序
             this.posts.sort((a, b) => new Date(b.date) - new Date(a.date));
             this.filteredPosts = [...this.posts];
-            
-            // 缓存结果（仅缓存元数据与字数，不缓存正文，避免超长正文超出存储配额）
+
+            // 缓存结果
             try {
                 const cacheData = this.posts.map(p => ({
+                    id: p.id,
                     filename: p.filename,
                     title: p.title,
                     date: p.date,
@@ -65,7 +70,8 @@ const BlogApp = {
                     author: p.author,
                     excerpt: p.excerpt,
                     image: p.image,
-                    wordCount: p.wordCount || 0
+                    wordCount: p.wordCount || 0,
+                    content: p.content || '',
                 }));
                 sessionStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
             } catch (e) {
@@ -74,6 +80,38 @@ const BlogApp = {
         } catch (error) {
             console.error('加载文章失败:', error);
         }
+    },
+
+    // 加载静态文件文章
+    async loadStaticPosts() {
+        try {
+            const postFiles = await this.getPostFiles();
+            const promises = postFiles.map(file => this.loadPost(file));
+            return (await Promise.all(promises)).filter(p => p !== null);
+        } catch { return []; }
+    },
+
+    // 加载 Blobs 后台文章
+    async loadBlobPosts() {
+        try {
+            const res = await fetch('/api/admin?action=articles');
+            const data = await res.json();
+            if (data.status !== 'success' || !Array.isArray(data.data)) return [];
+            return data.data
+                .filter(a => a.status === 'published')
+                .map(a => ({
+                    id: a.id,
+                    filename: a.filename || `${a.id}.md`,
+                    title: a.title,
+                    date: a.date,
+                    tags: a.tags || [],
+                    author: a.author || '渡鸦NULL',
+                    excerpt: a.excerpt || '',
+                    image: a.image || this.getRandomBgImage(a.id),
+                    wordCount: a.wordCount || 0,
+                    content: '', // 列表不加载正文
+                }));
+        } catch { return []; }
     },
 
     // 获取文章文件列表
@@ -187,7 +225,7 @@ const BlogApp = {
         const readTime = Math.max(1, Math.round(wordCount / 300));
 
         return `
-            <div class="card" onclick="BlogApp.openPost('${post.filename}')">
+            <div class="card" onclick="BlogApp.openPost('${post.filename}', '${post.id || ''}')">
                 ${post.image ? `
                     <div class="card-img">
                         <img src="${post.image}" alt="${post.title}" class="img-placeholder" loading="lazy"
@@ -246,9 +284,13 @@ const BlogApp = {
         });
     },
 
-    // 打开文章详情页（资讯卡片进入站内阅读；后端资讯无正文 → 新窗口打开原文）
-    openPost(filename) {
-        window.location.href = `article.html?post=${filename}`;
+    // 打开文章详情页
+    openPost(filename, id) {
+        if (id) {
+            window.location.href = `article.html?post=${filename}&blob=${id}`;
+        } else {
+            window.location.href = `article.html?post=${filename}`;
+        }
     },
 
     // 切换搜索框显示（打开时自动关闭标签面板，避免重叠）

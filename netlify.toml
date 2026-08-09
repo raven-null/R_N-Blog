@@ -36,3 +36,13 @@
   from = "/api/refresh"
   to = "/.netlify/functions/refresh"
   status = 200
+
+[[redirects]]
+  from = "/api/admin"
+  to = "/.netlify/functions/admin"
+  status = 200
+
+[[redirects]]
+  from = "/api/admin-image"
+  to = "/.netlify/functions/admin-image"
+  status = 200

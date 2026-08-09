@@ -7,7 +7,7 @@
     <link rel="icon" href="/images/TX/01_TX.webp" type="image/webp">
     
     <!-- 主样式 -->
-    <link rel="stylesheet" href="css/style.css?v=2.7.0">
+    <link rel="stylesheet" href="css/style.css?v=2.7.1">
     
     <!-- Marked.js -->
     <script src="js/vendor/marked.min.js"></script>
@@ -1660,11 +1660,11 @@
     </div>
 
     <!-- JavaScript -->
-    <script src="js/theme.js?v=2.7.0"></script>
-    <script src="js/markdown.js?v=2.7.0"></script>
-    <script src="js/chat.js?v=2.7.0"></script>
-    <script src="js/reader.js?v=2.7.0"></script>
-    <script src="js/animations.js?v=2.7.0"></script>
+    <script src="js/theme.js?v=2.7.1"></script>
+    <script src="js/markdown.js?v=2.7.1"></script>
+    <script src="js/chat.js?v=2.7.1"></script>
+    <script src="js/reader.js?v=2.7.1"></script>
+    <script src="js/animations.js?v=2.7.1"></script>
 
     <script>
         // 文章详情页应用
@@ -1690,22 +1690,52 @@
                 const urlParams = new URLSearchParams(window.location.search);
                 const postFile = urlParams.get('post');
                 const isNews = urlParams.get('type') === 'news';
+                const blobId = urlParams.get('blob');
 
                 if (!postFile) {
                     this.showError('未指定文章');
                     return;
                 }
 
-                // 加载文章和文章列表
-                await this.loadArticle(postFile, isNews);
-                // 初始化留言区（普通文章与站内资讯均可留言）
-                this.initComments(postFile);
+                // 加载文章（Blobs / 静态 / 资讯）
+                if (blobId) {
+                    await this.loadBlobArticle(blobId, postFile);
+                } else {
+                    await this.loadArticle(postFile, isNews);
+                }
+                // 初始化留言区
+                this.initComments(blobId || postFile);
                 // 异步加载文章列表，不阻塞文章渲染（资讯模式不加载，避免上下篇导航错乱）
                 if (!isNews) {
                     this.loadAllPosts().then(() => this.renderNavigation());
                 } else {
                     const nav = document.getElementById('article-navigation');
                     if (nav) nav.style.display = 'none';
+                }
+            },
+
+            // 加载 Blobs 后台文章
+            async loadBlobArticle(blobId, filename) {
+                try {
+                    const res = await fetch(`/api/admin?action=articles&id=${blobId}`);
+                    const data = await res.json();
+                    if (data.status !== 'success' || !data.data) throw new Error('文章不存在');
+                    const d = data.data;
+                    this.currentPost = {
+                        filename: filename,
+                        title: d.title,
+                        date: d.date || d.createdAt,
+                        update: d.updatedAt,
+                        tags: d.tags || [],
+                        author: d.author || '渡鸦NULL',
+                        content: d.content,
+                        frontmatter: {},
+                    };
+                    this.renderArticle();
+                    document.title = `${this.currentPost.title} - 我的博客`;
+                } catch (error) {
+                    console.error('加载Blobs文章失败:', error);
+                    this.showError('文章加载失败');
                 }
             },
 
@@ -1791,14 +1821,15 @@
             // 加载所有文章（用于上下篇导航，优先复用首页缓存）
             async loadAllPosts() {
                 try {
-                    // 优先复用首页 sessionStorage 缓存（v9，仅元数据）
-                    const homepageCache = sessionStorage.getItem('blog-posts-data-v10');
+                    // 优先复用首页 sessionStorage 缓存
+                    const homepageCache = sessionStorage.getItem('blog-posts-data-v11');
                     if (homepageCache) {
                         this.allPosts = JSON.parse(homepageCache).map(p => ({
                             filename: p.filename,
                             title: p.title,
                             date: p.date,
-                            tags: p.tags || []
+                            tags: p.tags || [],
+                            id: p.id || '',
                         }));
                         this.allPosts.sort((a, b) => new Date(b.date) - new Date(a.date));
                         return;
@@ -1811,39 +1842,52 @@
                         return;
                     }
 
-                    const response = await fetch('posts/manifest.json');
-                    if (response.ok) {
-                        const files = await response.json();
-                        const posts = [];
-
-                        const promises = files.map(async (file) => {
-                            try {
-                                const postResponse = await fetch(`posts/${file}`);
-                                if (postResponse.ok) {
-                                    const content = await postResponse.text();
-                                    const { frontmatter } = MarkdownParser.parseFrontmatter(content);
-                                    return {
-                                        filename: file,
-                                        title: frontmatter.title || file.replace('.md', ''),
-                                        date: frontmatter.date || new Date().toISOString().split('T')[0],
-                                        tags: frontmatter.tags || []
-                                    };
-                                }
-                            } catch (e) {
-                                console.warn(`跳过文章 ${file}:`, e);
-                            }
-                            return null;
-                        });
-
-                        const results = await Promise.all(promises);
-                        this.allPosts = results.filter(post => post !== null);
-                        this.allPosts.sort((a, b) => new Date(b.date) - new Date(a.date));
-                        
-                        sessionStorage.setItem('blog-posts-cache-v2', JSON.stringify(this.allPosts));
-                    }
+                    // 静态文件 + Blobs 并行加载
+                    const [staticPosts, blobPosts] = await Promise.all([
+                        this.loadStaticPostList(),
+                        this.loadBlobPostList(),
+                    ]);
+                    this.allPosts = [...staticPosts, ...blobPosts];
+                    this.allPosts.sort((a, b) => new Date(b.date) - new Date(a.date));
+                    sessionStorage.setItem('blog-posts-cache-v2', JSON.stringify(this.allPosts));
                 } catch (error) {
                     console.warn('加载文章列表失败:', error);
                 }
+            },
+
+            async loadStaticPostList() {
+                try {
+                    const response = await fetch('posts/manifest.json');
+                    if (!response.ok) return [];
+                    const files = await response.json();
+                    const promises = files.map(async (file) => {
+                        try {
+                            const r = await fetch(`posts/${file}`);
+                            if (r.ok) {
+                                const content = await r.text();
+                                const { frontmatter } = MarkdownParser.parseFrontmatter(content);
+                                return { filename: file, title: frontmatter.title || file.replace('.md', ''), date: frontmatter.date, tags: frontmatter.tags || [] };
+                            }
+                        } catch {}
+                        return null;
+                    });
+                    return (await Promise.all(promises)).filter(p => p !== null);
+                } catch { return []; }
+            },
+
+            async loadBlobPostList() {
+                try {
+                    const res = await fetch('/api/admin?action=articles');
+                    const data = await res.json();
+                    if (data.status !== 'success' || !Array.isArray(data.data)) return [];
+                    return data.data.filter(a => a.status === 'published').map(a => ({
+                        filename: a.filename || `${a.id}.md`,
+                        title: a.title,
+                        date: a.date,
+                        tags: a.tags || [],
+                        id: a.id,
+                    }));
+                } catch { return []; }
             },
 
             // 渲染文章头部和正文
@@ -2213,13 +2257,13 @@
 
                 navigation.innerHTML = `
                     ${prevPost ? `
-                        <a href="article.html?post=${prevPost.filename}" class="nav-card prev">
+                        <a href="article.html?post=${prevPost.filename}${prevPost.id ? '&blob=' + prevPost.id : ''}" class="nav-card prev">
                             <div class="nav-label">← 上一篇</div>
                             <div class="nav-title">${prevPost.title}</div>
                         </a>
                     ` : '<div></div>'}
                     ${nextPost ? `
-                        <a href="article.html?post=${nextPost.filename}" class="nav-card next">
+                        <a href="article.html?post=${nextPost.filename}${nextPost.id ? '&blob=' + nextPost.id : ''}" class="nav-card next">
                             <div class="nav-label">下一篇 →</div>
                             <div class="nav-title">${nextPost.title}</div>
                         </a>
