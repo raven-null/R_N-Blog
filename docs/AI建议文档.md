@@ -1959,3 +1959,211 @@ async loadNewsArticle(id) {
 - **导航**：上/下一篇瞬时可用（复用缓存，无额外请求）
 - **代码高亮**：首屏可见代码即时高亮，其余按需
 - **内存**：首页不再驻留所有文章正文，标签页长时间打开不卡
+
+---
+
+# 前后端合并部署至 Netlify 方案
+
+> 目标：将博客前端（`02-personal-blog`，GitHub Pages）与后端（`02-blog-server`，Netlify Functions）合并为一个 Netlify 站点，消除跨域、简化部署、统一域名。
+
+### 1. 现状
+
+| 项目 | 部署位置 | 域名 | 技术 |
+|------|----------|------|------|
+| 前端 `02-personal-blog` | GitHub Pages | `ravennull.work` | 纯静态 HTML/CSS/JS |
+| 后端 `02-blog-server` | Netlify | `r-n-blog-server.netlify.app` | Netlify Functions + Blobs |
+
+**问题**：前端通过 `fetch('https://r-n-blog-server.netlify.app/api/...')` 跨域调用后端，需要 CORS 配置，且依赖两个平台的可用性。
+
+### 2. 合并后目录结构
+
+```
+blog-unified/                        # 合并后的项目根目录
+├── netlify.toml                     # 合并后的部署配置
+├── package.json                     # 后端依赖（netlify/functions 需要）
+├── tsconfig.json                    # 后端 TypeScript 配置
+├── pnpm-lock.yaml
+│
+├── netlify/                         # 后端 Netlify Functions
+│   └── functions/
+│       ├── news.ts                  # 资讯聚合 API
+│       ├── comments.ts              # 评论 CRUD
+│       ├── upload.ts                # 图片上传
+│       ├── image.ts                 # 图片服务
+│       ├── refresh.ts               # 定时刷新资讯缓存
+│       └── _shared/                 # 共享库（blob、cors、news sources 等）
+│
+├── index.html                       # 前端首页
+├── article.html                     # 前端文章页
+├── css/                             # 前端样式
+├── js/                              # 前端脚本
+├── images/                          # 前端图片
+├── posts/                           # Markdown 文章
+├── data/                            # 资讯 fallback 数据
+├── favicon.ico
+├── feed.xml
+├── CNAME                            # 域名配置（可保留或删除）
+└── .nojekyll
+```
+
+### 3. 合并步骤
+
+#### 第一步：创建统一项目
+
+```bash
+# 新建合并目录
+mkdir blog-unified && cd blog-unified
+
+# 初始化 git
+git init
+
+# 复制前端所有文件（保留目录结构）
+# 将 02-personal-blog 下的 index.html、article.html、css/、js/、
+# images/、posts/、data/、favicon.ico、feed.xml、.nojekyll 等全部复制过来
+
+# 复制后端核心文件
+# 将 02-blog-server 下的 netlify/、package.json、tsconfig.json、
+# pnpm-lock.yaml、pnpm-workspace.yaml 复制过来
+```
+
+#### 第二步：合并 netlify.toml
+
+```toml
+[build]
+  # 无构建步骤，纯静态 + Functions
+  command = "echo 'Static site with Functions'"
+  publish = "."                        # 发布根目录（前端静态文件所在）
+  functions = "netlify/functions"
+
+[functions]
+  # 使用 esbuild 或 tsc 编译 Functions
+  node_bundler = "esbuild"
+
+# API 路由 → Functions（必须在 SPA catch-all 之前）
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+
+# 前端多页应用：不需要 catch-all（index.html 和 article.html 各自独立）
+# 如需 SPA 路由可按需添加：
+# [[redirects]]
+#   from = "/*"
+#   to = "/index.html"
+#   status = 200
+```
+
+#### 第三步：修改前端 apiBase 为同源
+
+`js/app.js` 第 10 行：
+
+```javascript
+// 修改前（跨域）
+apiBase: 'https://r-n-blog-server.netlify.app'
+
+// 修改后（同源，留空即可）
+apiBase: ''
+```
+
+所有 `fetch(this.config.apiBase + '/api/...')` 会自动请求同源 `/api/...`，无需 CORS。
+
+#### 第四步：处理 commentImageSrc
+
+`js/app.js` 中 `commentImageSrc()` 方法：
+
+```javascript
+// 修改前：相对路径补全为后端绝对地址
+commentImageSrc(url) {
+    if (!url) return '';
+    if (/^https?:\/\//.test(url)) return url;
+    if (url.startsWith('/api/')) return this.config.apiBase + url;
+    return url;
+}
+
+// 修改后：同源直接返回
+commentImageSrc(url) {
+    if (!url) return '';
+    if (/^https?:\/\//.test(url)) return url;
+    return url;  // /api/image?key=xx 直接同源请求
+}
+```
+
+#### 第五步：删除后端 status 页面
+
+删除 `02-blog-server/public/index.html`（后端的占位状态页），前端的 `index.html` 成为站点首页。
+
+#### 第六步：清理 CORS 配置
+
+后端 `_shared/cors.ts` 中的 CORS 头可保留（方便外部 API 消费者），但 `ALLOWED_ORIGIN` 环境变量不再必需，可设置为 `*` 或直接删除。
+
+#### 第七步：合并 package.json
+
+```json
+{
+  "name": "raven-blog",
+  "private": true,
+  "scripts": {
+    "dev": "netlify dev",
+    "build": "echo 'Static site'"
+  },
+  "dependencies": {
+    "@netlify/blobs": "^10.7.12",
+    "@netlify/functions": "^5.3.0"
+    // ... 后端其他依赖
+  }
+}
+```
+
+> 前端无需 npm 依赖（纯静态），只需保留后端的 `package.json`。
+
+### 4. 部署流程
+
+```bash
+# 1. 推送到 GitHub
+git remote add origin https://github.com/raven-null/blog-unified.git
+git add -A && git commit -m "合并前后端"
+git push -u origin main
+
+# 2. Netlify → Add new site → Import from GitHub
+# 3. 构建配置自动读取 netlify.toml：
+#    - Build command: echo 'Static site'
+#    - Publish dir: .
+#    - Functions dir: netlify/functions
+# 4. 配置环境变量：
+#    - ADMIN_KEY（评论管理密钥）
+#    - MIHOYO_*（如需米哈游登录，本项目不需要）
+# 5. 绑定自定义域名：ravennull.work
+# 6. DNS 指向 Netlify（CNAME → xxx.netlify.app）
+```
+
+### 5. 关键注意事项
+
+| 事项 | 说明 |
+|------|------|
+| **redirect 顺序** | `/api/*` 必须在 `/*` catch-all 之前，否则 API 请求会被拦截为 HTML |
+| **publish 目录** | 必须为 `.`（根目录），否则 `index.html`、`article.html` 等无法被访问 |
+| **Functions 运行时** | Netlify Functions 使用 Node.js，需确保 `tsconfig.json` 兼容 |
+| **Blobs 存储** | 合并后 Blobs store 名称不变（`newsnow-comments`、`comment-images`），数据无需迁移 |
+| **GitHub Pages** | 合并后可删除 `.github/workflows/` 中的部署配置和 `CNAME` 文件 |
+| **定时任务** | 后端 `refresh.ts` 的 `@hourly` cron 需在 Netlify Scheduled Functions 中配置 |
+| **域名切换** | DNS 从 GitHub Pages 切换到 Netlify 时会有短暂不可用（TTL 相关） |
+
+### 6. 合并收益
+
+- **消除跨域**：同源请求，无需 CORS，调试更简单
+- **统一部署**：一次推送，前端 + 后端同时更新
+- **统一域名**：`ravennull.work` 同时承载页面和 API
+- **降低成本**：只需维护一个 Netlify 站点
+- **简化开发**：`netlify dev` 一个命令启动前端 + Functions 联调
+
+### 7. 优先级
+
+| 优先级 | 事项 | 工作量 |
+|--------|------|--------|
+| P0 | 创建统一项目 + 合并文件 | 小 |
+| P0 | 合并 netlify.toml | 极小 |
+| P0 | 修改 apiBase 为同源 | 极小 |
+| P0 | Netlify 部署 + 域名切换 | 小 |
+| P1 | 删除后端 status 页面 + 清理 CORS | 极小 |
+| P1 | 验证评论/资讯/图片上传全部正常 | 小 |
+| P2 | 清理旧仓库（GitHub Pages 配置） | 极小 |
