@@ -1694,3 +1694,268 @@ git add . && git commit -m "更新每日资讯" && git push origin main
 
 **状态：** AI 助手部分已实施（v2.2.0）；Anime.js 动画方案已实施（v2.4.0）；首页改造方案已实施（v2.4.2，P0/P1 项）；标签区改为导航栏"全部标签"面板（v2.4.5）；Hero 重设计已实施（v2.5.0，P0/P1 项）；animejs.com 动效借鉴已实施（v2.5.2，P0/P1 项）；Hero 区重新设计已实施（v2.6.0，方案 A）；Hero 与内容区左右切换方案待评审；省去 Hero 区方案已实施（v2.6.3，方案 A）；"我的"个人仪表盘已实施（v2.6.16）；文章页阅读体验已实施（v2.6.25）；"推荐"页面设计方案已改版为「每日新闻」视图（v2.6.58，位于图库与我的之间，列表式展示资讯，无卡片图片）；「资讯每日更新」自动化方案已实施（v2.6.51，含资讯站内阅读 2.1 节）
 **作者：** 渡鸦NULL
+
+---
+
+# 长文本加载性能优化方案
+
+> 目标：解决加载长篇文章时的卡顿与等待问题，从**网络请求、解析渲染、缓存策略**三个维度系统性提速。
+
+### 1. 现状与瓶颈分析
+
+当前长文本加载链路：
+
+```
+fetch(.md) → response.text() → parseFrontmatter() → marked.parse() [同步] → innerHTML → hljs.highlightElement() [同步]
+```
+
+| 瓶颈 | 位置 | 影响 |
+|------|------|------|
+| 首页加载全部文章正文 | `app.js:49-51` | 每篇文章的**完整 Markdown** 都被 fetch 到内存，但首页仅需摘要（150 字） |
+| 文章页重新加载全部文章列表 | `article.html:1786-1833` | 为生成上/下一篇导航，再次 fetch 所有 .md 文件提取 frontmatter |
+| Markdown 同步解析阻塞主线程 | `markdown.js:137` | `marked.parse()` 在主线程执行，长文（如 488 行使用手册）会导致可感知卡顿 |
+| 单次 innerHTML 大量 DOM 更新 | `article.html:1890-1891` | 整篇 HTML 字符串一次性注入，触发大规模 DOM 树重建 |
+| 代码高亮仍在主线程 | `article.html:1899-1911` | 虽已分批（10 个/批），但 hljs 本身在主线程执行 |
+| 资讯含全文时 JSON 过大 | `data/recommendations.json` | 部分资讯条目含完整 `content`，JSON 体积膨胀，全量解析只为取一条 |
+
+### 2. 优化方案
+
+#### 2.1 首页：仅加载 frontmatter + 摘要（不加载正文）⭐ 最高优先级
+
+**现状：** `loadPost()` 调用 `MarkdownParser.loadFromFile()` 获取完整 .md 文件，将整个正文存入 `content` 字段。首页渲染卡片只用 `excerpt`（150 字），`content` 完全浪费。
+
+**方案：** 新增 `loadPostMeta()` 方法，fetch 后只解析 frontmatter + 截取摘要，不保留正文：
+
+```javascript
+async loadPostMeta(filename) {
+    const filePath = `${this.config.postsDirectory}/${filename}`;
+    const response = await fetch(filePath);
+    const raw = await response.text();
+    const { frontmatter, content } = MarkdownParser.parseFrontmatter(raw);
+    // 只取摘要，丢弃正文
+    const excerpt = frontmatter.excerpt || MarkdownParser.extractExcerpt(content);
+    const image = frontmatter.image || MarkdownParser.extractFirstImage(content) || this.getRandomBgImage(filename);
+    return {
+        filename,
+        title: frontmatter.title || filename.replace('.md', ''),
+        date: frontmatter.date,
+        tags: frontmatter.tags || [],
+        author: frontmatter.author || 'Anonymous',
+        excerpt,
+        image,
+        wordCount: content.length
+        // 不存储 content
+    };
+}
+```
+
+**收益：** 内存占用降低 80%+（正文不再驻留），首页加载提速 30-50%（不存储大字符串）。
+
+#### 2.2 首页：分块加载 / 渐进渲染
+
+**现状：** `Promise.all(postFiles.map(...))` 等待全部文章加载完毕后才渲染。
+
+**方案：** 改为 `Promise.allSettled()` + 渐进渲染——每篇文章加载完成即刻渲染其卡片，无需等待全部：
+
+```javascript
+async loadPosts() {
+    // ...缓存逻辑不变...
+    const postFiles = await this.getPostFiles();
+    this.posts = [];
+
+    // 先渲染空壳骨架屏
+    this.renderSkeletons(postFiles.length);
+
+    // 逐个加载，完成即渲染
+    for (const file of postFiles) {
+        const post = await this.loadPostMeta(file);
+        if (post) {
+            this.posts.push(post);
+            this.appendPostCard(post); // 追加到 DOM
+        }
+    }
+
+    // 全部完成后排序 + 入场动画
+    this.posts.sort((a, b) => new Date(b.date) - new Date(a.date));
+    this.filteredPosts = [...this.posts];
+    this.renderPosts(); // 重排 DOM 顺序
+}
+```
+
+**收益：** 首张卡片出现时间从"全部加载完"变为"第一篇加载完"，感知速度提升 60%+。
+
+#### 2.3 文章页：Markdown 解析移至 Web Worker
+
+**现状：** `marked.parse()` 在主线程执行，长文解析期间页面无响应。
+
+**方案：** 将 Markdown 解析放入 Web Worker，主线程保持流畅：
+
+```javascript
+// js/markdown-worker.js
+self.onmessage = function(e) {
+    importScripts('vendor/marked.min.js');
+    const { content, id } = e.data;
+    const html = marked.parse(content, { breaks: true, gfm: true });
+    self.postMessage({ html, id });
+};
+
+// js/markdown.js 中新增
+parseMarkdownAsync(content) {
+    return new Promise((resolve) => {
+        // 短文本直接主线程解析（避免 Worker 开销）
+        if (content.length < 5000) {
+            return resolve(this.parseMarkdown(content));
+        }
+        const worker = new Worker('js/markdown-worker.js');
+        const id = Date.now();
+        worker.onmessage = (e) => {
+            resolve(e.data.html);
+            worker.terminate();
+        };
+        worker.postMessage({ content, id });
+    });
+}
+```
+
+**收益：** 长文解析不再阻塞主线程，页面滚动、点击等交互保持流畅。解析期间可显示 loading 动画。
+
+#### 2.4 文章页：增量 DOM 渲染
+
+**现状：** `content.innerHTML = html` 一次性注入大量 HTML。
+
+**方案：** 对超长文章（>10000 字）采用分段注入：
+
+```javascript
+async renderArticle() {
+    const html = await MarkdownParser.parseMarkdownAsync(this.currentPost.content);
+
+    // 按 h2/h3 分割为段落块
+    const sections = html.split(/(?=<h[23])/);
+    content.innerHTML = '';
+
+    // 首屏立即渲染前 3 块
+    const firstBatch = sections.splice(0, 3);
+    content.innerHTML = firstBatch.join('');
+
+    // 剩余块用 requestIdleCallback 空闲时追加
+    const appendNext = () => {
+        if (sections.length === 0) return;
+        const chunk = sections.splice(0, 2).join('');
+        content.insertAdjacentHTML('beforeend', chunk);
+        if (sections.length > 0) requestIdleCallback(appendNext);
+    };
+    requestIdleCallback(appendNext);
+}
+```
+
+**收益：** 首屏渲染时间缩短（只处理前几个段落），剩余内容在浏览器空闲时渐进填充，不阻塞交互。
+
+#### 2.5 文章页导航：复用首页缓存 / 独立轻量接口
+
+**现状：** `loadAllPosts()` 重新 fetch 所有 .md 文件提取 frontmatter，与首页重复劳动。
+
+**方案（三选一）：**
+
+| 方案 | 说明 | 改动量 |
+|------|------|--------|
+| **A（推荐）**：复用 sessionStorage 缓存 | 首页已缓存 `blog-posts-data-v8`（含 filename/title/date/tags），文章页直接读取 | 极小 |
+| **B**：manifest.json 扩展字段 | 在 manifest.json 中直接存 frontmatter 元数据，一次 fetch 搞定 | 小 |
+| **C**：单独的 index.json | 新建 `posts/index.json` 存所有文章元数据，文章页只需 fetch 这一个文件 | 中 |
+
+**方案 A 实现（推荐）：**
+
+```javascript
+async loadAllPosts() {
+    // 直接复用首页缓存
+    const cached = sessionStorage.getItem('blog-posts-data-v8');
+    if (cached) {
+        this.allPosts = JSON.parse(cached).map(p => ({
+            filename: p.filename,
+            title: p.title,
+            date: p.date,
+            tags: p.tags
+        }));
+        return;
+    }
+    // 缓存未命中时的降级逻辑（原有逻辑）
+    // ...
+}
+```
+
+**收益：** 文章页省去 N 次网络请求（N = 文章数），上/下一篇导航瞬时出现。
+
+#### 2.6 代码高亮：移至 Worker 或懒执行
+
+**现状：** `hljs.highlightElement()` 在主线程分批执行。
+
+**方案：**
+- **短文（<5000 字）**：保持现有分批策略
+- **长文（≥5000 字）**：仅对视口内可见的代码块立即高亮，其余用 IntersectionObserver 懒高亮：
+
+```javascript
+function highlightVisibleCodeBlocks(container) {
+    const blocks = container.querySelectorAll('pre code:not(.hljs)');
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                hljs.highlightElement(entry.target);
+                observer.unobserve(entry.target);
+            }
+        });
+    }, { rootMargin: '200px' }); // 提前 200px 开始高亮
+    blocks.forEach(block => observer.observe(block));
+}
+```
+
+**收益：** 长文首屏代码高亮延迟从"全部代码块"降为"首屏可见代码块"，其余滚动到时再高亮。
+
+#### 2.7 资讯正文按需加载
+
+**现状：** `loadNewsArticle()` fetch 整个 `recommendations.json`（含所有资讯的 `content`），只为取一条。
+
+**方案：** 
+- **方案 A**：资讯正文拆分为独立文件（如 `data/news/n01.json`），按需 fetch 单条
+- **方案 B（推荐）**：保持单文件，但 `loadNews()` 只返回不含 `content` 的摘要列表；需要正文时单独 fetch + 解析 + 按 id 过滤
+
+```javascript
+async loadNewsArticle(id) {
+    const res = await fetch('data/recommendations.json');
+    const text = await res.text();
+    // 流式解析：只找目标 id，不解析全部
+    const regex = new RegExp(`"id"\\s*:\\s*"${id}"[\\s\\S]*?"content"\\s*:\\s*"([\\s\\S]*?)"`);
+    const match = text.match(regex);
+    // ...
+}
+```
+
+**收益：** 资讯文章页加载提速（尤其当 recommendations.json 含大量正文时）。
+
+### 3. 缓存策略增强
+
+| 优化项 | 现状 | 建议 |
+|--------|------|------|
+| sessionStorage 缓存 key | 固定版本号 `v8` | 改为内容哈希，内容变化自动失效 |
+| 文章页导航缓存 | 独立 key `blog-posts-cache-v2` | 复用首页缓存（方案 2.5A） |
+| HTTP 缓存 | 无 Service Worker | 添加 SW 缓存静态资源 + 文章文件，离线可用 |
+| 资讯缓存 | 无 | 与文章一致，用内容哈希做 key |
+
+### 4. 实施优先级
+
+| 优先级 | 方案 | 预计工作量 | 收益 |
+|--------|------|-----------|------|
+| P0 | 2.1 首页不加载正文 | 小 | 内存↓80%，加载提速 30-50% |
+| P0 | 2.5A 文章页导航复用缓存 | 极小 | 省去 N 次网络请求 |
+| P1 | 2.2 首页渐进渲染 + 骨架屏 | 中 | 首卡出现提速 60%+ |
+| P1 | 2.3 Markdown 解析 Worker 化 | 中 | 长文解析不阻塞主线程 |
+| P1 | 2.6 代码高亮懒加载 | 小 | 长文首屏高亮提速 |
+| P2 | 2.4 增量 DOM 渲染 | 中 | 超长文首屏渲染提速 |
+| P2 | 2.7 资讯正文按需加载 | 小 | 资讯页加载提速 |
+| P2 | Service Worker 离线缓存 | 大 | 二次访问秒开 + 离线可用 |
+
+### 5. 预期效果
+
+- **首页加载**：文章数增长后依然流畅（不加载正文，渐进渲染首卡）
+- **文章页打开**：长文（如 488 行使用手册）解析不卡顿，首屏秒出
+- **导航**：上/下一篇瞬时可用（复用缓存，无额外请求）
+- **代码高亮**：首屏可见代码即时高亮，其余按需
+- **内存**：首页不再驻留所有文章正文，标签页长时间打开不卡

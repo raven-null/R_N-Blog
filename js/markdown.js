@@ -140,6 +140,40 @@ const MarkdownParser = {
         // 如果没有marked库，使用简单的解析
         return this.simpleParse(content);
     },
+
+    // 异步解析 Markdown（长文使用 Web Worker，短文直接主线程）
+    parseMarkdownAsync(content) {
+        return new Promise((resolve) => {
+            if (content.length < 5000 || typeof Worker === 'undefined') {
+                return resolve(this.parseMarkdown(content));
+            }
+            try {
+                const worker = new Worker('js/markdown-worker.js');
+                const id = Date.now();
+                const timer = setTimeout(() => {
+                    worker.terminate();
+                    resolve(this.parseMarkdown(content));
+                }, 10000);
+                worker.onmessage = (e) => {
+                    clearTimeout(timer);
+                    worker.terminate();
+                    if (e.data.error) {
+                        resolve(this.parseMarkdown(content));
+                    } else {
+                        resolve(e.data.html);
+                    }
+                };
+                worker.onerror = () => {
+                    clearTimeout(timer);
+                    worker.terminate();
+                    resolve(this.parseMarkdown(content));
+                };
+                worker.postMessage({ content, id });
+            } catch (err) {
+                resolve(this.parseMarkdown(content));
+            }
+        });
+    },
     
     // 简单的Markdown解析（备用）
     simpleParse(content) {

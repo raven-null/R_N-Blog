@@ -7,7 +7,7 @@
     <link rel="icon" href="/images/TX/01_TX.webp" type="image/webp">
     
     <!-- 主样式 -->
-    <link rel="stylesheet" href="css/style.css?v=2.6.68">
+    <link rel="stylesheet" href="css/style.css?v=2.6.69">
     
     <!-- Marked.js -->
     <script src="js/vendor/marked.min.js"></script>
@@ -1660,11 +1660,11 @@
     </div>
 
     <!-- JavaScript -->
-    <script src="js/theme.js?v=2.6.68"></script>
-    <script src="js/markdown.js?v=2.6.68"></script>
-    <script src="js/chat.js?v=2.6.68"></script>
-    <script src="js/reader.js?v=2.6.68"></script>
-    <script src="js/animations.js?v=2.6.68"></script>
+    <script src="js/theme.js?v=2.6.69"></script>
+    <script src="js/markdown.js?v=2.6.69"></script>
+    <script src="js/chat.js?v=2.6.69"></script>
+    <script src="js/reader.js?v=2.6.69"></script>
+    <script src="js/animations.js?v=2.6.69"></script>
 
     <script>
         // 文章详情页应用
@@ -1709,11 +1709,17 @@
                 }
             },
 
-            // 加载资讯正文（从 data/recommendations.json 按 id 匹配）
+            // 加载资讯正文（按 id 从 recommendations.json 匹配，按需解析）
             async loadNewsArticle(id) {
                 const res = await fetch('data/recommendations.json');
                 if (!res.ok) throw new Error('HTTP 错误: ' + res.status);
-                const items = await res.json();
+                const text = await res.text();
+                let items;
+                try {
+                    items = JSON.parse(text);
+                } catch (e) {
+                    throw new Error('资讯数据解析失败');
+                }
                 const item = (Array.isArray(items) ? items : []).find(it => it.id === id);
                 if (!item) throw new Error('未找到该资讯');
                 if (!item.content) {
@@ -1782,10 +1788,23 @@
                 }
             },
 
-            // 加载所有文章（用于上下篇导航）
+            // 加载所有文章（用于上下篇导航，优先复用首页缓存）
             async loadAllPosts() {
                 try {
-                    // 检查缓存（带版本号，旧缓存自动失效）
+                    // 优先复用首页 sessionStorage 缓存（v9，仅元数据）
+                    const homepageCache = sessionStorage.getItem('blog-posts-data-v9');
+                    if (homepageCache) {
+                        this.allPosts = JSON.parse(homepageCache).map(p => ({
+                            filename: p.filename,
+                            title: p.title,
+                            date: p.date,
+                            tags: p.tags || []
+                        }));
+                        this.allPosts.sort((a, b) => new Date(b.date) - new Date(a.date));
+                        return;
+                    }
+
+                    // 回退：检查文章页独立缓存
                     const cachedData = sessionStorage.getItem('blog-posts-cache-v2');
                     if (cachedData) {
                         this.allPosts = JSON.parse(cachedData);
@@ -1797,14 +1816,12 @@
                         const files = await response.json();
                         const posts = [];
 
-                        // 并行加载所有文章的frontmatter
                         const promises = files.map(async (file) => {
                             try {
                                 const postResponse = await fetch(`posts/${file}`);
                                 if (postResponse.ok) {
                                     const content = await postResponse.text();
                                     const { frontmatter } = MarkdownParser.parseFrontmatter(content);
-
                                     return {
                                         filename: file,
                                         title: frontmatter.title || file.replace('.md', ''),
@@ -1820,11 +1837,8 @@
 
                         const results = await Promise.all(promises);
                         this.allPosts = results.filter(post => post !== null);
-
-                        // 按日期降序排序
                         this.allPosts.sort((a, b) => new Date(b.date) - new Date(a.date));
                         
-                        // 缓存结果
                         sessionStorage.setItem('blog-posts-cache-v2', JSON.stringify(this.allPosts));
                     }
                 } catch (error) {
@@ -1833,7 +1847,7 @@
             },
 
             // 渲染文章头部和正文
-            renderArticle() {
+            async renderArticle() {
                 const header = document.getElementById('article-header');
                 const content = document.getElementById('article-content');
 
@@ -1886,32 +1900,71 @@
                     ` : ''}
                 `;
 
-                // 渲染 Markdown 正文
-                const html = MarkdownParser.parseMarkdown(this.currentPost.content);
-                content.innerHTML = html;
+                // 异步解析 Markdown（长文使用 Web Worker）
+                const html = await MarkdownParser.parseMarkdownAsync(this.currentPost.content);
+
+                // 增量渲染：按 h2/h3 分段，首屏先渲染前 3 块，其余空闲时追加
+                const sections = html.split(/(?=<h[23][^>]*>)/);
+                const firstBatch = sections.splice(0, 3);
+                content.innerHTML = firstBatch.join('');
 
                 // 文章内容入场动画（Anime.js）
                 if (window.BlogAnimations && BlogAnimations.ready) {
                     BlogAnimations.animateArticleContent(content);
                 }
 
-                // 延迟高亮代码块，不阻塞渲染
-                requestAnimationFrame(() => {
-                    if (typeof hljs !== 'undefined') {
-                        const blocks = content.querySelectorAll('pre code');
-                        // 分批处理代码块
-                        const batchSize = 10;
-                        for (let i = 0; i < blocks.length; i += batchSize) {
-                            const batch = Array.from(blocks).slice(i, i + batchSize);
-                            requestAnimationFrame(() => {
-                                batch.forEach(block => hljs.highlightElement(block));
-                            });
+                // 剩余段落用 requestIdleCallback 渐进追加
+                if (sections.length > 0) {
+                    const appendNext = () => {
+                        if (sections.length === 0) {
+                            // 全部渲染完成后高亮剩余代码块
+                            this.highlightRemainingBlocks(content);
+                            return;
                         }
+                        const chunk = sections.splice(0, 2).join('');
+                        content.insertAdjacentHTML('beforeend', chunk);
+                        if ('requestIdleCallback' in window) {
+                            requestIdleCallback(appendNext);
+                        } else {
+                            setTimeout(appendNext, 0);
+                        }
+                    };
+                    if ('requestIdleCallback' in window) {
+                        requestIdleCallback(appendNext);
+                    } else {
+                        setTimeout(appendNext, 0);
                     }
-                });
+                }
+
+                // 首屏代码块立即高亮，其余用 IntersectionObserver 懒高亮
+                requestAnimationFrame(() => this.highlightVisibleBlocks(content));
 
                 // 延迟生成目录
                 requestAnimationFrame(() => this.generateTableOfContents());
+            },
+
+            // 高亮视口内可见的代码块（首屏立即 + 滚动时按需）
+            highlightVisibleBlocks(container) {
+                if (typeof hljs === 'undefined') return;
+                const blocks = container.querySelectorAll('pre code:not(.hljs)');
+                if (!blocks.length) return;
+                const observer = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            hljs.highlightElement(entry.target);
+                            observer.unobserve(entry.target);
+                        }
+                    });
+                }, { rootMargin: '200px' });
+                blocks.forEach(block => observer.observe(block));
+            },
+
+            // 增量渲染完成后高亮剩余未处理的代码块
+            highlightRemainingBlocks(container) {
+                if (typeof hljs === 'undefined') return;
+                container.querySelectorAll('pre code:not(.hljs)').forEach(block => {
+                    hljs.highlightElement(block);
+                });
             },
 
             // 生成左侧目录
