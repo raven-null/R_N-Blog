@@ -6,8 +6,8 @@ const BlogApp = {
     // 配置项
     config: {
         postsDirectory: 'posts',
-        // 后端 API 地址（Netlify 部署的后端）
-        apiBase: 'https://r-n-blog-server.netlify.app'
+        // 后端 API 地址（同源）
+        apiBase: ''
     },
 
     // 所有文章

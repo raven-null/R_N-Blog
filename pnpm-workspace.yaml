@@ -1,0 +1,10 @@
+allowBuilds:
+  esbuild: set this to true or false
+  netlify-cli: set this to true or false
+  sharp: set this to true or false
+  unix-dgram: set this to true or false
+onlyBuiltDependencies:
+  - esbuild
+  - netlify-cli
+  - sharp
+verifyDepsBeforeRun: false
