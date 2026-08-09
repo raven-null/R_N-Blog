@@ -31,10 +31,11 @@ const BlogApp = {
         this.handleRoute();
     },
 
-    // 加载所有文章（仅元数据 + 摘要，不加载正文）
+    // 加载所有文章
     async loadPosts() {
         try {
-            const CACHE_KEY = 'blog-posts-data-v9';
+            // 检查缓存（带版本号，旧缓存自动失效）
+            const CACHE_KEY = 'blog-posts-data-v8';
             const cachedData = sessionStorage.getItem(CACHE_KEY);
             if (cachedData) {
                 this.posts = JSON.parse(cachedData);
@@ -44,27 +45,29 @@ const BlogApp = {
 
             const postFiles = await this.getPostFiles();
             this.posts = [];
-
-            // 先渲染骨架屏占位
-            this.renderSkeletons(postFiles.length);
-
-            // 逐个加载元数据，完成即渲染卡片（渐进渲染）
-            for (const file of postFiles) {
-                const post = await this.loadPostMeta(file);
-                if (post) {
-                    this.posts.push(post);
-                    this.appendPostCard(post);
-                }
-            }
-
-            // 按日期降序排序后重排 DOM
+            
+            // 并行加载所有文章
+            const promises = postFiles.map(file => this.loadPost(file));
+            const results = await Promise.all(promises);
+            this.posts = results.filter(post => post !== null);
+            
+            // 按日期降序排序
             this.posts.sort((a, b) => new Date(b.date) - new Date(a.date));
             this.filteredPosts = [...this.posts];
-            this.renderPosts();
-
-            // 缓存结果（仅元数据 + 摘要，不含正文）
+            
+            // 缓存结果（仅缓存元数据与字数，不缓存正文，避免超长正文超出存储配额）
             try {
-                sessionStorage.setItem(CACHE_KEY, JSON.stringify(this.posts));
+                const cacheData = this.posts.map(p => ({
+                    filename: p.filename,
+                    title: p.title,
+                    date: p.date,
+                    tags: p.tags,
+                    author: p.author,
+                    excerpt: p.excerpt,
+                    image: p.image,
+                    wordCount: p.wordCount || 0
+                }));
+                sessionStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
             } catch (e) {
                 console.warn('文章缓存失败（不影响使用）:', e);
             }
@@ -139,74 +142,6 @@ const BlogApp = {
             console.error(`加载文章 ${filename} 失败:`, error);
             return null;
         }
-    },
-
-    // 仅加载文章元数据 + 摘要（不保留正文，首页专用）
-    async loadPostMeta(filename) {
-        try {
-            const filePath = `${this.config.postsDirectory}/${filename}`;
-            const response = await fetch(filePath);
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            const raw = await response.text();
-            const { frontmatter, content } = MarkdownParser.parseFrontmatter(raw);
-
-            let tags = [];
-            if (Array.isArray(frontmatter.tags)) {
-                tags = frontmatter.tags;
-            } else if (typeof frontmatter.tags === 'string') {
-                tags = frontmatter.tags.split(',').map(t => t.trim()).filter(Boolean);
-            }
-
-            return {
-                filename,
-                title: frontmatter.title || filename.replace('.md', ''),
-                date: frontmatter.date || new Date().toISOString().split('T')[0],
-                tags,
-                author: frontmatter.author || 'Anonymous',
-                excerpt: frontmatter.excerpt || MarkdownParser.extractExcerpt(content),
-                image: frontmatter.image || MarkdownParser.extractFirstImage(content) || this.getRandomBgImage(filename),
-                wordCount: content.length
-            };
-        } catch (error) {
-            console.error(`加载文章 ${filename} 元数据失败:`, error);
-            return null;
-        }
-    },
-
-    // 渲染骨架屏占位
-    renderSkeletons(count) {
-        const postsContainer = document.getElementById('posts');
-        if (!postsContainer) return;
-        const skeletons = Array.from({ length: Math.min(count, 6) }, () => `
-            <div class="card skeleton-card">
-                <div class="card-img skeleton-shimmer"></div>
-                <div class="card-body">
-                    <div class="skeleton-shimmer" style="height:14px;width:40%;margin-bottom:10px;border-radius:4px;"></div>
-                    <div class="skeleton-shimmer" style="height:12px;width:60%;margin-bottom:12px;border-radius:4px;"></div>
-                    <div class="skeleton-shimmer" style="height:16px;width:80%;margin-bottom:8px;border-radius:4px;"></div>
-                    <div class="skeleton-shimmer" style="height:12px;width:100%;margin-bottom:6px;border-radius:4px;"></div>
-                    <div class="skeleton-shimmer" style="height:12px;width:70%;border-radius:4px;"></div>
-                </div>
-            </div>
-        `).join('');
-        postsContainer.innerHTML = `<div class="waterfall">${skeletons}</div>`;
-    },
-
-    // 渐进追加单张卡片到瀑布流
-    appendPostCard(post) {
-        const postsContainer = document.getElementById('posts');
-        if (!postsContainer) return;
-        let waterfall = postsContainer.querySelector('.waterfall');
-        if (!waterfall) {
-            waterfall = document.createElement('div');
-            waterfall.className = 'waterfall';
-            postsContainer.innerHTML = '';
-            postsContainer.appendChild(waterfall);
-        }
-        const temp = document.createElement('div');
-        temp.innerHTML = this.renderPostCard(post);
-        const card = temp.firstElementChild;
-        if (card) waterfall.appendChild(card);
     },
 
     // 渲染页面（文章）

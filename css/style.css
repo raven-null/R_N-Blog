@@ -2723,19 +2723,3 @@ html.reader-focus .article-main {
     max-width: 820px;
     margin: 0 auto;
 }
-
-/* 骨架屏占位 */
-.skeleton-card {
-    pointer-events: none;
-}
-
-.skeleton-shimmer {
-    background: linear-gradient(90deg, var(--bg-secondary) 25%, rgba(255,255,255,0.06) 50%, var(--bg-secondary) 75%);
-    background-size: 200% 100%;
-    animation: shimmer 1.5s ease-in-out infinite;
-}
-
-@keyframes shimmer {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
-}
