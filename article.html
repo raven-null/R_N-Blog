@@ -1792,7 +1792,7 @@
             async loadAllPosts() {
                 try {
                     // 优先复用首页 sessionStorage 缓存（v9，仅元数据）
-                    const homepageCache = sessionStorage.getItem('blog-posts-data-v9');
+                    const homepageCache = sessionStorage.getItem('blog-posts-data-v10');
                     if (homepageCache) {
                         this.allPosts = JSON.parse(homepageCache).map(p => ({
                             filename: p.filename,
