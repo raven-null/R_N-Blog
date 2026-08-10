@@ -346,11 +346,30 @@
             const img=allImageData.find(i=>i.key===key);
             const cur=img?(img.tags||[]):[];
             if(cur.includes(tag)){showToast(`已属于「${tag}」`,'error');return}
-            const r=await apiFetch('action=images',{method:'PATCH',body:JSON.stringify({key,tags:[...cur,tag]})});
-            if(r.status==='success'){showToast(`已归入「${tag}」`,'success');await loadData()}else showToast(r.message||'失败','error');
+            const newTags=[...cur,tag];
+            // 乐观更新：先改本地数据并刷新 UI
+            if(img)img.tags=newTags;
+            renderPanels();
+            showToast(`已归入「${tag}」`,'success');
+            // 后台同步
+            const r=await apiFetch('action=images',{method:'PATCH',body:JSON.stringify({key,tags:newTags})});
+            if(r.status!=='success'){
+                // 失败则回滚
+                if(img)img.tags=cur;
+                renderPanels();
+                showToast(r.message||'同步失败','error');
+            }
         }
 
-        async function deleteImage(key){if(!confirm(`确定删除 ${key}？`))return;const r=await apiFetch(`action=images&key=${encodeURIComponent(key)}`,{method:'DELETE'});if(r.status==='success'){showToast('已删除','success');await loadData()}}
+        async function deleteImage(key){if(!confirm(`确定删除 ${key}？`))return;
+            // 乐观删除：先从本地移除
+            const idx=allImageData.findIndex(i=>i.key===key);
+            if(idx>=0)allImageData.splice(idx,1);
+            renderPanels();
+            // 后台同步
+            const r=await apiFetch(`action=images&key=${encodeURIComponent(key)}`,{method:'DELETE'});
+            if(r.status==='success'){showToast('已删除','success')}else{showToast(r.message||'删除失败','error');await loadData()}
+        }
 
         // ===== 标签弹窗 =====
         function openTagModal(key,tags){tagModalKey=key;tagModalSelected=[...tags];const o=document.getElementById('tagModalOptions');o.innerHTML=ALL_TAGS.map(t=>`<span class="tag-opt ${tagModalSelected.includes(t)?'selected':''}" onclick="toggleTagOpt(this,'${t}')">${t}</span>`).join('');document.getElementById('customTagInput').value='';document.getElementById('tagModal').classList.add('open')}
