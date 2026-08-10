@@ -397,9 +397,9 @@ export default async (req: Request) => {
         imageCount: counts.imageCount,
         articleCount: counts.articleCount,
         total: counts.imageCount + counts.articleCount,
-        // 标记标签属于哪个注册表
-        inArticleRegistry: registry.article.includes(name),
-        inImageRegistry: registry.image.includes(name),
+        // 标记标签属于哪个类别（注册表 或 实际使用）
+        inArticleRegistry: registry.article.includes(name) || counts.articleCount > 0,
+        inImageRegistry: registry.image.includes(name) || counts.imageCount > 0,
       })).sort((a, b) => b.total - a.total)
 
       return json(200, { status: "success", data: result }, req)
