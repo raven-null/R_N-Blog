@@ -1178,7 +1178,7 @@ body.home-layout {
     width: 44px;
     height: 44px;
     border-radius: 50%;
-    background: var(--bg-tertiary) url('../images/TX/03_TX.webp') center/cover;
+    background: var(--bg-tertiary) url('../images/Default/profile -picture.webp') center/cover;
     border: 2px solid var(--bg-card);
     z-index: 2;
     overflow: hidden;

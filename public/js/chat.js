@@ -655,7 +655,7 @@ const AIChat = {
         const div = document.createElement('div');
         div.className = 'chat-message chat-message-assistant';
         div.innerHTML = `
-            <div class="chat-message-avatar"><img src="images/TX/02_TX.webp" alt="AI" style="width:100%;height:100%;object-fit:cover;border-radius:8px;"></div>
+            <div class="chat-message-avatar"><img src="images/Default/profile -picture.webp" alt="AI" style="width:100%;height:100%;object-fit:cover;border-radius:8px;"></div>
             <div class="chat-message-body">
                 <div class="chat-message-label">AI</div>
                 <div class="chat-message-content chat-streaming-content">
@@ -873,8 +873,8 @@ const AIChat = {
         div.className = `chat-message chat-message-${role}`;
 
         const avatar = role === 'user'
-            ? '<img src="images/TX/01_TX.webp" alt="我" style="width:100%;height:100%;object-fit:cover;border-radius:8px;">'
-            : '<img src="images/TX/02_TX.webp" alt="AI" style="width:100%;height:100%;object-fit:cover;border-radius:8px;">';
+            ? '<img src="images/Default/profile -picture.webp" alt="我" style="width:100%;height:100%;object-fit:cover;border-radius:8px;">'
+            : '<img src="images/Default/profile -picture.webp" alt="AI" style="width:100%;height:100%;object-fit:cover;border-radius:8px;">';
         const label = role === 'user' ? '你' : role === 'error' ? '错误' : 'AI';
 
         div.innerHTML = `

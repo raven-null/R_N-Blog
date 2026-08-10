@@ -122,18 +122,18 @@ const BlogApp = {
         } catch { return []; }
     },
 
-    // BG 文件夹图片列表（用于无图文章的默认封面）
+    // 默认封面图片（用于无图文章的默认封面）
     bgImages: [
-        'images/BG/01_BG.webp', 'images/BG/02_BG.webp', 'images/BG/03_BG.webp',
-        'images/BG/04_BG.webp', 'images/BG/05_BG.webp', 'images/BG/06_BG.webp',
-        'images/BG/07_BG.webp', 'images/BG/08_BG.webp', 'images/BG/09_BG.webp',
-        'images/BG/10_BG.webp', 'images/BG/11_BG.webp', 'images/BG/12_BG.webp',
-        'images/BG/13_BG.webp', 'images/BG/14_BG.webp', 'images/BG/15_BG.webp',
-        'images/BG/16_BG.webp', 'images/BG/17_BG.webp', 'images/BG/18_BG.webp',
-        'images/BG/19_BG.webp', 'images/BG/20_BG.webp', 'images/BG/21_BG.webp',
-        'images/BG/22_BG.webp', 'images/BG/23_BG.webp', 'images/BG/24_BG.webp',
-        'images/BG/25_BG.webp', 'images/BG/26_BG.webp', 'images/BG/27_BG.webp',
-        'images/BG/28_BG.webp'
+        'images/Default/web-logo.webp', 'images/Default/web-logo.webp', 'images/Default/web-logo.webp',
+        'images/Default/web-logo.webp', 'images/Default/web-logo.webp', 'images/Default/web-logo.webp',
+        'images/Default/web-logo.webp', 'images/Default/web-logo.webp', 'images/Default/web-logo.webp',
+        'images/Default/web-logo.webp', 'images/Default/web-logo.webp', 'images/Default/web-logo.webp',
+        'images/Default/web-logo.webp', 'images/Default/web-logo.webp', 'images/Default/web-logo.webp',
+        'images/Default/web-logo.webp', 'images/Default/web-logo.webp', 'images/Default/web-logo.webp',
+        'images/Default/web-logo.webp', 'images/Default/web-logo.webp', 'images/Default/web-logo.webp',
+        'images/Default/web-logo.webp', 'images/Default/web-logo.webp', 'images/Default/web-logo.webp',
+        'images/Default/web-logo.webp', 'images/Default/web-logo.webp', 'images/Default/web-logo.webp',
+        'images/Default/web-logo.webp'
     ],
 
     // 根据文件名生成固定随机索引
@@ -174,9 +174,9 @@ const BlogApp = {
     // 根据作者名字返回对应头像
     getAuthorAvatar(author) {
         const name = (author || '').trim();
-        if (name === '博主') return 'images/TX/03_TX.webp';
-        if (name === 'AI') return 'images/TX/02_TX.webp';
-        return 'images/TX/03_TX.webp';
+        if (name === '博主') return 'images/Default/profile -picture.webp';
+        if (name === 'AI') return 'images/Default/profile -picture.webp';
+        return 'images/Default/profile -picture.webp';
     },
 
     // 渲染单个文章卡片
