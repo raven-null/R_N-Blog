@@ -224,6 +224,23 @@
         .rename-box input:focus{outline:none;border-color:var(--accent)}
         .rename-box .rename-actions{display:flex;gap:8px;justify-content:flex-end}
 
+        /* 图片灯箱 */
+        .admin-lightbox{display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:1000;align-items:center;justify-content:center;flex-direction:column}
+        .admin-lightbox.open{display:flex}
+        .admin-lightbox-top{position:fixed;top:0;left:0;right:0;display:flex;align-items:center;justify-content:space-between;padding:14px 20px;z-index:2}
+        .admin-lightbox-top .lb-counter{color:var(--text-muted);font-size:13px}
+        .admin-lightbox-top button{background:rgba(255,255,255,.1);border:none;color:#fff;width:36px;height:36px;border-radius:50%;font-size:20px;cursor:pointer;transition:background .15s}
+        .admin-lightbox-top button:hover{background:rgba(255,255,255,.25)}
+        .admin-lightbox-img{max-width:88vw;max-height:80vh;object-fit:contain;border-radius:8px;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+        .admin-lightbox-nav{position:fixed;top:50%;transform:translateY(-50%);width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,.1);border:none;color:#fff;font-size:28px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s;z-index:2}
+        .admin-lightbox-nav:hover{background:rgba(255,255,255,.25)}
+        .admin-lightbox-nav.prev{left:24px}
+        .admin-lightbox-nav.next{right:24px}
+        .admin-lightbox-bottom{position:fixed;bottom:20px;display:flex;gap:10px;z-index:2}
+        .admin-lightbox-bottom a,.admin-lightbox-bottom button{background:rgba(255,255,255,.12);color:#fff;border:none;padding:8px 18px;border-radius:8px;font-size:13px;cursor:pointer;text-decoration:none;transition:background .15s}
+        .admin-lightbox-bottom a:hover,.admin-lightbox-bottom button:hover{background:rgba(255,255,255,.25)}
+        .admin-lightbox-name{position:fixed;bottom:70px;color:var(--text-muted);font-size:12px;z-index:2}
+
         @media(max-width:768px){.sidebar{display:none}.editor-split{grid-template-columns:1fr}.image-picker-panel{width:100%}.classify-workspace{flex-direction:column;height:auto}.tags-grid{grid-template-columns:1fr}}
     </style>
 </head>
@@ -382,6 +399,22 @@
     </div>
 
     <div class="toast" id="toast"></div>
+
+    <!-- 图片灯箱 -->
+    <div class="admin-lightbox" id="adminLightbox" onclick="closeAdminLightbox()">
+        <div class="admin-lightbox-top" onclick="event.stopPropagation()">
+            <span class="lb-counter" id="adminLbCounter"></span>
+            <button onclick="closeAdminLightbox()">&times;</button>
+        </div>
+        <button class="admin-lightbox-nav prev" title="上一张" onclick="event.stopPropagation();adminLightboxNav(-1)">&#8249;</button>
+        <img class="admin-lightbox-img" id="adminLbImg" src="" alt="图片预览" onclick="event.stopPropagation()">
+        <button class="admin-lightbox-nav next" title="下一张" onclick="event.stopPropagation();adminLightboxNav(1)">&#8250;</button>
+        <div class="admin-lightbox-name" id="adminLbName" onclick="event.stopPropagation()"></div>
+        <div class="admin-lightbox-bottom" onclick="event.stopPropagation()">
+            <a id="adminLbDownload" href="#" download title="下载图片">⬇ 下载</a>
+            <button onclick="deleteImageFromLightbox()">🗑 删除</button>
+        </div>
+    </div>
 
     <script>
         let adminKey=localStorage.getItem('admin_key')||'';
@@ -694,7 +727,7 @@
         function classifyCardHtml(img, showCheckbox=false){
             const checked = selectedImageKeys.has(img.key) ? 'checked' : '';
             const checkbox = (showCheckbox && batchMode) ? `<input type="checkbox" class="img-checkbox" ${checked} onclick="event.stopPropagation();toggleImageSelect('${img.key}')" style="position:absolute;top:4px;left:4px;z-index:2">` : '';
-            return `<div class="classify-card${selectedImageKeys.has(img.key) && batchMode ? ' selected' : ''}" draggable="true" data-key="${img.key}" ondragstart="dragStart(event,'${img.key}')">${checkbox}<img src="${img.url}" loading="lazy"><div class="cc-bottom"><span class="cc-name" title="${img.key}">${img.key}</span><button class="cc-del" onclick="event.stopPropagation();deleteImage('${img.key}')" title="删除">&times;</button></div></div>`;
+            return `<div class="classify-card${selectedImageKeys.has(img.key) && batchMode ? ' selected' : ''}" draggable="true" data-key="${img.key}" ondragstart="dragStart(event,'${img.key}')">${checkbox}<img src="${img.url}" loading="lazy" onclick="event.stopPropagation();openAdminLightbox('${img.key}')"><div class="cc-bottom"><span class="cc-name" title="${img.key}">${img.key}</span><button class="cc-del" onclick="event.stopPropagation();deleteImage('${img.key}')" title="删除">&times;</button></div></div>`;
         }
 
         function dragStart(e,key){e.dataTransfer.setData('text/key',key);e.target.classList.add('dragging');e.target.addEventListener('dragend',()=>e.target.classList.remove('dragging'),{once:true})}
@@ -958,6 +991,87 @@
             const r=await apiFetch(`action=images&key=${encodeURIComponent(key)}`,{method:'DELETE'});
             if(r.status==='success'){showToast('已删除','success')}else{showToast(r.message||'删除失败','error');await loadData()}
         }
+
+        // ===== 图片灯箱 =====
+        let lightboxKeys=[]; // 灯箱中显示的图片 key 列表
+        let lightboxIndex=0;
+
+        // 打开灯箱（显示当前面板中的所有图片）
+        function openAdminLightbox(key){
+            // 收集当前视图下所有图片 key（含未分类 + 当前分类）
+            const untagged=allImageData.filter(i=>(i.tags||[]).length===0);
+            const classified=allImageData.filter(i=>(i.tags||[]).includes(classifyTag));
+            lightboxKeys=[...untagged,...classified].map(i=>i.key);
+            // 去重
+            lightboxKeys=[...new Set(lightboxKeys)];
+            lightboxIndex=lightboxKeys.indexOf(key);
+            if(lightboxIndex<0)lightboxIndex=0;
+            renderAdminLightbox();
+            document.getElementById('adminLightbox').classList.add('open');
+        }
+
+        // 渲染灯箱当前图片
+        function renderAdminLightbox(){
+            if(!lightboxKeys.length)return;
+            const key=lightboxKeys[lightboxIndex];
+            const img=allImageData.find(i=>i.key===key);
+            if(!img)return;
+            const lb=document.getElementById('adminLightbox');
+            document.getElementById('adminLbImg').src=img.url;
+            document.getElementById('adminLbName').textContent=`${key} · ${(img.tags||[]).join(', ')||'未分类'}`;
+            document.getElementById('adminLbCounter').textContent=`${lightboxIndex+1} / ${lightboxKeys.length}`;
+            document.getElementById('adminLbDownload').href=img.url;
+            document.getElementById('adminLbDownload').download=key;
+        }
+
+        // 灯箱切换
+        function adminLightboxNav(dir){
+            if(!lightboxKeys.length)return;
+            lightboxIndex=(lightboxIndex+dir+lightboxKeys.length)%lightboxKeys.length;
+            renderAdminLightbox();
+        }
+
+        // 关闭灯箱
+        function closeAdminLightbox(){
+            const lb=document.getElementById('adminLightbox');
+            lb.classList.remove('open');
+            document.getElementById('adminLbImg').src='';
+            lightboxKeys=[];
+        }
+
+        // 从灯箱删除当前图片
+        async function deleteImageFromLightbox(){
+            const key=lightboxKeys[lightboxIndex];
+            if(!key)return;
+            if(!confirm(`确定删除 ${key}？`))return;
+            const idx=allImageData.findIndex(i=>i.key===key);
+            if(idx>=0)allImageData.splice(idx,1);
+            renderPanels();
+            const r=await apiFetch(`action=images&key=${encodeURIComponent(key)}`,{method:'DELETE'});
+            if(r.status==='success'){
+                showToast('已删除','success');
+                // 更新灯箱列表
+                lightboxKeys.splice(lightboxIndex,1);
+                if(!lightboxKeys.length){
+                    closeAdminLightbox();
+                }else{
+                    if(lightboxIndex>=lightboxKeys.length)lightboxIndex=0;
+                    renderAdminLightbox();
+                }
+            }else{
+                showToast(r.message||'删除失败','error');
+                await loadData();
+            }
+        }
+
+        // ESC 关闭灯箱，左右键切换
+        document.addEventListener('keydown',e=>{
+            const lb=document.getElementById('adminLightbox');
+            if(!lb||!lb.classList.contains('open'))return;
+            if(e.key==='Escape')closeAdminLightbox();
+            if(e.key==='ArrowLeft')adminLightboxNav(-1);
+            if(e.key==='ArrowRight')adminLightboxNav(1);
+        });
 
         // ===== 标签弹窗 =====
         function openTagModal(key,tags){tagModalKey=key;tagModalSelected=[...tags];const o=document.getElementById('tagModalOptions');o.innerHTML=imageTagNames.map(t=>`<span class="tag-opt ${tagModalSelected.includes(t.name)?'selected':''}" onclick="toggleTagOpt(this,'${t.name}')">${t.name}</span>`).join('');document.getElementById('customTagInput').value='';document.getElementById('tagModal').classList.add('open')}
