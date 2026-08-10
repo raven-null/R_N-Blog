@@ -1342,6 +1342,82 @@ body.home-layout {
     transform: rotate(180deg);
 }
 
+/* 图库分类按钮（位于主题切换按钮上方） */
+.gallery-tag-btn {
+    position: fixed;
+    bottom: 80px;
+    right: 24px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: var(--bg-secondary);
+    backdrop-filter: blur(10px);
+    color: var(--text-muted);
+    font-size: 18px;
+    cursor: pointer;
+    z-index: 100;
+    transition: all 0.3s;
+    display: none;
+    align-items: center;
+    justify-content: center;
+}
+
+.gallery-tag-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+body.view-gallery-active .gallery-tag-btn {
+    display: flex;
+}
+
+.gallery-tag-float-panel {
+    position: fixed;
+    bottom: 132px;
+    right: 24px;
+    width: 180px;
+    max-height: 320px;
+    overflow-y: auto;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0,0,0,.5);
+    z-index: 100;
+    padding: 8px;
+    display: none;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.gallery-tag-float-panel.show {
+    display: flex;
+}
+
+.gallery-tag-item {
+    width: 100%;
+    padding: 8px 12px;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    text-align: left;
+    font-size: 13px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: inherit;
+}
+
+.gallery-tag-item:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+.gallery-tag-item.active {
+    background: var(--accent-dim);
+    color: var(--accent);
+}
+
 /* ===== LOADING STATE ===== */
 .loading {
     text-align: center;

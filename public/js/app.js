@@ -369,6 +369,12 @@ const BlogApp = {
         const navBar = document.getElementById('navBar');
         if (navBar) navBar.style.display = view === 'blog' ? '' : 'none';
 
+        // 图库分类按钮仅在图库视图显示
+        document.body.classList.toggle('view-gallery-active', view === 'gallery');
+        // 切换视图时隐藏分类面板
+        const tagPanel = document.getElementById('galleryTagFloatPanel');
+        if (tagPanel) tagPanel.classList.remove('show');
+
         // 视图显隐
         document.querySelectorAll('.view').forEach(v => {
             v.style.display = v.id === 'view-' + view ? '' : 'none';
@@ -428,6 +434,9 @@ const BlogApp = {
                          onclick="openGalleryLightbox('${img.url}', ${i})">
                 </figure>
             `).join('');
+            // 加载图库分类标签
+            this.galleryTag = 'all';
+            this.renderGalleryTags();
         } catch (e) {
             grid.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:40px;">图库加载失败</p>';
         }
@@ -443,6 +452,7 @@ const BlogApp = {
                 this.galleryImages = data.data.map(img => ({
                     key: img.key,
                     url: img.url,
+                    tags: img.tags || [],
                 }));
             } else {
                 this.galleryImages = [];
@@ -451,6 +461,71 @@ const BlogApp = {
             this.galleryImages = [];
         }
         return this.galleryImages;
+    },
+
+    // 当前图库筛选标签（'all' 表示全部）
+    galleryTag: 'all',
+
+    // 图库分类切换
+    setGalleryTag(tag) {
+        this.galleryTag = tag || 'all';
+        this.renderGalleryByTag();
+        // 更新分类按钮状态
+        document.querySelectorAll('.gallery-tag-item').forEach(el => {
+            el.classList.toggle('active', el.dataset.tag === this.galleryTag);
+        });
+        // 更新悬浮按钮图标为当前标签首字
+        const btn = document.getElementById('galleryTagBtn');
+        if (btn) btn.textContent = this.galleryTag === 'all' ? '🏷' : this.galleryTag.charAt(0);
+        const panel = document.getElementById('galleryTagFloatPanel');
+        if (panel) panel.classList.remove('show');
+    },
+
+    // 根据当前分类渲染图库
+    renderGalleryByTag() {
+        const grid = document.getElementById('galleryGrid');
+        if (!grid) return;
+        const images = window.__galleryImages || [];
+        const filtered = this.galleryTag === 'all'
+            ? images
+            : images.filter(img => (img.tags || []).includes(this.galleryTag));
+        window.__galleryImages = filtered;
+        if (!filtered.length) {
+            grid.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:40px;">该分类暂无图片</p>';
+            return;
+        }
+        grid.innerHTML = filtered.map((img, i) => `
+            <figure class="gallery-item">
+                <img src="${img.url}" alt="图片 ${i + 1}" loading="lazy"
+                     onclick="openGalleryLightbox('${img.url}', ${i})">
+            </figure>
+        `).join('');
+    },
+
+    // 切换图库分类面板
+    toggleGalleryTagPanel() {
+        const panel = document.getElementById('galleryTagFloatPanel');
+        if (!panel) return;
+        panel.classList.toggle('show');
+    },
+
+    // 加载并渲染图库分类标签
+    async renderGalleryTags() {
+        const list = document.getElementById('galleryTagFloatList');
+        if (!list) return;
+        try {
+            // 从图片数据提取所有标签（后端分类）
+            const allTags = new Set();
+            const images = window.__galleryImages || [];
+            images.forEach(img => (img.tags || []).forEach(t => allTags.add(t)));
+            const tags = [...allTags];
+            list.innerHTML = `
+                <button class="gallery-tag-item active" data-tag="all" onclick="BlogApp.setGalleryTag('all')">全部</button>
+                ${tags.map(t => `<button class="gallery-tag-item" data-tag="${t}" onclick="BlogApp.setGalleryTag('${t}')">${t}</button>`).join('')}
+            `;
+        } catch (e) {
+            list.innerHTML = '<button class="gallery-tag-item active" data-tag="all" onclick="BlogApp.setGalleryTag(\'all\')">全部</button>';
+        }
     },
 
     // 加载资讯数据（优先后端 NewsNow 资讯 API，失败回退本地 recommendations.json）

@@ -8,7 +8,7 @@
     <link rel="icon" id="siteFavicon" href="images/Default/web-logo.webp" type="image/webp">
 
     <!-- Styles -->
-    <link rel="stylesheet" href="css/style.css?v=3.12.0">
+    <link rel="stylesheet" href="css/style.css?v=3.13.0">
 
     <!-- Marked.js -->
     <script src="js/vendor/marked.min.js"></script>
@@ -210,6 +210,12 @@
         </svg>
     </button>
 
+    <!-- 图库分类按钮（位于主题切换按钮上方） -->
+    <button class="gallery-tag-btn" id="galleryTagBtn" title="图库分类" onclick="BlogApp.toggleGalleryTagPanel()">🏷</button>
+    <div class="gallery-tag-float-panel" id="galleryTagFloatPanel">
+        <div class="gallery-tag-list" id="galleryTagFloatList"></div>
+    </div>
+
     <!-- 图库灯箱 -->
     <div class="gallery-lightbox" id="galleryLightbox" onclick="closeGalleryLightbox()">
         <div class="gallery-lightbox-counter" id="galleryLightboxCounter" onclick="event.stopPropagation()">1 / 0</div>
@@ -230,10 +236,10 @@
     </div>
 
     <!-- Scripts -->
-    <script src="js/theme.js?v=3.12.0"></script>
-    <script src="js/markdown.js?v=3.12.0"></script>
-    <script src="js/app.js?v=3.12.0"></script>
-    <script src="js/animations.js?v=3.12.0"></script>
+    <script src="js/theme.js?v=3.13.0"></script>
+    <script src="js/markdown.js?v=3.13.0"></script>
+    <script src="js/app.js?v=3.13.0"></script>
+    <script src="js/animations.js?v=3.13.0"></script>
 
     <script>
         // ===== Scroll Observer =====
@@ -576,11 +582,16 @@
                 }
             });
 
-            // Click outside to close panels（搜索框 / 标签面板）
+            // Click outside to close panels（搜索框 / 标签面板 / 图库分类）
             document.addEventListener('click', (e) => {
                 const tools = document.querySelector('.nav-tools');
                 if (tools && !tools.contains(e.target)) {
                     BlogApp.closePanels();
+                }
+                const tagBtn = document.getElementById('galleryTagBtn');
+                const tagPanel = document.getElementById('galleryTagFloatPanel');
+                if (tagPanel && tagBtn && !tagBtn.contains(e.target) && !tagPanel.contains(e.target)) {
+                    tagPanel.classList.remove('show');
                 }
             });
 
