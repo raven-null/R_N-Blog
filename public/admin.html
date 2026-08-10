@@ -83,6 +83,15 @@
         .status-off{color:var(--text-muted)}
         .row-actions{display:flex;gap:4px}
 
+        /* 文章搜索框 */
+        .article-search-box{display:flex;align-items:center;gap:8px;padding:8px 14px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:14px;transition:border .15s}
+        .article-search-box:focus-within{border-color:var(--accent)}
+        .article-search-box svg{color:var(--text-muted);flex-shrink:0}
+        .article-search-box input{flex:1;background:transparent;border:none;outline:none;color:var(--text);font-size:13px;font-family:inherit}
+        .article-search-box input::placeholder{color:#555}
+        .article-search-clear{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;padding:0 2px;line-height:1}
+        .article-search-clear:hover{color:var(--danger)}
+
         .editor-top{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
         .editor-top input,.editor-top select{padding:9px 12px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:13px;transition:border .15s}
         .editor-top input:focus,.editor-top select:focus{outline:none;border-color:var(--accent)}
@@ -316,6 +325,7 @@
             .article-table td{border:none;border-bottom:1px solid var(--border);padding:8px 10px}
             .article-table tr{border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:10px;background:var(--bg-card)}
             .article-table tr td:first-child{padding-top:12px}
+            .article-search-box{margin-bottom:12px;padding:8px 12px}
             .row-actions{justify-content:flex-end}
             /* 写文章 */
             .write-settings{padding:12px}
@@ -407,6 +417,11 @@
                 <!-- 文章列表 -->
                 <div id="tab-articles">
                     <div class="page-bar"><h2>文章管理</h2><div class="page-bar-actions"><label class="btn btn-ghost" style="cursor:pointer">📄 导入 .md<input type="file" accept=".md,.markdown" onchange="importAndEdit(this.files[0])" style="display:none"></label></div></div>
+                    <div class="article-search-box">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                        <input type="text" id="articleSearchInput" placeholder="搜索文章标题、标签..." oninput="filterArticles()">
+                        <button class="article-search-clear" onclick="clearArticleSearch()" title="清空" style="display:none">&times;</button>
+                    </div>
                     <table class="article-table"><thead><tr><th>标题</th><th>标签</th><th>状态</th><th>日期</th><th>操作</th></tr></thead><tbody id="articleList"></tbody></table>
                 </div>
 
@@ -643,6 +658,7 @@
     <script>
         let adminKey=localStorage.getItem('admin_key')||'';
         let articles=[],editingId=null,cachedImages=[];
+        let allArticles=[]; // 全部文章（用于搜索过滤）
         let tagModalKey='',tagModalSelected=[];
         let classifyTag='',allImageData=[];
         let imageTagNames=[];
@@ -662,7 +678,37 @@
         function toggleSidebar(){document.getElementById('sidebar').classList.toggle('collapsed')}
 
         // ===== 文章 =====
-        async function loadArticles(){const r=await apiFetch('action=articles');if(r.status==='success'){articles=r.data||[];renderArticleList()}}
+        async function loadArticles(){const r=await apiFetch('action=articles');if(r.status==='success'){allArticles=r.data||[];applyArticleFilter()}}
+        // 应用搜索过滤并渲染
+        function applyArticleFilter(){
+            const kw=(document.getElementById('articleSearchInput')?.value||'').trim().toLowerCase();
+            if(!kw){
+                articles=allArticles;
+                updateSearchClearBtn(false);
+            }else{
+                articles=allArticles.filter(a=>{
+                    const title=(a.title||'').toLowerCase();
+                    const id=(a.id||'').toLowerCase();
+                    const tags=(a.tags||[]).join(' ').toLowerCase();
+                    return title.includes(kw)||id.includes(kw)||tags.includes(kw);
+                });
+                updateSearchClearBtn(true);
+            }
+            renderArticleList();
+        }
+        // 搜索框输入
+        function filterArticles(){applyArticleFilter()}
+        // 清空搜索
+        function clearArticleSearch(){
+            const input=document.getElementById('articleSearchInput');
+            if(input)input.value='';
+            applyArticleFilter();
+        }
+        // 更新清空按钮显示
+        function updateSearchClearBtn(show){
+            const btn=document.getElementById('articleSearchInput')?.nextElementSibling;
+            if(btn)btn.style.display=show?'':'none';
+        }
         function renderArticleList(){const t=document.getElementById('articleList');if(!articles.length){t.innerHTML='<tr><td colspan="5" class="empty">暂无文章</td></tr>';return}t.innerHTML=articles.map(a=>`<tr><td><strong>${esc(a.title)}</strong><br><small style="color:var(--text-muted);font-size:10px">${esc(a.id)}</small></td><td>${(a.tags||[]).map(t=>`<span class="tag">${esc(t)}</span>`).join('')}</td><td><span class="status-${a.status==='published'?'on':'off'}">${a.status==='published'?'● 已发布':'○ 草稿'}</span></td><td style="font-size:11px;color:var(--text-muted)">${a.date}${a.update?'<br>↑ '+a.update:''}</td><td><div class="row-actions"><button class="btn btn-ghost btn-sm" onclick="editArticle('${escJs(a.id)}')">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteArticle('${escJs(a.id)}','${escJs(a.title)}')">删除</button></div></td></tr>`).join('')}
         async function deleteArticle(id,title){if(!confirm(`确定删除「${title}」？`))return;const r=await apiFetch(`action=articles&id=${id}`,{method:'DELETE'});if(r.status==='success'){showToast('已删除','success');loadArticles()}else showToast(r.message||'删除失败','error')}
         function editArticle(id){editingId=id;switchTab('write');document.getElementById('writeTitle').textContent='编辑文章';loadArticleForEdit(id)}
