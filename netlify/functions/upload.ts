@@ -69,7 +69,7 @@ export default async (req: Request) => {
     if (!key) return badRequest("key 必填", req)
     try {
       const store = getBlobStore(IMAGE_STORE)
-      await store.set(key, "")
+      await store.delete(key)
       return json(200, { status: "success", message: "已删除" }, req)
     } catch (err: any) {
       return json(500, { status: "error", message: err?.message || "删除失败" }, req)

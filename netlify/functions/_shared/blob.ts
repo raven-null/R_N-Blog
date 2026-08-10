@@ -1,5 +1,5 @@
 import { getStore } from "@netlify/blobs"
-import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync } from "node:fs"
+import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync, unlinkSync } from "node:fs"
 import { join } from "node:path"
 import type { NewsCache } from "./types"
 
@@ -13,6 +13,7 @@ const LOCAL_DIR = join(process.cwd(), ".local-data")
 interface KVStore {
   get(key: string, opts?: { type: "text" }): Promise<string | null>
   set(key: string, value: string): Promise<void>
+  delete(key: string): Promise<void>
   list(opts: { prefix: string }): Promise<{ blobs: { key: string }[] }>
 }
 
@@ -27,6 +28,10 @@ function localStore(name: string): KVStore {
     },
     async set(key, value) {
       writeFileSync(join(dir, key), value, "utf-8")
+    },
+    async delete(key) {
+      const file = join(dir, key)
+      if (existsSync(file)) unlinkSync(file)
     },
     async list({ prefix }) {
       if (!existsSync(dir)) return { blobs: [] }

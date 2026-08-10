@@ -182,7 +182,7 @@ export default async (req: Request) => {
       const id = url.searchParams.get("id")
       if (!id) return badRequest("id 必填", req)
 
-      await store.set(id, "")
+      await store.delete(id)
 
       const index = await getArticleIndex(store)
       const next = index.filter(a => a.id !== id)
@@ -218,6 +218,12 @@ export default async (req: Request) => {
         const tags = tagIndex[blob.key] || []
         // 按标签筛选
         if (tag && !tags.includes(tag)) continue
+        // 跳过已删除（空内容）的 blob，并顺带清理
+        const raw = await store.get(blob.key, { type: "text" })
+        if (!raw || raw.length < 10) {
+          try { await store.delete(blob.key) } catch {}
+          continue
+        }
         images.push({
           key: blob.key,
           url: `/api/admin-image?key=${blob.key}`,
@@ -324,7 +330,7 @@ export default async (req: Request) => {
     if (req.method === "DELETE") {
       const key = url.searchParams.get("key")
       if (!key) return badRequest("key 必填", req)
-      await store.set(key, "")
+      await store.delete(key)
       // 清理标签
       const tagIndex = await getImageTagIndex()
       delete tagIndex[key]
