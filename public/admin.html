@@ -680,7 +680,8 @@
                                 <div class="settings-avatar-row">
                                     <div class="settings-avatar-preview" id="settingsAvatarPreview"><img id="settingsAvatarImg" alt="" style="display:none"><span>未设置</span></div>
                                     <input type="text" id="setAvatar" placeholder="输入头像图片路径">
-                                    <button class="btn btn-ghost btn-sm" onclick="pickAvatarFromGallery()">🖼 选图</button>
+                                    <label class="btn btn-ghost btn-sm" style="cursor:pointer">⬆ 上传<input type="file" accept="image/*" style="display:none" onchange="uploadAvatarImage(this.files[0])"></label>
+                                    <button class="btn btn-ghost btn-sm" onclick="clearAvatarImage()" id="clearAvatarBtn">✕ 移除</button>
                                 </div>
                             </div>
                             <div class="settings-field">
@@ -1969,15 +1970,56 @@
                 span.style.display='';
             }
         }
-        // 从图库选择头像
-        async function pickAvatarFromGallery(){
-            document.getElementById('imagePickerPanel').classList.add('open');
-            const r=await apiFetch('action=images');
-            if(r.status==='success'){
-                cachedImages=r.data||[];
-                window.__avatarMode=true;
-                renderImagePicker();
+        // 上传头像（存入独立 avatar-images store，与图库/文章图片分离）
+        async function uploadAvatarImage(file){
+            if(!file)return;
+            // 如果已有头像（是已上传的），先删除旧的
+            const cur=document.getElementById('setAvatar').value.trim();
+            if(cur&&cur.includes('/api/avatar-image?')){
+                try{
+                    const m=cur.match(/key=([^&]+)/);
+                    if(m){
+                        const oldKey=decodeURIComponent(m[1]);
+                        await fetch(`/api/avatar-image?key=${encodeURIComponent(oldKey)}`,{method:'DELETE',headers:{'X-Admin-Key':adminKey}});
+                    }
+                }catch(e){}
             }
+            const prog=document.getElementById('uploadProgress'),pt=document.getElementById('uploadProgressText');
+            prog.classList.add('show');pt.textContent=`上传头像 ${file.name}...`;
+            try{
+                const compressed=await compressImage(file);
+                const res=await fetch('/api/avatar-image',{
+                    method:'POST',
+                    headers:{'Content-Type':'application/json','X-Admin-Key':adminKey},
+                    body:JSON.stringify({data:compressed.data,mime:compressed.mime,name:file.name})
+                });
+                const r=await res.json();
+                if(r.status==='success'){
+                    document.getElementById('setAvatar').value=r.url;
+                    renderSettingsAvatar(r.url);
+                    showToast('头像已上传','success');
+                }else{
+                    showToast(r.message||'上传失败','error');
+                }
+            }catch(e){
+                showToast('上传失败','error');
+            }finally{prog.classList.remove('show')}
+        }
+        // 移除头像（若为已上传头像则删除后端存储）
+        async function clearAvatarImage(){
+            const cur=document.getElementById('setAvatar').value.trim();
+            if(cur&&cur.includes('/api/avatar-image?')){
+                try{
+                    const m=cur.match(/key=([^&]+)/);
+                    if(m){
+                        const oldKey=decodeURIComponent(m[1]);
+                        await fetch(`/api/avatar-image?key=${encodeURIComponent(oldKey)}`,{method:'DELETE',headers:{'X-Admin-Key':adminKey}});
+                    }
+                }catch(e){}
+            }
+            document.getElementById('setAvatar').value='';
+            renderSettingsAvatar('');
+            showToast('头像已移除','success');
         }
         async function saveSettings(){
             const siteName=document.getElementById('setSiteName').value.trim();

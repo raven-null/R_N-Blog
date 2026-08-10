@@ -51,3 +51,8 @@
   from = "/api/article-image"
   to = "/.netlify/functions/article-image"
   status = 200
+
+[[redirects]]
+  from = "/api/avatar-image"
+  to = "/.netlify/functions/avatar-image"
+  status = 200
