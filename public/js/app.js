@@ -485,10 +485,12 @@ const BlogApp = {
     renderGalleryByTag() {
         const grid = document.getElementById('galleryGrid');
         if (!grid) return;
-        const images = window.__galleryImages || [];
+        // 始终基于完整图库数据（this.galleryImages）筛选
+        const allImages = (this.galleryImages && this.galleryImages.length) ? this.galleryImages : [];
         const filtered = this.galleryTag === 'all'
-            ? images
-            : images.filter(img => (img.tags || []).includes(this.galleryTag));
+            ? allImages
+            : allImages.filter(img => (img.tags || []).includes(this.galleryTag));
+        // window.__galleryImages 设为当前筛选结果（灯箱在筛选结果内导航）
         window.__galleryImages = filtered;
         if (!filtered.length) {
             grid.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:40px;">该分类暂无图片</p>';
