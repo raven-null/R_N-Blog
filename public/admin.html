@@ -128,6 +128,8 @@
         .classify-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(105px,1fr));gap:8px}
         .classify-card{background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;cursor:grab;transition:all .12s;position:relative}
         .classify-card:hover{border-color:var(--border-light);transform:translateY(-1px)}
+        .classify-card.selected{border-color:var(--accent);box-shadow:0 0 8px rgba(79,195,247,.3)}
+        .img-checkbox{width:16px;height:16px;accent-color:var(--accent);cursor:pointer}
         .classify-card.dragging{opacity:.4;transform:scale(.92)}
         .classify-card img{width:100%;height:85px;object-fit:cover;display:block}
         .classify-card .cc-bottom{padding:4px 6px;display:flex;justify-content:space-between;align-items:center}
@@ -294,7 +296,13 @@
                         </div>
                         <div class="classify-right">
                             <div class="classify-panel" id="classifyRight">
-                                <div class="classify-header"><div class="tag-sel" id="classifyTagSel"></div></div>
+                                <div class="classify-header">
+                                    <div class="tag-sel" id="classifyTagSel"></div>
+                                    <div style="display:flex;gap:6px;margin-left:auto">
+                                        <button class="btn btn-ghost btn-sm" onclick="toggleSelectAll()" id="btnSelectAll">全选</button>
+                                        <button class="btn btn-ghost btn-sm" onclick="batchClearTags()" id="btnBatchClear" disabled>批量清除</button>
+                                    </div>
+                                </div>
                                 <div class="classify-body"><div class="classify-grid" id="classifiedGrid"></div></div>
                             </div>
                         </div>
@@ -355,6 +363,7 @@
         let articleTagNames=[];
         let selectedArticleTags=[];
         let tagPickerOpen=false;
+        let selectedImageKeys=new Set();
 
         function doLogin(){const k=document.getElementById('adminKeyInput').value.trim();if(!k)return;adminKey=k;localStorage.setItem('admin_key',k);apiFetch('action=login',{method:'POST',body:JSON.stringify({key:k})}).then(r=>{if(r.status==='success')showAdmin();else{document.getElementById('loginError').style.display='block';document.getElementById('loginError').textContent=r.message||'密钥错误'}}).catch(()=>{document.getElementById('loginError').style.display='block';document.getElementById('loginError').textContent='连接失败'})}
         function doLogout(){adminKey='';localStorage.removeItem('admin_key');location.reload()}
@@ -449,11 +458,14 @@
             document.getElementById('unclassifiedCount').textContent=untagged.length;
             const leftGrid=document.getElementById('unclassifiedGrid');
             if(!untagged.length){leftGrid.innerHTML='<div class="classify-empty" style="border:none">所有图库图片已分类 ✓</div>'}
-            else{leftGrid.innerHTML=untagged.map(img=>classifyCardHtml(img)).join('')}
+            else{leftGrid.innerHTML=untagged.map(img=>classifyCardHtml(img, false)).join('')}
 
             const rightGrid=document.getElementById('classifiedGrid');
             if(!classified.length){rightGrid.innerHTML='<div class="classify-empty">拖拽图片到这里分类</div>'}
-            else{rightGrid.innerHTML=classified.map(img=>classifyCardHtml(img)).join('')}
+            else{rightGrid.innerHTML=classified.map(img=>classifyCardHtml(img, true)).join('')}
+
+            // 更新批量操作按钮状态
+            updateBatchButtons();
 
             // 左侧放置区：拖入清除标签 或 拖入文件上传
             const leftPanel=document.getElementById('classifyLeft');
@@ -485,8 +497,10 @@
             rightPanel.ondrop=async e=>{e.preventDefault();rightPanel.classList.remove('drag-over');const key=e.dataTransfer.getData('text/key');if(key)await assignTag(key,classifyTag)};
         }
 
-        function classifyCardHtml(img){
-            return `<div class="classify-card" draggable="true" data-key="${img.key}" ondragstart="dragStart(event,'${img.key}')"><img src="${img.url}" loading="lazy"><div class="cc-bottom"><span class="cc-name" title="${img.key}">${img.key}</span><button class="cc-del" onclick="event.stopPropagation();deleteImage('${img.key}')" title="删除">&times;</button></div></div>`;
+        function classifyCardHtml(img, showCheckbox=false){
+            const checked = selectedImageKeys.has(img.key) ? 'checked' : '';
+            const checkbox = showCheckbox ? `<input type="checkbox" class="img-checkbox" ${checked} onclick="event.stopPropagation();toggleImageSelect('${img.key}')" style="position:absolute;top:4px;left:4px;z-index:2">` : '';
+            return `<div class="classify-card${selectedImageKeys.has(img.key) ? ' selected' : ''}" draggable="true" data-key="${img.key}" ondragstart="dragStart(event,'${img.key}')">${checkbox}<img src="${img.url}" loading="lazy"><div class="cc-bottom"><span class="cc-name" title="${img.key}">${img.key}</span><button class="cc-del" onclick="event.stopPropagation();deleteImage('${img.key}')" title="删除">&times;</button></div></div>`;
         }
 
         function dragStart(e,key){e.dataTransfer.setData('text/key',key);e.target.classList.add('dragging');e.target.addEventListener('dragend',()=>e.target.classList.remove('dragging'),{once:true})}
@@ -504,6 +518,81 @@
             // 后台同步
             const r=await apiFetch('action=images',{method:'PATCH',body:JSON.stringify({key,tags:newTags})});
             if(r.status!=='success'){if(img)img.tags=cur;renderPanels();showToast(r.message||'同步失败','error')}
+        }
+
+        // 切换图片选中状态
+        function toggleImageSelect(key){
+            if(selectedImageKeys.has(key)){
+                selectedImageKeys.delete(key);
+            }else{
+                selectedImageKeys.add(key);
+            }
+            renderPanels();
+        }
+
+        // 全选/取消全选
+        function toggleSelectAll(){
+            const classified=allImageData.filter(i=>(i.tags||[]).includes(classifyTag));
+            if(selectedImageKeys.size === classified.length){
+                // 取消全选
+                selectedImageKeys.clear();
+            }else{
+                // 全选
+                classified.forEach(img=>selectedImageKeys.add(img.key));
+            }
+            renderPanels();
+        }
+
+        // 更新批量操作按钮状态
+        function updateBatchButtons(){
+            const btnSelectAll=document.getElementById('btnSelectAll');
+            const btnBatchClear=document.getElementById('btnBatchClear');
+            const classified=allImageData.filter(i=>(i.tags||[]).includes(classifyTag));
+            
+            if(btnSelectAll){
+                btnSelectAll.textContent = selectedImageKeys.size === classified.length && classified.length > 0 ? '取消全选' : '全选';
+            }
+            if(btnBatchClear){
+                btnBatchClear.disabled = selectedImageKeys.size === 0;
+            }
+        }
+
+        // 批量清除标签（移到未分类）
+        async function batchClearTags(){
+            if(selectedImageKeys.size === 0){showToast('请先选择图片','error');return}
+            
+            const count = selectedImageKeys.size;
+            if(!confirm(`确定将 ${count} 张图片移至未分类？`))return;
+
+            let success = 0, fail = 0;
+            const keys = Array.from(selectedImageKeys);
+            
+            for(const key of keys){
+                const img=allImageData.find(i=>i.key===key);
+                const cur=img?(img.tags||[]):[];
+                const newTags=['图库'];
+                
+                // 乐观更新
+                if(img)img.tags=newTags;
+                
+                // 后台同步
+                const r=await apiFetch('action=images',{method:'PATCH',body:JSON.stringify({key,tags:newTags})});
+                if(r.status==='success'){
+                    success++;
+                }else{
+                    fail++;
+                    if(img)img.tags=cur;
+                }
+            }
+
+            selectedImageKeys.clear();
+            renderPanels();
+            
+            if(fail === 0){
+                showToast(`已将 ${success} 张图片移至未分类`,'success');
+            }else{
+                showToast(`${success} 成功，${fail} 失败`,'error');
+            }
         }
 
         async function assignTag(key,tag){
