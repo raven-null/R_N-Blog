@@ -72,17 +72,12 @@ export default async (req: Request) => {
     return json(200, { status: "success", token: generateToken(key) }, req)
   }
 
-  // 以下接口需要认证
-  if (!checkAuth(req)) {
-    return json(401, { status: "error", message: "未授权" }, req)
-  }
-
-  // ===== 文章管理 =====
+  // ===== 文章管理（公开读取） =====
 
   if (path === "articles") {
     const store = getBlobStore(ARTICLE_STORE)
 
-    // GET: 列表或单篇
+    // GET: 列表或单篇（公开访问）
     if (req.method === "GET") {
       const id = url.searchParams.get("id")
       if (id) {
@@ -92,6 +87,11 @@ export default async (req: Request) => {
       }
       const index = await getArticleIndex(store)
       return json(200, { status: "success", data: index }, req)
+    }
+
+    // 以下写操作需要认证
+    if (!checkAuth(req)) {
+      return json(401, { status: "error", message: "未授权" }, req)
     }
 
     // POST: 创建或更新
