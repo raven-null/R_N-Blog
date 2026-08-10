@@ -80,14 +80,33 @@
         .editor-top input:focus,.editor-top select:focus{outline:none;border-color:var(--accent)}
         .editor-top input{flex:1;min-width:180px}
         .editor-top select{min-width:90px}
-        .editor-toolbar{display:flex;gap:1px;padding:6px 10px;background:var(--bg-card);border:1px solid var(--border);border-bottom:none;border-radius:var(--radius-sm) var(--radius-sm) 0 0;flex-wrap:wrap;align-items:center}
-        .editor-toolbar button{width:30px;height:30px;display:flex;align-items:center;justify-content:center;background:transparent;border:none;color:var(--text-muted);cursor:pointer;border-radius:4px;font-size:13px;transition:all .08s}
+
+        /* ===== 写文章新 UI ===== */
+        .write-settings{display:flex;flex-direction:column;gap:10px;margin-bottom:12px;padding:16px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius)}
+        .write-title-input{width:100%;padding:12px 16px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:17px;font-weight:600;transition:border .15s}
+        .write-title-input:focus{outline:none;border-color:var(--accent)}
+        .write-title-input::placeholder{color:#555;font-weight:400}
+        .write-settings-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+        .write-settings-row > input{flex:1;min-width:180px;padding:9px 12px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:13px}
+        .write-settings-row > input:focus{outline:none;border-color:var(--accent)}
+        .write-settings-row select{padding:9px 12px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:13px;cursor:pointer}
+        .write-settings-row select:focus{outline:none;border-color:var(--accent)}
+
+        .editor-toolbar{display:flex;justify-content:space-between;gap:8px;padding:6px 10px;background:var(--bg-card);border:1px solid var(--border);border-bottom:none;border-radius:var(--radius-sm) var(--radius-sm) 0 0;flex-wrap:wrap;align-items:center}
+        .editor-toolbar-group{display:flex;gap:1px;flex-wrap:wrap;align-items:center}
+        .editor-toolbar-right{justify-content:flex-end;margin-left:auto}
+        .editor-toolbar button{height:30px;padding:0 8px;display:flex;align-items:center;justify-content:center;background:transparent;border:none;color:var(--text-muted);cursor:pointer;border-radius:4px;font-size:12px;transition:all .08s}
         .editor-toolbar button:hover{background:var(--bg-hover);color:var(--accent)}
-        .editor-toolbar .sep{width:1px;height:18px;background:var(--border);margin:0 5px}
-        .editor-split{display:grid;grid-template-columns:1fr 1fr;gap:0;height:calc(100vh - 310px)}
-        .editor-textarea{width:100%;height:100%;background:var(--bg-input);border:1px solid var(--border);border-radius:0 0 0 var(--radius-sm);color:var(--text);font-family:'JetBrains Mono','Fira Code',monospace;font-size:13px;padding:14px;resize:none;line-height:1.7;border-right:none}
+        .editor-toolbar .sep{width:1px;height:18px;background:var(--border);margin:0 4px}
+        .editor-upload-img{height:30px;padding:0 8px;display:flex;align-items:center;justify-content:center;background:transparent;border:none;color:var(--text-muted);cursor:pointer;border-radius:4px;font-size:12px;transition:all .08s;line-height:30px}
+        .editor-upload-img:hover{background:var(--bg-hover);color:var(--accent)}
+        .editor-split{display:grid;grid-template-columns:1fr 1fr;gap:0;height:calc(100vh - 420px);min-height:320px}
+        .editor-left{position:relative;display:flex;flex-direction:column}
+        .editor-textarea{width:100%;height:100%;flex:1;background:var(--bg-input);border:1px solid var(--border);border-radius:0 0 0 var(--radius-sm);color:var(--text);font-family:'JetBrains Mono','Fira Code',monospace;font-size:13px;padding:14px;resize:none;line-height:1.7;border-right:none}
         .editor-textarea:focus{outline:none;border-color:var(--accent)}
-        .editor-preview{background:var(--bg-card);border:1px solid var(--border);border-radius:0 0 var(--radius-sm) 0;padding:18px;overflow-y:auto;font-size:14px;line-height:1.8}
+        .editor-right{display:flex;flex-direction:column}
+        .editor-preview{background:var(--bg-card);border:1px solid var(--border);border-radius:0 0 var(--radius-sm) 0;padding:18px;overflow-y:auto;font-size:14px;line-height:1.8;flex:1}
+        .preview-empty{display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted);font-size:13px;text-align:center}
         .editor-preview h1,.editor-preview h2,.editor-preview h3{color:var(--accent);margin:18px 0 8px;font-weight:600}
         .editor-preview h1{font-size:22px;border-bottom:1px solid var(--border);padding-bottom:6px}
         .editor-preview h2{font-size:18px}.editor-preview h3{font-size:15px}
@@ -250,7 +269,8 @@
         .admin-lightbox-bottom a:hover,.admin-lightbox-bottom button:hover{background:rgba(255,255,255,.25)}
         .admin-lightbox-name{position:fixed;bottom:70px;color:var(--text-muted);font-size:12px;z-index:2}
 
-        @media(max-width:768px){.sidebar{display:none}.editor-split{grid-template-columns:1fr}.image-picker-panel{width:100%}.classify-workspace{flex-direction:column;height:auto}.tags-grid{grid-template-columns:1fr}}
+        @media(max-width:768px){.sidebar{display:none}.editor-split{grid-template-columns:1fr;height:auto}.image-picker-panel{width:100%}.classify-workspace{flex-direction:column;height:auto}.tags-grid{grid-template-columns:1fr}.write-settings-row{flex-direction:column;align-items:stretch}.write-settings-row>input{min-width:0}.write-settings-row select{width:100%}.editor-toolbar{justify-content:flex-start}.editor-toolbar-right{margin-left:0}.editor-split .editor-right{display:none}.editor-textarea{border-radius:0 0 var(--radius-sm) var(--radius-sm);border-right:1px solid var(--border)}.editor-footer{flex-direction:column;gap:10px}.editor-footer-actions{width:100%}.editor-footer-actions .btn{flex:1;justify-content:center}.page-bar-actions{flex-wrap:wrap}}
+        @media(max-width:480px){.write-title-input{font-size:15px}.editor-toolbar-group button{padding:0 6px;font-size:11px}.content{padding:14px}}
     </style>
 </head>
 <body>
@@ -278,29 +298,79 @@
 
                 <!-- 写文章 -->
                 <div id="tab-write" style="display:none">
-                    <div class="page-bar"><h2 id="writeTitle">写文章</h2><div class="page-bar-actions"><label class="btn btn-ghost" style="cursor:pointer">📄 导入<input type="file" accept=".md,.markdown" onchange="importToEditor(this.files[0])" style="display:none"></label><button class="btn btn-ghost" onclick="exportMarkdown()">💾 导出</button></div></div>
-                    <div class="editor-top">
-                        <input type="text" id="edTitle" placeholder="文章标题">
-                        <div class="tag-picker-wrap" style="flex:1;min-width:200px">
-                            <div class="tag-picker-input" id="tagPickerInput" onclick="focusTagPicker()">
-                                <input type="text" id="tagPickerText" placeholder="输入或选择标签..." oninput="filterTagDropdown()" onkeydown="tagPickerKeydown(event)" onfocus="openTagDropdown()" autocomplete="off">
-                            </div>
-                            <div class="tag-picker-dropdown" id="tagPickerDropdown"></div>
+                    <div class="page-bar">
+                        <h2 id="writeTitle">写文章</h2>
+                        <div class="page-bar-actions">
+                            <button class="btn btn-ghost" onclick="exportMarkdown()">💾 导出 MD</button>
+                            <label class="btn btn-ghost" style="cursor:pointer">📄 导入<input type="file" accept=".md,.markdown" onchange="importAndEdit(this.files[0])" style="display:none"></label>
                         </div>
-                        <select id="edStatus"><option value="published">已发布</option><option value="draft">草稿</option></select>
                     </div>
-                    <div class="editor-toolbar">
-                        <button onclick="mdInsert('heading')" title="标题"><b>H</b></button><button onclick="mdInsert('bold')" title="粗体"><b>B</b></button><button onclick="mdInsert('italic')" title="斜体"><i>I</i></button><button onclick="mdInsert('strike')" title="删除线"><s>S</s></button><span class="sep"></span>
-                        <button onclick="mdInsert('code')" title="代码">{ }</button><button onclick="mdInsert('codeblock')" title="代码块">```</button><button onclick="mdInsert('quote')" title="引用">"</button><button onclick="mdInsert('list')" title="列表">☰</button><button onclick="mdInsert('olist')" title="有序列表">1.</button><span class="sep"></span>
-                        <button onclick="mdInsert('link')" title="链接">🔗</button><button onclick="mdInsert('image')" title="图片URL">🖼</button><button onclick="openImagePicker()" title="从图库插入">📁</button><button onclick="mdInsert('table')" title="表格">▦</button><button onclick="mdInsert('hr')" title="分割线">—</button><span class="sep"></span>
-                        <div class="upload-progress" id="uploadProgress"><div class="spinner"></div><span id="uploadProgressText">上传中...</span></div>
+                    <!-- 文章设置区 -->
+                    <div class="write-settings">
+                        <input type="text" id="edTitle" class="write-title-input" placeholder="请输入文章标题 *" maxlength="100">
+                        <div class="write-settings-row">
+                            <input type="text" id="edExcerpt" placeholder="文章摘要（选填，不填自动提取正文前150字）" maxlength="200">
+                            <div class="tag-picker-wrap" style="flex:1;min-width:200px">
+                                <div class="tag-picker-input" id="tagPickerInput" onclick="focusTagPicker()">
+                                    <input type="text" id="tagPickerText" placeholder="添加标签，回车确认..." oninput="filterTagDropdown()" onkeydown="tagPickerKeydown(event)" onfocus="openTagDropdown()" autocomplete="off">
+                                </div>
+                                <div class="tag-picker-dropdown" id="tagPickerDropdown"></div>
+                            </div>
+                            <select id="edStatus" title="发布状态">
+                                <option value="published">✅ 发布</option>
+                                <option value="draft">📝 草稿</option>
+                            </select>
+                        </div>
                     </div>
-                    <div class="editor-split" style="position:relative">
-                        <textarea class="editor-textarea" id="edContent" placeholder="Markdown 正文...&#10;支持拖拽/粘贴图片自动上传" oninput="updatePreview()" ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)"></textarea>
-                        <div class="editor-preview" id="edPreview"></div>
-                        <div class="drop-overlay" id="dropOverlay">📤 拖拽图片到这里上传</div>
+                    <!-- 编辑工具栏 -->
+                    <div class="editor-toolbar" id="editorToolbar">
+                        <div class="editor-toolbar-group">
+                            <button onclick="mdInsert('heading')" title="二级标题"><b>H2</b></button>
+                            <button onclick="mdInsert('h3')" title="三级标题"><b>H3</b></button>
+                            <span class="sep"></span>
+                            <button onclick="mdInsert('bold')" title="加粗">B</button>
+                            <button onclick="mdInsert('italic')" title="斜体"><i>I</i></button>
+                            <button onclick="mdInsert('strike')" title="删除线"><s>S</s></button>
+                            <button onclick="mdInsert('quote')" title="引用">❝</button>
+                            <span class="sep"></span>
+                            <button onclick="mdInsert('list')" title="无序列表">• 列表</button>
+                            <button onclick="mdInsert('olist')" title="有序列表">1. 列表</button>
+                            <span class="sep"></span>
+                            <button onclick="mdInsert('link')" title="插入链接">🔗 链接</button>
+                            <button onclick="mdInsert('code')" title="行内代码">`代码`</button>
+                            <button onclick="mdInsert('codeblock')" title="代码块">代码块</button>
+                            <button onclick="mdInsert('hr')" title="分割线">— 分割线</button>
+                        </div>
+                        <div class="editor-toolbar-group editor-toolbar-right">
+                            <button onclick="mdInsert('table')" title="插入表格">▦ 表格</button>
+                            <span class="sep"></span>
+                            <button onclick="openImagePicker()" title="从图库插入图片" class="toolbar-img-btn">🖼 图库</button>
+                            <label class="editor-upload-img" title="上传图片">
+                                ⬆ 上传图片<input type="file" accept="image/*" multiple style="display:none" onchange="uploadAndInsertToEditor(this.files);this.value=''">
+                            </label>
+                            <div class="upload-progress" id="uploadProgress"><div class="spinner"></div><span id="uploadProgressText">上传中...</span></div>
+                        </div>
                     </div>
-                    <div class="editor-footer"><span class="editor-info" id="editorInfo">0 字</span><div class="editor-footer-actions"><button class="btn btn-ghost" onclick="resetEditor()">清空</button><button class="btn btn-primary" onclick="saveArticle()">保存文章</button></div></div>
+                    <!-- 编辑器主体：左侧编辑 + 右侧预览 -->
+                    <div class="editor-split">
+                        <div class="editor-left">
+                            <textarea class="editor-textarea" id="edContent" placeholder="开始写作吧...
+支持：拖拽或粘贴图片自动上传；选中文字后点击上方按钮快速排版；直接输入 Markdown 语法（如 ## 标题）" oninput="updatePreview()" ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)"></textarea>
+                            <div class="drop-overlay" id="dropOverlay">📤 松开上传图片</div>
+                        </div>
+                        <div class="editor-right">
+                            <div class="editor-preview" id="edPreview">
+                                <div class="preview-empty">👈 左侧开始写作，这里实时预览</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="editor-footer">
+                        <span class="editor-info" id="editorInfo">0 字</span>
+                        <div class="editor-footer-actions">
+                            <button class="btn btn-ghost" onclick="resetEditor()">清空</button>
+                            <button class="btn btn-primary" onclick="saveArticle()">💾 保存文章</button>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- 图片管理 -->
@@ -462,14 +532,14 @@
         function renderArticleList(){const t=document.getElementById('articleList');if(!articles.length){t.innerHTML='<tr><td colspan="5" class="empty">暂无文章</td></tr>';return}t.innerHTML=articles.map(a=>`<tr><td><strong>${esc(a.title)}</strong><br><small style="color:var(--text-muted);font-size:10px">${esc(a.id)}</small></td><td>${(a.tags||[]).map(t=>`<span class="tag">${esc(t)}</span>`).join('')}</td><td><span class="status-${a.status==='published'?'on':'off'}">${a.status==='published'?'● 已发布':'○ 草稿'}</span></td><td style="font-size:11px;color:var(--text-muted)">${a.date}${a.update?'<br>↑ '+a.update:''}</td><td><div class="row-actions"><button class="btn btn-ghost btn-sm" onclick="editArticle('${escJs(a.id)}')">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteArticle('${escJs(a.id)}','${escJs(a.title)}')">删除</button></div></td></tr>`).join('')}
         async function deleteArticle(id,title){if(!confirm(`确定删除「${title}」？`))return;const r=await apiFetch(`action=articles&id=${id}`,{method:'DELETE'});if(r.status==='success'){showToast('已删除','success');loadArticles()}else showToast(r.message||'删除失败','error')}
         function editArticle(id){editingId=id;switchTab('write');document.getElementById('writeTitle').textContent='编辑文章';loadArticleForEdit(id)}
-        async function loadArticleForEdit(id){const r=await apiFetch(`action=articles&id=${id}`);if(r.status==='success'){const d=r.data;document.getElementById('edTitle').value=d.title||'';selectedArticleTags=[...(d.tags||[])];renderTagPickerChips();document.getElementById('edStatus').value=d.status||'published';document.getElementById('edContent').value=d.content||'';updatePreview()}}
-        function importAndEdit(f){if(!f)return;const r=new FileReader();r.onload=()=>{const raw=r.result,m=raw.match(/^---\s*\n([\s\S]*?)\n---\s*\n([\s\S]*)$/);let title=f.name.replace(/\.md$/),tags=[],content=raw;if(m){const fm=m[1],t=fm.match(/title:\s*(.+)/);if(t)title=t[1].trim();const tg=fm.match(/tags:\s*\[([^\]]+)\]/);if(tg)tags=tg[1].split(',').map(s=>s.trim());content=m[2]}editingId=null;switchTab('write');document.getElementById('writeTitle').textContent='导入文章';document.getElementById('edTitle').value=title;selectedArticleTags=tags;renderTagPickerChips();document.getElementById('edContent').value=content;updatePreview();showToast(`已导入: ${f.name}`,'success')};r.readAsText(f)}
+        async function loadArticleForEdit(id){const r=await apiFetch(`action=articles&id=${id}`);if(r.status==='success'){const d=r.data;document.getElementById('edTitle').value=d.title||'';document.getElementById('edExcerpt').value=d.excerpt||'';selectedArticleTags=[...(d.tags||[])];renderTagPickerChips();document.getElementById('edStatus').value=d.status||'published';document.getElementById('edContent').value=d.content||'';updatePreview()}}
+        function importAndEdit(f){if(!f)return;const r=new FileReader();r.onload=()=>{const raw=r.result,m=raw.match(/^---\s*\n([\s\S]*?)\n---\s*\n([\s\S]*)$/);let title=f.name.replace(/\.md$/),excerpt='',tags=[],content=raw;if(m){const fm=m[1],t=fm.match(/title:\s*(.+)/);if(t)title=t[1].trim();const tg=fm.match(/tags:\s*\[([^\]]+)\]/);if(tg)tags=tg[1].split(',').map(s=>s.trim());const ex=fm.match(/excerpt:\s*(.+)/);if(ex)excerpt=ex[1].trim();content=m[2]}editingId=null;switchTab('write');document.getElementById('writeTitle').textContent='导入文章';document.getElementById('edTitle').value=title;document.getElementById('edExcerpt').value=excerpt;selectedArticleTags=tags;renderTagPickerChips();document.getElementById('edContent').value=content;updatePreview();showToast(`已导入: ${f.name}`,'success')};r.readAsText(f)}
 
         // ===== 写文章 =====
-        function resetEditor(){editingId=null;document.getElementById('writeTitle').textContent='写文章';document.getElementById('edTitle').value='';selectedArticleTags=[];renderTagPickerChips();document.getElementById('edStatus').value='published';document.getElementById('edContent').value='';document.getElementById('edPreview').innerHTML='';document.getElementById('editorInfo').textContent='0 字'}
-        async function saveArticle(){const title=document.getElementById('edTitle').value.trim(),tags=selectedArticleTags.join(', '),status=document.getElementById('edStatus').value,content=document.getElementById('edContent').value;if(!title){showToast('标题不能为空','error');return}if(!content){showToast('内容不能为空','error');return}const body={title,tags,content,status};if(editingId)body.id=editingId;const r=await apiFetch('action=articles',{method:'POST',body:JSON.stringify(body)});if(r.status==='success'){showToast('保存成功','success');resetEditor();switchTab('articles')}else showToast(r.message||'保存失败','error')}
-        function mdInsert(t){const ta=document.getElementById('edContent'),s=ta.selectionStart,e=ta.selectionEnd,sel=ta.value.slice(s,e),b=ta.value.slice(0,s),a=ta.value.slice(e);const m={heading:{b:'## ',a:'',d:'标题'},bold:{b:'**',a:'**',d:'粗体'},italic:{b:'*',a:'*',d:'斜体'},strike:{b:'~~',a:'~~',d:'删除线'},code:{b:'`',a:'`',d:'code'},codeblock:{b:'```\n',a:'\n```',d:'// 代码'},quote:{b:'> ',a:'',d:'引用'},list:{b:'- ',a:'',d:'列表项'},olist:{b:'1. ',a:'',d:'列表项'},link:{b:'[',a:'](https://)',d:'链接'},image:{b:'![',a:'](url)',d:'图片'},table:{b:'| 列1 | 列2 |\n| --- | --- |\n',a:'',d:'| 内容 | 内容 |'},hr:{b:'\n---\n',a:'',d:''}};const i=m[t];if(!i)return;const tx=sel||i.d;ta.value=b+i.b+tx+i.a+a;ta.focus();ta.selectionStart=s+i.b.length;ta.selectionEnd=s+i.b.length+tx.length;updatePreview()}
-        function updatePreview(){const md=document.getElementById('edContent').value;document.getElementById('edPreview').innerHTML=renderMd(md);document.getElementById('editorInfo').textContent=md.length+' 字'}
+        function resetEditor(){editingId=null;document.getElementById('writeTitle').textContent='写文章';document.getElementById('edTitle').value='';document.getElementById('edExcerpt').value='';selectedArticleTags=[];renderTagPickerChips();document.getElementById('edStatus').value='published';document.getElementById('edContent').value='';updatePreview();document.getElementById('editorInfo').textContent='0 字'}
+        async function saveArticle(){const title=document.getElementById('edTitle').value.trim(),excerpt=document.getElementById('edExcerpt').value.trim(),tags=selectedArticleTags.join(', '),status=document.getElementById('edStatus').value,content=document.getElementById('edContent').value;if(!title){showToast('请填写文章标题','error');return}if(!content){showToast('请填写文章内容','error');return}const body={title,excerpt,tags,content,status};if(editingId)body.id=editingId;const r=await apiFetch('action=articles',{method:'POST',body:JSON.stringify(body)});if(r.status==='success'){showToast('保存成功','success');resetEditor();switchTab('articles')}else showToast(r.message||'保存失败','error')}
+        function mdInsert(t){const ta=document.getElementById('edContent'),s=ta.selectionStart,e=ta.selectionEnd,sel=ta.value.slice(s,e),b=ta.value.slice(0,s),a=ta.value.slice(e);const m={heading:{b:'## ',a:'',d:'标题'},h3:{b:'### ',a:'',d:'小标题'},bold:{b:'**',a:'**',d:'加粗文字'},italic:{b:'*',a:'*',d:'斜体文字'},strike:{b:'~~',a:'~~',d:'删除线'},code:{b:'`',a:'`',d:'code'},codeblock:{b:'```\n',a:'\n```',d:'// 代码'},quote:{b:'> ',a:'',d:'引用内容'},list:{b:'- ',a:'',d:'列表项'},olist:{b:'1. ',a:'',d:'列表项'},link:{b:'[',a:'](https://)',d:'链接文字'},image:{b:'![',a:'](url)',d:'图片描述'},table:{b:'| 列1 | 列2 |\n| --- | --- |\n',a:'',d:'| 内容 | 内容 |'},hr:{b:'\n---\n',a:'',d:''}};const i=m[t];if(!i)return;const tx=sel||i.d;ta.value=b+i.b+tx+i.a+a;ta.focus();ta.selectionStart=s+i.b.length;ta.selectionEnd=s+i.b.length+tx.length;updatePreview()}
+        function updatePreview(){const md=document.getElementById('edContent').value;const preview=document.getElementById('edPreview');if(!md.trim()){preview.innerHTML='<div class="preview-empty">👈 左侧开始写作，这里实时预览</div>';}else{preview.innerHTML=renderMd(md);}document.getElementById('editorInfo').textContent=md.length+' 字'}
         function renderMd(t){return'<p>'+t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/^### (.*$)/gm,'<h3>$1</h3>').replace(/^## (.*$)/gm,'<h2>$1</h2>').replace(/^# (.*$)/gm,'<h1>$1</h1>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\*(.*?)\*/g,'<em>$1</em>').replace(/~~(.*?)~~/g,'<del>$1</del>').replace(/`([^`]+)`/g,'<code>$1</code>').replace(/```(\w*)\n([\s\S]*?)```/g,'<pre><code>$2</code></pre>').replace(/\[([^\]]+)\]\(([^)]+)\)/g,'<a href="$2" target="_blank">$1</a>').replace(/!\[([^\]]*)\]\(([^)]+)\)/g,'<img src="$2" alt="$1">').replace(/^> (.*$)/gm,'<blockquote>$1</blockquote>').replace(/^- (.*$)/gm,'<li>$1</li>').replace(/^1\. (.*$)/gm,'<li>$1</li>').replace(/^---$/gm,'<hr>').replace(/\n\n/g,'</p><p>')+'</p>'}
         function handleDragOver(e){e.preventDefault();e.stopPropagation();document.getElementById('dropOverlay').classList.add('show')}
         function handleDragLeave(e){e.preventDefault();e.stopPropagation();document.getElementById('dropOverlay').classList.remove('show')}
@@ -628,7 +698,15 @@
             }
         }
         function importToEditor(f){if(!f)return;const r=new FileReader();r.onload=()=>{const m=r.result.match(/^---\s*\n([\s\S]*?)\n---\s*\n([\s\S]*)$/);insertAtCursor(m?m[2]:r.result);showToast(`已插入: ${f.name}`,'success')};r.readAsText(f)}
-        function exportMarkdown(){const title=document.getElementById('edTitle').value.trim()||'untitled',md=`---\ntitle: ${title}\ndate: ${new Date().toISOString().slice(0,10)}\ntags: [${selectedArticleTags.join(', ')}]\nauthor: 渡鸦NULL\n---\n\n${document.getElementById('edContent').value}`,a=document.createElement('a');a.href=URL.createObjectURL(new Blob([md],{type:'text/markdown'}));a.download=`${title.replace(/[^a-zA-Z0-9\u4e00-\u9fff]/g,'-')}.md`;a.click();showToast('已导出','success')}
+        function exportMarkdown(){const title=document.getElementById('edTitle').value.trim()||'untitled',excerpt=document.getElementById('edExcerpt').value.trim(),md=`---\ntitle: ${title}\ndate: ${new Date().toISOString().slice(0,10)}\n${excerpt?`excerpt: ${excerpt}\n`:''}tags: [${selectedArticleTags.join(', ')}]\nauthor: 渡鸦NULL\n---\n\n${document.getElementById('edContent').value}`,a=document.createElement('a');a.href=URL.createObjectURL(new Blob([md],{type:'text/markdown'}));a.download=`${title.replace(/[^a-zA-Z0-9\u4e00-\u9fff]/g,'-')}.md`;a.click();showToast('已导出','success')}
+
+        // 编辑器内上传图片并插入（多文件）
+        async function uploadAndInsertToEditor(files){
+            for(const f of files){
+                const url=await uploadImageAndGetUrl(f);
+                if(url)insertAtCursor(`![${f.name.replace(/\.\w+$/,'')}](${url})`);
+            }
+        }
 
         // ===== 图片管理（显示所有图片）=====
         async function loadData(){
