@@ -8,7 +8,7 @@
     <link rel="icon" href="/images/TX/01_TX.webp" type="image/webp">
 
     <!-- Styles -->
-    <link rel="stylesheet" href="css/style.css?v=3.7.1">
+    <link rel="stylesheet" href="css/style.css?v=3.8.0">
 
     <!-- Marked.js -->
     <script src="js/vendor/marked.min.js"></script>
@@ -232,10 +232,10 @@
     </div>
 
     <!-- Scripts -->
-    <script src="js/theme.js?v=3.7.1"></script>
-    <script src="js/markdown.js?v=3.7.1"></script>
-    <script src="js/app.js?v=3.7.1"></script>
-    <script src="js/animations.js?v=3.7.1"></script>
+    <script src="js/theme.js?v=3.8.0"></script>
+    <script src="js/markdown.js?v=3.8.0"></script>
+    <script src="js/app.js?v=3.8.0"></script>
+    <script src="js/animations.js?v=3.8.0"></script>
 
     <script>
         // ===== Scroll Observer =====
@@ -392,6 +392,87 @@
             }
         }
 
+        // ===== 博客设置 =====
+        let blogSettings = null;
+
+        // 加载博客设置
+        async function loadBlogSettings() {
+            try {
+                const res = await fetch('/api/admin?action=settings');
+                const data = await res.json();
+                if (data.status === 'success' && data.data) {
+                    blogSettings = data.data;
+                }
+            } catch (e) {
+                console.warn('博客设置加载失败:', e);
+            }
+        }
+
+        // 应用博客设置到页面
+        function applyBlogSettings() {
+            if (!blogSettings) return;
+
+            // 1. 站点名称
+            if (blogSettings.siteName) {
+                const brand = document.querySelector('.top-bar-brand');
+                if (brand) brand.textContent = blogSettings.siteName;
+                document.title = blogSettings.siteName + (blogSettings.about?.version ? '' : '');
+            }
+
+            // 2. 个人资料
+            if (blogSettings.avatar) {
+                const avatar = document.querySelector('.dash-avatar');
+                if (avatar) avatar.src = blogSettings.avatar;
+                document.querySelector('link[rel="icon"]')?.setAttribute('href', blogSettings.avatar);
+            }
+            if (blogSettings.authorName) {
+                const name = document.querySelector('.dash-name');
+                if (name) name.textContent = blogSettings.authorName;
+            }
+            if (blogSettings.bio) {
+                const bio = document.querySelector('.dash-bio');
+                if (bio) bio.textContent = blogSettings.bio;
+            }
+
+            // 3. 导航页面开关
+            const views = blogSettings.views || {};
+            document.querySelectorAll('#viewSwitch .view-btn').forEach(btn => {
+                const v = btn.dataset.view;
+                if (views[v] === false) btn.style.display = 'none';
+            });
+            // 确保当前视图按钮可见
+            const activeViewBtn = document.querySelector('#viewSwitch .view-btn[data-view="' + (BlogApp.currentView || 'blog') + '"]');
+            if (activeViewBtn && activeViewBtn.style.display === 'none') {
+                activeViewBtn.style.display = '';
+            }
+
+            // 5. 导航标签
+            const navTags = blogSettings.navTags || [];
+            const navLinks = document.querySelector('.nav-links');
+            if (navLinks && navTags.length) {
+                // 保留「全部」，重建其余标签链接
+                const existing = navLinks.querySelector('a[onclick*="filterByTag(null)"]');
+                const tagLinks = navTags.map(tag => `
+                    <a href="#" class="nav-link" onclick="BlogApp.filterByTag('${tag.replace(/'/g,"\\'")}'); return false;">${tag}</a>
+                `).join('');
+                navLinks.innerHTML = (existing ? existing.outerHTML : '<a href="#" class="nav-link active" onclick="BlogApp.filterByTag(null); return false;">全部</a>') + tagLinks;
+                BlogApp.updateNavActive();
+            }
+
+            // 6. 关于信息
+            const about = blogSettings.about || {};
+            if (about.version || about.tech || about.updated) {
+                const aboutInfo = document.querySelector('.dash-about-info');
+                if (aboutInfo) {
+                    aboutInfo.innerHTML = [
+                        about.version ? `<span>${about.version}</span>` : '',
+                        about.tech ? `<span>${about.tech}</span>` : '',
+                        about.updated ? `<span>${about.updated}</span>` : ''
+                    ].join('');
+                }
+            }
+        }
+
         // ===== 欢迎区日期时间 =====
         function updateDashClock() {
             const dateEl = document.getElementById('dashClockDate');
@@ -404,7 +485,11 @@
         }
 
         // ===== Init =====
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
+            // 加载博客设置并应用（需在 BlogApp.init 前）
+            await loadBlogSettings();
+            applyBlogSettings();
+
             // 欢迎区日期时间（每秒更新）
             updateDashClock();
             setInterval(updateDashClock, 1000);
@@ -507,8 +592,17 @@
                 const tagsTitle = document.getElementById('tagsDropdownTitle');
                 if (tagsTitle) tagsTitle.textContent = `全部标签（${tagCount} 个）`;
 
-                // 初始化视图滑块指示器位置
-                setTimeout(() => BlogApp.moveIndicator('blog'), 0);
+                // 初始化视图滑块指示器位置（若 blog 被禁用则跳到第一个可见视图）
+                const _views = (blogSettings && blogSettings.views) || {};
+                let _startView = 'blog';
+                if (_views.blog === false) {
+                    const _valid = ['gallery', 'news', 'dashboard'];
+                    _startView = _valid.find(v => _views[v] !== false) || 'blog';
+                }
+                setTimeout(() => BlogApp.moveIndicator(_startView), 0);
+                if (_startView !== 'blog') {
+                    BlogApp.switchView(_startView);
+                }
 
                 // Init card observer after posts render
                 setTimeout(() => initCardObserver(), 100);

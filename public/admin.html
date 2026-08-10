@@ -292,6 +292,22 @@
         .settings-field input:focus,.settings-field textarea:focus{outline:none;border-color:var(--accent)}
         .settings-actions{display:flex;justify-content:flex-end}
         .settings-actions .btn{padding:10px 32px;font-size:14px}
+        /* 开关 */
+        .settings-toggle-list{display:flex;flex-direction:column;gap:10px}
+        .settings-toggle-item{display:flex;align-items:center;justify-content:space-between;padding:8px 4px;font-size:13px}
+        .settings-toggle-item + .settings-toggle-item{border-top:1px solid var(--border)}
+        .switch{position:relative;display:inline-block;width:42px;height:24px;flex-shrink:0}
+        .switch input{opacity:0;width:0;height:0}
+        .slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:var(--bg-input);border:1px solid var(--border);transition:.2s;border-radius:24px}
+        .slider:before{position:absolute;content:"";height:18px;width:18px;left:2px;bottom:2px;background:var(--text-muted);transition:.2s;border-radius:50%}
+        .switch input:checked + .slider{background:var(--accent);border-color:var(--accent)}
+        .switch input:checked + .slider:before{transform:translateX(18px);background:#000}
+        .settings-tip{font-size:11px;color:var(--text-muted);margin-top:8px}
+        /* 头像预览 */
+        .settings-avatar-row{display:flex;gap:10px;align-items:center}
+        .settings-avatar-preview{width:48px;height:48px;border-radius:50%;border:1px dashed var(--border);display:flex;align-items:center;justify-content:center;overflow:hidden;background:var(--bg-input);color:var(--text-muted);font-size:11px;flex-shrink:0}
+        .settings-avatar-preview img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+        .settings-avatar-row input{flex:1;min-width:0}
 
         /* 重命名弹窗 */
         .rename-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;align-items:center;justify-content:center}
@@ -645,36 +661,88 @@
                 <div id="tab-settings" style="display:none">
                     <div class="page-bar"><h2>博客设置</h2><div class="page-bar-actions"><button class="btn btn-ghost" onclick="loadSettings()">重置</button></div></div>
                     <div class="settings-panel">
+
+                        <!-- 1. 站点名称 -->
                         <div class="settings-group">
-                            <h3>站点信息</h3>
+                            <h3>站点名称</h3>
                             <div class="settings-field">
-                                <label>站点名称</label>
+                                <label>顶部品牌文字（首页左上角）</label>
                                 <input type="text" id="setSiteName" placeholder="渡鸦_NULL BLOG">
                             </div>
-                            <div class="settings-field">
-                                <label>站点简介</label>
-                                <input type="text" id="setSiteDesc" placeholder="一句话描述你的博客">
-                            </div>
-                            <div class="settings-field">
-                                <label>博主昵称</label>
-                                <input type="text" id="setSiteAuthor" placeholder="渡鸦NULL">
-                            </div>
-                            <div class="settings-field">
-                                <label>博主签名</label>
-                                <input type="text" id="setSiteBio" placeholder="个人签名">
-                            </div>
                         </div>
+
+                        <!-- 2. 个人资料 -->
                         <div class="settings-group">
-                            <h3>SEO 设置</h3>
+                            <h3>个人资料（我的视图欢迎区）</h3>
                             <div class="settings-field">
-                                <label>页面标题后缀</label>
-                                <input type="text" id="setTitleSuffix" placeholder=" - 渡鸦_NULL BLOG">
+                                <label>头像</label>
+                                <div class="settings-avatar-row">
+                                    <div class="settings-avatar-preview" id="settingsAvatarPreview"><img id="settingsAvatarImg" alt="" style="display:none"><span>未设置</span></div>
+                                    <input type="text" id="setAvatar" placeholder="头像图片路径，如 images/TX/01_TX.webp">
+                                    <button class="btn btn-ghost btn-sm" onclick="pickAvatarFromGallery()">🖼 选图</button>
+                                </div>
                             </div>
                             <div class="settings-field">
-                                <label>站点描述（用于 SEO）</label>
-                                <textarea id="setSeoDesc" rows="3" placeholder="站点关键词、描述等"></textarea>
+                                <label>用户名</label>
+                                <input type="text" id="setAuthorName" placeholder="渡鸦NULL">
+                            </div>
+                            <div class="settings-field">
+                                <label>签名</label>
+                                <input type="text" id="setBio" placeholder="全栈开发者 · 内容创作者 · 终身学习者">
                             </div>
                         </div>
+
+                        <!-- 3. 导航页面开关 -->
+                        <div class="settings-group">
+                            <h3>导航页面（首页顶部视图）</h3>
+                            <div class="settings-toggle-list">
+                                <div class="settings-toggle-item"><span>文章</span><label class="switch"><input type="checkbox" id="setViewBlog" checked><span class="slider"></span></label></div>
+                                <div class="settings-toggle-item"><span>图库</span><label class="switch"><input type="checkbox" id="setViewGallery" checked><span class="slider"></span></label></div>
+                                <div class="settings-toggle-item"><span>每日新闻</span><label class="switch"><input type="checkbox" id="setViewNews" checked><span class="slider"></span></label></div>
+                                <div class="settings-toggle-item"><span>我的</span><label class="switch"><input type="checkbox" id="setViewDashboard" checked><span class="slider"></span></label></div>
+                            </div>
+                            <div class="settings-tip">关闭后对应页面将在首页导航栏中隐藏</div>
+                        </div>
+
+                        <!-- 4. 仪表盘统计 -->
+                        <div class="settings-group">
+                            <h3>仪表盘统计（我的视图）</h3>
+                            <div class="settings-toggle-list">
+                                <div class="settings-toggle-item"><span>文章数</span><label class="switch"><input type="checkbox" id="setStatPosts" checked><span class="slider"></span></label></div>
+                                <div class="settings-toggle-item"><span>标签数</span><label class="switch"><input type="checkbox" id="setStatTags" checked><span class="slider"></span></label></div>
+                                <div class="settings-toggle-item"><span>总字数</span><label class="switch"><input type="checkbox" id="setStatWords" checked><span class="slider"></span></label></div>
+                                <div class="settings-toggle-item"><span>图库图片数</span><label class="switch"><input type="checkbox" id="setStatImages" checked><span class="slider"></span></label></div>
+                            </div>
+                            <div class="settings-tip">选择要在仪表盘显示的统计项</div>
+                        </div>
+
+                        <!-- 5. 导航标签 -->
+                        <div class="settings-group">
+                            <h3>导航标签（首页文章筛选）</h3>
+                            <div class="settings-field">
+                                <label>主要标签（逗号分隔，如：技术,生活,AI）</label>
+                                <input type="text" id="setNavTags" placeholder="技术,生活,AI">
+                            </div>
+                            <div class="settings-tip">首页导航栏将显示这些标签用于文章筛选，默认显示「全部」</div>
+                        </div>
+
+                        <!-- 6. 关于信息 -->
+                        <div class="settings-group">
+                            <h3>关于信息（我的视图底部）</h3>
+                            <div class="settings-field">
+                                <label>版本</label>
+                                <input type="text" id="setAboutVersion" placeholder="版本 v2.0">
+                            </div>
+                            <div class="settings-field">
+                                <label>技术栈</label>
+                                <input type="text" id="setAboutTech" placeholder="纯前端 · GitHub Pages">
+                            </div>
+                            <div class="settings-field">
+                                <label>最后更新</label>
+                                <input type="text" id="setAboutUpdated" placeholder="最后更新 2026-08-06">
+                            </div>
+                        </div>
+
                         <div class="settings-actions">
                             <button class="btn btn-primary" onclick="saveSettings()">💾 保存设置</button>
                         </div>
@@ -1669,20 +1737,30 @@
             if(r.status==='success')cachedImages=r.data||[];
             renderImagePicker();
         }
-        function closeImagePicker(){document.getElementById('imagePickerPanel').classList.remove('open');window.__coverMode=false}
+        function closeImagePicker(){document.getElementById('imagePickerPanel').classList.remove('open');window.__coverMode=false;window.__avatarMode=false}
         function renderImagePicker(){const l=document.getElementById('imagePickerList');if(!cachedImages.length){l.innerHTML='<div class="empty" style="padding:32px">暂无图片</div>';return}l.innerHTML=cachedImages.map(img=>`<div class="image-picker-item" data-key="${escAttr(img.key)}"><img src="${img.url}" loading="lazy" onclick="onPickerImageClick(this)"><span class="name" onclick="onPickerImageClick(this.previousElementSibling)">${esc(img.key)}</span><button class="picker-del" onclick="event.stopPropagation();deletePickerImage('${escAttr(img.key)}')" title="删除图片">&times;</button></div>`).join('')}
-        // 图片点击：封面模式设置封面，否则插入正文
+        // 图片点击：封面/头像模式设置，否则插入正文
         function onPickerImageClick(imgEl){
             const item=imgEl.closest('.image-picker-item');
             if(!item)return;
             const key=item.getAttribute('data-key');
             const img=cachedImages.find(i=>i.key===key);
             if(!img)return;
-            if(window.__coverMode){
+            if(window.__avatarMode){
+                avatarSelectFromPicker(img.url);
+            }else if(window.__coverMode){
                 coverSelectFromPicker(img.url);
             }else{
                 insertFromPicker(img.url);
             }
+        }
+        // 头像选择
+        function avatarSelectFromPicker(url){
+            document.getElementById('setAvatar').value=url;
+            renderSettingsAvatar(url);
+            closeImagePicker();
+            window.__avatarMode=false;
+            showToast('头像已设置','success');
         }
         // 删除图片（避免后端堆积）
         async function deletePickerImage(key){
@@ -1860,20 +1938,70 @@
             const r=await apiFetch('action=settings');
             const s=r.status==='success'&&r.data?r.data:{};
             document.getElementById('setSiteName').value=s.siteName||'';
-            document.getElementById('setSiteDesc').value=s.siteDesc||'';
-            document.getElementById('setSiteAuthor').value=s.siteAuthor||'';
-            document.getElementById('setSiteBio').value=s.siteBio||'';
-            document.getElementById('setTitleSuffix').value=s.titleSuffix||'';
-            document.getElementById('setSeoDesc').value=s.seoDesc||'';
+            document.getElementById('setAvatar').value=s.avatar||'';
+            renderSettingsAvatar(s.avatar);
+            document.getElementById('setAuthorName').value=s.authorName||'';
+            document.getElementById('setBio').value=s.bio||'';
+            document.getElementById('setViewBlog').checked=s.views?s.views.blog!==false:true;
+            document.getElementById('setViewGallery').checked=s.views?s.views.gallery!==false:true;
+            document.getElementById('setViewNews').checked=s.views?s.views.news!==false:true;
+            document.getElementById('setViewDashboard').checked=s.views?s.views.dashboard!==false:true;
+            document.getElementById('setStatPosts').checked=s.stats?s.stats.posts!==false:true;
+            document.getElementById('setStatTags').checked=s.stats?s.stats.tags!==false:true;
+            document.getElementById('setStatWords').checked=s.stats?s.stats.words!==false:true;
+            document.getElementById('setStatImages').checked=s.stats?s.stats.images!==false:true;
+            document.getElementById('setNavTags').value=(s.navTags||[]).join(',');
+            document.getElementById('setAboutVersion').value=s.about?s.about.version||'':'';
+            document.getElementById('setAboutTech').value=s.about?s.about.tech||'':'';
+            document.getElementById('setAboutUpdated').value=s.about?s.about.updated||'':'';
+        }
+        // 头像预览
+        function renderSettingsAvatar(src){
+            const img=document.getElementById('settingsAvatarImg');
+            const span=document.querySelector('#settingsAvatarPreview span');
+            if(src){
+                img.src=src;
+                img.style.display='block';
+                span.style.display='none';
+            }else{
+                img.style.display='none';
+                span.style.display='';
+            }
+        }
+        // 从图库选择头像
+        async function pickAvatarFromGallery(){
+            document.getElementById('imagePickerPanel').classList.add('open');
+            const r=await apiFetch('action=images');
+            if(r.status==='success'){
+                cachedImages=r.data||[];
+                window.__avatarMode=true;
+                renderImagePicker();
+            }
         }
         async function saveSettings(){
             const body={
                 siteName:document.getElementById('setSiteName').value.trim(),
-                siteDesc:document.getElementById('setSiteDesc').value.trim(),
-                siteAuthor:document.getElementById('setSiteAuthor').value.trim(),
-                siteBio:document.getElementById('setSiteBio').value.trim(),
-                titleSuffix:document.getElementById('setTitleSuffix').value.trim(),
-                seoDesc:document.getElementById('setSeoDesc').value.trim(),
+                avatar:document.getElementById('setAvatar').value.trim(),
+                authorName:document.getElementById('setAuthorName').value.trim(),
+                bio:document.getElementById('setBio').value.trim(),
+                views:{
+                    blog:document.getElementById('setViewBlog').checked,
+                    gallery:document.getElementById('setViewGallery').checked,
+                    news:document.getElementById('setViewNews').checked,
+                    dashboard:document.getElementById('setViewDashboard').checked,
+                },
+                stats:{
+                    posts:document.getElementById('setStatPosts').checked,
+                    tags:document.getElementById('setStatTags').checked,
+                    words:document.getElementById('setStatWords').checked,
+                    images:document.getElementById('setStatImages').checked,
+                },
+                navTags:document.getElementById('setNavTags').value.split(',').map(s=>s.trim()).filter(Boolean),
+                about:{
+                    version:document.getElementById('setAboutVersion').value.trim(),
+                    tech:document.getElementById('setAboutTech').value.trim(),
+                    updated:document.getElementById('setAboutUpdated').value.trim(),
+                },
             };
             const r=await apiFetch('action=settings',{method:'POST',body:JSON.stringify(body)});
             if(r.status==='success')showToast('设置已保存','success');

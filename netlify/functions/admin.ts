@@ -520,24 +520,43 @@ export default async (req: Request) => {
   if (path === "settings") {
     const settingsStore = getBlobStore("blog-settings", "strong")
 
-    // GET: 读取设置
+    // GET: 读取设置（公开，首页需要）
     if (req.method === "GET") {
       const raw = await settingsStore.get("site", { type: "text" })
       const data = raw ? JSON.parse(raw) : {}
       return json(200, { status: "success", data }, req)
     }
 
-    // POST: 保存设置
+    // POST: 保存设置（需认证）
+    if (!checkAuth(req)) {
+      return json(401, { status: "error", message: "未授权" }, req)
+    }
     if (req.method === "POST") {
       const body = await req.json().catch(() => ({}))
-      const { siteName, siteDesc, siteAuthor, siteBio, titleSuffix, seoDesc } = body
+      const { siteName, avatar, authorName, bio, views, stats, navTags, about } = body
       const settings = {
         siteName: siteName || "",
-        siteDesc: siteDesc || "",
-        siteAuthor: siteAuthor || "",
-        siteBio: siteBio || "",
-        titleSuffix: titleSuffix || "",
-        seoDesc: seoDesc || "",
+        avatar: avatar || "",
+        authorName: authorName || "",
+        bio: bio || "",
+        views: {
+          blog: views?.blog !== false,
+          gallery: views?.gallery !== false,
+          news: views?.news !== false,
+          dashboard: views?.dashboard !== false,
+        },
+        stats: {
+          posts: stats?.posts !== false,
+          tags: stats?.tags !== false,
+          words: stats?.words !== false,
+          images: stats?.images !== false,
+        },
+        navTags: Array.isArray(navTags) ? navTags : [],
+        about: {
+          version: about?.version || "",
+          tech: about?.tech || "",
+          updated: about?.updated || "",
+        },
       }
       await settingsStore.set("site", JSON.stringify(settings))
       return json(200, { status: "success", data: settings }, req)

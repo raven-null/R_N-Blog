@@ -337,6 +337,17 @@ const BlogApp = {
     switchView(view) {
         const valid = ['blog', 'gallery', 'news', 'dashboard'];
         if (!valid.includes(view) || this.currentView === view) return;
+
+        // 检查该视图是否被设置禁用
+        const settings = this.getBlogSettings();
+        const views = (settings && settings.views) || {};
+        if (views[view] === false) {
+            // 如果禁用，跳转到第一个可见视图
+            const visible = valid.find(v => views[v] !== false);
+            if (visible && visible !== view) return this.switchView(visible);
+            return;
+        }
+
         this.currentView = view;
 
         // 按钮激活态
@@ -546,11 +557,20 @@ const BlogApp = {
             .replace(/"/g, '&quot;');
     },
 
+    // 获取博客设置（由 index.html 的 loadBlogSettings 填充）
+    getBlogSettings() {
+        if (typeof blogSettings !== 'undefined' && blogSettings) return blogSettings;
+        return null;
+    },
+
     // 渲染仪表盘（统计概览 + 关于）
     async renderDashboard() {
         const box = document.getElementById('dashboardStats');
         if (!box || box.dataset.rendered) return;
         box.dataset.rendered = '1';
+
+        const settings = this.getBlogSettings();
+        const stats = (settings && settings.stats) || { posts: true, tags: true, words: true, images: true };
 
         const posts = this.posts.length;
         const tags = new Set(this.posts.flatMap(p => p.tags || [])).size;
@@ -560,25 +580,14 @@ const BlogApp = {
             images = (await this.loadGalleryImages()).length;
         } catch (e) { }
 
-        // 统计概览
-        box.innerHTML = `
-            <div class="dashboard-card">
-                <div class="dashboard-num">${posts}</div>
-                <div class="dashboard-label">文章</div>
-            </div>
-            <div class="dashboard-card">
-                <div class="dashboard-num">${tags}</div>
-                <div class="dashboard-label">标签</div>
-            </div>
-            <div class="dashboard-card">
-                <div class="dashboard-num">${totalWords.toLocaleString('zh-CN')}</div>
-                <div class="dashboard-label">总字数</div>
-            </div>
-            <div class="dashboard-card">
-                <div class="dashboard-num">${images}</div>
-                <div class="dashboard-label">图库图片</div>
-            </div>
-        `;
+        // 统计概览（根据设置选择显示项）
+        const cards = [];
+        if (stats.posts !== false) cards.push(`<div class="dashboard-card"><div class="dashboard-num">${posts}</div><div class="dashboard-label">文章</div></div>`);
+        if (stats.tags !== false) cards.push(`<div class="dashboard-card"><div class="dashboard-num">${tags}</div><div class="dashboard-label">标签</div></div>`);
+        if (stats.words !== false) cards.push(`<div class="dashboard-card"><div class="dashboard-num">${totalWords.toLocaleString('zh-CN')}</div><div class="dashboard-label">总字数</div></div>`);
+        if (stats.images !== false) cards.push(`<div class="dashboard-card"><div class="dashboard-num">${images}</div><div class="dashboard-label">图库图片</div></div>`);
+
+        box.innerHTML = cards.join('') || '<div class="dashboard-card"><div class="dashboard-num">—</div><div class="dashboard-label">统计</div></div>';
 
         // 入场动效（Anime.js）
         if (typeof anime !== 'undefined') {
