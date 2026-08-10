@@ -186,11 +186,24 @@ const BlogApp = {
         return 'images/Default/profile -picture.webp';
     },
 
+    // 根据作者名字返回显示名（站长显示设置中的用户名）
+    getAuthorName(author) {
+        const name = (author || '').trim();
+        const settings = this.getBlogSettings();
+        const authorName = settings ? settings.authorName : '';
+        // 作者是站长（博主或配置的用户名）→ 显示设置中的用户名
+        if (name === '博主' || (authorName && name === authorName)) {
+            return authorName || '博主';
+        }
+        return name || '博主';
+    },
+
     // 渲染单个文章卡片
     renderPostCard(post) {
         const gradientColors = this.getGradientColors(post.tags || []);
         const dateFormatted = this.formatDate(post.date);
         const avatarImg = this.getAuthorAvatar(post.author);
+        const authorName = this.getAuthorName(post.author);
 
         // 预计阅读时长（按每 300 字约 1 分钟估算）
         const wordCount = post.wordCount || 0;
@@ -211,7 +224,7 @@ const BlogApp = {
                 <div class="card-body">
                     <div class="card-author">
                         <div class="card-avatar" style="background-image:url('${avatarImg}');"></div>
-                        <span class="card-username">${post.author}</span>
+                        <span class="card-username">${authorName}</span>
                     </div>
                     <div class="card-tag">
                         ${(post.tags || []).map(tag => `<span>${tag}</span>`).join(' ')}

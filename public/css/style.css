@@ -2668,14 +2668,6 @@ body.view-gallery-active .gallery-tag-btn {
     color: var(--text-primary);
 }
 
-/* 页脚进入视口时隐藏右侧固定按钮，避免遮挡页脚内容 */
-body.footer-visible .back-to-top,
-body.footer-visible .theme-toggle {
-    opacity: 0 !important;
-    visibility: hidden !important;
-    pointer-events: none !important;
-}
-
 /* 超小屏：隐藏顶部品牌文字，为视图按钮腾出空间 */
 @media (max-width: 360px) {
     .top-bar-brand {

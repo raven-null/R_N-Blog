@@ -8,7 +8,7 @@
     <link rel="icon" id="siteFavicon" href="images/Default/web-logo.webp" type="image/webp">
 
     <!-- Styles -->
-    <link rel="stylesheet" href="css/style.css?v=3.13.3">
+    <link rel="stylesheet" href="css/style.css?v=3.13.4">
 
     <!-- Marked.js -->
     <script src="js/vendor/marked.min.js"></script>
@@ -236,10 +236,10 @@
     </div>
 
     <!-- Scripts -->
-    <script src="js/theme.js?v=3.13.3"></script>
-    <script src="js/markdown.js?v=3.13.3"></script>
-    <script src="js/app.js?v=3.13.3"></script>
-    <script src="js/animations.js?v=3.13.3"></script>
+    <script src="js/theme.js?v=3.13.4"></script>
+    <script src="js/markdown.js?v=3.13.4"></script>
+    <script src="js/app.js?v=3.13.4"></script>
+    <script src="js/animations.js?v=3.13.4"></script>
 
     <script>
         // ===== Scroll Observer =====
@@ -522,11 +522,6 @@
                     const scrollHeight = scroller.scrollHeight - scroller.clientHeight;
                     progress.style.width = scrollHeight > 0 ? (scrollTop / scrollHeight * 100) + '%' : '0%';
                     backToTop.classList.toggle('show', scrollTop > 400);
-
-                    // 页脚进入视口时隐藏右侧固定按钮，避免遮挡页脚内容
-                    const footer = document.querySelector('.footer');
-                    const footerInView = !!footer && footer.getBoundingClientRect().top <= window.innerHeight;
-                    document.body.classList.toggle('footer-visible', footerInView);
                 };
                 scroller.addEventListener('scroll', update, { passive: true });
                 window.addEventListener('resize', update);
