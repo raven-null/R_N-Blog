@@ -299,8 +299,12 @@
                                 <div class="classify-header">
                                     <div class="tag-sel" id="classifyTagSel"></div>
                                     <div style="display:flex;gap:6px;margin-left:auto">
-                                        <button class="btn btn-ghost btn-sm" onclick="toggleSelectAll()" id="btnSelectAll">全选</button>
-                                        <button class="btn btn-ghost btn-sm" onclick="batchClearTags()" id="btnBatchClear" disabled>批量清除</button>
+                                        <button class="btn btn-ghost btn-sm" onclick="toggleBatchMode()" id="btnBatchMode">批量操作</button>
+                                        <div id="batchActions" style="display:none;display:flex;gap:6px">
+                                            <button class="btn btn-ghost btn-sm" onclick="toggleSelectAll()" id="btnSelectAll">全选</button>
+                                            <button class="btn btn-ghost btn-sm" onclick="batchClearTags()" id="btnBatchClear" disabled>清除标签</button>
+                                            <button class="btn btn-ghost btn-sm" onclick="toggleBatchMode()">取消</button>
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="classify-body"><div class="classify-grid" id="classifiedGrid"></div></div>
@@ -364,6 +368,7 @@
         let selectedArticleTags=[];
         let tagPickerOpen=false;
         let selectedImageKeys=new Set();
+        let batchMode=false;
 
         function doLogin(){const k=document.getElementById('adminKeyInput').value.trim();if(!k)return;adminKey=k;localStorage.setItem('admin_key',k);apiFetch('action=login',{method:'POST',body:JSON.stringify({key:k})}).then(r=>{if(r.status==='success')showAdmin();else{document.getElementById('loginError').style.display='block';document.getElementById('loginError').textContent=r.message||'密钥错误'}}).catch(()=>{document.getElementById('loginError').style.display='block';document.getElementById('loginError').textContent='连接失败'})}
         function doLogout(){adminKey='';localStorage.removeItem('admin_key');location.reload()}
@@ -507,8 +512,8 @@
 
         function classifyCardHtml(img, showCheckbox=false){
             const checked = selectedImageKeys.has(img.key) ? 'checked' : '';
-            const checkbox = showCheckbox ? `<input type="checkbox" class="img-checkbox" ${checked} onclick="event.stopPropagation();toggleImageSelect('${img.key}')" style="position:absolute;top:4px;left:4px;z-index:2">` : '';
-            return `<div class="classify-card${selectedImageKeys.has(img.key) ? ' selected' : ''}" draggable="true" data-key="${img.key}" ondragstart="dragStart(event,'${img.key}')">${checkbox}<img src="${img.url}" loading="lazy"><div class="cc-bottom"><span class="cc-name" title="${img.key}">${img.key}</span><button class="cc-del" onclick="event.stopPropagation();deleteImage('${img.key}')" title="删除">&times;</button></div></div>`;
+            const checkbox = (showCheckbox && batchMode) ? `<input type="checkbox" class="img-checkbox" ${checked} onclick="event.stopPropagation();toggleImageSelect('${img.key}')" style="position:absolute;top:4px;left:4px;z-index:2">` : '';
+            return `<div class="classify-card${selectedImageKeys.has(img.key) && batchMode ? ' selected' : ''}" draggable="true" data-key="${img.key}" ondragstart="dragStart(event,'${img.key}')">${checkbox}<img src="${img.url}" loading="lazy"><div class="cc-bottom"><span class="cc-name" title="${img.key}">${img.key}</span><button class="cc-del" onclick="event.stopPropagation();deleteImage('${img.key}')" title="删除">&times;</button></div></div>`;
         }
 
         function dragStart(e,key){e.dataTransfer.setData('text/key',key);e.target.classList.add('dragging');e.target.addEventListener('dragend',()=>e.target.classList.remove('dragging'),{once:true})}
@@ -526,6 +531,23 @@
             // 后台同步
             const r=await apiFetch('action=images',{method:'PATCH',body:JSON.stringify({key,tags:newTags})});
             if(r.status!=='success'){if(img)img.tags=cur;renderPanels();showToast(r.message||'同步失败','error')}
+        }
+
+        // 切换批量模式
+        function toggleBatchMode(){
+            batchMode = !batchMode;
+            const btnBatchMode = document.getElementById('btnBatchMode');
+            const batchActions = document.getElementById('batchActions');
+            
+            if(batchMode){
+                btnBatchMode.style.display = 'none';
+                batchActions.style.display = 'flex';
+            }else{
+                btnBatchMode.style.display = '';
+                batchActions.style.display = 'none';
+                selectedImageKeys.clear();
+            }
+            renderPanels();
         }
 
         // 切换图片选中状态
@@ -553,6 +575,8 @@
 
         // 更新批量操作按钮状态
         function updateBatchButtons(){
+            if(!batchMode) return;
+            
             const btnSelectAll=document.getElementById('btnSelectAll');
             const btnBatchClear=document.getElementById('btnBatchClear');
             const classified=allImageData.filter(i=>(i.tags||[]).includes(classifyTag));
@@ -594,6 +618,9 @@
             }
 
             selectedImageKeys.clear();
+            batchMode = false;
+            document.getElementById('btnBatchMode').style.display = '';
+            document.getElementById('batchActions').style.display = 'none';
             renderPanels();
             
             if(fail === 0){
@@ -832,12 +859,14 @@
 
         async function deleteTag(name,count,type){
             const typeLabel=type==='article'?'文章':'图片';
+            if(name==='图库'){showToast('「图库」是系统标签，不能删除','error');return}
             if(count>0&&!confirm(`标签「${name}」下有 ${count} 个${typeLabel}，确定删除？`))return;
             if(count===0&&!confirm(`确定删除空标签「${name}」？`))return;
             const r=await apiFetch(`action=tags&name=${encodeURIComponent(name)}`,{method:'DELETE'});
             if(r.status==='success'){
                 showToast(`已删除「${name}」，影响 ${r.imageChanges} 张图片、${r.articleChanges} 篇文章`,'success');
                 await loadTags();
+                await loadData(); // 刷新图片数据
             }else showToast(r.message||'删除失败','error');
         }
 
