@@ -381,25 +381,30 @@
         document.addEventListener('paste',async e=>{if(document.activeElement!==document.getElementById('edContent'))return;for(const item of[...e.clipboardData.items]){if(item.type.startsWith('image/')){e.preventDefault();const url=await uploadImageAndGetUrl(item.getAsFile());if(url)insertAtCursor(`![图片](${url})`)}}});
         function insertAtCursor(t){const ta=document.getElementById('edContent'),p=ta.selectionStart;ta.value=ta.value.slice(0,p)+t+ta.value.slice(p);ta.focus();ta.selectionStart=ta.selectionEnd=p+t.length;updatePreview()}
 
-        // ===== 图片上传（不传 tags → 自动归入未分类）=====
-        async function uploadImageAndGetUrl(file){
+        // ===== 图片上传 =====
+        // tags 参数：['图库'] = 图库图片（图片管理），不传 = 文章/评论图片（不归图片管理）
+        async function uploadImageAndGetUrl(file, tags){
             const prog=document.getElementById('uploadProgress'),pt=document.getElementById('uploadProgressText');
             prog.classList.add('show');pt.textContent=`上传 ${file.name}...`;
             try{const b64=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.onerror=rej;r.readAsDataURL(file)});
-            const r=await apiFetch('action=images',{method:'POST',body:JSON.stringify({data:b64,mime:file.type,name:file.name})});
+            const body={data:b64,mime:file.type,name:file.name};
+            if(tags)body.tags=tags;
+            const r=await apiFetch('action=images',{method:'POST',body:JSON.stringify(body)});
             if(r.status==='success'){showToast(`已上传: ${r.key}`,'success');return r.url}else{showToast(r.message||'上传失败','error');return null}
             }catch{showToast('上传失败','error');return null}finally{prog.classList.remove('show')}
         }
-        async function uploadImages(files){for(const f of files){await uploadImageAndGetUrl(f)}await loadData()}
+        // 图片管理上传 → 自动标记为「图库」
+        async function uploadImages(files){for(const f of files){await uploadImageAndGetUrl(f,['图库'])}await loadData()}
         function importToEditor(f){if(!f)return;const r=new FileReader();r.onload=()=>{const m=r.result.match(/^---\s*\n([\s\S]*?)\n---\s*\n([\s\S]*)$/);insertAtCursor(m?m[2]:r.result);showToast(`已插入: ${f.name}`,'success')};r.readAsText(f)}
         function exportMarkdown(){const title=document.getElementById('edTitle').value.trim()||'untitled',md=`---\ntitle: ${title}\ndate: ${new Date().toISOString().slice(0,10)}\ntags: [${selectedArticleTags.join(', ')}]\nauthor: 渡鸦NULL\n---\n\n${document.getElementById('edContent').value}`,a=document.createElement('a');a.href=URL.createObjectURL(new Blob([md],{type:'text/markdown'}));a.download=`${title.replace(/[^a-zA-Z0-9\u4e00-\u9fff]/g,'-')}.md`;a.click();showToast('已导出','success')}
 
-        // ===== 图片管理 =====
+        // ===== 图片管理（只管理图库图片）=====
         async function loadData(){
             // 并行加载图片和标签
             const [imgRes,tagRes]=await Promise.all([apiFetch('action=images'),apiFetch('action=tags')]);
             if(imgRes.status==='success'){
-                allImageData=imgRes.data||[];
+                // 只保留图库图片（带「图库」标签的）
+                allImageData=(imgRes.data||[]).filter(i=>(i.tags||[]).includes('图库'));
                 cachedImages=allImageData;
             }
             if(tagRes.status==='success'){
@@ -422,12 +427,17 @@
         function selectTag(tag){classifyTag=tag;renderTagSel();renderPanels()}
 
         function renderPanels(){
-            const untagged=allImageData.filter(i=>!i.tags||i.tags.length===0);
+            // 未分类：有「图库」标签但没有其他分类标签
+            const classificationTags=imageTagNames.filter(t=>t!=='图库');
+            const untagged=allImageData.filter(i=>{
+                const tags=(i.tags||[]).filter(t=>t!=='图库');
+                return tags.length===0;
+            });
             const classified=allImageData.filter(i=>(i.tags||[]).includes(classifyTag));
 
             document.getElementById('unclassifiedCount').textContent=untagged.length;
             const leftGrid=document.getElementById('unclassifiedGrid');
-            if(!untagged.length){leftGrid.innerHTML='<div class="classify-empty" style="border:none">所有图片已分类 ✓</div>'}
+            if(!untagged.length){leftGrid.innerHTML='<div class="classify-empty" style="border:none">所有图库图片已分类 ✓</div>'}
             else{leftGrid.innerHTML=untagged.map(img=>classifyCardHtml(img)).join('')}
 
             const rightGrid=document.getElementById('classifiedGrid');
@@ -456,13 +466,15 @@
         async function clearTags(key){
             const img=allImageData.find(i=>i.key===key);
             const cur=img?(img.tags||[]):[];
-            if(!cur.length){showToast('本就未分类','error');return}
+            // 只保留「图库」标签
+            const newTags=['图库'];
+            if(cur.length===1&&cur[0]==='图库'){showToast('本就未分类','error');return}
             // 乐观更新
-            if(img)img.tags=[];
+            if(img)img.tags=newTags;
             renderPanels();
             showToast('已移至未分类','success');
             // 后台同步
-            const r=await apiFetch('action=images',{method:'PATCH',body:JSON.stringify({key,tags:[]})});
+            const r=await apiFetch('action=images',{method:'PATCH',body:JSON.stringify({key,tags:newTags})});
             if(r.status!=='success'){if(img)img.tags=cur;renderPanels();showToast(r.message||'同步失败','error')}
         }
 
@@ -503,7 +515,13 @@
         async function saveTagModal(){const r=await apiFetch('action=images',{method:'PATCH',body:JSON.stringify({key:tagModalKey,tags:tagModalSelected})});if(r.status==='success'){showToast('标签已更新','success');closeTagModal();await loadData()}else showToast(r.message||'更新失败','error')}
 
         // ===== 图片选择面板 =====
-        async function openImagePicker(){document.getElementById('imagePickerPanel').classList.add('open');if(!cachedImages.length){const r=await apiFetch('action=images');if(r.status==='success')cachedImages=r.data||[]}renderImagePicker()}
+        async function openImagePicker(){
+            document.getElementById('imagePickerPanel').classList.add('open');
+            // 图片选择器加载所有图片（包括文章图片）
+            const r=await apiFetch('action=images');
+            if(r.status==='success')cachedImages=r.data||[];
+            renderImagePicker();
+        }
         function closeImagePicker(){document.getElementById('imagePickerPanel').classList.remove('open')}
         function renderImagePicker(){const l=document.getElementById('imagePickerList');if(!cachedImages.length){l.innerHTML='<div class="empty" style="padding:32px">暂无图片</div>';return}l.innerHTML=cachedImages.map(img=>`<div class="image-picker-item" onclick="insertFromPicker('${img.url}')"><img src="${img.url}" loading="lazy"><span class="name">${img.key}</span></div>`).join('')}
         function insertFromPicker(url){insertAtCursor(`![图片](${url})`);closeImagePicker();showToast('已插入','success')}
