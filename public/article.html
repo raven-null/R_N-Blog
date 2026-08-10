@@ -4,10 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>文章详情 - 我的博客</title>
-    <link rel="icon" href="/images/TX/01_TX.webp" type="image/webp">
+    <link rel="icon" id="siteFavicon" href="" type="image/webp">
     
     <!-- 主样式 -->
-    <link rel="stylesheet" href="css/style.css?v=3.10.0">
+    <link rel="stylesheet" href="css/style.css?v=3.10.1">
     
     <!-- Marked.js -->
     <script src="js/vendor/marked.min.js"></script>
@@ -1659,11 +1659,11 @@
     </div>
 
     <!-- JavaScript -->
-    <script src="js/theme.js?v=3.10.0"></script>
-    <script src="js/markdown.js?v=3.10.0"></script>
-    <script src="js/chat.js?v=3.10.0"></script>
-    <script src="js/reader.js?v=3.10.0"></script>
-    <script src="js/animations.js?v=3.10.0"></script>
+    <script src="js/theme.js?v=3.10.1"></script>
+    <script src="js/markdown.js?v=3.10.1"></script>
+    <script src="js/chat.js?v=3.10.1"></script>
+    <script src="js/reader.js?v=3.10.1"></script>
+    <script src="js/animations.js?v=3.10.1"></script>
 
     <script>
         // 文章详情页应用
@@ -2462,6 +2462,16 @@
 
         // 页面加载完成后初始化
         document.addEventListener('DOMContentLoaded', () => {
+            // 应用网站图标 favicon（从设置读取）
+            fetch('/api/admin?action=settings').then(r=>r.json()).then(d=>{
+                if(d.status==='success'&&d.data&&d.data.favicon){
+                    const icon=document.getElementById('siteFavicon');
+                    if(icon)icon.setAttribute('href',d.data.favicon);
+                }
+                if(d.status==='success'&&d.data&&d.data.siteTitle){
+                    // 文章页标题保持文章名格式，仅应用 favicon
+                }
+            }).catch(()=>{});
             ArticleApp.init();
             AIChat.init();
 

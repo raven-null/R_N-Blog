@@ -4,11 +4,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>R_N</title>
-    <link rel="icon" href="/images/TX/01_TX.webp" type="image/webp">
+    <title>我的博客</title>
+    <link rel="icon" id="siteFavicon" href="" type="image/webp">
 
     <!-- Styles -->
-    <link rel="stylesheet" href="css/style.css?v=3.10.0">
+    <link rel="stylesheet" href="css/style.css?v=3.10.1">
 
     <!-- Marked.js -->
     <script src="js/vendor/marked.min.js"></script>
@@ -231,10 +231,10 @@
     </div>
 
     <!-- Scripts -->
-    <script src="js/theme.js?v=3.10.0"></script>
-    <script src="js/markdown.js?v=3.10.0"></script>
-    <script src="js/app.js?v=3.10.0"></script>
-    <script src="js/animations.js?v=3.10.0"></script>
+    <script src="js/theme.js?v=3.10.1"></script>
+    <script src="js/markdown.js?v=3.10.1"></script>
+    <script src="js/app.js?v=3.10.1"></script>
+    <script src="js/animations.js?v=3.10.1"></script>
 
     <script>
         // ===== Scroll Observer =====
@@ -411,18 +411,27 @@
         function applyBlogSettings() {
             if (!blogSettings) return;
 
-            // 1. 站点名称
+            // 1. 站点名称 + 网站标题
             if (blogSettings.siteName) {
                 const brand = document.querySelector('.top-bar-brand');
                 if (brand) brand.textContent = blogSettings.siteName;
-                document.title = blogSettings.siteName + (blogSettings.about?.version ? '' : '');
+            }
+            // 网站标题（默认"我的博客"）
+            if (blogSettings.siteTitle) {
+                document.title = blogSettings.siteTitle;
+            } else {
+                document.title = '我的博客';
+            }
+            // 网站图标 favicon（默认无）
+            if (blogSettings.favicon) {
+                const icon = document.getElementById('siteFavicon');
+                if (icon) icon.setAttribute('href', blogSettings.favicon);
             }
 
             // 2. 个人资料
             if (blogSettings.avatar) {
                 const avatar = document.querySelector('.dash-avatar');
                 if (avatar) avatar.src = blogSettings.avatar;
-                document.querySelector('link[rel="icon"]')?.setAttribute('href', blogSettings.avatar);
             }
             if (blogSettings.authorName) {
                 const name = document.querySelector('.dash-name');

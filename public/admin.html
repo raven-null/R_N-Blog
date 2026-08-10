@@ -663,9 +663,23 @@
                     <div class="page-bar"><h2>博客设置</h2><div class="page-bar-actions"><button class="btn btn-ghost" onclick="loadSettings()">重置</button></div></div>
                     <div class="settings-panel">
 
-                        <!-- 1. 站点名称 -->
+                        <!-- 1. 站点名称与标题 -->
                         <div class="settings-group">
-                            <h3>站点名称</h3>
+                            <h3>站点名称与标题</h3>
+                            <div class="settings-field">
+                                <label>网站标题（浏览器标签页显示）</label>
+                                <input type="text" id="setSiteTitle" placeholder="我的博客">
+                            </div>
+                            <div class="settings-field">
+                                <label>网站图标（favicon）</label>
+                                <div class="settings-avatar-row">
+                                    <div class="settings-avatar-preview" id="settingsFaviconPreview" style="border-radius:var(--radius-sm)"><img id="settingsFaviconImg" alt="" style="display:none;border-radius:var(--radius-sm)"><span>未设置</span></div>
+                                    <input type="hidden" id="setFavicon" value="">
+                                    <label class="btn btn-ghost btn-sm" style="cursor:pointer">⬆ 上传<input type="file" accept="image/*" style="display:none" onchange="uploadFaviconImage(this.files[0])"></label>
+                                    <button class="btn btn-ghost btn-sm" onclick="pickFaviconFromGallery()">🖼 从图库选</button>
+                                    <button class="btn btn-ghost btn-sm" onclick="clearFaviconImage()">✕ 移除</button>
+                                </div>
+                            </div>
                             <div class="settings-field">
                                 <label>顶部品牌文字（首页左上角）<span class="required-mark">*</span></label>
                                 <input type="text" id="setSiteName" placeholder="输入站点名称">
@@ -1761,16 +1775,18 @@
             if(r.status==='success')cachedImages=r.data||[];
             renderImagePicker();
         }
-        function closeImagePicker(){document.getElementById('imagePickerPanel').classList.remove('open');window.__coverMode=false;window.__avatarMode=false}
+        function closeImagePicker(){document.getElementById('imagePickerPanel').classList.remove('open');window.__coverMode=false;window.__avatarMode=false;window.__faviconMode=false}
         function renderImagePicker(){const l=document.getElementById('imagePickerList');if(!cachedImages.length){l.innerHTML='<div class="empty" style="padding:32px">暂无图片</div>';return}l.innerHTML=cachedImages.map(img=>`<div class="image-picker-item" data-key="${escAttr(img.key)}"><img src="${img.url}" loading="lazy" onclick="onPickerImageClick(this)"><span class="name" onclick="onPickerImageClick(this.previousElementSibling)">${esc(img.key)}</span><button class="picker-del" onclick="event.stopPropagation();deletePickerImage('${escAttr(img.key)}')" title="删除图片">&times;</button></div>`).join('')}
-        // 图片点击：封面/头像模式设置，否则插入正文
+        // 图片点击：favicon/封面/头像模式设置，否则插入正文
         function onPickerImageClick(imgEl){
             const item=imgEl.closest('.image-picker-item');
             if(!item)return;
             const key=item.getAttribute('data-key');
             const img=cachedImages.find(i=>i.key===key);
             if(!img)return;
-            if(window.__avatarMode){
+            if(window.__faviconMode){
+                faviconSelectFromPicker(img.url);
+            }else if(window.__avatarMode){
                 avatarSelectFromPicker(img.url);
             }else if(window.__coverMode){
                 coverSelectFromPicker(img.url);
@@ -1953,6 +1969,9 @@
         async function loadSettings(){
             const r=await apiFetch('action=settings');
             const s=r.status==='success'&&r.data?r.data:{};
+            document.getElementById('setSiteTitle').value=s.siteTitle||'';
+            document.getElementById('setFavicon').value=s.favicon||'';
+            renderSettingsFavicon(s.favicon);
             document.getElementById('setSiteName').value=s.siteName||'';
             document.getElementById('setAvatar').value=s.avatar||'';
             renderSettingsAvatar(s.avatar);
@@ -1983,6 +2002,87 @@
                 img.style.display='none';
                 span.style.display='';
             }
+        }
+        // favicon 预览
+        function renderSettingsFavicon(src){
+            const img=document.getElementById('settingsFaviconImg');
+            const span=document.querySelector('#settingsFaviconPreview span');
+            if(src){
+                img.src=src;
+                img.style.display='block';
+                span.style.display='none';
+            }else{
+                img.style.display='none';
+                span.style.display='';
+            }
+        }
+        // 上传 favicon（存入独立 avatar-images store）
+        async function uploadFaviconImage(file){
+            if(!file)return;
+            const cur=document.getElementById('setFavicon').value.trim();
+            if(cur&&cur.includes('/api/avatar-image?')){
+                try{
+                    const m=cur.match(/key=([^&]+)/);
+                    if(m){
+                        const oldKey=decodeURIComponent(m[1]);
+                        await fetch(`/api/avatar-image?key=${encodeURIComponent(oldKey)}`,{method:'DELETE',headers:{'X-Admin-Key':adminKey}});
+                    }
+                }catch(e){}
+            }
+            const prog=document.getElementById('uploadProgress'),pt=document.getElementById('uploadProgressText');
+            prog.classList.add('show');pt.textContent=`上传图标 ${file.name}...`;
+            try{
+                const compressed=await compressImage(file);
+                const res=await fetch('/api/avatar-image',{
+                    method:'POST',
+                    headers:{'Content-Type':'application/json','X-Admin-Key':adminKey},
+                    body:JSON.stringify({data:compressed.data,mime:compressed.mime,name:file.name})
+                });
+                const r=await res.json();
+                if(r.status==='success'){
+                    document.getElementById('setFavicon').value=r.url;
+                    renderSettingsFavicon(r.url);
+                    showToast('图标已上传','success');
+                }else{
+                    showToast(r.message||'上传失败','error');
+                }
+            }catch(e){
+                showToast('上传失败','error');
+            }finally{prog.classList.remove('show')}
+        }
+        // 从图库选择 favicon
+        async function pickFaviconFromGallery(){
+            document.getElementById('imagePickerPanel').classList.add('open');
+            const r=await apiFetch('action=images');
+            if(r.status==='success'){
+                cachedImages=r.data||[];
+                window.__faviconMode=true;
+                renderImagePicker();
+            }
+        }
+        // favicon 选择完成
+        function faviconSelectFromPicker(url){
+            document.getElementById('setFavicon').value=url;
+            renderSettingsFavicon(url);
+            closeImagePicker();
+            window.__faviconMode=false;
+            showToast('图标已设置','success');
+        }
+        // 移除 favicon（若为已上传的则删除后端存储）
+        async function clearFaviconImage(){
+            const cur=document.getElementById('setFavicon').value.trim();
+            if(cur&&cur.includes('/api/avatar-image?')){
+                try{
+                    const m=cur.match(/key=([^&]+)/);
+                    if(m){
+                        const oldKey=decodeURIComponent(m[1]);
+                        await fetch(`/api/avatar-image?key=${encodeURIComponent(oldKey)}`,{method:'DELETE',headers:{'X-Admin-Key':adminKey}});
+                    }
+                }catch(e){}
+            }
+            document.getElementById('setFavicon').value='';
+            renderSettingsFavicon('');
+            showToast('图标已移除','success');
         }
         // 上传头像（存入独立 avatar-images store，与图库/文章图片分离）
         async function uploadAvatarImage(file){
@@ -2060,6 +2160,8 @@
             if(!siteName){showToast('站点名称不能为空','error');document.getElementById('setSiteName').focus();return}
             if(!authorName){showToast('用户名不能为空','error');document.getElementById('setAuthorName').focus();return}
             const body={
+                siteTitle:document.getElementById('setSiteTitle').value.trim(),
+                favicon:document.getElementById('setFavicon').value.trim(),
                 siteName,
                 avatar:document.getElementById('setAvatar').value.trim(),
                 authorName,

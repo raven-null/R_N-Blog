@@ -540,6 +540,8 @@ export default async (req: Request) => {
 
     // 默认设置（通用默认值，打包分发时用户可自行修改）
     const DEFAULT_SETTINGS = {
+      siteTitle: "我的博客",
+      favicon: "",
       siteName: "",
       avatar: "",
       authorName: "",
@@ -572,7 +574,7 @@ export default async (req: Request) => {
     }
     if (req.method === "POST") {
       const body = await req.json().catch(() => ({}))
-      const { siteName, avatar, authorName, bio, views, stats, navTags, about } = body
+      const { siteTitle, favicon, siteName, avatar, authorName, bio, views, stats, navTags, about } = body
 
       // 修改密码操作
       if (body.oldPassword !== undefined || body.newPassword !== undefined) {
@@ -591,6 +593,8 @@ export default async (req: Request) => {
 
       // 允许保存空值（默认无个人信息）
       const settings = {
+        siteTitle: String(siteTitle || "").trim(),
+        favicon: String(favicon || "").trim(),
         siteName: String(siteName || "").trim(),
         avatar: String(avatar || "").trim(),
         authorName: String(authorName || "").trim(),
