@@ -1799,6 +1799,14 @@
         // ===== 评论管理 =====
         async function loadComments(){
             try{
+                // 加载文章列表，建立 postId → 标题 映射
+                let titleMap={};
+                try{
+                    const artRes=await apiFetch('action=articles');
+                    if(artRes.status==='success'){
+                        (artRes.data||[]).forEach(a=>{titleMap[a.id]=a.title});
+                    }
+                }catch(e){}
                 const res=await fetch('/api/comments?list=1');
                 const data=await res.json();
                 if(data.status!=='success'){showToast('加载评论失败','error');return}
@@ -1810,12 +1818,14 @@
                 const list=document.getElementById('commentManageList');
                 const all=(data.posts||[]).flatMap(p=>(p.comments||[]).map(c=>({...c,postId:p.postId})));
                 if(!all.length){list.innerHTML='<div class="empty">暂无评论</div>';return}
-                list.innerHTML=all.map(c=>`
+                list.innerHTML=all.map(c=>{
+                    const title=titleMap[c.postId]||c.postId;
+                    return `
                     <div class="comment-manage-item">
                         <div class="comment-manage-head">
                             <div class="comment-manage-name">
                                 <span>${esc(c.name||'匿名')}</span>
-                                <span class="comment-manage-post">${esc(c.postId)}</span>
+                                <span class="comment-manage-post" title="${esc(c.postId)}">${esc(title)}</span>
                             </div>
                             <span class="comment-manage-time">${formatCommentTime(c.createdAt)}</span>
                         </div>
@@ -1823,8 +1833,8 @@
                         <div class="comment-manage-actions">
                             <button class="btn btn-danger btn-sm" onclick="deleteComment('${escJs(c.postId)}','${escJs(c.id)}')">删除</button>
                         </div>
-                    </div>
-                `).join('');
+                    </div>`;
+                }).join('');
             }catch(e){showToast('加载评论失败','error')}
         }
         async function deleteComment(postId,id){
