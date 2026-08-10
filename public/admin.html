@@ -56,6 +56,11 @@
         .sidebar-item svg{width:15px;height:15px;flex-shrink:0}
 
         .content{flex:1;overflow-y:auto;padding:24px 28px}
+        /* 移动端导航（默认隐藏） */
+        .mobile-tabs{display:none;position:fixed;top:0;left:0;right:0;z-index:150;background:var(--bg-card);border-bottom:1px solid var(--border);padding:0 8px}
+        .mobile-tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0;background:transparent;border:none;color:var(--text-muted);cursor:pointer;font-size:10px;font-family:inherit;transition:color .15s}
+        .mobile-tab svg{width:20px;height:20px}
+        .mobile-tab.active{color:var(--accent)}
         .page-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
         .page-bar h2{font-size:18px;font-weight:600}
         .page-bar-actions{display:flex;gap:8px;align-items:center}
@@ -287,8 +292,92 @@
         .admin-lightbox-bottom a:hover,.admin-lightbox-bottom button:hover{background:rgba(255,255,255,.25)}
         .admin-lightbox-name{position:fixed;bottom:70px;color:var(--text-muted);font-size:12px;z-index:2}
 
-        @media(max-width:768px){.sidebar{display:none}.editor-split{grid-template-columns:1fr;height:auto}.image-picker-panel{width:100%}.classify-workspace{flex-direction:column;height:auto}.tags-grid{grid-template-columns:1fr}.write-settings-row{flex-direction:column;align-items:stretch}.write-settings-row>input{min-width:0}.write-settings-row select{width:100%}.editor-toolbar{justify-content:flex-start}.editor-toolbar-right{margin-left:0}.editor-split .editor-right{display:none}.editor-textarea{border-radius:0 0 var(--radius-sm) var(--radius-sm);border-right:1px solid var(--border)}.editor-footer{flex-direction:column;gap:10px}.editor-footer-actions{width:100%}.editor-footer-actions .btn{flex:1;justify-content:center}.page-bar-actions{flex-wrap:wrap}}
-        @media(max-width:480px){.write-title-input{font-size:15px}.editor-toolbar-group button{padding:0 6px;font-size:11px}.content{padding:14px}}
+        /* ===== 移动端适配 ===== */
+        /* 平板 */
+        @media(max-width:1024px){.content{padding:20px}}
+        /* 手机 */
+        @media(max-width:768px){
+            /* 布局：隐藏侧边栏，显示移动导航 */
+            .sidebar{display:none}
+            .admin-header{height:44px;padding:0 14px}
+            .admin-header h1{font-size:14px}
+            .mobile-tabs{display:flex}
+            .admin-body{display:block;height:calc(100vh - 44px);padding-top:56px}
+            .content{padding:16px 12px 80px}
+            .admin{height:auto;min-height:100vh}
+            /* 登录页 */
+            .login-box{width:90%;max-width:360px;padding:32px 24px}
+            /* 页面标题栏 */
+            .page-bar{flex-direction:column;align-items:flex-start;gap:10px;margin-bottom:14px}
+            .page-bar-actions{width:100%;justify-content:flex-start}
+            /* 文章管理表格 → 卡片 */
+            .article-table,.article-table thead,.article-table tbody,.article-table tr,.article-table th,.article-table td{display:block;width:100%}
+            .article-table thead{display:none}
+            .article-table td{border:none;border-bottom:1px solid var(--border);padding:8px 10px}
+            .article-table tr{border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:10px;background:var(--bg-card)}
+            .article-table tr td:first-child{padding-top:12px}
+            .row-actions{justify-content:flex-end}
+            /* 写文章 */
+            .write-settings{padding:12px}
+            .write-cover{flex-direction:column;align-items:stretch}
+            .write-cover-preview{width:100%;height:120px}
+            .write-cover-actions{flex-direction:row;flex-wrap:wrap;justify-content:flex-start}
+            .write-cover-actions .cover-btn{flex:1;min-width:110px;text-align:center}
+            .write-article-images{max-height:none;min-height:60px}
+            .editor-toolbar{padding:6px}
+            .editor-toolbar-group button{font-size:11px;padding:0 6px}
+            .editor-toolbar-right{margin-left:0;width:100%;justify-content:flex-start;border-top:1px solid var(--border);margin-top:4px;padding-top:4px}
+            .editor-split{grid-template-columns:1fr;height:auto}
+            .editor-split .editor-right{display:none}
+            .editor-textarea{border-radius:0 0 var(--radius-sm) var(--radius-sm);border-right:1px solid var(--border);height:300px}
+            .editor-footer{flex-direction:column;gap:10px}
+            .editor-footer-actions{width:100%}
+            .editor-footer-actions .btn{flex:1;justify-content:center}
+            /* 图片管理 */
+            .imgm-top{flex-direction:column;align-items:stretch;gap:10px}
+            .imgm-upload{justify-content:center;padding:12px}
+            .classify-workspace{flex-direction:column;height:auto;gap:12px}
+            .classify-left,.classify-right{width:100%}
+            .classify-panel{min-height:200px}
+            .classify-header{flex-wrap:wrap;gap:6px}
+            .classify-header .tag-sel{flex-wrap:wrap;gap:4px}
+            .classify-right .classify-header{flex-direction:column;align-items:flex-start}
+            .classify-right .classify-header > div{margin-left:0}
+            /* 标签管理 */
+            .tags-nav{overflow-x:auto;white-space:nowrap}
+            .tags-add{flex-direction:column}
+            .tags-grid{grid-template-columns:1fr}
+            /* 弹窗 */
+            .confirm-box,.rename-box,.tag-modal-box{width:90%;max-width:400px}
+            #uploadLogModal .rename-box{width:90%!important;max-width:440px}
+            /* 图片选择面板全屏 */
+            .image-picker-panel{width:100%}
+            /* 编辑器 */
+            .write-settings-row{flex-direction:column;align-items:stretch}
+            .write-settings-row>input{min-width:0}
+            .write-settings-row select{width:100%}
+            /* 图片灯箱 */
+            .admin-lightbox-img{max-width:95vw;max-height:75vh}
+            .admin-lightbox-nav{width:36px;height:36px;font-size:20px}
+            .admin-lightbox-nav.prev{left:8px}
+            .admin-lightbox-nav.next{right:8px}
+        }
+        /* 超小屏 */
+        @media(max-width:480px){
+            .content{padding:12px 10px 72px}
+            .write-title-input{font-size:15px}
+            .mobile-tab{font-size:9px}
+            .mobile-tab svg{width:18px;height:18px}
+            .admin-header-right a{font-size:11px}
+            .classify-card img{height:70px}
+            .editor-toolbar-group button{padding:0 5px;font-size:10px}
+            .editor-toolbar .sep{margin:0 3px}
+            .tags-card{flex-direction:column;align-items:flex-start;gap:10px}
+            .tags-card .tc-actions{margin-left:0}
+            .tags-card .tc-actions button{opacity:1}
+            .editor-footer-actions{flex-wrap:wrap}
+            .page-bar h2{font-size:16px}
+        }
     </style>
 </head>
 <body>
@@ -297,6 +386,13 @@
     </div>
     <div class="admin" id="adminApp">
         <div class="admin-header"><h1>管理后台</h1><div class="admin-header-right"><a href="/" target="_blank">首页 ↗</a><button onclick="doLogout()">退出</button></div></div>
+        <!-- 移动端顶部导航 -->
+        <nav class="mobile-tabs" id="mobileTabs">
+            <button class="mobile-tab active" data-tab="articles" onclick="switchTab('articles')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span>文章</span></button>
+            <button class="mobile-tab" data-tab="write" onclick="switchTab('write')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg><span>写文章</span></button>
+            <button class="mobile-tab" data-tab="images" onclick="switchTab('images')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><span>图片</span></button>
+            <button class="mobile-tab" data-tab="tags" onclick="switchTab('tags')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg><span>标签</span></button>
+        </nav>
         <div class="admin-body">
             <div class="sidebar" id="sidebar">
                 <div class="sidebar-top"><span>菜单</span><button class="sidebar-toggle" onclick="toggleSidebar()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg></button></div>
@@ -1560,6 +1656,7 @@
         // ===== Tab =====
         function switchTab(tab){
             document.querySelectorAll('.sidebar-item').forEach(el=>el.classList.toggle('active',el.dataset.tab===tab));
+            document.querySelectorAll('.mobile-tab').forEach(el=>el.classList.toggle('active',el.dataset.tab===tab));
             ['articles','write','images','tags'].forEach(t=>document.getElementById('tab-'+t).style.display=t===tab?'block':'none');
             if(tab==='articles')loadArticles();
             if(tab==='images'){loadData();loadTags()}
