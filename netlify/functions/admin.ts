@@ -30,15 +30,15 @@ interface ArticleMeta {
 
 // ===================== 认证 =====================
 
-// 获取后台密码：优先 Blobs（设置中修改的），其次环境变量 ADMIN_KEY，默认 1111
+// 获取后台密码：环境变量 ADMIN_KEY 优先，其次 Blobs（设置中修改的），默认 1111
 async function getAdminPassword(): Promise<string> {
+  const envPwd = process.env.ADMIN_KEY
+  if (envPwd) return envPwd
   try {
     const store = getBlobStore("blog-auth", "strong")
     const raw = await store.get("password", { type: "text" })
     if (raw) return raw
   } catch (e) {}
-  const envPwd = process.env.ADMIN_KEY
-  if (envPwd) return envPwd
   return "1111"
 }
 
