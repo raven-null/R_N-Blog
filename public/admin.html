@@ -406,13 +406,21 @@
         // 图片管理上传 → 自动标记为「图库」（未分类）
         async function uploadImages(files){
             const total = files.length;
-            let done = 0;
+            let success = 0, fail = 0;
             for(const f of files){
-                done++;
-                showToast(`上传中 (${done}/${total}): ${f.name}`, 'success');
-                await uploadImageAndGetUrl(f,['图库']);
+                showToast(`上传中 (${success + fail + 1}/${total}): ${f.name}`, 'success');
+                const url = await uploadImageAndGetUrl(f,['图库']);
+                if(url){
+                    success++;
+                }else{
+                    fail++;
+                }
             }
-            showToast(`上传完成: ${done} 张图片已归入未分类`, 'success');
+            if(fail === 0){
+                showToast(`上传完成: ${success} 张图片全部成功`, 'success');
+            }else{
+                showToast(`上传完成: ${success} 成功, ${fail} 失败`, fail > 0 ? 'error' : 'success');
+            }
             await loadData();
         }
         function importToEditor(f){if(!f)return;const r=new FileReader();r.onload=()=>{const m=r.result.match(/^---\s*\n([\s\S]*?)\n---\s*\n([\s\S]*)$/);insertAtCursor(m?m[2]:r.result);showToast(`已插入: ${f.name}`,'success')};r.readAsText(f)}
