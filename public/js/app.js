@@ -23,10 +23,13 @@ const BlogApp = {
 
     // 初始化应用
     async init() {
+        console.log('[BlogApp] 初始化开始');
         ThemeManager.init();
         ThemeManager.createThemeToggle();
         await this.loadPosts();
+        console.log('[BlogApp] 文章加载完成:', this.posts.length, '篇');
         this.render();
+        console.log('[BlogApp] 渲染完成');
         this.setupEventListeners();
         this.handleRoute();
     },
@@ -34,9 +37,11 @@ const BlogApp = {
     // 加载所有文章（仅从 Blobs 后台加载）
     async loadPosts() {
         try {
+            console.log('[loadPosts] 开始加载文章');
             const CACHE_KEY = 'blog-posts-data-v12';
             const cachedData = sessionStorage.getItem(CACHE_KEY);
             if (cachedData) {
+                console.log('[loadPosts] 使用缓存数据');
                 this.posts = JSON.parse(cachedData);
                 this.filteredPosts = [...this.posts];
                 return;
@@ -45,8 +50,11 @@ const BlogApp = {
             this.posts = [];
 
             // 仅从 Blobs 加载文章
+            console.log('[loadPosts] 从 Blobs 加载文章');
             const blobResults = await this.loadBlobPosts();
+            console.log('[loadPosts] Blobs 返回:', blobResults.length, '篇');
             this.posts = blobResults.filter(p => p !== null);
+            console.log('[loadPosts] 过滤后:', this.posts.length, '篇');
 
             // 按日期降序排序
             this.posts.sort((a, b) => new Date(b.date) - new Date(a.date));
