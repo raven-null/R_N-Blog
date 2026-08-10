@@ -330,6 +330,13 @@
             if(!classified.length){rightGrid.innerHTML='<div class="classify-empty">拖拽图片到这里分类</div>'}
             else{rightGrid.innerHTML=classified.map(img=>classifyCardHtml(img)).join('')}
 
+            // 左侧放置区：拖入清除标签
+            const leftPanel=document.getElementById('classifyLeft');
+            leftPanel.ondragover=e=>{e.preventDefault();leftPanel.classList.add('drag-over')};
+            leftPanel.ondragleave=()=>leftPanel.classList.remove('drag-over');
+            leftPanel.ondrop=async e=>{e.preventDefault();leftPanel.classList.remove('drag-over');const key=e.dataTransfer.getData('text/key');if(key)await clearTags(key)};
+
+            // 右侧放置区：拖入打标签
             const rightPanel=document.getElementById('classifyRight');
             rightPanel.ondragover=e=>{e.preventDefault();rightPanel.classList.add('drag-over')};
             rightPanel.ondragleave=()=>rightPanel.classList.remove('drag-over');
@@ -341,6 +348,19 @@
         }
 
         function dragStart(e,key){e.dataTransfer.setData('text/key',key);e.target.classList.add('dragging');e.target.addEventListener('dragend',()=>e.target.classList.remove('dragging'),{once:true})}
+
+        async function clearTags(key){
+            const img=allImageData.find(i=>i.key===key);
+            const cur=img?(img.tags||[]):[];
+            if(!cur.length){showToast('本就未分类','error');return}
+            // 乐观更新
+            if(img)img.tags=[];
+            renderPanels();
+            showToast('已移至未分类','success');
+            // 后台同步
+            const r=await apiFetch('action=images',{method:'PATCH',body:JSON.stringify({key,tags:[]})});
+            if(r.status!=='success'){if(img)img.tags=cur;renderPanels();showToast(r.message||'同步失败','error')}
+        }
 
         async function assignTag(key,tag){
             const img=allImageData.find(i=>i.key===key);
