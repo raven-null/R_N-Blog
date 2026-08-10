@@ -195,7 +195,7 @@ export default async (req: Request) => {
   // ===== 图片管理 =====
 
   if (path === "images") {
-    const store = getBlobStore(IMAGE_STORE)
+    const store = getBlobStore(IMAGE_STORE, "strong")
     const tagStore = getBlobStore("blog-image-tags", "strong")
 
     // 获取图片标签索引
@@ -270,7 +270,7 @@ export default async (req: Request) => {
       let finalBuf = buf
       let finalKey = ""
       const isSvg = mime === "image/svg+xml"
-      const safeName = (name || "").replace(/\s+/g, "_").replace(/[^\w.\-]/g, "").replace(/\.webp$/i, "")
+      const safeName = (name || "").replace(/\s+/g, "_").replace(/[^\w.\-]/g, "").replace(/\.(webp|jpg|jpeg|png|gif|svg)$/i, "")
 
       if (!isSvg) {
         try {
@@ -298,6 +298,16 @@ export default async (req: Request) => {
       }
 
       await store.set(finalKey, finalBuf.toString("base64"))
+
+      // 验证写入是否成功（使用 strong consistency 立即读取）
+      try {
+        const verify = await getBlobStore(IMAGE_STORE, "strong").get(finalKey, { type: "text" })
+        if (!verify || verify.length < 10) {
+          return json(500, { status: "error", message: "图片写入失败，请重试" }, req)
+        }
+      } catch (e) {
+        return json(500, { status: "error", message: "图片写入验证失败" }, req)
+      }
 
       // 保存标签
       if (tags) {

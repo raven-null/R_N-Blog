@@ -7,7 +7,7 @@ export default async (req: Request) => {
   const key = url.searchParams.get("key")
   if (!key) return new Response("key required", { status: 400 })
 
-  const store = getBlobStore(IMAGE_STORE)
+  const store = getBlobStore(IMAGE_STORE, "strong")
   const raw = await store.get(key, { type: "text" })
   if (!raw) return new Response("Not found", { status: 404 })
 
