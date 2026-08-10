@@ -118,8 +118,9 @@
         .classify-workspace{display:flex;gap:16px;height:calc(100vh - 200px)}
         .classify-left{flex:1;display:flex;flex-direction:column;min-width:0}
         .classify-right{flex:1.5;display:flex;flex-direction:column;min-width:0}
-        .classify-panel{flex:1;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);display:flex;flex-direction:column;overflow:hidden}
+        .classify-panel{flex:1;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);display:flex;flex-direction:column;overflow:hidden;position:relative}
         .classify-panel.drag-over{border-color:var(--accent);box-shadow:0 0 20px rgba(79,195,247,.15)}
+        .classify-panel.drag-over::after{content:'释放上传图片';position:absolute;inset:0;background:rgba(79,195,247,.1);display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--accent);font-weight:600;pointer-events:none;z-index:10;border-radius:var(--radius-sm)}
         .classify-header{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
         .classify-header h3{font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px}
         .classify-header .count{font-size:11px;color:var(--text-muted);font-weight:400}
@@ -287,7 +288,7 @@
                     <div class="classify-workspace">
                         <div class="classify-left">
                             <div class="classify-panel" id="classifyLeft">
-                                <div class="classify-header"><h3>未分类 <span class="count" id="unclassifiedCount">0</span></h3></div>
+                                <div class="classify-header"><h3>未分类 <span class="count" id="unclassifiedCount">0</span></h3><span style="font-size:11px;color:var(--text-muted)">拖拽图片到此处上传或移入</span></div>
                                 <div class="classify-body"><div class="classify-grid" id="unclassifiedGrid"></div></div>
                             </div>
                         </div>
@@ -393,8 +394,18 @@
             if(r.status==='success'){showToast(`已上传: ${r.key}`,'success');return r.url}else{showToast(r.message||'上传失败','error');return null}
             }catch{showToast('上传失败','error');return null}finally{prog.classList.remove('show')}
         }
-        // 图片管理上传 → 自动标记为「图库」
-        async function uploadImages(files){for(const f of files){await uploadImageAndGetUrl(f,['图库'])}await loadData()}
+        // 图片管理上传 → 自动标记为「图库」（未分类）
+        async function uploadImages(files){
+            const total = files.length;
+            let done = 0;
+            for(const f of files){
+                done++;
+                showToast(`上传中 (${done}/${total}): ${f.name}`, 'success');
+                await uploadImageAndGetUrl(f,['图库']);
+            }
+            showToast(`上传完成: ${done} 张图片已归入未分类`, 'success');
+            await loadData();
+        }
         function importToEditor(f){if(!f)return;const r=new FileReader();r.onload=()=>{const m=r.result.match(/^---\s*\n([\s\S]*?)\n---\s*\n([\s\S]*)$/);insertAtCursor(m?m[2]:r.result);showToast(`已插入: ${f.name}`,'success')};r.readAsText(f)}
         function exportMarkdown(){const title=document.getElementById('edTitle').value.trim()||'untitled',md=`---\ntitle: ${title}\ndate: ${new Date().toISOString().slice(0,10)}\ntags: [${selectedArticleTags.join(', ')}]\nauthor: 渡鸦NULL\n---\n\n${document.getElementById('edContent').value}`,a=document.createElement('a');a.href=URL.createObjectURL(new Blob([md],{type:'text/markdown'}));a.download=`${title.replace(/[^a-zA-Z0-9\u4e00-\u9fff]/g,'-')}.md`;a.click();showToast('已导出','success')}
 
@@ -444,11 +455,28 @@
             if(!classified.length){rightGrid.innerHTML='<div class="classify-empty">拖拽图片到这里分类</div>'}
             else{rightGrid.innerHTML=classified.map(img=>classifyCardHtml(img)).join('')}
 
-            // 左侧放置区：拖入清除标签
+            // 左侧放置区：拖入清除标签 或 拖入文件上传
             const leftPanel=document.getElementById('classifyLeft');
-            leftPanel.ondragover=e=>{e.preventDefault();leftPanel.classList.add('drag-over')};
+            leftPanel.ondragover=e=>{
+                e.preventDefault();
+                leftPanel.classList.add('drag-over');
+            };
             leftPanel.ondragleave=()=>leftPanel.classList.remove('drag-over');
-            leftPanel.ondrop=async e=>{e.preventDefault();leftPanel.classList.remove('drag-over');const key=e.dataTransfer.getData('text/key');if(key)await clearTags(key)};
+            leftPanel.ondrop=async e=>{
+                e.preventDefault();
+                leftPanel.classList.remove('drag-over');
+                // 检查是否是文件拖拽
+                if(e.dataTransfer.files && e.dataTransfer.files.length > 0){
+                    const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+                    if(files.length > 0){
+                        await uploadImages(files);
+                        return;
+                    }
+                }
+                // 否则是图片拖拽（移动到未分类）
+                const key=e.dataTransfer.getData('text/key');
+                if(key)await clearTags(key);
+            };
 
             // 右侧放置区：拖入打标签
             const rightPanel=document.getElementById('classifyRight');
