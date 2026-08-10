@@ -403,11 +403,11 @@ const BlogApp = {
         }
     },
 
-    // 加载图库图片（从 Blobs API 获取带「图库」标签的图片）
+    // 加载图库图片（从 Blobs API 获取所有图片）
     async loadGalleryImages() {
         if (this.galleryImages) return this.galleryImages;
         try {
-            const res = await fetch('/api/admin?action=images&tag=图库');
+            const res = await fetch('/api/admin?action=images');
             const data = await res.json();
             if (data.status === 'success' && Array.isArray(data.data)) {
                 this.galleryImages = data.data.map(img => ({

@@ -408,13 +408,13 @@
             if(r.status==='success'){showToast(`已上传: ${r.key}`,'success');return r.url}else{showToast(r.message||'上传失败','error');return null}
             }catch{showToast('上传失败','error');return null}finally{prog.classList.remove('show')}
         }
-        // 图片管理上传 → 自动标记为「图库」（未分类）
+        // 图片管理上传（不再标记特殊标签）
         async function uploadImages(files){
             const total = files.length;
             let success = 0, fail = 0;
             for(const f of files){
                 showToast(`上传中 (${success + fail + 1}/${total}): ${f.name}`, 'success');
-                const url = await uploadImageAndGetUrl(f,['图库']);
+                const url = await uploadImageAndGetUrl(f);
                 if(url){
                     success++;
                 }else{
@@ -431,13 +431,13 @@
         function importToEditor(f){if(!f)return;const r=new FileReader();r.onload=()=>{const m=r.result.match(/^---\s*\n([\s\S]*?)\n---\s*\n([\s\S]*)$/);insertAtCursor(m?m[2]:r.result);showToast(`已插入: ${f.name}`,'success')};r.readAsText(f)}
         function exportMarkdown(){const title=document.getElementById('edTitle').value.trim()||'untitled',md=`---\ntitle: ${title}\ndate: ${new Date().toISOString().slice(0,10)}\ntags: [${selectedArticleTags.join(', ')}]\nauthor: 渡鸦NULL\n---\n\n${document.getElementById('edContent').value}`,a=document.createElement('a');a.href=URL.createObjectURL(new Blob([md],{type:'text/markdown'}));a.download=`${title.replace(/[^a-zA-Z0-9\u4e00-\u9fff]/g,'-')}.md`;a.click();showToast('已导出','success')}
 
-        // ===== 图片管理（只管理图库图片）=====
+        // ===== 图片管理（显示所有图片）=====
         async function loadData(){
             // 并行加载图片和标签
             const [imgRes,tagRes]=await Promise.all([apiFetch('action=images'),apiFetch('action=tags')]);
             if(imgRes.status==='success'){
-                // 只保留图库图片（带「图库」标签的）
-                allImageData=(imgRes.data||[]).filter(i=>(i.tags||[]).includes('图库'));
+                // 显示所有图片
+                allImageData=imgRes.data||[];
                 cachedImages=allImageData;
             }
             if(tagRes.status==='success'){
@@ -460,17 +460,16 @@
         function selectTag(tag){classifyTag=tag;renderTagSel();renderPanels()}
 
         function renderPanels(){
-            // 未分类：有「图库」标签但没有其他分类标签
-            const classificationTags=imageTagNames.filter(t=>t!=='图库');
+            // 未分类：没有任何标签的图片
             const untagged=allImageData.filter(i=>{
-                const tags=(i.tags||[]).filter(t=>t!=='图库');
+                const tags=i.tags||[];
                 return tags.length===0;
             });
             const classified=allImageData.filter(i=>(i.tags||[]).includes(classifyTag));
 
             document.getElementById('unclassifiedCount').textContent=untagged.length;
             const leftGrid=document.getElementById('unclassifiedGrid');
-            if(!untagged.length){leftGrid.innerHTML='<div class="classify-empty" style="border:none">所有图库图片已分类 ✓</div>'}
+            if(!untagged.length){leftGrid.innerHTML='<div class="classify-empty" style="border:none">所有图片已分类 ✓</div>'}
             else{leftGrid.innerHTML=untagged.map(img=>classifyCardHtml(img, false)).join('')}
 
             const rightGrid=document.getElementById('classifiedGrid');
@@ -521,9 +520,9 @@
         async function clearTags(key){
             const img=allImageData.find(i=>i.key===key);
             const cur=img?(img.tags||[]):[];
-            // 只保留「图库」标签
-            const newTags=['图库'];
-            if(cur.length===1&&cur[0]==='图库'){showToast('本就未分类','error');return}
+            // 清空所有标签
+            const newTags=[];
+            if(cur.length===0){showToast('本就未分类','error');return}
             // 乐观更新
             if(img)img.tags=newTags;
             renderPanels();
@@ -602,7 +601,7 @@
             for(const key of keys){
                 const img=allImageData.find(i=>i.key===key);
                 const cur=img?(img.tags||[]):[];
-                const newTags=['图库'];
+                const newTags=[];
                 
                 // 乐观更新
                 if(img)img.tags=newTags;
@@ -859,7 +858,6 @@
 
         async function deleteTag(name,count,type){
             const typeLabel=type==='article'?'文章':'图片';
-            if(name==='图库'){showToast('「图库」是系统标签，不能删除','error');return}
             if(count>0&&!confirm(`标签「${name}」下有 ${count} 个${typeLabel}，确定删除？`))return;
             if(count===0&&!confirm(`确定删除空标签「${name}」？`))return;
             const r=await apiFetch(`action=tags&name=${encodeURIComponent(name)}`,{method:'DELETE'});
