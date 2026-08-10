@@ -113,7 +113,7 @@ const BlogApp = {
                     title: a.title,
                     date: a.date,
                     tags: a.tags || [],
-                    author: a.author || '渡鸦NULL',
+                    author: a.author || '博主',
                     excerpt: a.excerpt || '',
                     image: a.image || this.getRandomBgImage(a.id),
                     wordCount: a.wordCount || 0,
@@ -174,7 +174,7 @@ const BlogApp = {
     // 根据作者名字返回对应头像
     getAuthorAvatar(author) {
         const name = (author || '').trim();
-        if (name === '渡鸦NULL') return 'images/TX/01_TX.webp';
+        if (name === '博主') return 'images/TX/03_TX.webp';
         if (name === 'AI') return 'images/TX/02_TX.webp';
         return 'images/TX/03_TX.webp';
     },

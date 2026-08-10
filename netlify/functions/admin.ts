@@ -538,16 +538,16 @@ export default async (req: Request) => {
   if (path === "settings") {
     const settingsStore = getBlobStore("blog-settings", "strong")
 
-    // 默认设置（当前博客的默认信息，打包分发时用户可修改）
+    // 默认设置（通用默认值，打包分发时用户可自行修改）
     const DEFAULT_SETTINGS = {
-      siteName: "渡鸦_NULL BLOG",
+      siteName: "",
       avatar: "",
-      authorName: "渡鸦NULL",
-      bio: "全栈开发者 · 内容创作者 · 终身学习者",
+      authorName: "",
+      bio: "",
       views: { blog: true, gallery: true, news: true, dashboard: true },
       stats: { posts: true, tags: true, words: true, images: true },
-      navTags: ["技术", "生活", "AI"],
-      about: { version: "版本 v2.0", tech: "纯前端 · GitHub Pages", updated: "最后更新 2026-08-06" },
+      navTags: [],
+      about: { version: "", tech: "", updated: "" },
     }
 
     // 必填字段
