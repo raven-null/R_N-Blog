@@ -6,7 +6,7 @@
     <title>管理后台 - 渡鸦_NULL BLOG</title>
     <style>
         *{margin:0;padding:0;box-sizing:border-box}
-        :root{--bg:#0a0a0a;--bg-card:#141414;--bg-input:#1a1a1a;--bg-hover:#1e1e1e;--text:#e0e0e0;--text-muted:#888;--accent:#4fc3f7;--accent-dim:#1a3a4a;--border:#2a2a2a;--danger:#ef5350;--success:#66bb6a;--radius:8px;--shadow:0 4px 24px rgba(0,0,0,.4)}
+        :root{--bg:#0a0a0a;--bg-card:#141414;--bg-input:#1a1a1a;--bg-hover:#1e1e1e;--text:#e0e0e0;--text-muted:#888;--accent:#4fc3f7;--accent-dim:#1a3a4a;--border:#2a2a2a;--danger:#ef5350;--success:#66bb6a;--radius:8px;--shadow:0 4px 24px rgba(0,0,0,.4);--sidebar-w:220px;--sidebar-collapsed:56px}
         body{font-family:-apple-system,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
 
         /* 登录 */
@@ -32,11 +32,22 @@
         .admin-body{display:flex;height:calc(100vh - 49px)}
 
         /* 侧栏 */
-        .sidebar{width:200px;background:var(--bg-card);border-right:1px solid var(--border);padding:20px 0;flex-shrink:0}
-        .sidebar-item{display:flex;align-items:center;gap:10px;padding:10px 24px;cursor:pointer;color:var(--text-muted);font-size:13px;transition:all .15s;border-left:3px solid transparent}
+        .sidebar{width:var(--sidebar-w);background:var(--bg-card);border-right:1px solid var(--border);padding:16px 0;flex-shrink:0;transition:width .25s cubic-bezier(.4,0,.2,1);overflow:hidden;position:relative}
+        .sidebar.collapsed{width:var(--sidebar-collapsed)}
+        .sidebar.collapsed .sidebar-item span{opacity:0;width:0;overflow:hidden}
+        .sidebar.collapsed .sidebar-item{padding:10px 0;justify-content:center}
+        .sidebar.collapsed .sidebar-item svg{margin:0}
+        .sidebar.collapsed .sidebar-toggle svg{transform:rotate(180deg)}
+        .sidebar-header{display:flex;align-items:center;justify-content:space-between;padding:4px 16px 16px;border-bottom:1px solid var(--border);margin-bottom:8px}
+        .sidebar-header span{font-size:13px;color:var(--text-muted);font-weight:500;white-space:nowrap}
+        .sidebar.collapsed .sidebar-header span{display:none}
+        .sidebar-toggle{width:28px;height:28px;display:flex;align-items:center;justify-content:center;background:transparent;border:1px solid var(--border);border-radius:6px;cursor:pointer;color:var(--text-muted);transition:all .15s;flex-shrink:0}
+        .sidebar-toggle:hover{border-color:var(--accent);color:var(--accent)}
+        .sidebar-toggle svg{width:14px;height:14px;transition:transform .25s}
+        .sidebar-item{display:flex;align-items:center;gap:12px;padding:10px 24px;cursor:pointer;color:var(--text-muted);font-size:13px;transition:all .15s;border-left:3px solid transparent;white-space:nowrap}
         .sidebar-item:hover{background:var(--bg-hover);color:var(--text)}
         .sidebar-item.active{background:var(--accent-dim);color:var(--accent);border-left-color:var(--accent)}
-        .sidebar-item svg{width:16px;height:16px}
+        .sidebar-item svg{width:16px;height:16px;flex-shrink:0}
 
         /* 内容区 */
         .content{flex:1;overflow-y:auto;padding:28px 32px}
@@ -65,7 +76,6 @@
         .actions{display:flex;gap:6px}
 
         /* 编辑器 */
-        .editor{display:none}
         .editor-top{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
         .editor-top input,.editor-top select{padding:10px 14px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-size:13px;transition:border .2s}
         .editor-top input:focus,.editor-top select:focus{outline:none;border-color:var(--accent)}
@@ -77,10 +87,9 @@
         .editor-toolbar button{width:32px;height:32px;display:flex;align-items:center;justify-content:center;background:transparent;border:none;color:var(--text-muted);cursor:pointer;border-radius:4px;font-size:14px;transition:all .1s}
         .editor-toolbar button:hover{background:var(--bg-hover);color:var(--accent)}
         .editor-toolbar .sep{width:1px;height:20px;background:var(--border);margin:0 6px}
-        .editor-toolbar .label{font-size:11px;color:var(--text-muted);margin-right:4px}
 
         /* 编辑区 */
-        .editor-split{display:grid;grid-template-columns:1fr 1fr;gap:0;height:calc(100vh - 260px)}
+        .editor-split{display:grid;grid-template-columns:1fr 1fr;gap:0;height:calc(100vh - 300px)}
         .editor-textarea{width:100%;height:100%;background:var(--bg-input);border:1px solid var(--border);border-radius:0 0 0 var(--radius);color:var(--text);font-family:'JetBrains Mono','Fira Code','Cascadia Code',monospace;font-size:13px;padding:16px;resize:none;line-height:1.7;border-right:none}
         .editor-textarea:focus{outline:none;border-color:var(--accent)}
         .editor-textarea::placeholder{color:#555}
@@ -108,7 +117,7 @@
         .editor-footer-right{display:flex;gap:8px;align-items:center}
         .editor-info{font-size:12px;color:var(--text-muted)}
 
-        /* 拖拽上传覆盖层 */
+        /* 拖拽覆盖层 */
         .drop-overlay{display:none;position:absolute;inset:0;background:rgba(79,195,247,.1);border:2px dashed var(--accent);border-radius:var(--radius);z-index:10;align-items:center;justify-content:center;font-size:16px;color:var(--accent);pointer-events:none}
         .drop-overlay.show{display:flex}
 
@@ -146,9 +155,7 @@
         .toast-error{background:var(--danger);color:#fff}
 
         .empty{text-align:center;padding:60px;color:var(--text-muted)}
-        .empty svg{width:48px;height:48px;opacity:.3;margin-bottom:12px}
 
-        /* 上传进度 */
         .upload-progress{display:none;align-items:center;gap:8px;padding:8px 14px;background:var(--accent-dim);border-radius:var(--radius);font-size:12px;color:var(--accent)}
         .upload-progress.show{display:inline-flex}
         .upload-progress .spinner{width:14px;height:14px;border:2px solid var(--accent);border-top-color:transparent;border-radius:50%;animation:spin .6s linear infinite}
@@ -183,16 +190,28 @@
             </div>
         </div>
         <div class="admin-body">
-            <div class="sidebar">
+            <!-- 侧栏 -->
+            <div class="sidebar" id="sidebar">
+                <div class="sidebar-header">
+                    <span>菜单</span>
+                    <button class="sidebar-toggle" onclick="toggleSidebar()" title="收缩/展开">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+                    </button>
+                </div>
                 <div class="sidebar-item active" onclick="switchTab('articles')" data-tab="articles">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                    文章管理
+                    <span>文章管理</span>
+                </div>
+                <div class="sidebar-item" onclick="switchTab('write')" data-tab="write">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    <span>写文章</span>
                 </div>
                 <div class="sidebar-item" onclick="switchTab('images')" data-tab="images">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                    图片管理
+                    <span>图片管理</span>
                 </div>
             </div>
+
             <div class="content">
                 <!-- 文章列表 -->
                 <div id="tab-articles">
@@ -202,11 +221,11 @@
                             <label class="btn btn-ghost" style="cursor:pointer">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                                 导入 .md
-                                <input type="file" accept=".md,.markdown" onchange="importMarkdown(this.files[0])" style="display:none">
+                                <input type="file" accept=".md,.markdown" onchange="importAndEdit(this.files[0])" style="display:none">
                             </label>
-                            <button class="btn btn-primary" onclick="openEditor()">
+                            <button class="btn btn-primary" onclick="switchTab('write')">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                                新建文章
+                                写文章
                             </button>
                         </div>
                     </div>
@@ -216,11 +235,17 @@
                     </table>
                 </div>
 
-                <!-- 编辑器 -->
-                <div class="editor" id="editorPanel">
+                <!-- 写文章（独立页面） -->
+                <div id="tab-write" style="display:none">
                     <div class="toolbar">
-                        <h2 id="editorTitle">新建文章</h2>
-                        <button class="btn btn-ghost" onclick="closeEditor()">← 返回列表</button>
+                        <h2 id="writeTitle">写文章</h2>
+                        <div style="display:flex;gap:8px">
+                            <label class="btn btn-ghost" style="cursor:pointer">
+                                📄 导入 .md
+                                <input type="file" accept=".md,.markdown" onchange="importToEditor(this.files[0])" style="display:none">
+                            </label>
+                            <button class="btn btn-ghost" onclick="exportMarkdown()">💾 导出</button>
+                        </div>
                     </div>
                     <div class="editor-top">
                         <input type="text" id="edTitle" placeholder="文章标题">
@@ -230,7 +255,6 @@
                             <option value="draft">草稿</option>
                         </select>
                     </div>
-                    <!-- 工具栏 -->
                     <div class="editor-toolbar">
                         <button onclick="mdInsert('heading')" title="标题"><b>H</b></button>
                         <button onclick="mdInsert('bold')" title="粗体"><b>B</b></button>
@@ -249,16 +273,10 @@
                         <button onclick="mdInsert('table')" title="表格">▦</button>
                         <button onclick="mdInsert('hr')" title="分割线">—</button>
                         <span class="sep"></span>
-                        <label class="btn btn-ghost btn-sm" style="cursor:pointer;font-size:12px" title="导入 Markdown 文件">
-                            📄 导入
-                            <input type="file" accept=".md,.markdown" onchange="importToEditor(this.files[0])" style="display:none">
-                        </label>
-                        <button onclick="exportMarkdown()" title="导出为 .md 文件" style="width:auto;padding:0 8px;font-size:12px">💾 导出</button>
-                        <span class="sep"></span>
                         <div class="upload-progress" id="uploadProgress"><div class="spinner"></div><span id="uploadProgressText">上传中...</span></div>
                     </div>
                     <div class="editor-split" style="position:relative">
-                        <textarea class="editor-textarea" id="edContent" placeholder="Markdown 正文...&#10;&#10;支持拖拽图片到编辑区自动上传" oninput="updatePreview()" ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)"></textarea>
+                        <textarea class="editor-textarea" id="edContent" placeholder="Markdown 正文...&#10;&#10;支持拖拽/粘贴图片自动上传" oninput="updatePreview()" ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)"></textarea>
                         <div class="editor-preview" id="edPreview"></div>
                         <div class="drop-overlay" id="dropOverlay">📤 拖拽图片到这里上传</div>
                     </div>
@@ -267,7 +285,7 @@
                             <span class="editor-info" id="editorInfo">0 字</span>
                         </div>
                         <div class="editor-footer-right">
-                            <button class="btn btn-ghost" onclick="closeEditor()">取消</button>
+                            <button class="btn btn-ghost" onclick="resetEditor()">清空</button>
                             <button class="btn btn-primary" onclick="saveArticle()">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>
                                 保存文章
@@ -278,9 +296,7 @@
 
                 <!-- 图片管理 -->
                 <div id="tab-images" style="display:none">
-                    <div class="toolbar">
-                        <h2>图片管理</h2>
-                    </div>
+                    <div class="toolbar"><h2>图片管理</h2></div>
                     <div class="upload-area" onclick="document.getElementById('imageUpload').click()">
                         <input type="file" id="imageUpload" accept="image/*" multiple onchange="uploadImages(this.files)">
                         <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
@@ -299,10 +315,7 @@
             <button onclick="closeImagePicker()">&times;</button>
         </div>
         <div class="image-picker-upload">
-            <label>
-                📤 上传新图片（自动转 WebP）
-                <input type="file" accept="image/*" multiple onchange="uploadAndInsert(this.files)" style="display:none">
-            </label>
+            <label>📤 上传新图片<input type="file" accept="image/*" multiple onchange="uploadAndInsert(this.files)" style="display:none"></label>
         </div>
         <div class="image-picker-list" id="imagePickerList"></div>
     </div>
@@ -334,6 +347,11 @@
             return res.json();
         }
 
+        // 侧栏收缩
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('collapsed');
+        }
+
         // ===== 文章列表 =====
         async function loadArticles() {
             const res = await apiFetch('action=articles');
@@ -341,7 +359,7 @@
         }
         function renderArticleList() {
             const tbody = document.getElementById('articleList');
-            if (!articles.length) { tbody.innerHTML = '<tr><td colspan="5" class="empty" style="padding:60px">暂无文章，点击右上角新建或导入 .md 文件</td></tr>'; return; }
+            if (!articles.length) { tbody.innerHTML = '<tr><td colspan="5" class="empty" style="padding:60px">暂无文章，点击左侧「写文章」新建</td></tr>'; return; }
             tbody.innerHTML = articles.map(a => `
                 <tr>
                     <td><strong>${esc(a.title)}</strong><br><small style="color:var(--text-muted);font-size:11px">${a.id}</small></td>
@@ -354,19 +372,17 @@
                     </div></td>
                 </tr>`).join('');
         }
-
-        // ===== 编辑器 =====
-        function openEditor(id) {
-            editingId = id || null;
-            document.getElementById('tab-articles').style.display = 'none';
-            document.getElementById('editorPanel').style.display = 'block';
-            document.getElementById('editorTitle').textContent = id ? '编辑文章' : '新建文章';
-            ['edTitle','edTags'].forEach(el => document.getElementById(el).value = '');
-            document.getElementById('edStatus').value = 'published';
-            document.getElementById('edContent').value = '';
-            document.getElementById('edPreview').innerHTML = '';
-            document.getElementById('editorInfo').textContent = '0 字';
-            if (id) loadArticleForEdit(id);
+        async function deleteArticle(id, title) {
+            if (!confirm(`确定删除「${title}」？`)) return;
+            const res = await apiFetch(`action=articles&id=${id}`, { method: 'DELETE' });
+            if (res.status === 'success') { showToast('已删除', 'success'); loadArticles(); }
+            else showToast(res.message || '删除失败', 'error');
+        }
+        function editArticle(id) {
+            editingId = id;
+            switchTab('write');
+            document.getElementById('writeTitle').textContent = '编辑文章';
+            loadArticleForEdit(id);
         }
         async function loadArticleForEdit(id) {
             const res = await apiFetch(`action=articles&id=${id}`);
@@ -379,7 +395,41 @@
                 updatePreview();
             }
         }
-        function closeEditor() { editingId = null; document.getElementById('tab-articles').style.display = 'block'; document.getElementById('editorPanel').style.display = 'none'; loadArticles(); }
+        function importAndEdit(file) {
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = () => {
+                const raw = reader.result;
+                const m = raw.match(/^---\s*\n([\s\S]*?)\n---\s*\n([\s\S]*)$/);
+                let title = file.name.replace(/\.md$/, ''), tags = '', content = raw;
+                if (m) {
+                    const fm = m[1];
+                    const t = fm.match(/title:\s*(.+)/); if (t) title = t[1].trim();
+                    const tg = fm.match(/tags:\s*\[([^\]]+)\]/); if (tg) tags = tg[1];
+                    content = m[2];
+                }
+                editingId = null;
+                switchTab('write');
+                document.getElementById('writeTitle').textContent = '导入文章';
+                document.getElementById('edTitle').value = title;
+                document.getElementById('edTags').value = tags;
+                document.getElementById('edContent').value = content;
+                updatePreview();
+                showToast(`已导入: ${file.name}`, 'success');
+            };
+            reader.readAsText(file);
+        }
+
+        // ===== 写文章 =====
+        function resetEditor() {
+            editingId = null;
+            document.getElementById('writeTitle').textContent = '写文章';
+            ['edTitle','edTags'].forEach(el => document.getElementById(el).value = '');
+            document.getElementById('edStatus').value = 'published';
+            document.getElementById('edContent').value = '';
+            document.getElementById('edPreview').innerHTML = '';
+            document.getElementById('editorInfo').textContent = '0 字';
+        }
         async function saveArticle() {
             const title = document.getElementById('edTitle').value.trim();
             const tags = document.getElementById('edTags').value;
@@ -390,16 +440,9 @@
             const body = { title, tags, content, status };
             if (editingId) body.id = editingId;
             const res = await apiFetch('action=articles', { method: 'POST', body: JSON.stringify(body) });
-            if (res.status === 'success') { showToast('保存成功', 'success'); closeEditor(); }
+            if (res.status === 'success') { showToast('保存成功', 'success'); resetEditor(); switchTab('articles'); }
             else showToast(res.message || '保存失败', 'error');
         }
-        async function deleteArticle(id, title) {
-            if (!confirm(`确定删除「${title}」？`)) return;
-            const res = await apiFetch(`action=articles&id=${id}`, { method: 'DELETE' });
-            if (res.status === 'success') { showToast('已删除', 'success'); loadArticles(); }
-            else showToast(res.message || '删除失败', 'error');
-        }
-        function editArticle(id) { openEditor(id); }
 
         // ===== Markdown 工具栏 =====
         function mdInsert(type) {
@@ -408,27 +451,17 @@
             const sel = ta.value.slice(start, end);
             const before = ta.value.slice(0, start), after = ta.value.slice(end);
             const inserts = {
-                heading: { before: '## ', after: '', default: '标题' },
-                bold: { before: '**', after: '**', default: '粗体文字' },
-                italic: { before: '*', after: '*', default: '斜体文字' },
-                strike: { before: '~~', after: '~~', default: '删除线文字' },
-                code: { before: '`', after: '`', default: 'code' },
-                codeblock: { before: '```\n', after: '\n```', default: '// 代码' },
-                quote: { before: '> ', after: '', default: '引用文字' },
-                list: { before: '- ', after: '', default: '列表项' },
-                olist: { before: '1. ', after: '', default: '列表项' },
-                link: { before: '[', after: '](https://)', default: '链接文字' },
-                image: { before: '![', after: '](url)', default: '图片描述' },
-                table: { before: '| 列1 | 列2 | 列3 |\n| --- | --- | --- |\n', after: '', default: '| 内容 | 内容 | 内容 |' },
-                hr: { before: '\n---\n', after: '', default: '' },
+                heading:{b:'## ',a:'',d:'标题'}, bold:{b:'**',a:'**',d:'粗体文字'}, italic:{b:'*',a:'*',d:'斜体文字'},
+                strike:{b:'~~',a:'~~',d:'删除线文字'}, code:{b:'`',a:'`',d:'code'}, codeblock:{b:'```\n',a:'\n```',d:'// 代码'},
+                quote:{b:'> ',a:'',d:'引用文字'}, list:{b:'- ',a:'',d:'列表项'}, olist:{b:'1. ',a:'',d:'列表项'},
+                link:{b:'[',a:'](https://)',d:'链接文字'}, image:{b:'![',a:'](url)',d:'图片描述'},
+                table:{b:'| 列1 | 列2 | 列3 |\n| --- | --- | --- |\n',a:'',d:'| 内容 | 内容 | 内容 |'},
+                hr:{b:'\n---\n',a:'',d:''}
             };
-            const ins = inserts[type];
-            if (!ins) return;
-            const text = sel || ins.default;
-            ta.value = before + ins.before + text + ins.after + after;
-            ta.focus();
-            ta.selectionStart = start + ins.before.length;
-            ta.selectionEnd = start + ins.before.length + text.length;
+            const ins = inserts[type]; if (!ins) return;
+            const text = sel || ins.d;
+            ta.value = before + ins.b + text + ins.a + after;
+            ta.focus(); ta.selectionStart = start + ins.b.length; ta.selectionEnd = start + ins.b.length + text.length;
             updatePreview();
         }
 
@@ -446,29 +479,20 @@
                 .replace(/`([^`]+)`/g,'<code>$1</code>').replace(/```(\w*)\n([\s\S]*?)```/g,'<pre><code>$2</code></pre>')
                 .replace(/\[([^\]]+)\]\(([^)]+)\)/g,'<a href="$2" target="_blank">$1</a>')
                 .replace(/!\[([^\]]*)\]\(([^)]+)\)/g,'<img src="$2" alt="$1">')
-                .replace(/^> (.*$)/gm,'<blockquote>$1</blockquote>')
-                .replace(/^- (.*$)/gm,'<li>$1</li>')
-                .replace(/^1\. (.*$)/gm,'<li>$1</li>')
-                .replace(/^---$/gm,'<hr>')
-                .replace(/\n\n/g,'</p><p>');
+                .replace(/^> (.*$)/gm,'<blockquote>$1</blockquote>').replace(/^- (.*$)/gm,'<li>$1</li>')
+                .replace(/^1\. (.*$)/gm,'<li>$1</li>').replace(/^---$/gm,'<hr>').replace(/\n\n/g,'</p><p>');
             return '<p>'+h+'</p>';
         }
 
-        // ===== 图片拖拽上传 =====
+        // ===== 拖拽/粘贴上传 =====
         function handleDragOver(e) { e.preventDefault(); e.stopPropagation(); document.getElementById('dropOverlay').classList.add('show'); }
         function handleDragLeave(e) { e.preventDefault(); e.stopPropagation(); document.getElementById('dropOverlay').classList.remove('show'); }
         async function handleDrop(e) {
             e.preventDefault(); e.stopPropagation();
             document.getElementById('dropOverlay').classList.remove('show');
             const files = [...e.dataTransfer.files].filter(f => f.type.startsWith('image/'));
-            if (!files.length) return;
-            for (const file of files) {
-                const url = await uploadImageAndGetUrl(file);
-                if (url) insertAtCursor(`![${file.name}](${url})`);
-            }
+            for (const file of files) { const url = await uploadImageAndGetUrl(file); if (url) insertAtCursor(`![${file.name}](${url})`); }
         }
-
-        // 粘贴上传
         document.addEventListener('paste', async (e) => {
             if (document.activeElement !== document.getElementById('edContent')) return;
             const items = [...e.clipboardData.items];
@@ -481,73 +505,30 @@
                 }
             }
         });
-
         function insertAtCursor(text) {
             const ta = document.getElementById('edContent');
             const pos = ta.selectionStart;
             ta.value = ta.value.slice(0, pos) + text + ta.value.slice(pos);
-            ta.focus();
-            ta.selectionStart = ta.selectionEnd = pos + text.length;
+            ta.focus(); ta.selectionStart = ta.selectionEnd = pos + text.length;
             updatePreview();
         }
 
+        // ===== 图片上传 =====
         async function uploadImageAndGetUrl(file) {
             const progress = document.getElementById('uploadProgress');
             const progressText = document.getElementById('uploadProgressText');
-            progress.classList.add('show');
-            progressText.textContent = `上传 ${file.name}...`;
+            progress.classList.add('show'); progressText.textContent = `上传 ${file.name}...`;
             try {
                 const base64 = await readFileAsBase64(file);
                 const res = await apiFetch('action=images', { method: 'POST', body: JSON.stringify({ data: base64, mime: file.type, name: file.name }) });
-                if (res.status === 'success') {
-                    showToast(`已上传: ${res.key}`, 'success');
-                    return res.url;
-                } else {
-                    showToast(res.message || '上传失败', 'error');
-                    return null;
-                }
-            } catch (e) {
-                showToast('上传失败: ' + e.message, 'error');
-                return null;
-            } finally {
-                progress.classList.remove('show');
-            }
+                if (res.status === 'success') { showToast(`已上传: ${res.key}`, 'success'); return res.url; }
+                else { showToast(res.message || '上传失败', 'error'); return null; }
+            } catch (e) { showToast('上传失败', 'error'); return null; }
+            finally { progress.classList.remove('show'); }
         }
+        function readFileAsBase64(file) { return new Promise((resolve, reject) => { const r = new FileReader(); r.onload = () => resolve(r.result.split(',')[1]); r.onerror = reject; r.readAsDataURL(file); }); }
 
-        function readFileAsBase64(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = () => resolve(reader.result.split(',')[1]);
-                reader.onerror = reject;
-                reader.readAsDataURL(file);
-            });
-        }
-
-        // ===== 导入 Markdown =====
-        function importMarkdown(file) {
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = () => {
-                const raw = reader.result;
-                const m = raw.match(/^---\s*\n([\s\S]*?)\n---\s*\n([\s\S]*)$/);
-                let title = file.name.replace(/\.md$/, ''), tags = '', content = raw;
-                if (m) {
-                    const fm = m[1];
-                    const t = fm.match(/title:\s*(.+)/); if (t) title = t[1].trim();
-                    const tg = fm.match(/tags:\s*\[([^\]]+)\]/); if (tg) tags = tg[1];
-                    else { const tg2 = fm.match(/tags:\s*\n((?:\s*-\s*.+\n?)+)/); if (tg2) tags = tg2[1].replace(/\s*-\s*/g, '').trim(); }
-                    content = m[2];
-                }
-                openEditor();
-                document.getElementById('edTitle').value = title;
-                document.getElementById('edTags').value = tags;
-                document.getElementById('edContent').value = content;
-                updatePreview();
-                showToast(`已导入: ${file.name}`, 'success');
-            };
-            reader.readAsText(file);
-        }
-
+        // ===== 导入/导出 =====
         function importToEditor(file) {
             if (!file) return;
             const reader = new FileReader();
@@ -563,7 +544,6 @@
             };
             reader.readAsText(file);
         }
-
         function exportMarkdown() {
             const title = document.getElementById('edTitle').value.trim() || 'untitled';
             const tags = document.getElementById('edTags').value;
@@ -571,46 +551,27 @@
             const date = new Date().toISOString().slice(0, 10);
             const md = `---\ntitle: ${title}\ndate: ${date}\ntags: [${tags}]\nauthor: 渡鸦NULL\n---\n\n${content}`;
             const blob = new Blob([md], { type: 'text/markdown' });
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
             a.download = `${title.replace(/[^a-zA-Z0-9\u4e00-\u9fff]/g, '-')}.md`;
-            a.click();
-            URL.revokeObjectURL(a.href);
-            showToast('已导出', 'success');
+            a.click(); URL.revokeObjectURL(a.href); showToast('已导出', 'success');
         }
 
         // ===== 图片选择面板 =====
         async function openImagePicker() {
             document.getElementById('imagePickerPanel').classList.add('open');
-            if (!cachedImages.length) {
-                const res = await apiFetch('action=images');
-                if (res.status === 'success') cachedImages = res.data || [];
-            }
+            if (!cachedImages.length) { const res = await apiFetch('action=images'); if (res.status === 'success') cachedImages = res.data || []; }
             renderImagePicker();
         }
         function closeImagePicker() { document.getElementById('imagePickerPanel').classList.remove('open'); }
         function renderImagePicker() {
             const list = document.getElementById('imagePickerList');
             if (!cachedImages.length) { list.innerHTML = '<div class="empty" style="padding:40px"><p>暂无图片</p></div>'; return; }
-            list.innerHTML = cachedImages.map(img => `
-                <div class="image-picker-item" onclick="insertImageFromPicker('${img.url}')">
-                    <img src="${img.url}" alt="${img.key}" loading="lazy">
-                    <span class="name">${img.key}</span>
-                </div>
-            `).join('');
+            list.innerHTML = cachedImages.map(img => `<div class="image-picker-item" onclick="insertImageFromPicker('${img.url}')"><img src="${img.url}" alt="${img.key}" loading="lazy"><span class="name">${img.key}</span></div>`).join('');
         }
-        function insertImageFromPicker(url) {
-            insertAtCursor(`![图片](${url})`);
-            closeImagePicker();
-            showToast('已插入图片', 'success');
-        }
+        function insertImageFromPicker(url) { insertAtCursor(`![图片](${url})`); closeImagePicker(); showToast('已插入图片', 'success'); }
         async function uploadAndInsert(files) {
-            for (const file of files) {
-                const url = await uploadImageAndGetUrl(file);
-                if (url) insertAtCursor(`![${file.name}](${url})`);
-            }
-            cachedImages = [];
-            openImagePicker();
+            for (const file of files) { const url = await uploadImageAndGetUrl(file); if (url) insertAtCursor(`![${file.name}](${url})`); }
+            cachedImages = []; openImagePicker();
         }
 
         // ===== 图片管理 =====
@@ -621,19 +582,11 @@
             grid.innerHTML = images.map(img => `
                 <div class="image-card">
                     <img src="${img.url}" alt="${img.key}" loading="lazy">
-                    <div class="image-info">
-                        <span class="url" title="${img.key}">${img.key}</span>
-                        <button class="btn btn-ghost btn-sm" onclick="copyUrl('${img.url}')">复制</button>
-                    </div>
+                    <div class="image-info"><span class="url" title="${img.key}">${img.key}</span><button class="btn btn-ghost btn-sm" onclick="copyUrl('${img.url}')">复制</button></div>
                     <button class="delete-btn" onclick="deleteImage('${img.key}')">&times;</button>
                 </div>`).join('');
         }
-        async function uploadImages(files) {
-            for (const file of files) {
-                const url = await uploadImageAndGetUrl(file);
-                if (url) loadImages();
-            }
-        }
+        async function uploadImages(files) { for (const file of files) { const url = await uploadImageAndGetUrl(file); if (url) loadImages(); } }
         async function deleteImage(key) {
             if (!confirm(`确定删除 ${key}？`)) return;
             const res = await apiFetch(`action=images&key=${encodeURIComponent(key)}`, { method: 'DELETE' });
@@ -645,17 +598,18 @@
         function switchTab(tab) {
             document.querySelectorAll('.sidebar-item').forEach(el => el.classList.toggle('active', el.dataset.tab === tab));
             document.getElementById('tab-articles').style.display = tab === 'articles' ? 'block' : 'none';
+            document.getElementById('tab-write').style.display = tab === 'write' ? 'block' : 'none';
             document.getElementById('tab-images').style.display = tab === 'images' ? 'block' : 'none';
-            document.getElementById('editorPanel').style.display = 'none';
-            if (tab === 'images') loadImages();
             if (tab === 'articles') loadArticles();
+            if (tab === 'images') loadImages();
+            if (tab === 'write' && !editingId) resetEditor();
         }
 
         // ===== 工具 =====
         function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
         function showToast(msg, type) { const t = document.getElementById('toast'); t.textContent = msg; t.className = `toast toast-${type}`; t.style.display = 'block'; setTimeout(() => t.style.display = 'none', 2500); }
 
-        // ===== 初始化 =====
+        // 初始化
         (function(){ if (adminKey) apiFetch('action=login', { method: 'POST', body: JSON.stringify({ key: adminKey }) }).then(res => { if (res.status === 'success') showAdmin(); else doLogout(); }).catch(() => doLogout()); })();
     </script>
 </body>
