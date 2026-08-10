@@ -726,12 +726,20 @@
 
         function classifyCardHtml(img, showCheckbox=false){
             const checked = selectedImageKeys.has(img.key) ? 'checked' : '';
-            const k = escJs(img.key);
-            const checkbox = (showCheckbox && batchMode) ? `<input type="checkbox" class="img-checkbox" ${checked} onclick="event.stopPropagation();toggleImageSelect('${k}')" style="position:absolute;top:4px;left:4px;z-index:2">` : '';
-            return `<div class="classify-card${selectedImageKeys.has(img.key) && batchMode ? ' selected' : ''}" draggable="true" data-key="${img.key.replace(/"/g,'&quot;')}" ondragstart="dragStart(event,'${k}')">${checkbox}<img src="${img.url}" loading="lazy" onclick="event.stopPropagation();openAdminLightbox('${k}')"><div class="cc-bottom"><span class="cc-name" title="${img.key.replace(/"/g,'&quot;')}">${esc(img.key)}</span><button class="cc-del" onclick="event.stopPropagation();deleteImage('${k}')" title="删除">&times;</button></div></div>`;
+            const checkbox = (showCheckbox && batchMode) ? `<input type="checkbox" class="img-checkbox" ${checked} style="position:absolute;top:4px;left:4px;z-index:2">` : '';
+            return `<div class="classify-card${selectedImageKeys.has(img.key) && batchMode ? ' selected' : ''}" draggable="true" data-key="${escAttr(img.key)}">${checkbox}<img src="${img.url}" loading="lazy"><div class="cc-bottom"><span class="cc-name" title="${escAttr(img.key)}">${esc(img.key)}</span><button class="cc-del" title="删除">&times;</button></div></div>`;
         }
 
-        function dragStart(e,key){e.dataTransfer.setData('text/key',key);e.target.classList.add('dragging');e.target.addEventListener('dragend',()=>e.target.classList.remove('dragging'),{once:true})}
+        // HTML 属性转义（用于 data-key）
+        function escAttr(s){return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+
+        function dragStart(e){
+            const key=e.target.closest('.classify-card')?.getAttribute('data-key');
+            if(!key)return;
+            e.dataTransfer.setData('text/key',key);
+            e.target.classList.add('dragging');
+            e.target.addEventListener('dragend',()=>e.target.classList.remove('dragging'),{once:true});
+        }
 
         async function clearTags(key){
             const img=allImageData.find(i=>i.key===key);
@@ -1289,6 +1297,57 @@
         // 用于内联事件参数中的 JS 字符串转义（转义单引号）
         function escJs(s){return String(s||'').replace(/'/g,"\\'").replace(/\\/g,"\\\\").replace(/"/g,'&quot;')}
         function showToast(msg,type){const t=document.getElementById('toast');t.textContent=msg;t.className=`toast toast-${type}`;t.style.display='block';setTimeout(()=>t.style.display='none',2500)}
+
+        // ===== 图片卡片事件委托（避免内联事件的特殊字符问题）=====
+        function initCardDelegation(){
+            const grids=[document.getElementById('unclassifiedGrid'),document.getElementById('classifiedGrid')];
+
+            // 点击：图片打开灯箱，复选框选中，删除按钮删除
+            grids.forEach(grid=>{
+                if(!grid)return;
+                grid.addEventListener('click',e=>{
+                    const card=e.target.closest('.classify-card');
+                    if(!card)return;
+                    const key=card.getAttribute('data-key');
+                    if(!key)return;
+                    // 复选框
+                    if(e.target.classList.contains('img-checkbox')){
+                        e.stopPropagation();
+                        toggleImageSelect(key);
+                        return;
+                    }
+                    // 删除按钮
+                    if(e.target.classList.contains('cc-del')){
+                        e.stopPropagation();
+                        deleteImage(key);
+                        return;
+                    }
+                    // 图片点击 → 打开灯箱
+                    if(e.target.tagName==='IMG'){
+                        e.stopPropagation();
+                        openAdminLightbox(key);
+                        return;
+                    }
+                });
+            });
+
+            // 拖拽开始
+            grids.forEach(grid=>{
+                if(!grid)return;
+                grid.addEventListener('dragstart',e=>{
+                    const card=e.target.closest('.classify-card');
+                    if(!card)return;
+                    const key=card.getAttribute('data-key');
+                    if(!key)return;
+                    e.dataTransfer.setData('text/key',key);
+                    e.target.classList.add('dragging');
+                    e.target.addEventListener('dragend',()=>e.target.classList.remove('dragging'),{once:true});
+                });
+            });
+        }
+        // 页面加载后初始化事件委托
+        document.addEventListener('DOMContentLoaded',initCardDelegation);
+
         (function(){if(adminKey)apiFetch('action=login',{method:'POST',body:JSON.stringify({key:adminKey})}).then(r=>{if(r.status==='success')showAdmin();else doLogout()}).catch(()=>doLogout())})();
     </script>
 </body>

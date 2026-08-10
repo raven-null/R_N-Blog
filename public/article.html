@@ -1805,7 +1805,7 @@
             async loadAllPosts() {
                 try {
                     // 优先复用首页 sessionStorage 缓存
-                    const homepageCache = sessionStorage.getItem('blog-posts-data-v13');
+                    const homepageCache = sessionStorage.getItem('blog-posts-data-v14');
                     if (homepageCache) {
                         this.allPosts = JSON.parse(homepageCache).map(p => ({
                             filename: p.filename,
