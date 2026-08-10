@@ -520,11 +520,35 @@ export default async (req: Request) => {
   if (path === "settings") {
     const settingsStore = getBlobStore("blog-settings", "strong")
 
+    // 默认设置（当前博客的默认信息，打包分发时用户可修改）
+    const DEFAULT_SETTINGS = {
+      siteName: "渡鸦_NULL BLOG",
+      avatar: "images/TX/01_TX.webp",
+      authorName: "渡鸦NULL",
+      bio: "全栈开发者 · 内容创作者 · 终身学习者",
+      views: { blog: true, gallery: true, news: true, dashboard: true },
+      stats: { posts: true, tags: true, words: true, images: true },
+      navTags: ["技术", "生活", "AI"],
+      about: { version: "版本 v2.0", tech: "纯前端 · GitHub Pages", updated: "最后更新 2026-08-06" },
+    }
+
+    // 必填字段
+    const REQUIRED = ["siteName", "authorName"]
+
     // GET: 读取设置（公开，首页需要）
     if (req.method === "GET") {
       const raw = await settingsStore.get("site", { type: "text" })
       const data = raw ? JSON.parse(raw) : {}
-      return json(200, { status: "success", data }, req)
+      // 合并默认值，确保关键字段有值
+      const merged = {
+        ...DEFAULT_SETTINGS,
+        ...data,
+        views: { ...DEFAULT_SETTINGS.views, ...(data.views || {}) },
+        stats: { ...DEFAULT_SETTINGS.stats, ...(data.stats || {}) },
+        about: { ...DEFAULT_SETTINGS.about, ...(data.about || {}) },
+        navTags: data.navTags && data.navTags.length ? data.navTags : DEFAULT_SETTINGS.navTags,
+      }
+      return json(200, { status: "success", data: merged }, req)
     }
 
     // POST: 保存设置（需认证）
@@ -534,11 +558,19 @@ export default async (req: Request) => {
     if (req.method === "POST") {
       const body = await req.json().catch(() => ({}))
       const { siteName, avatar, authorName, bio, views, stats, navTags, about } = body
+
+      // 必填校验
+      for (const field of REQUIRED) {
+        if (!body[field] || !String(body[field]).trim()) {
+          return badRequest(`「${field === "siteName" ? "站点名称" : "用户名"}」不能为空`, req)
+        }
+      }
+
       const settings = {
-        siteName: siteName || "",
-        avatar: avatar || "",
-        authorName: authorName || "",
-        bio: bio || "",
+        siteName: String(siteName || "").trim(),
+        avatar: String(avatar || "").trim(),
+        authorName: String(authorName || "").trim(),
+        bio: String(bio || "").trim(),
         views: {
           blog: views?.blog !== false,
           gallery: views?.gallery !== false,
@@ -551,11 +583,11 @@ export default async (req: Request) => {
           words: stats?.words !== false,
           images: stats?.images !== false,
         },
-        navTags: Array.isArray(navTags) ? navTags : [],
+        navTags: Array.isArray(navTags) ? navTags.map(t => String(t).trim()).filter(Boolean) : [],
         about: {
-          version: about?.version || "",
-          tech: about?.tech || "",
-          updated: about?.updated || "",
+          version: String(about?.version || "").trim(),
+          tech: String(about?.tech || "").trim(),
+          updated: String(about?.updated || "").trim(),
         },
       }
       await settingsStore.set("site", JSON.stringify(settings))

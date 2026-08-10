@@ -288,6 +288,7 @@
         .settings-field{margin-bottom:14px}
         .settings-field:last-child{margin-bottom:0}
         .settings-field label{display:block;font-size:12px;color:var(--text-muted);margin-bottom:6px}
+        .required-mark{color:var(--danger);font-weight:700;margin-left:2px}
         .settings-field input,.settings-field textarea{width:100%;padding:10px 14px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:13px;font-family:inherit;resize:vertical}
         .settings-field input:focus,.settings-field textarea:focus{outline:none;border-color:var(--accent)}
         .settings-actions{display:flex;justify-content:flex-end}
@@ -666,7 +667,7 @@
                         <div class="settings-group">
                             <h3>站点名称</h3>
                             <div class="settings-field">
-                                <label>顶部品牌文字（首页左上角）</label>
+                                <label>顶部品牌文字（首页左上角）<span class="required-mark">*</span></label>
                                 <input type="text" id="setSiteName" placeholder="输入站点名称">
                             </div>
                         </div>
@@ -683,7 +684,7 @@
                                 </div>
                             </div>
                             <div class="settings-field">
-                                <label>用户名</label>
+                                <label>用户名 <span class="required-mark">*</span></label>
                                 <input type="text" id="setAuthorName" placeholder="输入用户名">
                             </div>
                             <div class="settings-field">
@@ -1979,10 +1980,15 @@
             }
         }
         async function saveSettings(){
+            const siteName=document.getElementById('setSiteName').value.trim();
+            const authorName=document.getElementById('setAuthorName').value.trim();
+            // 必填校验
+            if(!siteName){showToast('站点名称不能为空','error');document.getElementById('setSiteName').focus();return}
+            if(!authorName){showToast('用户名不能为空','error');document.getElementById('setAuthorName').focus();return}
             const body={
-                siteName:document.getElementById('setSiteName').value.trim(),
+                siteName,
                 avatar:document.getElementById('setAvatar').value.trim(),
-                authorName:document.getElementById('setAuthorName').value.trim(),
+                authorName,
                 bio:document.getElementById('setBio').value.trim(),
                 views:{
                     blog:document.getElementById('setViewBlog').checked,
