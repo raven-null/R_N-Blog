@@ -283,8 +283,8 @@
         .comment-manage-actions{display:flex;justify-content:flex-end;gap:6px}
 
         /* 博客设置 */
-        .settings-panel{display:flex;flex-direction:column;gap:20px;max-width:640px}
-        .settings-group{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:18px}
+        .settings-panel{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start;max-width:1000px}
+        .settings-group{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:18px;min-width:0}
         .settings-group h3{font-size:14px;color:var(--accent);margin-bottom:16px;font-weight:600}
         .settings-field{margin-bottom:14px}
         .settings-field:last-child{margin-bottom:0}
@@ -292,7 +292,7 @@
         .required-mark{color:var(--danger);font-weight:700;margin-left:2px}
         .settings-field input,.settings-field textarea{width:100%;padding:10px 14px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:13px;font-family:inherit;resize:vertical}
         .settings-field input:focus,.settings-field textarea:focus{outline:none;border-color:var(--accent)}
-        .settings-actions{display:flex;justify-content:flex-end}
+        .settings-actions{display:flex;justify-content:flex-end;grid-column:1/-1}
         .settings-actions .btn{padding:10px 32px;font-size:14px}
         /* 开关 */
         .settings-toggle-list{display:flex;flex-direction:column;gap:10px}
@@ -407,7 +407,8 @@
             .comment-manage-head{flex-direction:column;align-items:flex-start}
             .comment-manage-actions{justify-content:flex-start}
             /* 博客设置 */
-            .settings-panel{max-width:100%}
+            .settings-panel{grid-template-columns:1fr;max-width:100%}
+            .settings-actions{grid-column:auto}
             /* 弹窗 */
             .confirm-box,.rename-box,.tag-modal-box{width:90%;max-width:400px}
             #uploadLogModal .rename-box{width:90%!important;max-width:440px}
