@@ -25,7 +25,7 @@
 html {
     scroll-behavior: smooth;
     scrollbar-width: thin;
-    scrollbar-color: var(--border) var(--bg-primary);
+    scrollbar-color: rgba(255,255,255,.08) transparent;
 }
 
 body {
@@ -41,10 +41,11 @@ body.home-layout {
     height: 100vh;
 }
 
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: var(--bg-primary); }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: var(--border-light); }
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,.08); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.15); }
+::-webkit-scrollbar-corner { background: transparent; }
 
 /* ===== HERO SECTION - Full Page ===== */
 
@@ -1836,7 +1837,7 @@ body.home-layout {
 }
 
 .chat-messages::-webkit-scrollbar-thumb {
-    background: var(--border);
+    background: rgba(255,255,255,.08);
     border-radius: 2px;
 }
 
