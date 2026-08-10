@@ -224,6 +224,15 @@
         .rename-box input:focus{outline:none;border-color:var(--accent)}
         .rename-box .rename-actions{display:flex;gap:8px;justify-content:flex-end}
 
+        /* 通用确认弹窗 */
+        .confirm-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:2000;align-items:center;justify-content:center}
+        .confirm-modal.open{display:flex}
+        .confirm-box{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;width:380px;box-shadow:var(--shadow);text-align:center}
+        .confirm-box h3{font-size:15px;margin-bottom:12px;color:var(--accent)}
+        .confirm-message{font-size:13px;color:var(--text-muted);margin-bottom:20px;line-height:1.6;word-break:break-all}
+        .confirm-actions{display:flex;gap:8px;justify-content:center}
+        .confirm-actions .btn{padding:8px 28px}
+
         /* 图片灯箱 */
         .admin-lightbox{display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:1000;align-items:center;justify-content:center;flex-direction:column}
         .admin-lightbox.open{display:flex}
@@ -395,6 +404,18 @@
             <h3>上传记录</h3>
             <div id="uploadLogList" style="max-height:320px;overflow-y:auto;margin-bottom:16px"></div>
             <div class="rename-actions"><button class="btn btn-primary" onclick="clearUploadLog()">清空记录</button><button class="btn btn-ghost" onclick="closeUploadLog()">关闭</button></div>
+        </div>
+    </div>
+
+    <!-- 通用确认弹窗（页面中间弹出） -->
+    <div class="confirm-modal" id="confirmModal">
+        <div class="confirm-box">
+            <h3 id="confirmTitle">确认操作</h3>
+            <div id="confirmMessage" class="confirm-message"></div>
+            <div class="confirm-actions">
+                <button class="btn btn-ghost" id="confirmCancelBtn" onclick="closeConfirmModal()">取消</button>
+                <button class="btn btn-danger" id="confirmOkBtn">确认</button>
+            </div>
         </div>
     </div>
 
@@ -853,7 +874,8 @@
             if(selectedImageKeys.size === 0){showToast('请先选择图片','error');return}
             
             const count = selectedImageKeys.size;
-            if(!confirm(`确定将 ${count} 张图片移至未分类？`))return;
+            const confirmed=await showConfirm(`确定将 ${count} 张图片移至未分类？`,'移至未分类','确认');
+            if(!confirmed)return;
 
             let success = 0, fail = 0;
             const keys = Array.from(selectedImageKeys);
@@ -892,7 +914,8 @@
             if(selectedImageKeys.size === 0){showToast('请先选择图片','error');return}
             
             const count = selectedImageKeys.size;
-            if(!confirm(`确定删除 ${count} 张图片？此操作不可恢复！`))return;
+            const confirmed=await showConfirm(`确定删除 ${count} 张图片？此操作不可恢复！`,'删除图片','删除');
+            if(!confirmed)return;
 
             let success = 0, fail = 0;
             const keys = Array.from(selectedImageKeys);
@@ -928,7 +951,8 @@
             if(!classifyTag){showToast('请先选择分类标签','error');return}
             
             const count = selectedImageKeys.size;
-            if(!confirm(`确定将 ${count} 张图片移至「${classifyTag}」分类？`))return;
+            const confirmed=await showConfirm(`确定将 ${count} 张图片移至「${classifyTag}」分类？`,'移至分类','确认');
+            if(!confirmed)return;
 
             let success = 0, fail = 0;
             const keys = Array.from(selectedImageKeys);
@@ -991,7 +1015,28 @@
             }
         }
 
-        async function deleteImage(key){if(!confirm(`确定删除 ${key}？`))return;
+        // 通用确认弹窗：resolve(true) 确认，resolve(false) 取消
+        function showConfirm(message, title='确认操作', okText='确认'){
+            return new Promise(resolve=>{
+                const modal=document.getElementById('confirmModal');
+                document.getElementById('confirmTitle').textContent=title;
+                document.getElementById('confirmMessage').textContent=message;
+                const okBtn=document.getElementById('confirmOkBtn');
+                okBtn.textContent=okText;
+                const done=(result)=>{
+                    closeConfirmModal();
+                    okBtn.onclick=null;
+                    document.getElementById('confirmCancelBtn').onclick=null;
+                    resolve(result);
+                };
+                okBtn.onclick=()=>done(true);
+                document.getElementById('confirmCancelBtn').onclick=()=>done(false);
+                modal.classList.add('open');
+            });
+        }
+        function closeConfirmModal(){document.getElementById('confirmModal').classList.remove('open')}
+
+        async function deleteImage(key){const confirmed=await showConfirm(`确定删除 ${key}？`,'删除图片','删除');if(!confirmed)return;
             // 乐观删除：先从本地移除
             const idx=allImageData.findIndex(i=>i.key===key);
             if(idx>=0)allImageData.splice(idx,1);
@@ -1052,7 +1097,8 @@
         async function deleteImageFromLightbox(){
             const key=lightboxKeys[lightboxIndex];
             if(!key)return;
-            if(!confirm(`确定删除 ${key}？`))return;
+            const confirmed=await showConfirm(`确定删除 ${key}？`,'删除图片','删除');
+            if(!confirmed)return;
             const idx=allImageData.findIndex(i=>i.key===key);
             if(idx>=0)allImageData.splice(idx,1);
             renderPanels();
