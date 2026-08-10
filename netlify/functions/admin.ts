@@ -550,9 +550,6 @@ export default async (req: Request) => {
       about: { version: "", tech: "", updated: "" },
     }
 
-    // 必填字段
-    const REQUIRED = ["siteName", "authorName"]
-
     // GET: 读取设置（公开，首页需要）
     if (req.method === "GET") {
       const raw = await settingsStore.get("site", { type: "text" })
@@ -592,13 +589,7 @@ export default async (req: Request) => {
         return json(200, { status: "success", message: "密码已更新" }, req)
       }
 
-      // 必填校验
-      for (const field of REQUIRED) {
-        if (!body[field] || !String(body[field]).trim()) {
-          return badRequest(`「${field === "siteName" ? "站点名称" : "用户名"}」不能为空`, req)
-        }
-      }
-
+      // 允许保存空值（默认无个人信息）
       const settings = {
         siteName: String(siteName || "").trim(),
         avatar: String(avatar || "").trim(),
