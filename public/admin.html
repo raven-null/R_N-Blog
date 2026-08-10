@@ -679,8 +679,9 @@
                                 <label>头像</label>
                                 <div class="settings-avatar-row">
                                     <div class="settings-avatar-preview" id="settingsAvatarPreview"><img id="settingsAvatarImg" alt="" style="display:none"><span>未设置</span></div>
-                                    <input type="text" id="setAvatar" placeholder="输入头像图片路径">
+                                    <input type="hidden" id="setAvatar" value="">
                                     <label class="btn btn-ghost btn-sm" style="cursor:pointer">⬆ 上传<input type="file" accept="image/*" style="display:none" onchange="uploadAvatarImage(this.files[0])"></label>
+                                    <button class="btn btn-ghost btn-sm" onclick="pickAvatarFromGallery()">🖼 从图库选</button>
                                     <button class="btn btn-ghost btn-sm" onclick="clearAvatarImage()" id="clearAvatarBtn">✕ 移除</button>
                                 </div>
                             </div>
@@ -1756,14 +1757,6 @@
                 insertFromPicker(img.url);
             }
         }
-        // 头像选择
-        function avatarSelectFromPicker(url){
-            document.getElementById('setAvatar').value=url;
-            renderSettingsAvatar(url);
-            closeImagePicker();
-            window.__avatarMode=false;
-            showToast('头像已设置','success');
-        }
         // 删除图片（避免后端堆积）
         async function deletePickerImage(key){
             const confirmed=await showConfirm(`确定删除 ${key}？`,'删除图片','删除');
@@ -2020,6 +2013,24 @@
             document.getElementById('setAvatar').value='';
             renderSettingsAvatar('');
             showToast('头像已移除','success');
+        }
+        // 从图库选择头像
+        async function pickAvatarFromGallery(){
+            document.getElementById('imagePickerPanel').classList.add('open');
+            const r=await apiFetch('action=images');
+            if(r.status==='success'){
+                cachedImages=r.data||[];
+                window.__avatarMode=true;
+                renderImagePicker();
+            }
+        }
+        // 头像选择完成
+        function avatarSelectFromPicker(url){
+            document.getElementById('setAvatar').value=url;
+            renderSettingsAvatar(url);
+            closeImagePicker();
+            window.__avatarMode=false;
+            showToast('头像已设置','success');
         }
         async function saveSettings(){
             const siteName=document.getElementById('setSiteName').value.trim();

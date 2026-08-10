@@ -523,7 +523,7 @@ export default async (req: Request) => {
     // 默认设置（当前博客的默认信息，打包分发时用户可修改）
     const DEFAULT_SETTINGS = {
       siteName: "渡鸦_NULL BLOG",
-      avatar: "images/TX/01_TX.webp",
+      avatar: "",
       authorName: "渡鸦NULL",
       bio: "全栈开发者 · 内容创作者 · 终身学习者",
       views: { blog: true, gallery: true, news: true, dashboard: true },
