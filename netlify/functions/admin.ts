@@ -53,6 +53,13 @@ async function saveArticleIndex(store: ReturnType<typeof getBlobStore>, index: A
   await store.set("index", JSON.stringify(index))
 }
 
+// 使用强一致性读取文章索引，避免最终一致性导致读到旧数据
+async function getArticleIndexStrong(store: ReturnType<typeof getBlobStore>): Promise<ArticleMeta[]> {
+  const raw = await getBlobStore(ARTICLE_STORE, "strong").get("index", { type: "text" })
+  if (!raw) return []
+  try { return JSON.parse(raw) } catch { return [] }
+}
+
 // ===================== 主路由 =====================
 
 export default async (req: Request) => {
@@ -132,8 +139,19 @@ export default async (req: Request) => {
       // 保存文章内容
       await store.set(articleId, JSON.stringify(articleData))
 
-      // 更新索引
-      const index = await getArticleIndex(store)
+      // 同步文章标签到注册表
+      try {
+        const registryStore = getBlobStore("blog-tag-registry")
+        const rawReg = await registryStore.get("index", { type: "text" })
+        const reg = rawReg ? JSON.parse(rawReg) : { article: [], image: [] }
+        for (const tag of tagsArr) {
+          if (!reg.article.includes(tag)) reg.article.push(tag)
+        }
+        await registryStore.set("index", JSON.stringify(reg))
+      } catch (e) {}
+
+      // 更新索引（使用强一致性读取，避免读到旧数据）
+      const index = await getArticleIndexStrong(store)
       const existing = index.findIndex(a => a.id === articleId)
       const meta: ArticleMeta = {
         id: articleId,
@@ -215,7 +233,20 @@ export default async (req: Request) => {
       const { key, tags } = body
       if (!key) return badRequest("key 必填", req)
       const tagIndex = await getImageTagIndex()
-      tagIndex[key] = Array.isArray(tags) ? tags : (tags || "").split(",").map((t: string) => t.trim()).filter(Boolean)
+      const newTags = Array.isArray(tags) ? tags : (tags || "").split(",").map((t: string) => t.trim()).filter(Boolean)
+      tagIndex[key] = newTags
+
+      // 同步图片标签到注册表
+      try {
+        const registryStore = getBlobStore("blog-tag-registry")
+        const rawReg = await registryStore.get("index", { type: "text" })
+        const reg = rawReg ? JSON.parse(rawReg) : { article: [], image: [] }
+        for (const tag of newTags) {
+          if (!reg.image.includes(tag)) reg.image.push(tag)
+        }
+        await registryStore.set("index", JSON.stringify(reg))
+      } catch (e) {}
+
       await saveImageTagIndex(tagIndex)
       return json(200, { status: "success", key, tags: tagIndex[key] }, req)
     }
@@ -256,7 +287,20 @@ export default async (req: Request) => {
       // 保存标签
       if (tags) {
         const tagIndex = await getImageTagIndex()
-        tagIndex[finalKey] = Array.isArray(tags) ? tags : (tags || "").split(",").map((t: string) => t.trim()).filter(Boolean)
+        const tagsArr = Array.isArray(tags) ? tags : (tags || "").split(",").map((t: string) => t.trim()).filter(Boolean)
+        tagIndex[finalKey] = tagsArr
+
+        // 同步图片标签到注册表
+        try {
+          const registryStore = getBlobStore("blog-tag-registry")
+          const rawReg = await registryStore.get("index", { type: "text" })
+          const reg = rawReg ? JSON.parse(rawReg) : { article: [], image: [] }
+          for (const tag of tagsArr) {
+            if (!reg.image.includes(tag)) reg.image.push(tag)
+          }
+          await registryStore.set("index", JSON.stringify(reg))
+        } catch (e) {}
+
         await saveImageTagIndex(tagIndex)
       }
 

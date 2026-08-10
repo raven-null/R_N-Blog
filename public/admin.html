@@ -290,7 +290,18 @@
                     <div class="classify-workspace">
                         <div class="classify-left">
                             <div class="classify-panel" id="classifyLeft">
-                                <div class="classify-header"><h3>未分类 <span class="count" id="unclassifiedCount">0</span></h3><span style="font-size:11px;color:var(--text-muted)">拖拽图片到此处上传或移入</span></div>
+                                <div class="classify-header"><h3>未分类 <span class="count" id="unclassifiedCount">0</span></h3>
+                                    <div style="display:flex;gap:6px;align-items:center">
+                                        <span style="font-size:11px;color:var(--text-muted)">拖拽上传/移入</span>
+                                        <button class="btn btn-ghost btn-sm" onclick="toggleBatchMode('left')" id="btnBatchModeLeft">批量操作</button>
+                                        <div id="batchActionsLeft" style="display:none">
+                                            <button class="btn btn-ghost btn-sm" onclick="toggleSelectAll('left')">全选</button>
+                                            <button class="btn btn-ghost btn-sm" onclick="batchMoveToTag()" disabled>移至分类</button>
+                                            <button class="btn btn-ghost btn-sm" onclick="batchDeleteImages()" disabled>删除</button>
+                                            <button class="btn btn-ghost btn-sm" onclick="toggleBatchMode('left')">取消</button>
+                                        </div>
+                                    </div>
+                                </div>
                                 <div class="classify-body"><div class="classify-grid" id="unclassifiedGrid"></div></div>
                             </div>
                         </div>
@@ -299,11 +310,12 @@
                                 <div class="classify-header">
                                     <div class="tag-sel" id="classifyTagSel"></div>
                                     <div style="display:flex;gap:6px;margin-left:auto">
-                                        <button class="btn btn-ghost btn-sm" onclick="toggleBatchMode()" id="btnBatchMode">批量操作</button>
-                                        <div id="batchActions" style="display:none;display:flex;gap:6px">
-                                            <button class="btn btn-ghost btn-sm" onclick="toggleSelectAll()" id="btnSelectAll">全选</button>
+                                        <button class="btn btn-ghost btn-sm" onclick="toggleBatchMode('right')" id="btnBatchMode">批量操作</button>
+                                        <div id="batchActions" style="display:none;gap:6px">
+                                            <button class="btn btn-ghost btn-sm" onclick="toggleSelectAll('right')" id="btnSelectAll">全选</button>
                                             <button class="btn btn-ghost btn-sm" onclick="batchClearTags()" id="btnBatchClear" disabled>清除标签</button>
-                                            <button class="btn btn-ghost btn-sm" onclick="toggleBatchMode()">取消</button>
+                                            <button class="btn btn-ghost btn-sm" onclick="batchDeleteImages()" disabled>删除</button>
+                                            <button class="btn btn-ghost btn-sm" onclick="toggleBatchMode('right')">取消</button>
                                         </div>
                                     </div>
                                 </div>
@@ -369,6 +381,7 @@
         let tagPickerOpen=false;
         let selectedImageKeys=new Set();
         let batchMode=false;
+        let batchSide=''; // 'left' 或 'right'
 
         function doLogin(){const k=document.getElementById('adminKeyInput').value.trim();if(!k)return;adminKey=k;localStorage.setItem('admin_key',k);apiFetch('action=login',{method:'POST',body:JSON.stringify({key:k})}).then(r=>{if(r.status==='success')showAdmin();else{document.getElementById('loginError').style.display='block';document.getElementById('loginError').textContent=r.message||'密钥错误'}}).catch(()=>{document.getElementById('loginError').style.display='block';document.getElementById('loginError').textContent='连接失败'})}
         function doLogout(){adminKey='';localStorage.removeItem('admin_key');location.reload()}
@@ -440,15 +453,25 @@
                 allImageData=imgRes.data||[];
                 cachedImages=allImageData;
             }
-            if(tagRes.status==='success'){
-                imageTagNames=(tagRes.data||[]).filter(t=>t.imageCount>0).map(t=>t.name);
-            }
+            // 刷新图片标签名称（与标签管理的图片标签保持一致）
+            await refreshImageTags(tagRes);
             // 默认选中第一个标签
             if(!classifyTag||!imageTagNames.includes(classifyTag)){
                 classifyTag=imageTagNames[0]||'';
             }
             renderTagSel();
             renderPanels();
+        }
+
+        // 刷新图片标签名称（使用注册表中的图片标签，与标签管理保持一致）
+        async function refreshImageTags(tagRes){
+            if(!tagRes){
+                tagRes=await apiFetch('action=tags');
+            }
+            if(tagRes.status==='success'){
+                // 与标签管理一致：使用注册表中的图片标签（inImageRegistry）
+                imageTagNames=(tagRes.data||[]).filter(t=>t.inImageRegistry).map(t=>t.name);
+            }
         }
 
         function renderTagSel(){
@@ -470,7 +493,7 @@
             document.getElementById('unclassifiedCount').textContent=untagged.length;
             const leftGrid=document.getElementById('unclassifiedGrid');
             if(!untagged.length){leftGrid.innerHTML='<div class="classify-empty" style="border:none">所有图片已分类 ✓</div>'}
-            else{leftGrid.innerHTML=untagged.map(img=>classifyCardHtml(img, false)).join('')}
+            else{leftGrid.innerHTML=untagged.map(img=>classifyCardHtml(img, true)).join('')}
 
             const rightGrid=document.getElementById('classifiedGrid');
             if(!classified.length){rightGrid.innerHTML='<div class="classify-empty">拖拽图片到这里分类</div>'}
@@ -532,18 +555,30 @@
             if(r.status!=='success'){if(img)img.tags=cur;renderPanels();showToast(r.message||'同步失败','error')}
         }
 
-        // 切换批量模式
-        function toggleBatchMode(){
+        // 切换批量模式（支持左右两侧）
+        function toggleBatchMode(side){
+            // 如果切换到另一侧，先清除当前选择
+            if(batchMode && batchSide !== side){
+                selectedImageKeys.clear();
+            }
+            batchSide = side;
             batchMode = !batchMode;
-            const btnBatchMode = document.getElementById('btnBatchMode');
-            const batchActions = document.getElementById('batchActions');
             
             if(batchMode){
-                btnBatchMode.style.display = 'none';
-                batchActions.style.display = 'flex';
+                // 显示当前侧的批量操作按钮
+                if(side==='left'){
+                    document.getElementById('btnBatchModeLeft').style.display = 'none';
+                    document.getElementById('batchActionsLeft').style.display = 'flex';
+                }else{
+                    document.getElementById('btnBatchMode').style.display = 'none';
+                    document.getElementById('batchActions').style.display = 'flex';
+                }
             }else{
-                btnBatchMode.style.display = '';
-                batchActions.style.display = 'none';
+                // 隐藏所有批量操作按钮
+                document.getElementById('btnBatchModeLeft').style.display = '';
+                document.getElementById('batchActionsLeft').style.display = 'none';
+                document.getElementById('btnBatchMode').style.display = '';
+                document.getElementById('batchActions').style.display = 'none';
                 selectedImageKeys.clear();
             }
             renderPanels();
@@ -559,15 +594,24 @@
             renderPanels();
         }
 
-        // 全选/取消全选
-        function toggleSelectAll(){
-            const classified=allImageData.filter(i=>(i.tags||[]).includes(classifyTag));
-            if(selectedImageKeys.size === classified.length){
+        // 全选/取消全选（根据所在侧）
+        function toggleSelectAll(side){
+            let list;
+            if(side==='left'){
+                list=allImageData.filter(i=>{
+                    const tags=i.tags||[];
+                    return tags.length===0;
+                });
+            }else{
+                list=allImageData.filter(i=>(i.tags||[]).includes(classifyTag));
+            }
+            if(selectedImageKeys.size === list.length && list.length > 0){
                 // 取消全选
                 selectedImageKeys.clear();
             }else{
                 // 全选
-                classified.forEach(img=>selectedImageKeys.add(img.key));
+                selectedImageKeys.clear();
+                list.forEach(img=>selectedImageKeys.add(img.key));
             }
             renderPanels();
         }
@@ -576,15 +620,30 @@
         function updateBatchButtons(){
             if(!batchMode) return;
             
-            const btnSelectAll=document.getElementById('btnSelectAll');
-            const btnBatchClear=document.getElementById('btnBatchClear');
-            const classified=allImageData.filter(i=>(i.tags||[]).includes(classifyTag));
-            
-            if(btnSelectAll){
-                btnSelectAll.textContent = selectedImageKeys.size === classified.length && classified.length > 0 ? '取消全选' : '全选';
+            let list;
+            if(batchSide==='left'){
+                list=allImageData.filter(i=>{
+                    const tags=i.tags||[];
+                    return tags.length===0;
+                });
+            }else{
+                list=allImageData.filter(i=>(i.tags||[]).includes(classifyTag));
             }
-            if(btnBatchClear){
-                btnBatchClear.disabled = selectedImageKeys.size === 0;
+            
+            if(batchSide==='left'){
+                const btnSelectAll=document.querySelector('#batchActionsLeft button:first-child');
+                const btnMove=document.querySelector('#batchActionsLeft button:nth-child(2)');
+                const btnDel=document.querySelector('#batchActionsLeft button:nth-child(3)');
+                if(btnSelectAll)btnSelectAll.textContent = selectedImageKeys.size === list.length && list.length > 0 ? '取消全选' : '全选';
+                if(btnMove)btnMove.disabled = selectedImageKeys.size === 0;
+                if(btnDel)btnDel.disabled = selectedImageKeys.size === 0;
+            }else{
+                const btnSelectAll=document.getElementById('btnSelectAll');
+                const btnBatchClear=document.getElementById('btnBatchClear');
+                const btnDel=document.querySelector('#batchActions button:nth-child(3)');
+                if(btnSelectAll)btnSelectAll.textContent = selectedImageKeys.size === list.length && list.length > 0 ? '取消全选' : '全选';
+                if(btnBatchClear)btnBatchClear.disabled = selectedImageKeys.size === 0;
+                if(btnDel)btnDel.disabled = selectedImageKeys.size === 0;
             }
         }
 
@@ -617,9 +676,7 @@
             }
 
             selectedImageKeys.clear();
-            batchMode = false;
-            document.getElementById('btnBatchMode').style.display = '';
-            document.getElementById('batchActions').style.display = 'none';
+            exitBatchMode();
             renderPanels();
             
             if(fail === 0){
@@ -627,6 +684,91 @@
             }else{
                 showToast(`${success} 成功，${fail} 失败`,'error');
             }
+        }
+
+        // 批量删除图片
+        async function batchDeleteImages(){
+            if(selectedImageKeys.size === 0){showToast('请先选择图片','error');return}
+            
+            const count = selectedImageKeys.size;
+            if(!confirm(`确定删除 ${count} 张图片？此操作不可恢复！`))return;
+
+            let success = 0, fail = 0;
+            const keys = Array.from(selectedImageKeys);
+            
+            for(const key of keys){
+                // 乐观删除
+                const idx=allImageData.findIndex(i=>i.key===key);
+                if(idx>=0)allImageData.splice(idx,1);
+                
+                // 后台同步
+                const r=await apiFetch(`action=images&key=${encodeURIComponent(key)}`,{method:'DELETE'});
+                if(r.status==='success'){
+                    success++;
+                }else{
+                    fail++;
+                }
+            }
+
+            selectedImageKeys.clear();
+            exitBatchMode();
+            renderPanels();
+            
+            if(fail === 0){
+                showToast(`已删除 ${success} 张图片`,'success');
+            }else{
+                showToast(`${success} 删除成功，${fail} 失败`,'error');
+            }
+        }
+
+        // 批量转移到右侧（添加当前分类标签）
+        async function batchMoveToTag(){
+            if(selectedImageKeys.size === 0){showToast('请先选择图片','error');return}
+            if(!classifyTag){showToast('请先选择分类标签','error');return}
+            
+            const count = selectedImageKeys.size;
+            if(!confirm(`确定将 ${count} 张图片移至「${classifyTag}」分类？`))return;
+
+            let success = 0, fail = 0;
+            const keys = Array.from(selectedImageKeys);
+            
+            for(const key of keys){
+                const img=allImageData.find(i=>i.key===key);
+                const cur=img?(img.tags||[]):[];
+                const newTags=[...cur,classifyTag];
+                
+                // 乐观更新
+                if(img)img.tags=newTags;
+                
+                // 后台同步
+                const r=await apiFetch('action=images',{method:'PATCH',body:JSON.stringify({key,tags:newTags})});
+                if(r.status==='success'){
+                    success++;
+                }else{
+                    fail++;
+                    if(img)img.tags=cur;
+                }
+            }
+
+            selectedImageKeys.clear();
+            exitBatchMode();
+            renderPanels();
+            
+            if(fail === 0){
+                showToast(`已将 ${success} 张图片移至「${classifyTag}」`,'success');
+            }else{
+                showToast(`${success} 成功，${fail} 失败`,'error');
+            }
+        }
+
+        // 退出批量模式
+        function exitBatchMode(){
+            batchMode=false;
+            batchSide='';
+            document.getElementById('btnBatchModeLeft').style.display = '';
+            document.getElementById('batchActionsLeft').style.display = 'none';
+            document.getElementById('btnBatchMode').style.display = '';
+            document.getElementById('batchActions').style.display = 'none';
         }
 
         async function assignTag(key,tag){
@@ -663,7 +805,7 @@
         function closeTagModal(){document.getElementById('tagModal').classList.remove('open')}
         function toggleTagOpt(el,tag){if(tagModalSelected.includes(tag)){tagModalSelected=tagModalSelected.filter(t=>t!==tag);el.classList.remove('selected')}else{tagModalSelected.push(tag);el.classList.add('selected')}}
         function addCustomTag(){const input=document.getElementById('customTagInput'),tag=input.value.trim();if(!tag||tagModalSelected.includes(tag))return;tagModalSelected.push(tag);const o=document.getElementById('tagModalOptions'),s=document.createElement('span');s.className='tag-opt selected';s.textContent=tag;s.onclick=()=>toggleTagOpt(s,tag);o.appendChild(s);input.value=''}
-        async function saveTagModal(){const r=await apiFetch('action=images',{method:'PATCH',body:JSON.stringify({key:tagModalKey,tags:tagModalSelected})});if(r.status==='success'){showToast('标签已更新','success');closeTagModal();await loadData()}else showToast(r.message||'更新失败','error')}
+        async function saveTagModal(){const r=await apiFetch('action=images',{method:'PATCH',body:JSON.stringify({key:tagModalKey,tags:tagModalSelected})});if(r.status==='success'){showToast('标签已更新','success');closeTagModal();await loadData();await loadTags()}else showToast(r.message||'更新失败','error')}
 
         // ===== 图片选择面板 =====
         async function openImagePicker(){
@@ -766,8 +908,8 @@
             document.querySelectorAll('.sidebar-item').forEach(el=>el.classList.toggle('active',el.dataset.tab===tab));
             ['articles','write','images','tags'].forEach(t=>document.getElementById('tab-'+t).style.display=t===tab?'block':'none');
             if(tab==='articles')loadArticles();
-            if(tab==='images')loadData();
-            if(tab==='tags')loadTags();
+            if(tab==='images'){loadData();loadTags()}
+            if(tab==='tags'){loadTags();loadData()}
             if(tab==='write'){if(!editingId)resetEditor();loadArticleTagNames()}
         }
 
@@ -782,9 +924,10 @@
             const r=await apiFetch('action=tags');
             if(r.status!=='success')return;
             const all=r.data||[];
-            // 根据注册表分离文章标签和图片标签
-            articleTagsData=all.filter(t=>t.inArticleRegistry).map(t=>({name:t.name,count:t.articleCount}));
-            imageTagsData=all.filter(t=>t.inImageRegistry).map(t=>({name:t.name,count:t.imageCount}));
+            // 文章标签：注册表中的 + 所有文章中实际使用的（确保显示所有文章标签）
+            // 图片标签：注册表中的图片标签
+            articleTagsData=all.filter(t=>t.inArticleRegistry || t.articleCount>0).map(t=>({name:t.name,count:t.articleCount}));
+            imageTagsData=all.filter(t=>t.inImageRegistry || t.imageCount>0).map(t=>({name:t.name,count:t.imageCount}));
             renderTags();
         }
 
@@ -828,6 +971,7 @@
                 input.value='';
                 showToast(`${currentTagsView==='article'?'文章':'图片'}标签「${name}」已添加`,'success');
                 await loadTags(); // 重新加载标签数据
+                await loadData(); // 同步刷新图片管理标签
             }else showToast(r.message||'添加失败','error');
         }
 
@@ -851,6 +995,7 @@
                 showToast(`已重命名：${renameOldName} → ${newName}`,'success');
                 closeRenameModal();
                 await loadTags();
+                await loadData();
             }else showToast(r.message||'重命名失败','error');
         }
 
@@ -861,7 +1006,7 @@
             const r=await apiFetch(`action=tags&name=${encodeURIComponent(name)}`,{method:'DELETE'});
             if(r.status==='success'){
                 showToast(`已删除「${name}」，影响 ${r.imageChanges} 张图片、${r.articleChanges} 篇文章`,'success');
-                await loadTags();
+                await loadTags(); // 立即刷新标签
                 await loadData(); // 刷新图片数据
             }else showToast(r.message||'删除失败','error');
         }
