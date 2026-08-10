@@ -30,9 +30,26 @@ interface ArticleMeta {
 
 // ===================== 认证 =====================
 
-function checkAuth(req: Request): boolean {
-  const adminKey = process.env.ADMIN_KEY
-  if (!adminKey) return true // 未配置则免认证（本地开发）
+// 获取后台密码：优先从 Blobs 读取（设置中修改），回退到环境变量 ADMIN_KEY，默认 1111
+async function getAdminPassword(): Promise<string> {
+  const envPwd = process.env.ADMIN_KEY
+  if (envPwd) return envPwd
+  try {
+    const store = getBlobStore("blog-auth", "strong")
+    const raw = await store.get("password", { type: "text" })
+    if (raw) return raw
+  } catch (e) {}
+  return "1111"
+}
+
+// 设置后台密码
+async function setAdminPassword(password: string): Promise<void> {
+  const store = getBlobStore("blog-auth", "strong")
+  await store.set("password", password)
+}
+
+async function checkAuth(req: Request): Promise<boolean> {
+  const adminKey = await getAdminPassword()
   const provided = req.headers.get("x-admin-key") ?? ""
   return provided === adminKey
 }
@@ -73,7 +90,8 @@ export default async (req: Request) => {
     if (req.method !== "POST") return badRequest("Method Not Allowed", req)
     const body = await req.json().catch(() => ({}))
     const key = body.key || ""
-    if (!checkAuth(req) && key !== process.env.ADMIN_KEY) {
+    const validPwd = await getAdminPassword()
+    if (key !== validPwd) {
       return json(401, { status: "error", message: "密钥错误" }, req)
     }
     return json(200, { status: "success", token: generateToken(key) }, req)
@@ -97,7 +115,7 @@ export default async (req: Request) => {
     }
 
     // 以下写操作需要认证
-    if (!checkAuth(req)) {
+    if (!(await checkAuth(req))) {
       return json(401, { status: "error", message: "未授权" }, req)
     }
 
@@ -552,12 +570,27 @@ export default async (req: Request) => {
     }
 
     // POST: 保存设置（需认证）
-    if (!checkAuth(req)) {
+    if (!(await checkAuth(req))) {
       return json(401, { status: "error", message: "未授权" }, req)
     }
     if (req.method === "POST") {
       const body = await req.json().catch(() => ({}))
       const { siteName, avatar, authorName, bio, views, stats, navTags, about } = body
+
+      // 修改密码操作
+      if (body.oldPassword !== undefined || body.newPassword !== undefined) {
+        const oldPassword = String(body.oldPassword || "")
+        const newPassword = String(body.newPassword || "")
+        const currentPwd = await getAdminPassword()
+        if (oldPassword !== currentPwd) {
+          return json(401, { status: "error", message: "当前密码错误" }, req)
+        }
+        if (!newPassword || newPassword.length < 4) {
+          return badRequest("新密码至少 4 位", req)
+        }
+        await setAdminPassword(newPassword)
+        return json(200, { status: "success", message: "密码已更新" }, req)
+      }
 
       // 必填校验
       for (const field of REQUIRED) {

@@ -746,6 +746,27 @@
                             </div>
                         </div>
 
+                        <!-- 7. 后台密码 -->
+                        <div class="settings-group">
+                            <h3>后台密码</h3>
+                            <div class="settings-field">
+                                <label>当前密码</label>
+                                <input type="password" id="setOldPassword" placeholder="输入当前密码" autocomplete="off">
+                            </div>
+                            <div class="settings-field">
+                                <label>新密码（至少 4 位）</label>
+                                <input type="password" id="setNewPassword" placeholder="输入新密码" autocomplete="new-password">
+                            </div>
+                            <div class="settings-field">
+                                <label>确认新密码</label>
+                                <input type="password" id="setConfirmPassword" placeholder="再次输入新密码" autocomplete="new-password">
+                            </div>
+                            <div class="settings-tip">默认密码为 1111，修改后请牢记新密码</div>
+                            <div class="settings-actions" style="margin-top:12px">
+                                <button class="btn btn-ghost" onclick="changePassword()">🔑 修改密码</button>
+                            </div>
+                        </div>
+
                         <div class="settings-actions">
                             <button class="btn btn-primary" onclick="saveSettings()">💾 保存设置</button>
                         </div>
@@ -2065,6 +2086,25 @@
             const r=await apiFetch('action=settings',{method:'POST',body:JSON.stringify(body)});
             if(r.status==='success')showToast('设置已保存','success');
             else showToast(r.message||'保存失败','error');
+        }
+        // 修改后台密码
+        async function changePassword(){
+            const oldPassword=document.getElementById('setOldPassword').value;
+            const newPassword=document.getElementById('setNewPassword').value;
+            const confirmPassword=document.getElementById('setConfirmPassword').value;
+            if(!oldPassword){showToast('请输入当前密码','error');return}
+            if(!newPassword){showToast('请输入新密码','error');return}
+            if(newPassword.length<4){showToast('新密码至少 4 位','error');return}
+            if(newPassword!==confirmPassword){showToast('两次输入的新密码不一致','error');return}
+            const r=await apiFetch('action=settings',{method:'POST',body:JSON.stringify({oldPassword,newPassword})});
+            if(r.status==='success'){
+                showToast('密码已修改','success');
+                document.getElementById('setOldPassword').value='';
+                document.getElementById('setNewPassword').value='';
+                document.getElementById('setConfirmPassword').value='';
+            }else{
+                showToast(r.message||'修改失败','error');
+            }
         }
 
         // ===== 标签管理 =====
