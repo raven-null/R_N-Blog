@@ -186,16 +186,15 @@ const BlogApp = {
         return 'images/Default/profile -picture.webp';
     },
 
-    // 根据作者名字返回显示名（站长显示设置中的用户名）
+    // 根据作者名字返回显示名（卡片用户名始终跟随设置中的用户名）
     getAuthorName(author) {
         const name = (author || '').trim();
         const settings = this.getBlogSettings();
         const authorName = settings ? settings.authorName : '';
-        // 作者是站长（博主或配置的用户名）→ 显示设置中的用户名
-        if (name === '博主' || (authorName && name === authorName)) {
-            return authorName || '博主';
-        }
-        return name || '博主';
+        // AI 作者保持显示 AI
+        if (name === 'AI') return 'AI';
+        // 其他作者一律显示设置中的用户名
+        return authorName || name || '博主';
     },
 
     // 渲染单个文章卡片
