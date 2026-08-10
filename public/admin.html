@@ -647,7 +647,15 @@
             leftPanel.ondrop=async e=>{
                 e.preventDefault();
                 leftPanel.classList.remove('drag-over');
-                // 检查是否是文件拖拽
+                // 优先判断是否为站内图片拖拽（通过自定义 data type）
+                const types=e.dataTransfer.types||[];
+                const isInternalDrag=types.includes('text/key');
+                if(isInternalDrag){
+                    const key=e.dataTransfer.getData('text/key');
+                    if(key)await clearTags(key);
+                    return;
+                }
+                // 否则是外部文件拖拽（上传到未分类）
                 if(e.dataTransfer.files && e.dataTransfer.files.length > 0){
                     const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
                     if(files.length > 0){
@@ -655,9 +663,6 @@
                         return;
                     }
                 }
-                // 否则是图片拖拽（移动到未分类）
-                const key=e.dataTransfer.getData('text/key');
-                if(key)await clearTags(key);
             };
 
             // 右侧放置区：拖入打标签 或 拖入文件上传到当前分类
@@ -667,7 +672,15 @@
             rightPanel.ondrop=async e=>{
                 e.preventDefault();
                 rightPanel.classList.remove('drag-over');
-                // 检查是否是文件拖拽
+                // 优先判断是否为站内图片拖拽（通过自定义 data type）
+                const types=e.dataTransfer.types||[];
+                const isInternalDrag=types.includes('text/key');
+                if(isInternalDrag){
+                    const key=e.dataTransfer.getData('text/key');
+                    if(key)await assignTag(key,classifyTag);
+                    return;
+                }
+                // 否则是外部文件拖拽（上传到当前分类）
                 if(e.dataTransfer.files && e.dataTransfer.files.length > 0){
                     const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
                     if(files.length > 0){
@@ -675,9 +688,6 @@
                         return;
                     }
                 }
-                // 否则是图片拖拽（移动到当前分类）
-                const key=e.dataTransfer.getData('text/key');
-                if(key)await assignTag(key,classifyTag)
             };
         }
 
