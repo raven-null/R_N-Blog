@@ -319,9 +319,8 @@
         let adminKey=localStorage.getItem('admin_key')||'';
         let articles=[],editingId=null,cachedImages=[];
         let tagModalKey='',tagModalSelected=[];
-        let classifyTag='风景',allImageData=[];
-
-        const ALL_TAGS=['背景','风景','原神','动漫','人物','抽象','其他'];
+        let classifyTag='',allImageData=[];
+        let imageTagNames=[];
 
         function doLogin(){const k=document.getElementById('adminKeyInput').value.trim();if(!k)return;adminKey=k;localStorage.setItem('admin_key',k);apiFetch('action=login',{method:'POST',body:JSON.stringify({key:k})}).then(r=>{if(r.status==='success')showAdmin();else{document.getElementById('loginError').style.display='block';document.getElementById('loginError').textContent=r.message||'密钥错误'}}).catch(()=>{document.getElementById('loginError').style.display='block';document.getElementById('loginError').textContent='连接失败'})}
         function doLogout(){adminKey='';localStorage.removeItem('admin_key');location.reload()}
@@ -364,16 +363,27 @@
 
         // ===== 图片管理 =====
         async function loadData(){
-            const r=await apiFetch('action=images');
-            if(r.status!=='success')return;
-            allImageData=r.data||[];
-            cachedImages=allImageData;
+            // 并行加载图片和标签
+            const [imgRes,tagRes]=await Promise.all([apiFetch('action=images'),apiFetch('action=tags')]);
+            if(imgRes.status==='success'){
+                allImageData=imgRes.data||[];
+                cachedImages=allImageData;
+            }
+            if(tagRes.status==='success'){
+                imageTagNames=(tagRes.data||[]).filter(t=>t.imageCount>0).map(t=>t.name);
+            }
+            // 默认选中第一个标签
+            if(!classifyTag||!imageTagNames.includes(classifyTag)){
+                classifyTag=imageTagNames[0]||'';
+            }
             renderTagSel();
             renderPanels();
         }
 
         function renderTagSel(){
-            document.getElementById('classifyTagSel').innerHTML=ALL_TAGS.map(t=>`<button class="${classifyTag===t?'active':''}" onclick="selectTag('${t}')">${t}</button>`).join('');
+            const sel=document.getElementById('classifyTagSel');
+            if(!imageTagNames.length){sel.innerHTML='<span style="color:var(--text-muted);font-size:12px">暂无图片标签，请先在标签管理中添加</span>';return}
+            sel.innerHTML=imageTagNames.map(t=>`<button class="${classifyTag===t?'active':''}" onclick="selectTag('${t}')">${t}</button>`).join('');
         }
 
         function selectTag(tag){classifyTag=tag;renderTagSel();renderPanels()}
@@ -453,7 +463,7 @@
         }
 
         // ===== 标签弹窗 =====
-        function openTagModal(key,tags){tagModalKey=key;tagModalSelected=[...tags];const o=document.getElementById('tagModalOptions');o.innerHTML=ALL_TAGS.map(t=>`<span class="tag-opt ${tagModalSelected.includes(t)?'selected':''}" onclick="toggleTagOpt(this,'${t}')">${t}</span>`).join('');document.getElementById('customTagInput').value='';document.getElementById('tagModal').classList.add('open')}
+        function openTagModal(key,tags){tagModalKey=key;tagModalSelected=[...tags];const o=document.getElementById('tagModalOptions');o.innerHTML=imageTagNames.map(t=>`<span class="tag-opt ${tagModalSelected.includes(t)?'selected':''}" onclick="toggleTagOpt(this,'${t}')">${t}</span>`).join('');document.getElementById('customTagInput').value='';document.getElementById('tagModal').classList.add('open')}
         function closeTagModal(){document.getElementById('tagModal').classList.remove('open')}
         function toggleTagOpt(el,tag){if(tagModalSelected.includes(tag)){tagModalSelected=tagModalSelected.filter(t=>t!==tag);el.classList.remove('selected')}else{tagModalSelected.push(tag);el.classList.add('selected')}}
         function addCustomTag(){const input=document.getElementById('customTagInput'),tag=input.value.trim();if(!tag||tagModalSelected.includes(tag))return;tagModalSelected.push(tag);const o=document.getElementById('tagModalOptions'),s=document.createElement('span');s.className='tag-opt selected';s.textContent=tag;s.onclick=()=>toggleTagOpt(s,tag);o.appendChild(s);input.value=''}
