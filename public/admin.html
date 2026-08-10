@@ -172,6 +172,11 @@
         @keyframes spin{to{transform:rotate(360deg)}}
 
         /* 标签管理 */
+        .tags-nav{display:flex;gap:4px;margin-bottom:16px;border-bottom:1px solid var(--border);padding-bottom:12px}
+        .tags-nav-btn{display:flex;align-items:center;gap:6px;padding:8px 18px;border:1px solid var(--border);border-radius:var(--radius-sm);background:transparent;color:var(--text-muted);font-size:13px;cursor:pointer;transition:all .12s}
+        .tags-nav-btn:hover{border-color:var(--text-muted);color:var(--text)}
+        .tags-nav-btn.active{background:var(--accent-dim);color:var(--accent);border-color:var(--accent)}
+        .tags-info{font-size:11px;color:var(--text-muted);margin-bottom:14px;padding:8px 12px;background:var(--bg-input);border-radius:var(--radius-sm)}
         .tags-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
         .tags-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px;display:flex;align-items:center;justify-content:space-between;transition:all .12s}
         .tags-card:hover{border-color:var(--border-light);background:var(--bg-hover)}
@@ -268,8 +273,25 @@
                 <!-- 标签管理 -->
                 <div id="tab-tags" style="display:none">
                     <div class="page-bar"><h2>标签管理</h2><div class="page-bar-actions"><button class="btn btn-ghost" onclick="loadTags()">刷新</button></div></div>
+                    <div class="tags-nav">
+                        <button class="tags-nav-btn active" onclick="switchTagsView('article')" data-tview="article">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                            文章标签
+                        </button>
+                        <button class="tags-nav-btn" onclick="switchTagsView('image')" data-tview="image">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                            图片标签
+                        </button>
+                    </div>
                     <div class="tags-add"><input type="text" id="newTagInput" placeholder="输入新标签名称，回车添加" onkeydown="if(event.key==='Enter')addNewTag()"><button class="btn btn-primary" onclick="addNewTag()">添加标签</button></div>
-                    <div class="tags-grid" id="tagsGrid"></div>
+                    <div id="tagsViewArticle">
+                        <div class="tags-info">文章标签来自文章管理中保存的文章，删除标签会从所有文章中移除。</div>
+                        <div class="tags-grid" id="articleTagsGrid"></div>
+                    </div>
+                    <div id="tagsViewImage" style="display:none">
+                        <div class="tags-info">图片标签来自图片管理中分类的图片，删除标签会从所有图片中移除。</div>
+                        <div class="tags-grid" id="imageTagsGrid"></div>
+                    </div>
                 </div>
             </div>
                 </div>
@@ -455,29 +477,46 @@
         }
 
         // ===== 标签管理 =====
-        let allTagsData=[];
+        let articleTagsData=[];
+        let imageTagsData=[];
+        let currentTagsView='article';
         let renameOldName='';
+        let renameType='article';
 
         async function loadTags(){
             const r=await apiFetch('action=tags');
-            if(r.status==='success'){allTagsData=r.data||[];renderTags()}
+            if(r.status!=='success')return;
+            const all=r.data||[];
+            articleTagsData=all.filter(t=>t.articleCount>0).map(t=>({name:t.name,count:t.articleCount}));
+            imageTagsData=all.filter(t=>t.imageCount>0).map(t=>({name:t.name,count:t.imageCount}));
+            // 补充只有文章或只有图片的标签
+            const allNames=new Set(all.map(t=>t.name));
+            renderTags();
+        }
+
+        function switchTagsView(view){
+            currentTagsView=view;
+            document.querySelectorAll('.tags-nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.tview===view));
+            document.getElementById('tagsViewArticle').style.display=view==='article'?'block':'none';
+            document.getElementById('tagsViewImage').style.display=view==='image'?'block':'none';
+            renderTags();
         }
 
         function renderTags(){
-            const grid=document.getElementById('tagsGrid');
-            if(!allTagsData.length){grid.innerHTML='<div class="empty">暂无标签</div>';return}
-            grid.innerHTML=allTagsData.map(t=>`
+            const data=currentTagsView==='article'?articleTagsData:imageTagsData;
+            const gridId=currentTagsView==='article'?'articleTagsGrid':'imageTagsGrid';
+            const grid=document.getElementById(gridId);
+            const typeLabel=currentTagsView==='article'?'文章':'图片';
+            if(!data.length){grid.innerHTML=`<div class="empty">暂无${typeLabel}标签</div>`;return}
+            grid.innerHTML=data.map(t=>`
                 <div class="tags-card">
                     <div class="tc-info">
                         <div class="tc-name">${esc(t.name)}</div>
-                        <div class="tc-counts">
-                            <span>🖼 ${t.imageCount} 张图片</span>
-                            <span>📄 ${t.articleCount} 篇文章</span>
-                        </div>
+                        <div class="tc-counts"><span>${currentTagsView==='article'?'📄':'🖼'} ${t.count} 个${typeLabel}</span></div>
                     </div>
                     <div class="tc-actions">
-                        <button class="btn btn-ghost btn-sm" onclick="openRenameModal('${esc(t.name)}')">重命名</button>
-                        <button class="btn btn-danger btn-sm" onclick="deleteTag('${esc(t.name)}',${t.total})">删除</button>
+                        <button class="btn btn-ghost btn-sm" onclick="openRenameModal('${esc(t.name)}','${currentTagsView}')">重命名</button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteTag('${esc(t.name)}',${t.count},'${currentTagsView}')">删除</button>
                     </div>
                 </div>
             `).join('');
@@ -487,16 +526,17 @@
             const input=document.getElementById('newTagInput');
             const name=input.value.trim();
             if(!name){showToast('标签名不能为空','error');return}
-            if(allTagsData.some(t=>t.name===name)){showToast('标签已存在','error');return}
-            // 新标签不需要 API 调用，直接添加到列表（首次使用时自动生效）
-            allTagsData.unshift({name,imageCount:0,articleCount:0,total:0});
+            const data=currentTagsView==='article'?articleTagsData:imageTagsData;
+            if(data.some(t=>t.name===name)){showToast('标签已存在','error');return}
+            data.unshift({name,count:0});
             renderTags();
             input.value='';
-            showToast(`标签「${name}」已添加（首次使用时生效）`,'success');
+            showToast(`${currentTagsView==='article'?'文章':'图片'}标签「${name}」已添加（首次使用时生效）`,'success');
         }
 
-        function openRenameModal(oldName){
+        function openRenameModal(oldName,type){
             renameOldName=oldName;
+            renameType=type||currentTagsView;
             document.getElementById('renameInput').value=oldName;
             document.getElementById('renameModal').classList.add('open');
             setTimeout(()=>document.getElementById('renameInput').focus(),100);
@@ -507,7 +547,8 @@
             const newName=document.getElementById('renameInput').value.trim();
             if(!newName){showToast('名称不能为空','error');return}
             if(newName===renameOldName){closeRenameModal();return}
-            if(allTagsData.some(t=>t.name===newName)){showToast('标签名已存在','error');return}
+            const data=renameType==='article'?articleTagsData:imageTagsData;
+            if(data.some(t=>t.name===newName)){showToast('标签名已存在','error');return}
             const r=await apiFetch('action=tags',{method:'PATCH',body:JSON.stringify({oldName:renameOldName,newName})});
             if(r.status==='success'){
                 showToast(`已重命名：${renameOldName} → ${newName}`,'success');
@@ -516,8 +557,9 @@
             }else showToast(r.message||'重命名失败','error');
         }
 
-        async function deleteTag(name,count){
-            if(count>0&&!confirm(`标签「${name}」下有 ${count} 个内容，确定删除？删除后会从所有图片和文章中移除该标签。`))return;
+        async function deleteTag(name,count,type){
+            const typeLabel=type==='article'?'文章':'图片';
+            if(count>0&&!confirm(`标签「${name}」下有 ${count} 个${typeLabel}，确定删除？`))return;
             if(count===0&&!confirm(`确定删除空标签「${name}」？`))return;
             const r=await apiFetch(`action=tags&name=${encodeURIComponent(name)}`,{method:'DELETE'});
             if(r.status==='success'){
