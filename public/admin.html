@@ -47,7 +47,7 @@
         .sidebar-item svg{width:15px;height:15px;flex-shrink:0}
 
         .content{flex:1;overflow-y:auto;padding:24px 28px}
-        .page-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}
+        .page-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
         .page-bar h2{font-size:18px;font-weight:600}
         .page-bar-actions{display:flex;gap:8px;align-items:center}
         .btn{padding:7px 16px;border:none;border-radius:var(--radius-sm);cursor:pointer;font-size:12px;font-weight:500;transition:all .12s;display:inline-flex;align-items:center;gap:5px}
@@ -104,53 +104,37 @@
         .drop-overlay.show{display:flex}
 
         /* 图片管理 */
-        .image-tabs{display:flex;gap:4px;margin-bottom:16px;flex-wrap:wrap}
-        .image-tab{padding:6px 14px;border:1px solid var(--border);border-radius:20px;cursor:pointer;font-size:12px;color:var(--text-muted);transition:all .12s;background:transparent}
-        .image-tab:hover{border-color:var(--text-muted);color:var(--text)}
-        .image-tab.active{background:var(--accent);color:#000;border-color:var(--accent);font-weight:500}
-        .image-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
-        .image-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;position:relative;transition:all .12s;cursor:grab}
-        .image-card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.4);border-color:var(--border-light)}
-        .image-card.dragging{opacity:.4;transform:scale(.95)}
-        .image-card img{width:100%;height:130px;object-fit:cover;display:block}
-        .image-card .image-bottom{padding:8px 10px;display:flex;justify-content:space-between;align-items:center}
-        .image-card .image-name{font-size:10px;color:var(--text-muted);max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-        .image-card .image-tags{display:flex;gap:3px;flex-wrap:wrap}
-        .image-card .image-tags .itag{padding:1px 5px;background:var(--accent-dim);color:var(--accent);border-radius:3px;font-size:9px}
-        .image-card .delete-btn{position:absolute;top:5px;right:5px;background:rgba(0,0,0,.8);border:none;color:var(--danger);cursor:pointer;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;opacity:0;transition:opacity .1s}
-        .image-card:hover .delete-btn{opacity:1}
-        .image-card .tag-btn{position:absolute;top:5px;left:5px;background:rgba(0,0,0,.8);border:none;color:var(--accent);cursor:pointer;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;opacity:0;transition:opacity .1s}
-        .image-card:hover .tag-btn{opacity:1}
-        .upload-area{border:2px dashed var(--border);border-radius:var(--radius);padding:36px;text-align:center;color:var(--text-muted);cursor:pointer;margin-bottom:16px;transition:all .2s}
-        .upload-area:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-dim)}
-        .upload-area input{display:none}
+        .imgm-top{display:flex;gap:12px;margin-bottom:16px;align-items:center}
+        .imgm-upload{padding:14px 20px;border:2px dashed var(--border);border-radius:var(--radius-sm);color:var(--text-muted);cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:10px;font-size:12px}
+        .imgm-upload:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-dim)}
+        .imgm-upload input{display:none}
 
-        /* 分类工作区 */
-        .classify-workspace{display:flex;gap:20px;height:calc(100vh - 140px)}
+        .classify-workspace{display:flex;gap:16px;height:calc(100vh - 200px)}
         .classify-left{flex:1;display:flex;flex-direction:column;min-width:0}
         .classify-right{flex:1.5;display:flex;flex-direction:column;min-width:0}
         .classify-panel{flex:1;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);display:flex;flex-direction:column;overflow:hidden}
         .classify-panel.drag-over{border-color:var(--accent);box-shadow:0 0 20px rgba(79,195,247,.15)}
-        .classify-header{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+        .classify-header{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
         .classify-header h3{font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px}
         .classify-header .count{font-size:11px;color:var(--text-muted);font-weight:400}
-        .classify-body{flex:1;overflow-y:auto;padding:12px}
-        .classify-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px}
-        .classify-card{background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;cursor:grab;transition:all .12s}
+        .classify-body{flex:1;overflow-y:auto;padding:10px}
+        .classify-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(105px,1fr));gap:8px}
+        .classify-card{background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;cursor:grab;transition:all .12s;position:relative}
         .classify-card:hover{border-color:var(--border-light);transform:translateY(-1px)}
         .classify-card.dragging{opacity:.4;transform:scale(.92)}
-        .classify-card img{width:100%;height:90px;object-fit:cover;display:block}
-        .classify-card .cc-name{padding:4px 6px;font-size:9px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+        .classify-card img{width:100%;height:85px;object-fit:cover;display:block}
+        .classify-card .cc-bottom{padding:4px 6px;display:flex;justify-content:space-between;align-items:center}
+        .classify-card .cc-name{font-size:9px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+        .classify-card .cc-del{background:rgba(0,0,0,.7);border:none;color:var(--danger);cursor:pointer;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;opacity:0;transition:opacity .1s;flex-shrink:0}
+        .classify-card:hover .cc-del{opacity:1}
 
         .classify-right .classify-header{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-        .classify-right .classify-header .tag-sel{display:flex;gap:4px;flex-wrap:wrap}
-        .classify-right .classify-header .tag-sel button{padding:4px 10px;border:1px solid var(--border);border-radius:12px;background:transparent;color:var(--text-muted);font-size:11px;cursor:pointer;transition:all .1s}
-        .classify-right .classify-header .tag-sel button:hover{border-color:var(--text-muted)}
-        .classify-right .classify-header .tag-sel button.active{background:var(--accent);color:#000;border-color:var(--accent)}
+        .classify-right .tag-sel{display:flex;gap:4px;flex-wrap:wrap}
+        .classify-right .tag-sel button{padding:4px 10px;border:1px solid var(--border);border-radius:12px;background:transparent;color:var(--text-muted);font-size:11px;cursor:pointer;transition:all .1s}
+        .classify-right .tag-sel button:hover{border-color:var(--text-muted)}
+        .classify-right .tag-sel button.active{background:var(--accent);color:#000;border-color:var(--accent)}
+        .classify-empty{display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted);font-size:13px;border:2px dashed var(--border);border-radius:var(--radius-sm);margin:10px}
 
-        .classify-empty{display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted);font-size:13px;border:2px dashed var(--border);border-radius:var(--radius-sm);margin:12px}
-
-        /* 标签编辑弹窗 */
         .tag-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;align-items:center;justify-content:center}
         .tag-modal.open{display:flex}
         .tag-modal-box{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;width:400px;box-shadow:var(--shadow)}
@@ -191,25 +175,16 @@
 </head>
 <body>
     <div class="login-page" id="loginPage">
-        <div class="login-box">
-            <h1>渡鸦_NULL</h1><p>管理后台</p>
-            <div class="login-error" id="loginError">密钥错误</div>
-            <input type="password" id="adminKeyInput" placeholder="输入管理密钥" onkeydown="if(event.key==='Enter')doLogin()">
-            <button onclick="doLogin()">进入后台</button>
-        </div>
+        <div class="login-box"><h1>渡鸦_NULL</h1><p>管理后台</p><div class="login-error" id="loginError">密钥错误</div><input type="password" id="adminKeyInput" placeholder="输入管理密钥" onkeydown="if(event.key==='Enter')doLogin()"><button onclick="doLogin()">进入后台</button></div>
     </div>
     <div class="admin" id="adminApp">
-        <div class="admin-header">
-            <h1>管理后台</h1>
-            <div class="admin-header-right"><a href="/" target="_blank">首页 ↗</a><button onclick="doLogout()">退出</button></div>
-        </div>
+        <div class="admin-header"><h1>管理后台</h1><div class="admin-header-right"><a href="/" target="_blank">首页 ↗</a><button onclick="doLogout()">退出</button></div></div>
         <div class="admin-body">
             <div class="sidebar" id="sidebar">
                 <div class="sidebar-top"><span>菜单</span><button class="sidebar-toggle" onclick="toggleSidebar()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg></button></div>
                 <div class="sidebar-nav">
                     <div class="sidebar-item active" onclick="switchTab('articles')" data-tab="articles"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span>文章管理</span></div>
                     <div class="sidebar-item" onclick="switchTab('write')" data-tab="write"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg><span>写文章</span></div>
-                    <div class="sidebar-item" onclick="switchTab('classify')" data-tab="classify"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg><span>图片分类</span></div>
                     <div class="sidebar-item" onclick="switchTab('images')" data-tab="images"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><span>图片管理</span></div>
                 </div>
             </div>
@@ -238,9 +213,16 @@
                     <div class="editor-footer"><span class="editor-info" id="editorInfo">0 字</span><div class="editor-footer-actions"><button class="btn btn-ghost" onclick="resetEditor()">清空</button><button class="btn btn-primary" onclick="saveArticle()">保存文章</button></div></div>
                 </div>
 
-                <!-- 图片分类 -->
-                <div id="tab-classify" style="display:none">
-                    <div class="page-bar"><h2>图片分类</h2><div class="page-bar-actions"><label class="btn btn-ghost" style="cursor:pointer">📤 上传图片<input type="file" accept="image/*" multiple onchange="uploadImagesClassify(this.files)" style="display:none"></label></div></div>
+                <!-- 图片管理 -->
+                <div id="tab-images" style="display:none">
+                    <div class="page-bar"><h2>图片管理</h2></div>
+                    <div class="imgm-top">
+                        <label class="imgm-upload">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                            上传图片（自动转 WebP，限 10MB，上传后归入未分类）
+                            <input type="file" id="imageUpload" accept="image/*" multiple onchange="uploadImages(this.files)">
+                        </label>
+                    </div>
                     <div class="classify-workspace">
                         <div class="classify-left">
                             <div class="classify-panel" id="classifyLeft">
@@ -250,37 +232,18 @@
                         </div>
                         <div class="classify-right">
                             <div class="classify-panel" id="classifyRight">
-                                <div class="classify-header">
-                                    <div class="tag-sel" id="classifyTagSel"></div>
-                                </div>
+                                <div class="classify-header"><div class="tag-sel" id="classifyTagSel"></div></div>
                                 <div class="classify-body"><div class="classify-grid" id="classifiedGrid"></div></div>
                             </div>
                         </div>
                     </div>
-                </div>
-
-                <!-- 图片管理 -->
-                <div id="tab-images" style="display:none">
-                    <div class="page-bar"><h2>图片管理</h2></div>
-                    <div class="upload-area" onclick="document.getElementById('imageUpload').click()">
-                        <input type="file" id="imageUpload" accept="image/*" multiple onchange="uploadImages(this.files)">
-                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                        <p style="margin-top:6px;font-size:12px">点击上传图片（自动转 WebP，限 10MB）</p>
-                    </div>
-                    <div class="image-tabs" id="imageTabs"></div>
-                    <div class="image-grid" id="imageGrid"></div>
                 </div>
             </div>
         </div>
     </div>
 
     <div class="tag-modal" id="tagModal">
-        <div class="tag-modal-box">
-            <h3>编辑图片标签</h3>
-            <div class="tag-options" id="tagModalOptions"></div>
-            <div class="custom-tag"><input type="text" id="customTagInput" placeholder="自定义标签，回车添加" onkeydown="if(event.key==='Enter')addCustomTag()"><button class="btn btn-ghost btn-sm" onclick="addCustomTag()">添加</button></div>
-            <div class="tag-modal-actions"><button class="btn btn-ghost" onclick="closeTagModal()">取消</button><button class="btn btn-primary" onclick="saveTagModal()">保存</button></div>
-        </div>
+        <div class="tag-modal-box"><h3>编辑图片标签</h3><div class="tag-options" id="tagModalOptions"></div><div class="custom-tag"><input type="text" id="customTagInput" placeholder="自定义标签，回车添加" onkeydown="if(event.key==='Enter')addCustomTag()"><button class="btn btn-ghost btn-sm" onclick="addCustomTag()">添加</button></div><div class="tag-modal-actions"><button class="btn btn-ghost" onclick="closeTagModal()">取消</button><button class="btn btn-primary" onclick="saveTagModal()">保存</button></div></div>
     </div>
 
     <div class="image-picker-panel" id="imagePickerPanel">
@@ -294,12 +257,11 @@
     <script>
         let adminKey=localStorage.getItem('admin_key')||'';
         let articles=[],editingId=null,cachedImages=[];
-        let currentImageTag='全部',tagModalKey='',tagModalSelected=[];
-        let classifyTag='风景',allImageTags=[],allImageData=[];
+        let tagModalKey='',tagModalSelected=[];
+        let classifyTag='风景',allImageData=[];
 
         const ALL_TAGS=['背景','风景','原神','动漫','人物','抽象','其他'];
 
-        // 认证
         function doLogin(){const k=document.getElementById('adminKeyInput').value.trim();if(!k)return;adminKey=k;localStorage.setItem('admin_key',k);apiFetch('action=login',{method:'POST',body:JSON.stringify({key:k})}).then(r=>{if(r.status==='success')showAdmin();else{document.getElementById('loginError').style.display='block';document.getElementById('loginError').textContent=r.message||'密钥错误'}}).catch(()=>{document.getElementById('loginError').style.display='block';document.getElementById('loginError').textContent='连接失败'})}
         function doLogout(){adminKey='';localStorage.removeItem('admin_key');location.reload()}
         function showAdmin(){document.getElementById('loginPage').style.display='none';document.getElementById('adminApp').style.display='block';loadArticles()}
@@ -326,95 +288,76 @@
         document.addEventListener('paste',async e=>{if(document.activeElement!==document.getElementById('edContent'))return;for(const item of[...e.clipboardData.items]){if(item.type.startsWith('image/')){e.preventDefault();const url=await uploadImageAndGetUrl(item.getAsFile());if(url)insertAtCursor(`![图片](${url})`)}}});
         function insertAtCursor(t){const ta=document.getElementById('edContent'),p=ta.selectionStart;ta.value=ta.value.slice(0,p)+t+ta.value.slice(p);ta.focus();ta.selectionStart=ta.selectionEnd=p+t.length;updatePreview()}
 
-        // ===== 图片上传 =====
-        async function uploadImageAndGetUrl(file,tags){
+        // ===== 图片上传（不传 tags → 自动归入未分类）=====
+        async function uploadImageAndGetUrl(file){
             const prog=document.getElementById('uploadProgress'),pt=document.getElementById('uploadProgressText');
             prog.classList.add('show');pt.textContent=`上传 ${file.name}...`;
             try{const b64=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.onerror=rej;r.readAsDataURL(file)});
-            const body={data:b64,mime:file.type,name:file.name};if(tags)body.tags=tags;
-            const r=await apiFetch('action=images',{method:'POST',body:JSON.stringify(body)});
+            const r=await apiFetch('action=images',{method:'POST',body:JSON.stringify({data:b64,mime:file.type,name:file.name})});
             if(r.status==='success'){showToast(`已上传: ${r.key}`,'success');return r.url}else{showToast(r.message||'上传失败','error');return null}
             }catch{showToast('上传失败','error');return null}finally{prog.classList.remove('show')}
         }
+        async function uploadImages(files){for(const f of files){await uploadImageAndGetUrl(f)}await loadData()}
         function importToEditor(f){if(!f)return;const r=new FileReader();r.onload=()=>{const m=r.result.match(/^---\s*\n([\s\S]*?)\n---\s*\n([\s\S]*)$/);insertAtCursor(m?m[2]:r.result);showToast(`已插入: ${f.name}`,'success')};r.readAsText(f)}
         function exportMarkdown(){const title=document.getElementById('edTitle').value.trim()||'untitled',md=`---\ntitle: ${title}\ndate: ${new Date().toISOString().slice(0,10)}\ntags: [${document.getElementById('edTags').value}]\nauthor: 渡鸦NULL\n---\n\n${document.getElementById('edContent').value}`,a=document.createElement('a');a.href=URL.createObjectURL(new Blob([md],{type:'text/markdown'}));a.download=`${title.replace(/[^a-zA-Z0-9\u4e00-\u9fff]/g,'-')}.md`;a.click();showToast('已导出','success')}
 
-        // ===== 图片分类工作区 =====
-        async function loadClassifyData(){
+        // ===== 图片管理 =====
+        async function loadData(){
             const r=await apiFetch('action=images');
             if(r.status!=='success')return;
             allImageData=r.data||[];
-            allImageTags=[...new Set(allImageData.flatMap(i=>i.tags||[]))].sort();
-            renderClassifyTagSel();
-            renderClassifyPanels();
+            cachedImages=allImageData;
+            renderTagSel();
+            renderPanels();
         }
 
-        function renderClassifyTagSel(){
-            const sel=document.getElementById('classifyTagSel');
-            const tags=['背景','风景','原神','动漫','人物','抽象','其他'];
-            sel.innerHTML=tags.map(t=>`<button class="${classifyTag===t?'active':''}" onclick="selectClassifyTag('${t}')">${t}</button>`).join('');
+        function renderTagSel(){
+            document.getElementById('classifyTagSel').innerHTML=ALL_TAGS.map(t=>`<button class="${classifyTag===t?'active':''}" onclick="selectTag('${t}')">${t}</button>`).join('');
         }
 
-        function selectClassifyTag(tag){
-            classifyTag=tag;
-            renderClassifyTagSel();
-            renderClassifyPanels();
-        }
+        function selectTag(tag){classifyTag=tag;renderTagSel();renderPanels()}
 
-        function renderClassifyPanels(){
+        function renderPanels(){
             const untagged=allImageData.filter(i=>!i.tags||i.tags.length===0);
             const classified=allImageData.filter(i=>(i.tags||[]).includes(classifyTag));
 
             document.getElementById('unclassifiedCount').textContent=untagged.length;
             const leftGrid=document.getElementById('unclassifiedGrid');
             if(!untagged.length){leftGrid.innerHTML='<div class="classify-empty" style="border:none">所有图片已分类 ✓</div>'}
-            else{leftGrid.innerHTML=untagged.map(img=>`<div class="classify-card" draggable="true" data-key="${img.key}" ondragstart="classifyDragStart(event,'${img.key}')"><img src="${img.url}" loading="lazy"><div class="cc-name">${img.key}</div></div>`).join('')}
+            else{leftGrid.innerHTML=untagged.map(img=>classifyCardHtml(img)).join('')}
 
             const rightGrid=document.getElementById('classifiedGrid');
             if(!classified.length){rightGrid.innerHTML='<div class="classify-empty">拖拽图片到这里分类</div>'}
-            else{rightGrid.innerHTML=classified.map(img=>`<div class="classify-card" draggable="true" data-key="${img.key}" ondragstart="classifyDragStart(event,'${img.key}')"><img src="${img.url}" loading="lazy"><div class="cc-name">${img.key}</div></div>`).join('')}
+            else{rightGrid.innerHTML=classified.map(img=>classifyCardHtml(img)).join('')}
 
-            // 放置区事件
             const rightPanel=document.getElementById('classifyRight');
             rightPanel.ondragover=e=>{e.preventDefault();rightPanel.classList.add('drag-over')};
             rightPanel.ondragleave=()=>rightPanel.classList.remove('drag-over');
             rightPanel.ondrop=async e=>{e.preventDefault();rightPanel.classList.remove('drag-over');const key=e.dataTransfer.getData('text/key');if(key)await assignTag(key,classifyTag)};
         }
 
-        function classifyDragStart(e,key){
-            e.dataTransfer.setData('text/key',key);
-            e.target.classList.add('dragging');
-            e.target.addEventListener('dragend',()=>e.target.classList.remove('dragging'),{once:true});
+        function classifyCardHtml(img){
+            return `<div class="classify-card" draggable="true" data-key="${img.key}" ondragstart="dragStart(event,'${img.key}')"><img src="${img.url}" loading="lazy"><div class="cc-bottom"><span class="cc-name" title="${img.key}">${img.key}</span><button class="cc-del" onclick="event.stopPropagation();deleteImage('${img.key}')" title="删除">&times;</button></div></div>`;
         }
+
+        function dragStart(e,key){e.dataTransfer.setData('text/key',key);e.target.classList.add('dragging');e.target.addEventListener('dragend',()=>e.target.classList.remove('dragging'),{once:true})}
 
         async function assignTag(key,tag){
             const img=allImageData.find(i=>i.key===key);
-            const currentTags=img?(img.tags||[]):[];
-            if(currentTags.includes(tag)){showToast(`已属于「${tag}」`,'error');return}
-            const newTags=[...currentTags,tag];
-            const r=await apiFetch('action=images',{method:'PATCH',body:JSON.stringify({key,tags:newTags})});
-            if(r.status==='success'){showToast(`已归入「${tag}」`,'success');await loadClassifyData()}else showToast(r.message||'失败','error');
+            const cur=img?(img.tags||[]):[];
+            if(cur.includes(tag)){showToast(`已属于「${tag}」`,'error');return}
+            const r=await apiFetch('action=images',{method:'PATCH',body:JSON.stringify({key,tags:[...cur,tag]})});
+            if(r.status==='success'){showToast(`已归入「${tag}」`,'success');await loadData()}else showToast(r.message||'失败','error');
         }
 
-        async function uploadImagesClassify(files){
-            for(const f of files){await uploadImageAndGetUrl(f,[classifyTag])}
-            await loadClassifyData();
-        }
-
-        // ===== 图片管理 =====
-        function renderImageTabs(){const t=document.getElementById('imageTabs');t.innerHTML=['全部','背景','风景','原神','动漫','人物','抽象','其他'].map(t=>`<button class="image-tab ${currentImageTag===t?'active':''}" onclick="filterByTag('${t}')">${t}</button>`).join('')}
-        async function filterByTag(tag){currentImageTag=tag;renderImageTabs();const q=tag==='全部'?'':`?action=images&tag=${encodeURIComponent(tag)}`;const r=await apiFetch(q||'action=images');if(r.status==='success'){cachedImages=r.data||[];renderImageGrid(cachedImages)}}
-        async function loadImages(){await filterByTag(currentImageTag)}
-        function renderImageGrid(images){const g=document.getElementById('imageGrid');if(!images.length){g.innerHTML='<div class="empty">暂无图片</div>';return}g.innerHTML=images.map(img=>`<div class="image-card"><img src="${img.url}" alt="${img.key}" loading="lazy"><button class="tag-btn" onclick="openTagModal('${img.key}',${JSON.stringify(img.tags||[]).replace(/"/g,'&quot;')})" title="编辑标签">🏷</button><button class="delete-btn" onclick="deleteImage('${img.key}')">&times;</button><div class="image-bottom"><span class="image-name" title="${img.key}">${img.key}</span><div class="image-tags">${(img.tags||[]).map(t=>`<span class="itag">${t}</span>`).join('')}</div></div></div>`).join('')}
-        async function uploadImages(files){for(const f of files){const url=await uploadImageAndGetUrl(f);if(url)loadImages()}}
-        async function deleteImage(key){if(!confirm(`确定删除 ${key}？`))return;const r=await apiFetch(`action=images&key=${encodeURIComponent(key)}`,{method:'DELETE'});if(r.status==='success'){showToast('已删除','success');cachedImages=[];loadImages();loadClassifyData()}}
+        async function deleteImage(key){if(!confirm(`确定删除 ${key}？`))return;const r=await apiFetch(`action=images&key=${encodeURIComponent(key)}`,{method:'DELETE'});if(r.status==='success'){showToast('已删除','success');await loadData()}}
 
         // ===== 标签弹窗 =====
         function openTagModal(key,tags){tagModalKey=key;tagModalSelected=[...tags];const o=document.getElementById('tagModalOptions');o.innerHTML=ALL_TAGS.map(t=>`<span class="tag-opt ${tagModalSelected.includes(t)?'selected':''}" onclick="toggleTagOpt(this,'${t}')">${t}</span>`).join('');document.getElementById('customTagInput').value='';document.getElementById('tagModal').classList.add('open')}
         function closeTagModal(){document.getElementById('tagModal').classList.remove('open')}
         function toggleTagOpt(el,tag){if(tagModalSelected.includes(tag)){tagModalSelected=tagModalSelected.filter(t=>t!==tag);el.classList.remove('selected')}else{tagModalSelected.push(tag);el.classList.add('selected')}}
         function addCustomTag(){const input=document.getElementById('customTagInput'),tag=input.value.trim();if(!tag||tagModalSelected.includes(tag))return;tagModalSelected.push(tag);const o=document.getElementById('tagModalOptions'),s=document.createElement('span');s.className='tag-opt selected';s.textContent=tag;s.onclick=()=>toggleTagOpt(s,tag);o.appendChild(s);input.value=''}
-        async function saveTagModal(){const r=await apiFetch('action=images',{method:'PATCH',body:JSON.stringify({key:tagModalKey,tags:tagModalSelected})});if(r.status==='success'){showToast('标签已更新','success');closeTagModal();loadImages();loadClassifyData()}else showToast(r.message||'更新失败','error')}
+        async function saveTagModal(){const r=await apiFetch('action=images',{method:'PATCH',body:JSON.stringify({key:tagModalKey,tags:tagModalSelected})});if(r.status==='success'){showToast('标签已更新','success');closeTagModal();await loadData()}else showToast(r.message||'更新失败','error')}
 
         // ===== 图片选择面板 =====
         async function openImagePicker(){document.getElementById('imagePickerPanel').classList.add('open');if(!cachedImages.length){const r=await apiFetch('action=images');if(r.status==='success')cachedImages=r.data||[]}renderImagePicker()}
@@ -426,10 +369,9 @@
         // ===== Tab =====
         function switchTab(tab){
             document.querySelectorAll('.sidebar-item').forEach(el=>el.classList.toggle('active',el.dataset.tab===tab));
-            ['articles','write','classify','images'].forEach(t=>document.getElementById('tab-'+t).style.display=t===tab?'block':'none');
+            ['articles','write','images'].forEach(t=>document.getElementById('tab-'+t).style.display=t===tab?'block':'none');
             if(tab==='articles')loadArticles();
-            if(tab==='images'){renderImageTabs();loadImages()}
-            if(tab==='classify')loadClassifyData();
+            if(tab==='images')loadData();
             if(tab==='write'&&!editingId)resetEditor();
         }
 
