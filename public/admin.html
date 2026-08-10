@@ -309,7 +309,8 @@
                             <div class="classify-panel" id="classifyRight">
                                 <div class="classify-header">
                                     <div class="tag-sel" id="classifyTagSel"></div>
-                                    <div style="display:flex;gap:6px;margin-left:auto">
+                                    <div style="display:flex;gap:6px;margin-left:auto;align-items:center">
+                                        <label class="btn btn-ghost btn-sm" style="cursor:pointer">上传到此分类<input type="file" accept="image/*" multiple style="display:none" onchange="uploadImages(this.files, classifyTag);this.value=''"></label>
                                         <button class="btn btn-ghost btn-sm" onclick="toggleBatchMode('right')" id="btnBatchMode">批量操作</button>
                                         <div id="batchActions" style="display:none;gap:6px">
                                             <button class="btn btn-ghost btn-sm" onclick="toggleSelectAll('right')" id="btnSelectAll">全选</button>
@@ -410,36 +411,98 @@
         function insertAtCursor(t){const ta=document.getElementById('edContent'),p=ta.selectionStart;ta.value=ta.value.slice(0,p)+t+ta.value.slice(p);ta.focus();ta.selectionStart=ta.selectionEnd=p+t.length;updatePreview()}
 
         // ===== 图片上传 =====
-        // tags 参数：['图库'] = 图库图片（图片管理），不传 = 文章/评论图片（不归图片管理）
+        // tags 参数：可选的初始标签
         async function uploadImageAndGetUrl(file, tags){
             const prog=document.getElementById('uploadProgress'),pt=document.getElementById('uploadProgressText');
             prog.classList.add('show');pt.textContent=`上传 ${file.name}...`;
-            try{const b64=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.onerror=rej;r.readAsDataURL(file)});
-            const body={data:b64,mime:file.type,name:file.name};
-            if(tags)body.tags=tags;
-            const r=await apiFetch('action=images',{method:'POST',body:JSON.stringify(body)});
-            if(r.status==='success'){showToast(`已上传: ${r.key}`,'success');return r.url}else{showToast(r.message||'上传失败','error');return null}
+            try{
+                // 先压缩图片（限制在 1920x1080 内，WebP 质量 82）
+                const compressed = await compressImage(file);
+                const b64 = compressed.data;
+                const mime = compressed.mime;
+                const body={data:b64,mime,name:file.name};
+                if(tags)body.tags=tags;
+                const r=await apiFetch('action=images',{method:'POST',body:JSON.stringify(body)});
+                if(r.status==='success'){showToast(`已上传: ${r.key}`,'success');return r.url}else{showToast(r.message||'上传失败','error');return null}
             }catch{showToast('上传失败','error');return null}finally{prog.classList.remove('show')}
         }
-        // 图片管理上传（不再标记特殊标签）
-        async function uploadImages(files){
+
+        // 压缩图片：限制尺寸并转 WebP，避免超过函数请求体限制
+        function compressImage(file){
+            return new Promise((resolve,reject)=>{
+                const reader=new FileReader();
+                reader.onerror=reject;
+                reader.onload=()=>{
+                    const img=new Image();
+                    img.onerror=reject;
+                    img.onload=()=>{
+                        // 计算目标尺寸（最大 1920x1080）
+                        let {width,height}=img;
+                        const maxW=1920,maxH=1080;
+                        if(width>maxW||height>maxH){
+                            const ratio=Math.min(maxW/width,maxH/height);
+                            width=Math.round(width*ratio);
+                            height=Math.round(height*ratio);
+                        }
+                        // SVG 不压缩，直接返回
+                        if(file.type==='image/svg+xml'){
+                            resolve({data:reader.result.split(',')[1],mime:file.type});
+                            return;
+                        }
+                        const canvas=document.createElement('canvas');
+                        canvas.width=width;
+                        canvas.height=height;
+                        const ctx=canvas.getContext('2d');
+                        if(!ctx){reject(new Error('无法创建画布'));return}
+                        ctx.drawImage(img,0,0,width,height);
+                        // 转 WebP（质量 82）
+                        const webpData=canvas.toDataURL('image/webp',0.82).split(',')[1];
+                        resolve({data:webpData,mime:'image/webp'});
+                    };
+                    img.src=reader.result;
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+        // 图片管理上传：targetTag 为 null/undefined 表示上传到未分类，否则上传到指定标签
+        async function uploadImages(files, targetTag){
             const total = files.length;
             let success = 0, fail = 0;
             for(const f of files){
                 showToast(`上传中 (${success + fail + 1}/${total}): ${f.name}`, 'success');
-                const url = await uploadImageAndGetUrl(f);
+                const url = await uploadImageAndGetUrl(f, targetTag ? [targetTag] : undefined);
                 if(url){
                     success++;
+                    // 乐观更新：上传成功后立即添加到本地数据
+                    // 从 API 重新获取图片信息（key 和 tags）
+                    try{
+                        const imgRes=await apiFetch('action=images');
+                        if(imgRes.status==='success'){
+                            allImageData=imgRes.data||[];
+                            cachedImages=allImageData;
+                            // 刷新标签
+                            const tagRes=await apiFetch('action=tags');
+                            if(tagRes.status==='success'){
+                                imageTagNames=(tagRes.data||[]).filter(t=>t.inImageRegistry).map(t=>t.name);
+                            }
+                            if(targetTag && imageTagNames.includes(targetTag)){
+                                classifyTag=targetTag;
+                            }
+                            renderTagSel();
+                            renderPanels();
+                        }
+                    }catch(e){}
                 }else{
                     fail++;
                 }
             }
+            // 最后完整刷新一次，确保与服务器一致
+            await loadData();
             if(fail === 0){
                 showToast(`上传完成: ${success} 张图片全部成功`, 'success');
             }else{
                 showToast(`上传完成: ${success} 成功, ${fail} 失败`, fail > 0 ? 'error' : 'success');
             }
-            await loadData();
         }
         function importToEditor(f){if(!f)return;const r=new FileReader();r.onload=()=>{const m=r.result.match(/^---\s*\n([\s\S]*?)\n---\s*\n([\s\S]*)$/);insertAtCursor(m?m[2]:r.result);showToast(`已插入: ${f.name}`,'success')};r.readAsText(f)}
         function exportMarkdown(){const title=document.getElementById('edTitle').value.trim()||'untitled',md=`---\ntitle: ${title}\ndate: ${new Date().toISOString().slice(0,10)}\ntags: [${selectedArticleTags.join(', ')}]\nauthor: 渡鸦NULL\n---\n\n${document.getElementById('edContent').value}`,a=document.createElement('a');a.href=URL.createObjectURL(new Blob([md],{type:'text/markdown'}));a.download=`${title.replace(/[^a-zA-Z0-9\u4e00-\u9fff]/g,'-')}.md`;a.click();showToast('已导出','success')}
@@ -525,11 +588,25 @@
                 if(key)await clearTags(key);
             };
 
-            // 右侧放置区：拖入打标签
+            // 右侧放置区：拖入打标签 或 拖入文件上传到当前分类
             const rightPanel=document.getElementById('classifyRight');
             rightPanel.ondragover=e=>{e.preventDefault();rightPanel.classList.add('drag-over')};
             rightPanel.ondragleave=()=>rightPanel.classList.remove('drag-over');
-            rightPanel.ondrop=async e=>{e.preventDefault();rightPanel.classList.remove('drag-over');const key=e.dataTransfer.getData('text/key');if(key)await assignTag(key,classifyTag)};
+            rightPanel.ondrop=async e=>{
+                e.preventDefault();
+                rightPanel.classList.remove('drag-over');
+                // 检查是否是文件拖拽
+                if(e.dataTransfer.files && e.dataTransfer.files.length > 0){
+                    const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+                    if(files.length > 0){
+                        await uploadImages(files, classifyTag);
+                        return;
+                    }
+                }
+                // 否则是图片拖拽（移动到当前分类）
+                const key=e.dataTransfer.getData('text/key');
+                if(key)await assignTag(key,classifyTag)
+            };
         }
 
         function classifyCardHtml(img, showCheckbox=false){

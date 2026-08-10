@@ -258,11 +258,13 @@ export default async (req: Request) => {
       if (!ALLOWED_MIME[mime]) return badRequest("不支持的图片格式", req)
 
       const buf = Buffer.from(data, "base64")
+      if (buf.length === 0) return badRequest("图片内容为空", req)
       if (buf.length > MAX_IMAGE_BYTES) return badRequest("图片过大（限 10MB）", req)
 
       let finalBuf = buf
       let finalKey = ""
       const isSvg = mime === "image/svg+xml"
+      const safeName = (name || "").replace(/\s+/g, "_").replace(/[^\w.\-]/g, "").replace(/\.webp$/i, "")
 
       if (!isSvg) {
         try {
@@ -272,14 +274,21 @@ export default async (req: Request) => {
             .webp({ quality: 82 })
             .toBuffer()
           finalBuf = Buffer.from(sharpBuf)
-          const baseName = name ? name.replace(/\.[^.]+$/, "") : randomUUID().slice(0, 8)
-          finalKey = `${baseName}.webp`
+          const baseName = safeName || randomUUID().slice(0, 8)
+          // 使用 UUID 前缀避免文件名冲突覆盖
+          finalKey = `${randomUUID().slice(0, 4)}_${baseName}.webp`
         } catch (err) {
           const ext = ALLOWED_MIME[mime]
-          finalKey = name || `${randomUUID().slice(0, 8)}.${ext}`
+          finalKey = `${randomUUID().slice(0, 4)}_${safeName || randomUUID().slice(0, 8)}.${ext}`
         }
       } else {
-        finalKey = name || `${randomUUID().slice(0, 8)}.svg`
+        finalKey = `${randomUUID().slice(0, 4)}_${safeName || randomUUID().slice(0, 8)}.svg`
+      }
+
+      // 如果 key 已存在，追加随机后缀避免覆盖
+      const existing = await store.get(finalKey, { type: "text" })
+      if (existing) {
+        finalKey = `${randomUUID().slice(0, 8)}_${finalKey}`
       }
 
       await store.set(finalKey, finalBuf.toString("base64"))
