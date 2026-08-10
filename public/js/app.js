@@ -38,7 +38,7 @@ const BlogApp = {
     async loadPosts() {
         try {
             console.log('[loadPosts] 开始加载文章');
-            const CACHE_KEY = 'blog-posts-data-v12';
+            const CACHE_KEY = 'blog-posts-data-v13';
             const cachedData = sessionStorage.getItem(CACHE_KEY);
             if (cachedData) {
                 console.log('[loadPosts] 使用缓存数据');
@@ -46,6 +46,10 @@ const BlogApp = {
                 this.filteredPosts = [...this.posts];
                 return;
             }
+
+            // 清除旧版本缓存
+            sessionStorage.removeItem('blog-posts-data-v11');
+            sessionStorage.removeItem('blog-posts-data-v12');
 
             this.posts = [];
 
