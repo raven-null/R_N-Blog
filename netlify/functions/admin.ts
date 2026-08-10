@@ -178,30 +178,57 @@ export default async (req: Request) => {
 
   if (path === "images") {
     const store = getBlobStore(IMAGE_STORE)
+    const tagStore = getBlobStore("blog-image-tags")
+
+    // 获取图片标签索引
+    async function getImageTagIndex(): Promise<Record<string, string[]>> {
+      const raw = await tagStore.get("index", { type: "text" })
+      if (!raw) return {}
+      try { return JSON.parse(raw) } catch { return {} }
+    }
+    async function saveImageTagIndex(idx: Record<string, string[]>) {
+      await tagStore.set("index", JSON.stringify(idx))
+    }
 
     if (req.method === "GET") {
+      const tag = url.searchParams.get("tag")
+      const tagIndex = await getImageTagIndex()
       const list = await store.list({ prefix: "" })
       const images = []
       for (const blob of list.blobs) {
         if (blob.key === "_index") continue
+        const tags = tagIndex[blob.key] || []
+        // 按标签筛选
+        if (tag && !tags.includes(tag)) continue
         images.push({
           key: blob.key,
           url: `/api/admin-image?key=${blob.key}`,
+          tags,
         })
       }
       return json(200, { status: "success", data: images }, req)
     }
 
+    // PATCH: 更新图片标签
+    if (req.method === "PATCH") {
+      const body = await req.json().catch(() => ({}))
+      const { key, tags } = body
+      if (!key) return badRequest("key 必填", req)
+      const tagIndex = await getImageTagIndex()
+      tagIndex[key] = Array.isArray(tags) ? tags : (tags || "").split(",").map((t: string) => t.trim()).filter(Boolean)
+      await saveImageTagIndex(tagIndex)
+      return json(200, { status: "success", key, tags: tagIndex[key] }, req)
+    }
+
     if (req.method === "POST") {
       const body = await req.json().catch(() => ({}))
-      const { data, mime, name } = body
+      const { data, mime, name, tags } = body
       if (!data || !mime) return badRequest("data 和 mime 必填", req)
       if (!ALLOWED_MIME[mime]) return badRequest("不支持的图片格式", req)
 
       const buf = Buffer.from(data, "base64")
       if (buf.length > MAX_IMAGE_BYTES) return badRequest("图片过大（限 10MB）", req)
 
-      // 使用 sharp 转换为 WebP（非 SVG 格式）
       let finalBuf = buf
       let finalKey = ""
       const isSvg = mime === "image/svg+xml"
@@ -216,7 +243,6 @@ export default async (req: Request) => {
           const baseName = name ? name.replace(/\.[^.]+$/, "") : randomUUID().slice(0, 8)
           finalKey = `${baseName}.webp`
         } catch (err) {
-          // sharp 不可用时回退原格式
           const ext = ALLOWED_MIME[mime]
           finalKey = name || `${randomUUID().slice(0, 8)}.${ext}`
         }
@@ -225,6 +251,13 @@ export default async (req: Request) => {
       }
 
       await store.set(finalKey, finalBuf.toString("base64"))
+
+      // 保存标签
+      if (tags) {
+        const tagIndex = await getImageTagIndex()
+        tagIndex[finalKey] = Array.isArray(tags) ? tags : (tags || "").split(",").map((t: string) => t.trim()).filter(Boolean)
+        await saveImageTagIndex(tagIndex)
+      }
 
       return json(200, {
         status: "success",
@@ -238,6 +271,10 @@ export default async (req: Request) => {
       const key = url.searchParams.get("key")
       if (!key) return badRequest("key 必填", req)
       await store.set(key, "")
+      // 清理标签
+      const tagIndex = await getImageTagIndex()
+      delete tagIndex[key]
+      await saveImageTagIndex(tagIndex)
       return json(200, { status: "success", message: "已删除" }, req)
     }
   }
