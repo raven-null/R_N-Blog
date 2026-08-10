@@ -31,10 +31,10 @@ const BlogApp = {
         this.handleRoute();
     },
 
-    // 加载所有文章（静态文件 + Blobs 后台文章）
+    // 加载所有文章（仅从 Blobs 后台加载）
     async loadPosts() {
         try {
-            const CACHE_KEY = 'blog-posts-data-v11';
+            const CACHE_KEY = 'blog-posts-data-v12';
             const cachedData = sessionStorage.getItem(CACHE_KEY);
             if (cachedData) {
                 this.posts = JSON.parse(cachedData);
@@ -44,16 +44,9 @@ const BlogApp = {
 
             this.posts = [];
 
-            // 并行加载：静态文件 + Blobs 后台文章
-            const [staticResults, blobResults] = await Promise.all([
-                this.loadStaticPosts(),
-                this.loadBlobPosts(),
-            ]);
-
-            // 合并，Blobs 文章优先（按 id 去重）
-            const staticIds = new Set(staticResults.map(p => p.id));
-            const allPosts = [...staticResults, ...blobResults.filter(p => !staticIds.has(p.id))];
-            this.posts = allPosts.filter(p => p !== null);
+            // 仅从 Blobs 加载文章
+            const blobResults = await this.loadBlobPosts();
+            this.posts = blobResults.filter(p => p !== null);
 
             // 按日期降序排序
             this.posts.sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -82,15 +75,6 @@ const BlogApp = {
         }
     },
 
-    // 加载静态文件文章
-    async loadStaticPosts() {
-        try {
-            const postFiles = await this.getPostFiles();
-            const promises = postFiles.map(file => this.loadPost(file));
-            return (await Promise.all(promises)).filter(p => p !== null);
-        } catch { return []; }
-    },
-
     // 加载 Blobs 后台文章
     async loadBlobPosts() {
         try {
@@ -114,18 +98,6 @@ const BlogApp = {
         } catch { return []; }
     },
 
-    // 获取文章文件列表
-    async getPostFiles() {
-        try {
-            const response = await fetch(`${this.config.postsDirectory}/manifest.json`);
-            if (response.ok) return await response.json();
-        } catch (e) {
-            console.log('未找到 manifest.json，使用默认列表');
-        }
-        return ['blog-usage-guide.md', 'javascript-async.md', 'jimeng-ai-prompt-framework.md'];
-    },
-
-    // 加载单篇文章数据
     // BG 文件夹图片列表（用于无图文章的默认封面）
     bgImages: [
         'images/BG/01_BG.webp', 'images/BG/02_BG.webp', 'images/BG/03_BG.webp',
@@ -149,37 +121,6 @@ const BlogApp = {
         }
         const index = Math.abs(hash) % this.bgImages.length;
         return this.bgImages[index];
-    },
-
-    async loadPost(filename) {
-        try {
-            const filePath = `${this.config.postsDirectory}/${filename}`;
-            const { frontmatter, content } = await MarkdownParser.loadFromFile(filePath);
-
-            // 标准化 tags 为数组
-            let tags = [];
-            if (Array.isArray(frontmatter.tags)) {
-                tags = frontmatter.tags;
-            } else if (typeof frontmatter.tags === 'string') {
-                tags = frontmatter.tags.split(',').map(t => t.trim()).filter(Boolean);
-            }
-
-            return {
-                filename,
-                title: frontmatter.title || filename.replace('.md', ''),
-                date: frontmatter.date || new Date().toISOString().split('T')[0],
-                tags,
-                author: frontmatter.author || 'Anonymous',
-                excerpt: frontmatter.excerpt || MarkdownParser.extractExcerpt(content),
-                image: frontmatter.image || MarkdownParser.extractFirstImage(content) || this.getRandomBgImage(filename),
-                content: content,
-                wordCount: content.length,
-                frontmatter: frontmatter
-            };
-        } catch (error) {
-            console.error(`加载文章 ${filename} 失败:`, error);
-            return null;
-        }
     },
 
     // 渲染页面（文章）
@@ -431,18 +372,18 @@ const BlogApp = {
         }
     },
 
-    // 渲染图库（读取 images/R-N-picture 目录清单，瀑布流布局）
+    // 渲染图库（从 Blobs API 加载图库图片，瀑布流布局）
     async renderGallery() {
         const grid = document.getElementById('galleryGrid');
         if (!grid || grid.dataset.rendered) return;
         grid.dataset.rendered = '1';
         try {
-            const images = await this.loadGalleryManifest();
+            const images = await this.loadGalleryImages();
             window.__galleryImages = images;
-            grid.innerHTML = images.map((src, i) => `
+            grid.innerHTML = images.map((img, i) => `
                 <figure class="gallery-item">
-                    <img src="images/R-N-picture/${src}" alt="图片 ${i + 1}" loading="lazy"
-                         onclick="openGalleryLightbox('images/R-N-picture/${src}', ${i})">
+                    <img src="${img.url}" alt="图片 ${i + 1}" loading="lazy"
+                         onclick="openGalleryLightbox('${img.url}', ${i})">
                 </figure>
             `).join('');
         } catch (e) {
@@ -450,13 +391,23 @@ const BlogApp = {
         }
     },
 
-    // 加载图库清单（images/R-N-picture/manifest.json，缓存复用）
-    async loadGalleryManifest() {
+    // 加载图库图片（从 Blobs API 获取带「图库」标签的图片）
+    async loadGalleryImages() {
         if (this.galleryImages) return this.galleryImages;
-        const res = await fetch('images/R-N-picture/manifest.json');
-        if (!res.ok) throw new Error('manifest load failed');
-        const images = await res.json();
-        this.galleryImages = Array.isArray(images) ? images : [];
+        try {
+            const res = await fetch('/api/admin?action=images&tag=图库');
+            const data = await res.json();
+            if (data.status === 'success' && Array.isArray(data.data)) {
+                this.galleryImages = data.data.map(img => ({
+                    key: img.key,
+                    url: img.url,
+                }));
+            } else {
+                this.galleryImages = [];
+            }
+        } catch {
+            this.galleryImages = [];
+        }
         return this.galleryImages;
     },
 
@@ -582,7 +533,7 @@ const BlogApp = {
         const totalWords = this.posts.reduce((s, p) => s + (p.wordCount || 0), 0);
         let images = 0;
         try {
-            images = (await this.loadGalleryManifest()).length;
+            images = (await this.loadGalleryImages()).length;
         } catch (e) { }
 
         // 统计概览

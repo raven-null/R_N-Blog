@@ -1,6 +1,10 @@
 /**
  * 迁移脚本：将本地静态文件上传到线上 Netlify Blobs
  * 用法：node scripts/migrate.mjs
+ *
+ * 迁移内容：
+ * 1. 图库图片（images/R-N-picture/）→ blog-images Blobs，标记「图库」标签
+ * 2. 静态文章（posts/*.md）→ blog-articles Blobs
  */
 
 import { readdirSync, readFileSync } from 'node:fs'
@@ -11,7 +15,7 @@ const __dirname = fileURLToPath(new URL('.', import.meta.url))
 const SITE_URL = 'https://ravennull.work'
 const ADMIN_KEY = 'Raven_NULL'
 const postsDir = join(__dirname, '..', 'public', 'posts')
-const imagesDir = join(__dirname, '..', 'public', 'images')
+const galleryDir = join(__dirname, '..', 'public', 'images', 'R-N-picture')
 
 async function apiFetch(action, options = {}) {
   try {
@@ -62,7 +66,16 @@ async function migrateArticles() {
       const tags = Array.isArray(fm.tags) ? fm.tags : (fm.tags || '').split(',').map(t => t.trim()).filter(Boolean)
       const res = await apiFetch('action=articles', {
         method: 'POST',
-        body: JSON.stringify({ id, title: fm.title || id, tags: tags.join(', '), author: fm.author || '渡鸦NULL', image: fm.image || '', content, status: 'published' }),
+        body: JSON.stringify({
+          id,
+          title: fm.title || id,
+          tags: tags.join(', '),
+          author: fm.author || '渡鸦NULL',
+          image: fm.image || '',
+          content,
+          status: 'published',
+          staticFile: file,
+        }),
       })
       if (res.status === 'success') { console.log(`  ✅ ${file} → ${fm.title || id}`); ok++ }
       else { console.log(`  ❌ ${file}: ${res.message}`); fail++ }
@@ -71,36 +84,41 @@ async function migrateArticles() {
   console.log(`📝 文章完成：${ok} 成功，${fail} 失败`)
 }
 
-async function migrateImages() {
-  console.log('\n🖼️  开始迁移图片（自动转 WebP）...')
-  let count = 0, errors = 0
+async function migrateGalleryImages() {
+  console.log('\n🖼️  开始迁移图库图片...')
   const mimeMap = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.gif': 'image/gif', '.webp': 'image/webp', '.svg': 'image/svg+xml' }
+  const files = readdirSync(galleryDir).filter(f => /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(f))
+  let ok = 0, fail = 0
 
-  function walk(dir, prefix) {
-    const entries = readdirSync(dir, { withFileTypes: true })
-    for (const entry of entries) {
-      const fullPath = join(dir, entry.name)
-      const blobKey = prefix ? `${prefix}/${entry.name}` : entry.name
-      if (entry.isDirectory()) { walk(fullPath, blobKey); continue }
-      if (!/\.(jpg|jpeg|png|gif|webp|svg)$/i.test(entry.name)) continue
-      tasks.push({ blobKey, fullPath, mime: mimeMap[extname(entry.name).toLowerCase()] || 'image/jpeg', name: entry.name })
+  console.log(`  找到 ${files.length} 张图库图片`)
+
+  for (const file of files) {
+    try {
+      const fullPath = join(galleryDir, file)
+      const base64 = readFileSync(fullPath).toString('base64')
+      const mime = mimeMap[extname(file).toLowerCase()] || 'image/jpeg'
+      const res = await apiFetch('action=images', {
+        method: 'POST',
+        body: JSON.stringify({
+          data: base64,
+          mime,
+          name: file,
+          tags: ['图库'],
+        }),
+      })
+      if (res.status === 'success') {
+        console.log(`  ✅ ${file} → ${res.key}${res.converted ? ' (→WebP)' : ''}`)
+        ok++
+      } else {
+        console.log(`  ❌ ${file}: ${res.message}`)
+        fail++
+      }
+    } catch (e) {
+      console.log(`  ❌ ${file}: ${e.message}`)
+      fail++
     }
   }
-
-  const tasks = []
-  walk(imagesDir, '')
-  console.log(`  找到 ${tasks.length} 张图片`)
-
-  for (const t of tasks) {
-    const base64 = readFileSync(t.fullPath).toString('base64')
-    const res = await apiFetch('action=images', {
-      method: 'POST',
-      body: JSON.stringify({ data: base64, mime: t.mime, name: t.name }),
-    })
-    if (res.status === 'success') { console.log(`  ✅ ${t.blobKey} → ${res.key}${res.converted ? ' (→WebP)' : ''}`); count++ }
-    else { console.log(`  ❌ ${t.blobKey}: ${res.message}`); errors++ }
-  }
-  console.log(`🖼️  图片完成：${count} 成功，${errors} 失败`)
+  console.log(`🖼️  图库图片完成：${ok} 成功，${fail} 失败`)
 }
 
 async function main() {
@@ -110,8 +128,9 @@ async function main() {
   if (test.status !== 'success') { console.error('❌ 认证失败'); process.exit(1) }
   console.log('✅ 认证成功')
   await migrateArticles()
-  await migrateImages()
+  await migrateGalleryImages()
   console.log('\n🎉 全部完成！')
+  console.log('   提示：迁移完成后，可以删除 public/posts/ 和 public/images/R-N-picture/ 目录')
 }
 
 main().catch(e => { console.error('失败:', e); process.exit(1) })

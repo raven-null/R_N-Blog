@@ -301,7 +301,7 @@
             const total = images.length;
             window.__galleryIndex = (window.__galleryIndex + dir + total) % total;
             const img = document.getElementById('galleryLightboxImg');
-            const src = 'images/R-N-picture/' + images[window.__galleryIndex];
+            const src = images[window.__galleryIndex].url || images[window.__galleryIndex];
             if (typeof anime !== 'undefined') {
                 anime.animate(img, { opacity: [1, 0], duration: 120, ease: 'in(2)', onComplete: () => {
                     img.src = src;

@@ -1697,11 +1697,13 @@
                     return;
                 }
 
-                // 加载文章（Blobs / 静态 / 资讯）
+                // 加载文章（优先 Blobs，无 blobId 时用文件名作为 id）
                 if (blobId) {
                     await this.loadBlobArticle(blobId, postFile);
                 } else {
-                    await this.loadArticle(postFile, isNews);
+                    // 尝试用文件名（去掉 .md）作为 id 从 Blobs 加载
+                    const fallbackId = postFile.replace('.md', '');
+                    await this.loadBlobArticle(fallbackId, postFile);
                 }
                 // 初始化留言区
                 this.initComments(blobId || postFile);
@@ -1714,7 +1716,7 @@
                 }
             },
 
-            // 加载 Blobs 后台文章（内容为空时回退到静态文件）
+            // 加载 Blobs 后台文章
             async loadBlobArticle(blobId, filename) {
                 try {
                     const res = await fetch(`/api/admin?action=articles&id=${blobId}`);
@@ -1722,19 +1724,7 @@
                     if (data.status !== 'success' || !data.data) throw new Error('文章不存在');
                     const d = data.data;
 
-                    let content = d.content || '';
-
-                    // 内容为空时从静态文件加载
-                    if (!content && filename) {
-                        try {
-                            const staticRes = await fetch(`posts/${filename}`);
-                            if (staticRes.ok) {
-                                const raw = await staticRes.text();
-                                const parsed = MarkdownParser.parseFrontmatter(raw);
-                                content = parsed.content;
-                            }
-                        } catch {}
-                    }
+                    const content = d.content || '';
 
                     this.currentPost = {
                         filename: filename,
@@ -1789,7 +1779,7 @@
                 document.title = `${this.currentPost.title} - 我的博客`;
             },
 
-            // 加载单篇文章
+            // 加载单篇文章（仅支持资讯，静态文章已迁移至 Blobs）
             async loadArticle(filename, isNews) {
                 try {
                     if (isNews) {
@@ -1797,29 +1787,8 @@
                         return;
                     }
 
-                    const filePath = `posts/${filename}`;
-                    const response = await fetch(filePath);
-
-                    if (!response.ok) {
-                        throw new Error(`HTTP 错误: ${response.status}`);
-                    }
-
-                    const content = await response.text();
-                    const { frontmatter, content: markdownContent } = MarkdownParser.parseFrontmatter(content);
-
-                    this.currentPost = {
-                        filename,
-                        title: frontmatter.title || filename.replace('.md', ''),
-                        date: frontmatter.date || new Date().toISOString().split('T')[0],
-                        update: frontmatter.update,
-                        tags: frontmatter.tags || [],
-                        author: frontmatter.author || 'Anonymous',
-                        content: markdownContent,
-                        frontmatter
-                    };
-
-                    this.renderArticle();
-                    document.title = `${this.currentPost.title} - 我的博客`;
+                    // 静态文章已迁移至 Blobs，显示错误提示
+                    this.showError('文章已迁移，请从首页重新访问');
 
                 } catch (error) {
                     console.error('加载文章失败:', error);
@@ -1837,7 +1806,7 @@
             async loadAllPosts() {
                 try {
                     // 优先复用首页 sessionStorage 缓存
-                    const homepageCache = sessionStorage.getItem('blog-posts-data-v11');
+                    const homepageCache = sessionStorage.getItem('blog-posts-data-v12');
                     if (homepageCache) {
                         this.allPosts = JSON.parse(homepageCache).map(p => ({
                             filename: p.filename,
@@ -1851,43 +1820,23 @@
                     }
 
                     // 回退：检查文章页独立缓存
-                    const cachedData = sessionStorage.getItem('blog-posts-cache-v2');
+                    const cachedData = sessionStorage.getItem('blog-posts-cache-v3');
                     if (cachedData) {
                         this.allPosts = JSON.parse(cachedData);
                         return;
                     }
 
-                    // 静态文件 + Blobs 并行加载
-                    const [staticPosts, blobPosts] = await Promise.all([
-                        this.loadStaticPostList(),
-                        this.loadBlobPostList(),
-                    ]);
-                    this.allPosts = [...staticPosts, ...blobPosts];
+                    // 仅从 Blobs 加载
+                    this.allPosts = await this.loadBlobPostList();
                     this.allPosts.sort((a, b) => new Date(b.date) - new Date(a.date));
-                    sessionStorage.setItem('blog-posts-cache-v2', JSON.stringify(this.allPosts));
+                    sessionStorage.setItem('blog-posts-cache-v3', JSON.stringify(this.allPosts));
                 } catch (error) {
                     console.warn('加载文章列表失败:', error);
                 }
             },
 
             async loadStaticPostList() {
-                try {
-                    const response = await fetch('posts/manifest.json');
-                    if (!response.ok) return [];
-                    const files = await response.json();
-                    const promises = files.map(async (file) => {
-                        try {
-                            const r = await fetch(`posts/${file}`);
-                            if (r.ok) {
-                                const content = await r.text();
-                                const { frontmatter } = MarkdownParser.parseFrontmatter(content);
-                                return { filename: file, title: frontmatter.title || file.replace('.md', ''), date: frontmatter.date, tags: frontmatter.tags || [] };
-                            }
-                        } catch {}
-                        return null;
-                    });
-                    return (await Promise.all(promises)).filter(p => p !== null);
-                } catch { return []; }
+                return [];
             },
 
             async loadBlobPostList() {

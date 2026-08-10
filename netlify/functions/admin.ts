@@ -236,10 +236,11 @@ export default async (req: Request) => {
       if (!isSvg) {
         try {
           const sharp = (await import("sharp")).default
-          finalBuf = await sharp(buf)
+          const sharpBuf = await sharp(buf)
             .resize({ width: 1920, height: 1080, fit: "inside", withoutEnlargement: true })
             .webp({ quality: 82 })
             .toBuffer()
+          finalBuf = Buffer.from(sharpBuf)
           const baseName = name ? name.replace(/\.[^.]+$/, "") : randomUUID().slice(0, 8)
           finalKey = `${baseName}.webp`
         } catch (err) {
@@ -438,6 +439,111 @@ export default async (req: Request) => {
 
       return json(200, { status: "success", imageChanges, articleChanges }, req)
     }
+  }
+
+  // ===== 数据迁移 =====
+
+  if (path === "migrate") {
+    if (req.method !== "POST") return badRequest("Method Not Allowed", req)
+    const body = await req.json().catch(() => ({}))
+    const { articles: migrateArticles, images: migrateImages } = body
+
+    const articleStore = getBlobStore(ARTICLE_STORE)
+    const imageStore = getBlobStore(IMAGE_STORE)
+    const tagStore = getBlobStore("blog-image-tags")
+
+    let articleCount = 0
+    let imageCount = 0
+
+    // 迁移文章
+    if (Array.isArray(migrateArticles)) {
+      const index = await getArticleIndex(articleStore)
+      for (const a of migrateArticles) {
+        const articleId = a.id || randomUUID().slice(0, 8)
+        const now = new Date().toISOString().slice(0, 10)
+        const tagsArr = Array.isArray(a.tags) ? a.tags : (a.tags || "").split(",").map((t: string) => t.trim()).filter(Boolean)
+        const content = a.content || ""
+        const autoExcerpt = content
+          ? content.replace(/#+\s+/g, "").replace(/\*\*(.*?)\*\*/g, "$1").replace(/\*(.*?)\*/g, "$1").replace(/\[([^\]]+)\]\([^)]+\)/g, "$1").replace(/!\[([^\]]*)\]\([^)]+\)/g, "").replace(/`([^`]+)`/g, "$1").replace(/\n/g, " ").trim().slice(0, 150)
+          : ""
+
+        const articleData = {
+          id: articleId,
+          filename: a.filename || `${articleId}.md`,
+          title: a.title,
+          tags: tagsArr,
+          author: a.author || "渡鸦NULL",
+          excerpt: a.excerpt || autoExcerpt + "...",
+          image: a.image || "",
+          content,
+          wordCount: content.length,
+          status: a.status || "published",
+          createdAt: a.date || now,
+          updatedAt: a.update || now,
+        }
+
+        await articleStore.set(articleId, JSON.stringify(articleData))
+
+        const existing = index.findIndex((x: ArticleMeta) => x.id === articleId)
+        const meta: ArticleMeta = {
+          id: articleId,
+          filename: articleData.filename,
+          title: articleData.title,
+          date: existing >= 0 ? index[existing].date : (a.date || now),
+          update: existing >= 0 ? (a.update || now) : undefined,
+          tags: tagsArr,
+          author: articleData.author,
+          excerpt: articleData.excerpt,
+          image: articleData.image,
+          wordCount: articleData.wordCount,
+          status: articleData.status,
+        }
+
+        if (existing >= 0) {
+          index[existing] = meta
+        } else {
+          index.push(meta)
+        }
+        articleCount++
+      }
+      await saveArticleIndex(articleStore, index)
+    }
+
+    // 迁移图片
+    if (Array.isArray(migrateImages)) {
+      const getTagIndex = async (): Promise<Record<string, string[]>> => {
+        const raw = await tagStore.get("index", { type: "text" })
+        if (!raw) return {}
+        try { return JSON.parse(raw) } catch { return {} }
+      }
+      const tagIndex = await getTagIndex()
+
+      for (const img of migrateImages) {
+        if (!img.data || !img.key) continue
+        // 检查是否已存在
+        const existing = await imageStore.get(img.key, { type: "text" })
+        if (existing) {
+          // 已存在，只更新标签
+          if (img.tags) {
+            tagIndex[img.key] = Array.isArray(img.tags) ? img.tags : [img.tags]
+          }
+          continue
+        }
+        await imageStore.set(img.key, img.data)
+        if (img.tags) {
+          tagIndex[img.key] = Array.isArray(img.tags) ? img.tags : [img.tags]
+        }
+        imageCount++
+      }
+      await tagStore.set("index", JSON.stringify(tagIndex))
+    }
+
+    return json(200, {
+      status: "success",
+      message: `迁移完成：${articleCount} 篇文章，${imageCount} 张图片`,
+      articleCount,
+      imageCount,
+    }, req)
   }
 
   return json(404, { status: "error", message: "未知操作" }, req)
