@@ -170,7 +170,32 @@
         .upload-progress.show{display:inline-flex}
         .upload-progress .spinner{width:12px;height:12px;border:2px solid var(--accent);border-top-color:transparent;border-radius:50%;animation:spin .6s linear infinite}
         @keyframes spin{to{transform:rotate(360deg)}}
-        @media(max-width:768px){.sidebar{display:none}.editor-split{grid-template-columns:1fr}.image-picker-panel{width:100%}.classify-workspace{flex-direction:column;height:auto}}
+
+        /* 标签管理 */
+        .tags-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+        .tags-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px;display:flex;align-items:center;justify-content:space-between;transition:all .12s}
+        .tags-card:hover{border-color:var(--border-light);background:var(--bg-hover)}
+        .tags-card .tc-info{flex:1;min-width:0}
+        .tags-card .tc-name{font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px}
+        .tags-card .tc-counts{font-size:11px;color:var(--text-muted);display:flex;gap:12px}
+        .tags-card .tc-counts span{display:flex;align-items:center;gap:4px}
+        .tags-card .tc-actions{display:flex;gap:6px;margin-left:12px}
+        .tags-card .tc-actions button{opacity:0;transition:opacity .12s}
+        .tags-card:hover .tc-actions button{opacity:1}
+        .tags-add{display:flex;gap:8px;margin-bottom:20px}
+        .tags-add input{flex:1;padding:9px 14px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:13px}
+        .tags-add input:focus{outline:none;border-color:var(--accent)}
+
+        /* 重命名弹窗 */
+        .rename-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;align-items:center;justify-content:center}
+        .rename-modal.open{display:flex}
+        .rename-box{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;width:360px;box-shadow:var(--shadow)}
+        .rename-box h3{font-size:15px;margin-bottom:16px;color:var(--accent)}
+        .rename-box input{width:100%;padding:10px 14px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:14px;margin-bottom:16px}
+        .rename-box input:focus{outline:none;border-color:var(--accent)}
+        .rename-box .rename-actions{display:flex;gap:8px;justify-content:flex-end}
+
+        @media(max-width:768px){.sidebar{display:none}.editor-split{grid-template-columns:1fr}.image-picker-panel{width:100%}.classify-workspace{flex-direction:column;height:auto}.tags-grid{grid-template-columns:1fr}}
     </style>
 </head>
 <body>
@@ -186,6 +211,7 @@
                     <div class="sidebar-item active" onclick="switchTab('articles')" data-tab="articles"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span>文章管理</span></div>
                     <div class="sidebar-item" onclick="switchTab('write')" data-tab="write"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg><span>写文章</span></div>
                     <div class="sidebar-item" onclick="switchTab('images')" data-tab="images"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><span>图片管理</span></div>
+                    <div class="sidebar-item" onclick="switchTab('tags')" data-tab="tags"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg><span>标签管理</span></div>
                 </div>
             </div>
             <div class="content">
@@ -235,8 +261,15 @@
                                 <div class="classify-header"><div class="tag-sel" id="classifyTagSel"></div></div>
                                 <div class="classify-body"><div class="classify-grid" id="classifiedGrid"></div></div>
                             </div>
-                        </div>
-                    </div>
+                </div>
+
+                <!-- 标签管理 -->
+                <div id="tab-tags" style="display:none">
+                    <div class="page-bar"><h2>标签管理</h2><div class="page-bar-actions"><button class="btn btn-ghost" onclick="loadTags()">刷新</button></div></div>
+                    <div class="tags-add"><input type="text" id="newTagInput" placeholder="输入新标签名称，回车添加" onkeydown="if(event.key==='Enter')addNewTag()"><button class="btn btn-primary" onclick="addNewTag()">添加标签</button></div>
+                    <div class="tags-grid" id="tagsGrid"></div>
+                </div>
+            </div>
                 </div>
             </div>
         </div>
@@ -250,6 +283,10 @@
         <div class="image-picker-header"><h3>选择图片插入</h3><button onclick="closeImagePicker()">&times;</button></div>
         <div class="image-picker-upload"><label>📤 上传新图片<input type="file" accept="image/*" multiple onchange="uploadAndInsert(this.files)" style="display:none"></label></div>
         <div class="image-picker-list" id="imagePickerList"></div>
+    </div>
+
+    <div class="rename-modal" id="renameModal">
+        <div class="rename-box"><h3>重命名标签</h3><input type="text" id="renameInput" placeholder="新名称" onkeydown="if(event.key==='Enter')confirmRename()"><div class="rename-actions"><button class="btn btn-ghost" onclick="closeRenameModal()">取消</button><button class="btn btn-primary" onclick="confirmRename()">确认</button></div></div>
     </div>
 
     <div class="toast" id="toast"></div>
@@ -408,10 +445,83 @@
         // ===== Tab =====
         function switchTab(tab){
             document.querySelectorAll('.sidebar-item').forEach(el=>el.classList.toggle('active',el.dataset.tab===tab));
-            ['articles','write','images'].forEach(t=>document.getElementById('tab-'+t).style.display=t===tab?'block':'none');
+            ['articles','write','images','tags'].forEach(t=>document.getElementById('tab-'+t).style.display=t===tab?'block':'none');
             if(tab==='articles')loadArticles();
             if(tab==='images')loadData();
+            if(tab==='tags')loadTags();
             if(tab==='write'&&!editingId)resetEditor();
+        }
+
+        // ===== 标签管理 =====
+        let allTagsData=[];
+        let renameOldName='';
+
+        async function loadTags(){
+            const r=await apiFetch('action=tags');
+            if(r.status==='success'){allTagsData=r.data||[];renderTags()}
+        }
+
+        function renderTags(){
+            const grid=document.getElementById('tagsGrid');
+            if(!allTagsData.length){grid.innerHTML='<div class="empty">暂无标签</div>';return}
+            grid.innerHTML=allTagsData.map(t=>`
+                <div class="tags-card">
+                    <div class="tc-info">
+                        <div class="tc-name">${esc(t.name)}</div>
+                        <div class="tc-counts">
+                            <span>🖼 ${t.imageCount} 张图片</span>
+                            <span>📄 ${t.articleCount} 篇文章</span>
+                        </div>
+                    </div>
+                    <div class="tc-actions">
+                        <button class="btn btn-ghost btn-sm" onclick="openRenameModal('${esc(t.name)}')">重命名</button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteTag('${esc(t.name)}',${t.total})">删除</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function addNewTag(){
+            const input=document.getElementById('newTagInput');
+            const name=input.value.trim();
+            if(!name){showToast('标签名不能为空','error');return}
+            if(allTagsData.some(t=>t.name===name)){showToast('标签已存在','error');return}
+            // 新标签不需要 API 调用，直接添加到列表（首次使用时自动生效）
+            allTagsData.unshift({name,imageCount:0,articleCount:0,total:0});
+            renderTags();
+            input.value='';
+            showToast(`标签「${name}」已添加（首次使用时生效）`,'success');
+        }
+
+        function openRenameModal(oldName){
+            renameOldName=oldName;
+            document.getElementById('renameInput').value=oldName;
+            document.getElementById('renameModal').classList.add('open');
+            setTimeout(()=>document.getElementById('renameInput').focus(),100);
+        }
+        function closeRenameModal(){document.getElementById('renameModal').classList.remove('open');renameOldName=''}
+
+        async function confirmRename(){
+            const newName=document.getElementById('renameInput').value.trim();
+            if(!newName){showToast('名称不能为空','error');return}
+            if(newName===renameOldName){closeRenameModal();return}
+            if(allTagsData.some(t=>t.name===newName)){showToast('标签名已存在','error');return}
+            const r=await apiFetch('action=tags',{method:'PATCH',body:JSON.stringify({oldName:renameOldName,newName})});
+            if(r.status==='success'){
+                showToast(`已重命名：${renameOldName} → ${newName}`,'success');
+                closeRenameModal();
+                await loadTags();
+            }else showToast(r.message||'重命名失败','error');
+        }
+
+        async function deleteTag(name,count){
+            if(count>0&&!confirm(`标签「${name}」下有 ${count} 个内容，确定删除？删除后会从所有图片和文章中移除该标签。`))return;
+            if(count===0&&!confirm(`确定删除空标签「${name}」？`))return;
+            const r=await apiFetch(`action=tags&name=${encodeURIComponent(name)}`,{method:'DELETE'});
+            if(r.status==='success'){
+                showToast(`已删除「${name}」，影响 ${r.imageChanges} 张图片、${r.articleChanges} 篇文章`,'success');
+                await loadTags();
+            }else showToast(r.message||'删除失败','error');
         }
 
         function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}

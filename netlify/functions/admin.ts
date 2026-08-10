@@ -279,6 +279,130 @@ export default async (req: Request) => {
     }
   }
 
+  // ===== 标签管理 =====
+
+  if (path === "tags") {
+    const imageStore = getBlobStore(IMAGE_STORE)
+    const tagStore = getBlobStore("blog-image-tags")
+    const articleStore = getBlobStore(ARTICLE_STORE)
+
+    async function getImageTagIndex(): Promise<Record<string, string[]>> {
+      const raw = await tagStore.get("index", { type: "text" })
+      if (!raw) return {}
+      try { return JSON.parse(raw) } catch { return {} }
+    }
+    async function saveImageTagIndex(idx: Record<string, string[]>) {
+      await tagStore.set("index", JSON.stringify(idx))
+    }
+    async function getArticleIndex(): Promise<ArticleMeta[]> {
+      const raw = await articleStore.get("index", { type: "text" })
+      if (!raw) return []
+      try { return JSON.parse(raw) } catch { return [] }
+    }
+    async function saveArticleIndex(index: ArticleMeta[]) {
+      await articleStore.set("index", JSON.stringify(index))
+    }
+
+    // GET: 列出所有标签及其使用次数
+    if (req.method === "GET") {
+      const imageTagIndex = await getImageTagIndex()
+      const articleIndex = await getArticleIndex()
+
+      const tagMap: Record<string, { imageCount: number; articleCount: number }> = {}
+
+      // 统计图片标签
+      for (const tags of Object.values(imageTagIndex)) {
+        for (const tag of tags) {
+          if (!tagMap[tag]) tagMap[tag] = { imageCount: 0, articleCount: 0 }
+          tagMap[tag].imageCount++
+        }
+      }
+
+      // 统计文章标签
+      for (const article of articleIndex) {
+        for (const tag of (article.tags || [])) {
+          if (!tagMap[tag]) tagMap[tag] = { imageCount: 0, articleCount: 0 }
+          tagMap[tag].articleCount++
+        }
+      }
+
+      const result = Object.entries(tagMap).map(([name, counts]) => ({
+        name,
+        imageCount: counts.imageCount,
+        articleCount: counts.articleCount,
+        total: counts.imageCount + counts.articleCount,
+      })).sort((a, b) => b.total - a.total)
+
+      return json(200, { status: "success", data: result }, req)
+    }
+
+    // PATCH: 重命名标签
+    if (req.method === "PATCH") {
+      const body = await req.json().catch(() => ({}))
+      const { oldName, newName } = body
+      if (!oldName || !newName) return badRequest("oldName 和 newName 必填", req)
+      if (oldName === newName) return badRequest("新旧名称相同", req)
+
+      let imageChanges = 0, articleChanges = 0
+
+      // 更新图片标签
+      const imageTagIndex = await getImageTagIndex()
+      for (const [key, tags] of Object.entries(imageTagIndex)) {
+        const idx = tags.indexOf(oldName)
+        if (idx >= 0) {
+          tags[idx] = newName
+          imageChanges++
+        }
+      }
+      await saveImageTagIndex(imageTagIndex)
+
+      // 更新文章标签
+      const articleIndex = await getArticleIndex()
+      for (const article of articleIndex) {
+        const idx = (article.tags || []).indexOf(oldName)
+        if (idx >= 0) {
+          article.tags[idx] = newName
+          articleChanges++
+        }
+      }
+      await saveArticleIndex(articleIndex)
+
+      return json(200, { status: "success", imageChanges, articleChanges }, req)
+    }
+
+    // DELETE: 删除标签
+    if (req.method === "DELETE") {
+      const tagName = url.searchParams.get("name")
+      if (!tagName) return badRequest("name 必填", req)
+
+      let imageChanges = 0, articleChanges = 0
+
+      // 从图片中移除
+      const imageTagIndex = await getImageTagIndex()
+      for (const [key, tags] of Object.entries(imageTagIndex)) {
+        const idx = tags.indexOf(tagName)
+        if (idx >= 0) {
+          tags.splice(idx, 1)
+          imageChanges++
+        }
+      }
+      await saveImageTagIndex(imageTagIndex)
+
+      // 从文章中移除
+      const articleIndex = await getArticleIndex()
+      for (const article of articleIndex) {
+        const idx = (article.tags || []).indexOf(tagName)
+        if (idx >= 0) {
+          article.tags.splice(idx, 1)
+          articleChanges++
+        }
+      }
+      await saveArticleIndex(articleIndex)
+
+      return json(200, { status: "success", imageChanges, articleChanges }, req)
+    }
+  }
+
   return json(404, { status: "error", message: "未知操作" }, req)
 }
 
