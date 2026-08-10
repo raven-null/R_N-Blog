@@ -171,11 +171,18 @@ const BlogApp = {
         postsContainer.innerHTML = `<div class="waterfall">${postsHTML}</div>`;
     },
 
-    // 根据作者名字返回对应头像
+    // 根据作者名字返回对应头像（站长使用设置中的头像，其他用默认）
     getAuthorAvatar(author) {
         const name = (author || '').trim();
-        if (name === '博主') return 'images/Default/profile -picture.webp';
-        if (name === 'AI') return 'images/Default/profile -picture.webp';
+        // 站长（博主/设置中配置的用户名）使用设置页面的头像
+        const settings = this.getBlogSettings();
+        const authorName = settings ? settings.authorName : '';
+        const avatar = settings ? settings.avatar : '';
+        // 作者是站长（博主或配置的用户名）→ 用设置的头像
+        if (name === '博主' || (authorName && name === authorName)) {
+            return avatar || 'images/Default/profile -picture.webp';
+        }
+        // AI 或其他作者 → 默认头像
         return 'images/Default/profile -picture.webp';
     },
 
