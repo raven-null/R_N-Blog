@@ -7,7 +7,7 @@
     <link rel="icon" href="/images/TX/01_TX.webp" type="image/webp">
     
     <!-- 主样式 -->
-    <link rel="stylesheet" href="css/style.css?v=3.6.1">
+    <link rel="stylesheet" href="css/style.css?v=3.6.2">
     
     <!-- Marked.js -->
     <script src="js/vendor/marked.min.js"></script>
@@ -1659,11 +1659,11 @@
     </div>
 
     <!-- JavaScript -->
-    <script src="js/theme.js?v=3.6.1"></script>
-    <script src="js/markdown.js?v=3.6.1"></script>
-    <script src="js/chat.js?v=3.6.1"></script>
-    <script src="js/reader.js?v=3.6.1"></script>
-    <script src="js/animations.js?v=3.6.1"></script>
+    <script src="js/theme.js?v=3.6.2"></script>
+    <script src="js/markdown.js?v=3.6.2"></script>
+    <script src="js/chat.js?v=3.6.2"></script>
+    <script src="js/reader.js?v=3.6.2"></script>
+    <script src="js/animations.js?v=3.6.2"></script>
 
     <script>
         // 文章详情页应用
@@ -1804,18 +1804,22 @@
             // 加载所有文章（用于上下篇导航，优先复用首页缓存）
             async loadAllPosts() {
                 try {
-                    // 优先复用首页 sessionStorage 缓存
-                    const homepageCache = sessionStorage.getItem('blog-posts-data-v14');
+                    // 优先复用首页 sessionStorage 缓存（新格式 {t, posts}）
+                    const homepageCache = sessionStorage.getItem('blog-posts-data-v15');
                     if (homepageCache) {
-                        this.allPosts = JSON.parse(homepageCache).map(p => ({
-                            filename: p.filename,
-                            title: p.title,
-                            date: p.date,
-                            tags: p.tags || [],
-                            id: p.id || '',
-                        }));
-                        this.allPosts.sort((a, b) => new Date(b.date) - new Date(a.date));
-                        return;
+                        try {
+                            const parsed = JSON.parse(homepageCache);
+                            const posts = Array.isArray(parsed) ? parsed : (Array.isArray(parsed.posts) ? parsed.posts : []);
+                            this.allPosts = posts.map(p => ({
+                                filename: p.filename,
+                                title: p.title,
+                                date: p.date,
+                                tags: p.tags || [],
+                                id: p.id || '',
+                            }));
+                            this.allPosts.sort((a, b) => new Date(b.date) - new Date(a.date));
+                            return;
+                        } catch (e) { /* 解析失败则回退 */ }
                     }
 
                     // 回退：检查文章页独立缓存

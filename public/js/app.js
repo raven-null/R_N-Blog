@@ -38,19 +38,27 @@ const BlogApp = {
     async loadPosts() {
         try {
             console.log('[loadPosts] 开始加载文章');
-            const CACHE_KEY = 'blog-posts-data-v14';
-            const cachedData = sessionStorage.getItem(CACHE_KEY);
-            if (cachedData) {
-                console.log('[loadPosts] 使用缓存数据');
-                this.posts = JSON.parse(cachedData);
-                this.filteredPosts = [...this.posts];
-                return;
+            const CACHE_KEY = 'blog-posts-data-v15';
+            const CACHE_TTL = 60 * 1000; // 缓存有效期 60 秒
+            const cachedRaw = sessionStorage.getItem(CACHE_KEY);
+            if (cachedRaw) {
+                try {
+                    const cached = JSON.parse(cachedRaw);
+                    // 检查缓存是否过期（存有时间戳）
+                    if (cached.t && Date.now() - cached.t < CACHE_TTL && Array.isArray(cached.posts)) {
+                        console.log('[loadPosts] 使用缓存数据');
+                        this.posts = cached.posts;
+                        this.filteredPosts = [...this.posts];
+                        return;
+                    }
+                } catch (e) { /* 解析失败则重新加载 */ }
             }
 
             // 清除旧版本缓存
             sessionStorage.removeItem('blog-posts-data-v11');
             sessionStorage.removeItem('blog-posts-data-v12');
             sessionStorage.removeItem('blog-posts-data-v13');
+            sessionStorage.removeItem('blog-posts-data-v14');
 
             this.posts = [];
 
@@ -65,20 +73,23 @@ const BlogApp = {
             this.posts.sort((a, b) => new Date(b.date) - new Date(a.date));
             this.filteredPosts = [...this.posts];
 
-            // 缓存结果
+            // 缓存结果（含时间戳）
             try {
-                const cacheData = this.posts.map(p => ({
-                    id: p.id,
-                    filename: p.filename,
-                    title: p.title,
-                    date: p.date,
-                    tags: p.tags,
-                    author: p.author,
-                    excerpt: p.excerpt,
-                    image: p.image,
-                    wordCount: p.wordCount || 0,
-                    content: p.content || '',
-                }));
+                const cacheData = {
+                    t: Date.now(),
+                    posts: this.posts.map(p => ({
+                        id: p.id,
+                        filename: p.filename,
+                        title: p.title,
+                        date: p.date,
+                        tags: p.tags,
+                        author: p.author,
+                        excerpt: p.excerpt,
+                        image: p.image,
+                        wordCount: p.wordCount || 0,
+                        content: p.content || '',
+                    }))
+                };
                 sessionStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
             } catch (e) {
                 console.warn('文章缓存失败（不影响使用）:', e);
