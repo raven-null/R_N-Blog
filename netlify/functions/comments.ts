@@ -25,7 +25,7 @@ function safeText(value: unknown, max: number): string {
  * GET  ?postId=xxx            获取某篇文章的留言
  * GET  ?list=1                全站留言汇总（管理用）
  * GET  ?diag=1                存储环境诊断
- * POST  { postId, name, email?, site?, content }   提交留言
+ * POST  { postId, name, content }   提交留言
  * DELETE ?postId=xxx&id=yyy   删除留言（需 X-Admin-Key）
  */
 export default async (req: Request, context: any) => {
@@ -86,8 +86,6 @@ export default async (req: Request, context: any) => {
 
     const postId = safeText(body.postId, 200)
     const name = safeText(body.name, MAX_NAME)
-    const email = safeText(body.email, 200)
-    const site = safeText(body.site, 200)
     const content = safeText(body.content, MAX_CONTENT)
     // 图片为 /api/image?key=... 链接，仅接受以 /api/image 开头或同源相对路径
     let image = typeof body.image === "string" ? sanitize(body.image).slice(0, 300) : ""
@@ -113,8 +111,6 @@ export default async (req: Request, context: any) => {
       id: randomUUID(),
       postId,
       name,
-      email,
-      site,
       content,
       image: image || undefined,
       createdAt: Date.now(),

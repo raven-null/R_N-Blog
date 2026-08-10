@@ -53,7 +53,6 @@ export interface Comment {
   id: string
   postId: string
   name: string
-  email?: string
   site?: string
   content: string
   image?: string

@@ -7,7 +7,7 @@
     <link rel="icon" href="/images/TX/01_TX.webp" type="image/webp">
     
     <!-- 主样式 -->
-    <link rel="stylesheet" href="css/style.css?v=2.9.1">
+    <link rel="stylesheet" href="css/style.css?v=2.9.3">
     
     <!-- Marked.js -->
     <script src="js/vendor/marked.min.js"></script>
@@ -1625,7 +1625,6 @@
                 <form class="comment-form" id="comment-form">
                     <div class="comment-form-row">
                         <input type="text" id="comment-name" placeholder="昵称 *" maxlength="32" required>
-                        <input type="text" id="comment-email" placeholder="邮箱（可选，不会被公开）" maxlength="200">
                     </div>
                     <div class="comment-form-main">
                         <textarea id="comment-content" placeholder="写下你的留言... *（支持纯文本，最长 5000 字）" maxlength="5000" required></textarea>
@@ -1660,11 +1659,11 @@
     </div>
 
     <!-- JavaScript -->
-    <script src="js/theme.js?v=2.9.1"></script>
-    <script src="js/markdown.js?v=2.9.1"></script>
-    <script src="js/chat.js?v=2.9.1"></script>
-    <script src="js/reader.js?v=2.9.1"></script>
-    <script src="js/animations.js?v=2.9.1"></script>
+    <script src="js/theme.js?v=2.9.3"></script>
+    <script src="js/markdown.js?v=2.9.3"></script>
+    <script src="js/chat.js?v=2.9.3"></script>
+    <script src="js/reader.js?v=2.9.3"></script>
+    <script src="js/animations.js?v=2.9.3"></script>
 
     <script>
         // 文章详情页应用
@@ -2379,12 +2378,10 @@
             async submitComment(e) {
                 e.preventDefault();
                 const nameInput = document.getElementById('comment-name');
-                const emailInput = document.getElementById('comment-email');
                 const contentInput = document.getElementById('comment-content');
                 const submitBtn = document.getElementById('comment-submit');
                 const tip = document.getElementById('comment-tip');
                 const name = (nameInput.value || '').trim();
-                const email = (emailInput.value || '').trim();
                 const content = (contentInput.value || '').trim();
                 if (!name || !content) return;
 
@@ -2400,14 +2397,13 @@
                     const res = await fetch(`${this.apiBase}/api/comments`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ postId: this.postId, name, email, content, image: imageUrl || undefined })
+                        body: JSON.stringify({ postId: this.postId, name, content, image: imageUrl || undefined })
                     });
                     const data = await res.json().catch(() => ({}));
                     if (!res.ok || !data || data.status !== 'success') {
                         throw new Error((data && data.message) || '提交失败');
                     }
                     nameInput.value = '';
-                    emailInput.value = '';
                     contentInput.value = '';
                     this.clearCommentImage();
                     if (tip) tip.textContent = '✓ 留言成功';

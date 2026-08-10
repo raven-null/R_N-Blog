@@ -693,12 +693,10 @@ const BlogApp = {
     async submitComment(e) {
         e.preventDefault();
         const nameInput = document.getElementById('comment-name');
-        const emailInput = document.getElementById('comment-email');
         const contentInput = document.getElementById('comment-content');
         const submitBtn = document.getElementById('comment-submit');
         const tip = document.getElementById('comment-tip');
         const name = (nameInput.value || '').trim();
-        const email = (emailInput.value || '').trim();
         const content = (contentInput.value || '').trim();
         if (!name || !content) return;
 
@@ -714,14 +712,13 @@ const BlogApp = {
             const res = await fetch(`${this.config.apiBase}/api/comments`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ postId: this.commentPostId, name, email, content, image: imageUrl || undefined })
+                body: JSON.stringify({ postId: this.commentPostId, name, content, image: imageUrl || undefined })
             });
             const data = await res.json().catch(() => ({}));
             if (!res.ok || !data || data.status !== 'success') {
                 throw new Error((data && data.message) || '提交失败');
             }
             nameInput.value = '';
-            emailInput.value = '';
             contentInput.value = '';
             this.clearCommentImage();
             if (tip) tip.textContent = '✓ 留言成功';
