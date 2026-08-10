@@ -438,7 +438,7 @@
 
         // ===== 文章 =====
         async function loadArticles(){const r=await apiFetch('action=articles');if(r.status==='success'){articles=r.data||[];renderArticleList()}}
-        function renderArticleList(){const t=document.getElementById('articleList');if(!articles.length){t.innerHTML='<tr><td colspan="5" class="empty">暂无文章</td></tr>';return}t.innerHTML=articles.map(a=>`<tr><td><strong>${esc(a.title)}</strong><br><small style="color:var(--text-muted);font-size:10px">${a.id}</small></td><td>${(a.tags||[]).map(t=>`<span class="tag">${esc(t)}</span>`).join('')}</td><td><span class="status-${a.status==='published'?'on':'off'}">${a.status==='published'?'● 已发布':'○ 草稿'}</span></td><td style="font-size:11px;color:var(--text-muted)">${a.date}${a.update?'<br>↑ '+a.update:''}</td><td><div class="row-actions"><button class="btn btn-ghost btn-sm" onclick="editArticle('${a.id}')">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteArticle('${a.id}','${esc(a.title)}')">删除</button></div></td></tr>`).join('')}
+        function renderArticleList(){const t=document.getElementById('articleList');if(!articles.length){t.innerHTML='<tr><td colspan="5" class="empty">暂无文章</td></tr>';return}t.innerHTML=articles.map(a=>`<tr><td><strong>${esc(a.title)}</strong><br><small style="color:var(--text-muted);font-size:10px">${esc(a.id)}</small></td><td>${(a.tags||[]).map(t=>`<span class="tag">${esc(t)}</span>`).join('')}</td><td><span class="status-${a.status==='published'?'on':'off'}">${a.status==='published'?'● 已发布':'○ 草稿'}</span></td><td style="font-size:11px;color:var(--text-muted)">${a.date}${a.update?'<br>↑ '+a.update:''}</td><td><div class="row-actions"><button class="btn btn-ghost btn-sm" onclick="editArticle('${escJs(a.id)}')">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteArticle('${escJs(a.id)}','${escJs(a.title)}')">删除</button></div></td></tr>`).join('')}
         async function deleteArticle(id,title){if(!confirm(`确定删除「${title}」？`))return;const r=await apiFetch(`action=articles&id=${id}`,{method:'DELETE'});if(r.status==='success'){showToast('已删除','success');loadArticles()}else showToast(r.message||'删除失败','error')}
         function editArticle(id){editingId=id;switchTab('write');document.getElementById('writeTitle').textContent='编辑文章';loadArticleForEdit(id)}
         async function loadArticleForEdit(id){const r=await apiFetch(`action=articles&id=${id}`);if(r.status==='success'){const d=r.data;document.getElementById('edTitle').value=d.title||'';selectedArticleTags=[...(d.tags||[])];renderTagPickerChips();document.getElementById('edStatus').value=d.status||'published';document.getElementById('edContent').value=d.content||'';updatePreview()}}
@@ -645,7 +645,7 @@
         function renderTagSel(){
             const sel=document.getElementById('classifyTagSel');
             if(!imageTagNames.length){sel.innerHTML='<span style="color:var(--text-muted);font-size:12px">暂无图片标签，请先在标签管理中添加</span>';return}
-            sel.innerHTML=imageTagNames.map(t=>`<button class="${classifyTag===t.name?'active':''}" onclick="selectTag('${t.name}')">${t.name}<span style="font-size:10px;opacity:.7;margin-left:4px">(${t.count})</span></button>`).join('');
+            sel.innerHTML=imageTagNames.map(t=>`<button class="${classifyTag===t.name?'active':''}" onclick="selectTag('${escJs(t.name)}')">${esc(t.name)}<span style="font-size:10px;opacity:.7;margin-left:4px">(${t.count})</span></button>`).join('');
         }
 
         function selectTag(tag){classifyTag=tag;renderTagSel();renderPanels()}
@@ -726,8 +726,9 @@
 
         function classifyCardHtml(img, showCheckbox=false){
             const checked = selectedImageKeys.has(img.key) ? 'checked' : '';
-            const checkbox = (showCheckbox && batchMode) ? `<input type="checkbox" class="img-checkbox" ${checked} onclick="event.stopPropagation();toggleImageSelect('${img.key}')" style="position:absolute;top:4px;left:4px;z-index:2">` : '';
-            return `<div class="classify-card${selectedImageKeys.has(img.key) && batchMode ? ' selected' : ''}" draggable="true" data-key="${img.key}" ondragstart="dragStart(event,'${img.key}')">${checkbox}<img src="${img.url}" loading="lazy" onclick="event.stopPropagation();openAdminLightbox('${img.key}')"><div class="cc-bottom"><span class="cc-name" title="${img.key}">${img.key}</span><button class="cc-del" onclick="event.stopPropagation();deleteImage('${img.key}')" title="删除">&times;</button></div></div>`;
+            const k = escJs(img.key);
+            const checkbox = (showCheckbox && batchMode) ? `<input type="checkbox" class="img-checkbox" ${checked} onclick="event.stopPropagation();toggleImageSelect('${k}')" style="position:absolute;top:4px;left:4px;z-index:2">` : '';
+            return `<div class="classify-card${selectedImageKeys.has(img.key) && batchMode ? ' selected' : ''}" draggable="true" data-key="${img.key.replace(/"/g,'&quot;')}" ondragstart="dragStart(event,'${k}')">${checkbox}<img src="${img.url}" loading="lazy" onclick="event.stopPropagation();openAdminLightbox('${k}')"><div class="cc-bottom"><span class="cc-name" title="${img.key.replace(/"/g,'&quot;')}">${esc(img.key)}</span><button class="cc-del" onclick="event.stopPropagation();deleteImage('${k}')" title="删除">&times;</button></div></div>`;
         }
 
         function dragStart(e,key){e.dataTransfer.setData('text/key',key);e.target.classList.add('dragging');e.target.addEventListener('dragend',()=>e.target.classList.remove('dragging'),{once:true})}
@@ -1074,7 +1075,7 @@
         });
 
         // ===== 标签弹窗 =====
-        function openTagModal(key,tags){tagModalKey=key;tagModalSelected=[...tags];const o=document.getElementById('tagModalOptions');o.innerHTML=imageTagNames.map(t=>`<span class="tag-opt ${tagModalSelected.includes(t.name)?'selected':''}" onclick="toggleTagOpt(this,'${t.name}')">${t.name}</span>`).join('');document.getElementById('customTagInput').value='';document.getElementById('tagModal').classList.add('open')}
+        function openTagModal(key,tags){tagModalKey=key;tagModalSelected=[...tags];const o=document.getElementById('tagModalOptions');o.innerHTML=imageTagNames.map(t=>`<span class="tag-opt ${tagModalSelected.includes(t.name)?'selected':''}" onclick="toggleTagOpt(this,'${escJs(t.name)}')">${esc(t.name)}</span>`).join('');document.getElementById('customTagInput').value='';document.getElementById('tagModal').classList.add('open')}
         function closeTagModal(){document.getElementById('tagModal').classList.remove('open')}
         function toggleTagOpt(el,tag){if(tagModalSelected.includes(tag)){tagModalSelected=tagModalSelected.filter(t=>t!==tag);el.classList.remove('selected')}else{tagModalSelected.push(tag);el.classList.add('selected')}}
         function addCustomTag(){const input=document.getElementById('customTagInput'),tag=input.value.trim();if(!tag||tagModalSelected.includes(tag))return;tagModalSelected.push(tag);const o=document.getElementById('tagModalOptions'),s=document.createElement('span');s.className='tag-opt selected';s.textContent=tag;s.onclick=()=>toggleTagOpt(s,tag);o.appendChild(s);input.value=''}
@@ -1089,7 +1090,7 @@
             renderImagePicker();
         }
         function closeImagePicker(){document.getElementById('imagePickerPanel').classList.remove('open')}
-        function renderImagePicker(){const l=document.getElementById('imagePickerList');if(!cachedImages.length){l.innerHTML='<div class="empty" style="padding:32px">暂无图片</div>';return}l.innerHTML=cachedImages.map(img=>`<div class="image-picker-item" onclick="insertFromPicker('${img.url}')"><img src="${img.url}" loading="lazy"><span class="name">${img.key}</span></div>`).join('')}
+        function renderImagePicker(){const l=document.getElementById('imagePickerList');if(!cachedImages.length){l.innerHTML='<div class="empty" style="padding:32px">暂无图片</div>';return}l.innerHTML=cachedImages.map(img=>`<div class="image-picker-item" onclick="insertFromPicker('${escJs(img.url)}')"><img src="${img.url}" loading="lazy"><span class="name">${esc(img.key)}</span></div>`).join('')}
         function insertFromPicker(url){insertAtCursor(`![图片](${url})`);closeImagePicker();showToast('已插入','success')}
         async function uploadAndInsert(files){for(const f of files){const url=await uploadImageAndGetUrl(f);if(url)insertAtCursor(`![${f.name}](${url})`)}cachedImages=[];openImagePicker()}
 
@@ -1110,7 +1111,7 @@
             selectedArticleTags.forEach(tag=>{
                 const chip=document.createElement('span');
                 chip.className='tp-chip';
-                chip.innerHTML=`${esc(tag)}<button onclick="removeArticleTag('${esc(tag)}')">&times;</button>`;
+                chip.innerHTML=`${esc(tag)}<button onclick="removeArticleTag('${escJs(tag)}')">&times;</button>`;
                 wrap.insertBefore(chip,input);
             });
         }
@@ -1159,7 +1160,7 @@
             const input=document.getElementById('tagPickerText').value.toLowerCase();
             const filtered=articleTagNames.filter(t=>!selectedArticleTags.includes(t)&&(!input||t.toLowerCase().includes(input)));
             if(!filtered.length){dd.innerHTML='<div style="padding:10px 12px;font-size:12px;color:var(--text-muted)">无匹配标签，回车添加新标签</div>';return}
-            dd.innerHTML=filtered.map(t=>`<div class="tp-item" onclick="addArticleTag('${esc(t)}')">${esc(t)}</div>`).join('');
+            dd.innerHTML=filtered.map(t=>`<div class="tp-item" onclick="addArticleTag('${escJs(t)}')">${esc(t)}</div>`).join('');
         }
 
         function filterTagDropdown(){if(tagPickerOpen)renderTagDropdown()}
@@ -1225,8 +1226,8 @@
                         <div class="tc-counts"><span>${currentTagsView==='article'?'📄':'🖼'} ${t.count} 个${typeLabel}</span></div>
                     </div>
                     <div class="tc-actions">
-                        <button class="btn btn-ghost btn-sm" onclick="openRenameModal('${esc(t.name)}','${currentTagsView}')">重命名</button>
-                        <button class="btn btn-danger btn-sm" onclick="deleteTag('${esc(t.name)}',${t.count},'${currentTagsView}')">删除</button>
+                        <button class="btn btn-ghost btn-sm" onclick="openRenameModal('${escJs(t.name)}','${currentTagsView}')">重命名</button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteTag('${escJs(t.name)}',${t.count},'${currentTagsView}')">删除</button>
                     </div>
                 </div>
             `).join('');
@@ -1285,6 +1286,8 @@
         }
 
         function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+        // 用于内联事件参数中的 JS 字符串转义（转义单引号）
+        function escJs(s){return String(s||'').replace(/'/g,"\\'").replace(/\\/g,"\\\\").replace(/"/g,'&quot;')}
         function showToast(msg,type){const t=document.getElementById('toast');t.textContent=msg;t.className=`toast toast-${type}`;t.style.display='block';setTimeout(()=>t.style.display='none',2500)}
         (function(){if(adminKey)apiFetch('action=login',{method:'POST',body:JSON.stringify({key:adminKey})}).then(r=>{if(r.status==='success')showAdmin();else doLogout()}).catch(()=>doLogout())})();
     </script>

@@ -196,7 +196,7 @@ export default async (req: Request) => {
 
   if (path === "images") {
     const store = getBlobStore(IMAGE_STORE)
-    const tagStore = getBlobStore("blog-image-tags")
+    const tagStore = getBlobStore("blog-image-tags", "strong")
 
     // 获取图片标签索引
     async function getImageTagIndex(): Promise<Record<string, string[]>> {
@@ -343,9 +343,9 @@ export default async (req: Request) => {
 
   if (path === "tags") {
     const imageStore = getBlobStore(IMAGE_STORE)
-    const tagStore = getBlobStore("blog-image-tags")
-    const articleStore = getBlobStore(ARTICLE_STORE)
-    const registryStore = getBlobStore("blog-tag-registry")
+    const tagStore = getBlobStore("blog-image-tags", "strong")
+    const articleStore = getBlobStore(ARTICLE_STORE, "strong")
+    const registryStore = getBlobStore("blog-tag-registry", "strong")
 
     async function getImageTagIndex(): Promise<Record<string, string[]>> {
       const raw = await tagStore.get("index", { type: "text" })
