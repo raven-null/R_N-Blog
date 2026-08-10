@@ -94,10 +94,19 @@
         .write-settings-row > input:focus{outline:none;border-color:var(--border)}
         .write-settings-row select{padding:9px 12px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:13px;cursor:pointer}
         .write-settings-row select:focus{outline:none;border-color:var(--border)}
-        .write-cover{display:flex;gap:12px;align-items:center;margin-top:2px}
-        .write-cover-preview{width:120px;height:68px;border-radius:var(--radius-sm);border:1px dashed var(--border);display:flex;align-items:center;justify-content:center;overflow:hidden;background:var(--bg-input);color:var(--text-muted);font-size:12px;flex-shrink:0}
+        .write-cover{display:flex;gap:14px;align-items:flex-start;margin-top:2px}
+        .write-cover-preview{width:120px;height:68px;border-radius:var(--radius-sm);border:1px dashed var(--border);display:flex;align-items:center;justify-content:center;overflow:hidden;background:var(--bg-input);color:var(--text-muted);font-size:12px;flex-shrink:0;margin-top:4px}
         .write-cover-preview img{width:100%;height:100%;object-fit:cover}
-        .write-cover-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+        .write-cover-actions{display:flex;flex-direction:column;gap:6px;align-items:stretch;flex-shrink:0}
+        .write-cover-actions .cover-btn{padding:6px 12px;font-size:11px;white-space:nowrap}
+        .write-article-images{flex:1;min-width:180px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;display:flex;flex-direction:column;gap:8px;max-height:150px;overflow:hidden}
+        .write-article-images-title{font-size:12px;color:var(--text-muted);font-weight:500;flex-shrink:0}
+        .write-article-images-list{display:flex;flex-wrap:wrap;gap:8px;overflow-y:auto;min-height:40px;align-content:flex-start}
+        .write-article-images-empty{font-size:11px;color:var(--text-muted)}
+        .write-article-img-item{position:relative;width:52px;height:52px;border-radius:var(--radius-sm);overflow:hidden;border:1px solid var(--border);flex-shrink:0}
+        .write-article-img-item img{width:100%;height:100%;object-fit:cover;display:block}
+        .write-article-img-item .del{position:absolute;top:0;right:0;width:16px;height:16px;background:rgba(0,0,0,.7);border:none;color:var(--danger);cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;border-radius:0 0 0 4px;opacity:0;transition:opacity .1s}
+        .write-article-img-item:hover .del{opacity:1}
 
         .editor-toolbar{display:flex;justify-content:space-between;gap:8px;padding:6px 10px;background:var(--bg-card);border:1px solid var(--border);border-bottom:none;border-radius:var(--radius-sm) var(--radius-sm) 0 0;flex-wrap:wrap;align-items:center}
         .editor-toolbar-group{display:flex;gap:1px;flex-wrap:wrap;align-items:center}
@@ -330,17 +339,23 @@
                                 <option value="draft">📝 草稿</option>
                             </select>
                         </div>
-                        <!-- 封面图设置 -->
+                        <!-- 封面图 + 文中图片 -->
                         <div class="write-cover">
                             <div class="write-cover-preview" id="coverPreview">
                                 <img id="coverPreviewImg" alt="封面预览" style="display:none">
                                 <span id="coverPlaceholder">📷 封面图</span>
                             </div>
                             <div class="write-cover-actions">
-                                <label class="btn btn-ghost btn-sm" style="cursor:pointer">⬆ 上传封面<input type="file" accept="image/*" style="display:none" onchange="setCoverImage(this.files[0])"></label>
-                                <button class="btn btn-ghost btn-sm" onclick="pickCoverFromGallery()">🖼 从图库选</button>
-                                <button class="btn btn-ghost btn-sm" onclick="clearCoverImage()" id="coverClearBtn" style="display:none">✕ 移除</button>
+                                <label class="btn btn-ghost btn-sm cover-btn" style="cursor:pointer">⬆ 上传封面<input type="file" accept="image/*" style="display:none" onchange="setCoverImage(this.files[0])"></label>
+                                <button class="btn btn-ghost btn-sm cover-btn" onclick="pickCoverFromGallery()">🖼 从图库选</button>
+                                <button class="btn btn-ghost btn-sm cover-btn" onclick="clearCoverImage()" id="coverClearBtn" style="display:none">✕ 移除封面</button>
                                 <input type="hidden" id="edImage" value="">
+                            </div>
+                            <div class="write-article-images">
+                                <div class="write-article-images-title">📎 文中图片 <span id="articleImgCount">0</span></div>
+                                <div class="write-article-images-list" id="articleImagesList">
+                                    <span class="write-article-images-empty">暂无图片，上传或从图库插入后显示</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -542,6 +557,7 @@
         let batchMode=false;
         let batchSide=''; // 'left' 或 'right'
         let uploadLog=[]; // 上传记录
+        let articleImages=[]; // 文中图片列表 {key, url}
 
         function doLogin(){const k=document.getElementById('adminKeyInput').value.trim();if(!k)return;adminKey=k;localStorage.setItem('admin_key',k);apiFetch('action=login',{method:'POST',body:JSON.stringify({key:k})}).then(r=>{if(r.status==='success')showAdmin();else{document.getElementById('loginError').style.display='block';document.getElementById('loginError').textContent=r.message||'密钥错误'}}).catch(()=>{document.getElementById('loginError').style.display='block';document.getElementById('loginError').textContent='连接失败'})}
         function doLogout(){adminKey='';localStorage.removeItem('admin_key');location.reload()}
@@ -554,19 +570,19 @@
         function renderArticleList(){const t=document.getElementById('articleList');if(!articles.length){t.innerHTML='<tr><td colspan="5" class="empty">暂无文章</td></tr>';return}t.innerHTML=articles.map(a=>`<tr><td><strong>${esc(a.title)}</strong><br><small style="color:var(--text-muted);font-size:10px">${esc(a.id)}</small></td><td>${(a.tags||[]).map(t=>`<span class="tag">${esc(t)}</span>`).join('')}</td><td><span class="status-${a.status==='published'?'on':'off'}">${a.status==='published'?'● 已发布':'○ 草稿'}</span></td><td style="font-size:11px;color:var(--text-muted)">${a.date}${a.update?'<br>↑ '+a.update:''}</td><td><div class="row-actions"><button class="btn btn-ghost btn-sm" onclick="editArticle('${escJs(a.id)}')">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteArticle('${escJs(a.id)}','${escJs(a.title)}')">删除</button></div></td></tr>`).join('')}
         async function deleteArticle(id,title){if(!confirm(`确定删除「${title}」？`))return;const r=await apiFetch(`action=articles&id=${id}`,{method:'DELETE'});if(r.status==='success'){showToast('已删除','success');loadArticles()}else showToast(r.message||'删除失败','error')}
         function editArticle(id){editingId=id;switchTab('write');document.getElementById('writeTitle').textContent='编辑文章';loadArticleForEdit(id)}
-        async function loadArticleForEdit(id){const r=await apiFetch(`action=articles&id=${id}`);if(r.status==='success'){const d=r.data;document.getElementById('edTitle').value=d.title||'';document.getElementById('edExcerpt').value=d.excerpt||'';document.getElementById('edImage').value=d.image||'';renderCoverPreview();selectedArticleTags=[...(d.tags||[])];renderTagPickerChips();document.getElementById('edStatus').value=d.status||'published';document.getElementById('edContent').value=d.content||'';updatePreview()}}
-        function importAndEdit(f){if(!f)return;const r=new FileReader();r.onload=()=>{const raw=r.result,m=raw.match(/^---\s*\n([\s\S]*?)\n---\s*\n([\s\S]*)$/);let title=f.name.replace(/\.md$/),excerpt='',tags=[],content=raw,image='';if(m){const fm=m[1],t=fm.match(/title:\s*(.+)/);if(t)title=t[1].trim();const tg=fm.match(/tags:\s*\[([^\]]+)\]/);if(tg)tags=tg[1].split(',').map(s=>s.trim());const ex=fm.match(/excerpt:\s*(.+)/);if(ex)excerpt=ex[1].trim();const im=fm.match(/image:\s*(.+)/);if(im)image=im[1].trim();content=m[2]}editingId=null;switchTab('write');document.getElementById('writeTitle').textContent='导入文章';document.getElementById('edTitle').value=title;document.getElementById('edExcerpt').value=excerpt;document.getElementById('edImage').value=image;renderCoverPreview();selectedArticleTags=tags;renderTagPickerChips();document.getElementById('edContent').value=content;updatePreview();showToast(`已导入: ${f.name}`,'success')};r.readAsText(f)}
+        async function loadArticleForEdit(id){const r=await apiFetch(`action=articles&id=${id}`);if(r.status==='success'){const d=r.data;document.getElementById('edTitle').value=d.title||'';document.getElementById('edExcerpt').value=d.excerpt||'';document.getElementById('edImage').value=d.image||'';renderCoverPreview();selectedArticleTags=[...(d.tags||[])];renderTagPickerChips();document.getElementById('edStatus').value=d.status||'published';document.getElementById('edContent').value=d.content||'';scanArticleImagesFromContent(d.content||'');updatePreview()}}
+        function importAndEdit(f){if(!f)return;const r=new FileReader();r.onload=()=>{const raw=r.result,m=raw.match(/^---\s*\n([\s\S]*?)\n---\s*\n([\s\S]*)$/);let title=f.name.replace(/\.md$/),excerpt='',tags=[],content=raw,image='';if(m){const fm=m[1],t=fm.match(/title:\s*(.+)/);if(t)title=t[1].trim();const tg=fm.match(/tags:\s*\[([^\]]+)\]/);if(tg)tags=tg[1].split(',').map(s=>s.trim());const ex=fm.match(/excerpt:\s*(.+)/);if(ex)excerpt=ex[1].trim();const im=fm.match(/image:\s*(.+)/);if(im)image=im[1].trim();content=m[2]}editingId=null;switchTab('write');document.getElementById('writeTitle').textContent='导入文章';document.getElementById('edTitle').value=title;document.getElementById('edExcerpt').value=excerpt;document.getElementById('edImage').value=image;renderCoverPreview();selectedArticleTags=tags;renderTagPickerChips();document.getElementById('edContent').value=content;scanArticleImagesFromContent(content);updatePreview();showToast(`已导入: ${f.name}`,'success')};r.readAsText(f)}
 
         // ===== 写文章 =====
-        function resetEditor(){editingId=null;document.getElementById('writeTitle').textContent='写文章';document.getElementById('edTitle').value='';document.getElementById('edExcerpt').value='';document.getElementById('edImage').value='';renderCoverPreview();selectedArticleTags=[];renderTagPickerChips();document.getElementById('edStatus').value='published';document.getElementById('edContent').value='';updatePreview();document.getElementById('editorInfo').textContent='0 字'}
+        function resetEditor(){editingId=null;document.getElementById('writeTitle').textContent='写文章';document.getElementById('edTitle').value='';document.getElementById('edExcerpt').value='';document.getElementById('edImage').value='';renderCoverPreview();selectedArticleTags=[];renderTagPickerChips();document.getElementById('edStatus').value='published';document.getElementById('edContent').value='';resetArticleImages();updatePreview();document.getElementById('editorInfo').textContent='0 字'}
         async function saveArticle(){const title=document.getElementById('edTitle').value.trim(),excerpt=document.getElementById('edExcerpt').value.trim(),tags=selectedArticleTags.join(', '),status=document.getElementById('edStatus').value,content=document.getElementById('edContent').value,image=document.getElementById('edImage').value.trim();if(!title){showToast('请填写文章标题','error');return}if(!content){showToast('请填写文章内容','error');return}const body={title,excerpt,tags,content,status,image};if(editingId)body.id=editingId;const r=await apiFetch('action=articles',{method:'POST',body:JSON.stringify(body)});if(r.status==='success'){showToast('保存成功','success');resetEditor();switchTab('articles')}else showToast(r.message||'保存失败','error')}
         function mdInsert(t){const ta=document.getElementById('edContent'),s=ta.selectionStart,e=ta.selectionEnd,sel=ta.value.slice(s,e),b=ta.value.slice(0,s),a=ta.value.slice(e);const m={heading:{b:'## ',a:'',d:'标题'},h3:{b:'### ',a:'',d:'小标题'},bold:{b:'**',a:'**',d:'加粗文字'},italic:{b:'*',a:'*',d:'斜体文字'},strike:{b:'~~',a:'~~',d:'删除线'},code:{b:'`',a:'`',d:'code'},codeblock:{b:'```\n',a:'\n```',d:'// 代码'},quote:{b:'> ',a:'',d:'引用内容'},list:{b:'- ',a:'',d:'列表项'},olist:{b:'1. ',a:'',d:'列表项'},link:{b:'[',a:'](https://)',d:'链接文字'},image:{b:'![',a:'](url)',d:'图片描述'},table:{b:'| 列1 | 列2 |\n| --- | --- |\n',a:'',d:'| 内容 | 内容 |'},hr:{b:'\n---\n',a:'',d:''}};const i=m[t];if(!i)return;const tx=sel||i.d;ta.value=b+i.b+tx+i.a+a;ta.focus();ta.selectionStart=s+i.b.length;ta.selectionEnd=s+i.b.length+tx.length;updatePreview()}
         function updatePreview(){const md=document.getElementById('edContent').value;const preview=document.getElementById('edPreview');if(!md.trim()){preview.innerHTML='<div class="preview-empty">👈 左侧开始写作，这里实时预览</div>';}else{preview.innerHTML=(typeof MarkdownParser!=='undefined'&&typeof marked!=='undefined')?MarkdownParser.parseMarkdown(md):renderMd(md);}document.getElementById('editorInfo').textContent=md.length+' 字'}
         function renderMd(t){return'<p>'+t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/^### (.*$)/gm,'<h3>$1</h3>').replace(/^## (.*$)/gm,'<h2>$1</h2>').replace(/^# (.*$)/gm,'<h1>$1</h1>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\*(.*?)\*/g,'<em>$1</em>').replace(/~~(.*?)~~/g,'<del>$1</del>').replace(/`([^`]+)`/g,'<code>$1</code>').replace(/```(\w*)\n([\s\S]*?)```/g,'<pre><code>$2</code></pre>').replace(/\[([^\]]+)\]\(([^)]+)\)/g,'<a href="$2" target="_blank">$1</a>').replace(/!\[([^\]]*)\]\(([^)]+)\)/g,'<img src="$2" alt="$1">').replace(/^> (.*$)/gm,'<blockquote>$1</blockquote>').replace(/^- (.*$)/gm,'<li>$1</li>').replace(/^1\. (.*$)/gm,'<li>$1</li>').replace(/^---$/gm,'<hr>').replace(/\n\n/g,'</p><p>')+'</p>'}
         function handleDragOver(e){e.preventDefault();e.stopPropagation();document.getElementById('dropOverlay').classList.add('show')}
         function handleDragLeave(e){e.preventDefault();e.stopPropagation();document.getElementById('dropOverlay').classList.remove('show')}
-        async function handleDrop(e){e.preventDefault();e.stopPropagation();document.getElementById('dropOverlay').classList.remove('show');for(const f of[...e.dataTransfer.files].filter(f=>f.type.startsWith('image/'))){const url=await uploadImageAndGetUrl(f);if(url)insertAtCursor(`![${f.name}](${url})`)}}
-        document.addEventListener('paste',async e=>{if(document.activeElement!==document.getElementById('edContent'))return;for(const item of[...e.clipboardData.items]){if(item.type.startsWith('image/')){e.preventDefault();const url=await uploadImageAndGetUrl(item.getAsFile());if(url)insertAtCursor(`![图片](${url})`)}}});
+        async function handleDrop(e){e.preventDefault();e.stopPropagation();document.getElementById('dropOverlay').classList.remove('show');for(const f of[...e.dataTransfer.files].filter(f=>f.type.startsWith('image/'))){const url=await uploadImageAndGetUrl(f);if(url){insertAtCursor(`![${f.name}](${url})`);trackArticleImage(url)}}}
+        document.addEventListener('paste',async e=>{if(document.activeElement!==document.getElementById('edContent'))return;for(const item of[...e.clipboardData.items]){if(item.type.startsWith('image/')){e.preventDefault();const url=await uploadImageAndGetUrl(item.getAsFile());if(url){insertAtCursor(`![图片](${url})`);trackArticleImage(url)}}}});
         function insertAtCursor(t){const ta=document.getElementById('edContent'),p=ta.selectionStart;ta.value=ta.value.slice(0,p)+t+ta.value.slice(p);ta.focus();ta.selectionStart=ta.selectionEnd=p+t.length;updatePreview()}
 
         // ===== 图片上传 =====
@@ -726,8 +742,80 @@
         async function uploadAndInsertToEditor(files){
             for(const f of files){
                 const url=await uploadImageAndGetUrl(f);
-                if(url)insertAtCursor(`![${f.name.replace(/\.\w+$/,'')}](${url})`);
+                if(url){
+                    insertAtCursor(`![${f.name.replace(/\.\w+$/,'')}](${url})`);
+                    trackArticleImage(url);
+                }
             }
+        }
+
+        // ===== 文中图片管理 =====
+        // 从图片 URL 提取 key 并记录到文中图片列表
+        function trackArticleImage(url){
+            if(!url)return;
+            let key='';
+            try{
+                const u=new URL(url,window.location.href);
+                key=decodeURIComponent(u.searchParams.get('key')||'');
+            }catch(e){}
+            if(!key){
+                // 可能是完整 URL，尝试从末尾提取
+                const m=url.match(/key=([^&]+)/);
+                if(m)key=decodeURIComponent(m[1]);
+            }
+            if(!key)return;
+            // 去重
+            if(!articleImages.some(i=>i.key===key)){
+                articleImages.push({key,url});
+            }
+            renderArticleImages();
+        }
+        // 渲染文中图片列表
+        function renderArticleImages(){
+            const list=document.getElementById('articleImagesList');
+            const count=document.getElementById('articleImgCount');
+            if(!list)return;
+            if(count)count.textContent=articleImages.length;
+            if(!articleImages.length){
+                list.innerHTML='<span class="write-article-images-empty">暂无图片，上传或从图库插入后显示</span>';
+                return;
+            }
+            list.innerHTML=articleImages.map(img=>`
+                <div class="write-article-img-item" title="${esc(img.key)}">
+                    <img src="${img.url}" loading="lazy">
+                    <button class="del" onclick="deleteArticleImage('${escAttr(img.key)}')" title="删除图片">&times;</button>
+                </div>
+            `).join('');
+        }
+        // 删除文中图片（同步后端删除）
+        async function deleteArticleImage(key){
+            const confirmed=await showConfirm(`确定删除 ${key}？图片将同时从后端移除。`,'删除图片','删除');
+            if(!confirmed)return;
+            const r=await apiFetch(`action=images&key=${encodeURIComponent(key)}`,{method:'DELETE'});
+            if(r.status==='success'){
+                showToast('已删除','success');
+                articleImages=articleImages.filter(i=>i.key!==key);
+                renderArticleImages();
+            }else{
+                showToast(r.message||'删除失败','error');
+            }
+        }
+        // 重置文中图片列表
+        function resetArticleImages(){
+            articleImages=[];
+            renderArticleImages();
+        }
+        // 根据正文扫描图片（编辑已有文章时初始化）
+        function scanArticleImagesFromContent(content){
+            articleImages=[];
+            if(content){
+                const regex=/!\[[^\]]*\]\(([^)]+)\)/g;
+                let m;
+                while((m=regex.exec(content))){
+                    trackArticleImage(m[1]);
+                }
+            }
+            renderArticleImages();
         }
 
         // ===== 封面图设置 =====
@@ -1337,8 +1425,8 @@
                 showToast(r.message||'删除失败','error');
             }
         }
-        function insertFromPicker(url){insertAtCursor(`![图片](${url})`);closeImagePicker();showToast('已插入','success')}
-        async function uploadAndInsert(files){for(const f of files){const url=await uploadImageAndGetUrl(f);if(url)insertAtCursor(`![${f.name}](${url})`)}cachedImages=[];openImagePicker()}
+        function insertFromPicker(url){insertAtCursor(`![图片](${url})`);trackArticleImage(url);closeImagePicker();showToast('已插入','success')}
+        async function uploadAndInsert(files){for(const f of files){const url=await uploadImageAndGetUrl(f);if(url){insertAtCursor(`![${f.name}](${url})`);trackArticleImage(url)}}cachedImages=[];openImagePicker()}
 
         // ===== 标签选择器（写文章） =====
         async function loadArticleTagNames(){
