@@ -782,10 +782,8 @@
             const r=await apiFetch('action=tags');
             if(r.status!=='success')return;
             const all=r.data||[];
-            articleTagsData=all.filter(t=>t.articleCount>0).map(t=>({name:t.name,count:t.articleCount}));
-            imageTagsData=all.filter(t=>t.imageCount>0).map(t=>({name:t.name,count:t.imageCount}));
-            // 补充只有文章或只有图片的标签
-            const allNames=new Set(all.map(t=>t.name));
+            articleTagsData=all.map(t=>({name:t.name,count:t.articleCount}));
+            imageTagsData=all.map(t=>({name:t.name,count:t.imageCount}));
             renderTags();
         }
 
