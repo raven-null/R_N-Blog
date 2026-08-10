@@ -1714,13 +1714,28 @@
                 }
             },
 
-            // 加载 Blobs 后台文章
+            // 加载 Blobs 后台文章（内容为空时回退到静态文件）
             async loadBlobArticle(blobId, filename) {
                 try {
                     const res = await fetch(`/api/admin?action=articles&id=${blobId}`);
                     const data = await res.json();
                     if (data.status !== 'success' || !data.data) throw new Error('文章不存在');
                     const d = data.data;
+
+                    let content = d.content || '';
+
+                    // 内容为空时从静态文件加载
+                    if (!content && filename) {
+                        try {
+                            const staticRes = await fetch(`posts/${filename}`);
+                            if (staticRes.ok) {
+                                const raw = await staticRes.text();
+                                const parsed = MarkdownParser.parseFrontmatter(raw);
+                                content = parsed.content;
+                            }
+                        } catch {}
+                    }
+
                     this.currentPost = {
                         filename: filename,
                         title: d.title,
@@ -1728,7 +1743,7 @@
                         update: d.updatedAt,
                         tags: d.tags || [],
                         author: d.author || '渡鸦NULL',
-                        content: d.content,
+                        content: content,
                         frontmatter: {},
                     };
                     this.renderArticle();

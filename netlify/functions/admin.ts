@@ -97,29 +97,22 @@ export default async (req: Request) => {
     // POST: 创建或更新
     if (req.method === "POST") {
       const body = await req.json().catch(() => ({}))
-      const { id, title, tags, author, excerpt, image, content, status } = body
-      if (!title || !content) return badRequest("title 和 content 必填", req)
+      const { id, title, tags, author, excerpt, image, content, status, staticFile } = body
+      if (!title) return badRequest("title 必填", req)
 
       const articleId = id || randomUUID().slice(0, 8)
       const now = new Date().toISOString().slice(0, 10)
-      const wordCount = content.length
+      const wordCount = (content || "").length
 
       const tagsArr = Array.isArray(tags) ? tags : (tags || "").split(",").map((t: string) => t.trim()).filter(Boolean)
 
-      // 提取摘要
+      // 提取摘要（有内容时自动提取，否则用传入的 excerpt）
       const autoExcerpt = content
-        .replace(/#+\s+/g, "")
-        .replace(/\*\*(.*?)\*\*/g, "$1")
-        .replace(/\*(.*?)\*/g, "$1")
-        .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
-        .replace(/!\[([^\]]*)\]\([^)]+\)/g, "")
-        .replace(/`([^`]+)`/g, "$1")
-        .replace(/\n/g, " ")
-        .trim()
-        .slice(0, 150)
+        ? content.replace(/#+\s+/g, "").replace(/\*\*(.*?)\*\*/g, "$1").replace(/\*(.*?)\*/g, "$1").replace(/\[([^\]]+)\]\([^)]+\)/g, "$1").replace(/!\[([^\]]*)\]\([^)]+\)/g, "").replace(/`([^`]+)`/g, "$1").replace(/\n/g, " ").trim().slice(0, 150)
+        : ""
 
       // 生成文件名
-      const filename = `${articleId}.md`
+      const filename = staticFile || `${articleId}.md`
 
       const articleData = {
         id: articleId,
