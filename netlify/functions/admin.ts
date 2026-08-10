@@ -325,9 +325,11 @@ export default async (req: Request) => {
       // 从注册表初始化（确保空标签也出现）
       for (const tag of registry.article) {
         if (!tagMap[tag]) tagMap[tag] = { imageCount: 0, articleCount: 0 }
+        tagMap[tag].articleCount = tagMap[tag].articleCount // 保持为0，后面会统计
       }
       for (const tag of registry.image) {
         if (!tagMap[tag]) tagMap[tag] = { imageCount: 0, articleCount: 0 }
+        tagMap[tag].imageCount = tagMap[tag].imageCount // 保持为0，后面会统计
       }
 
       // 统计图片实际使用
@@ -351,6 +353,9 @@ export default async (req: Request) => {
         imageCount: counts.imageCount,
         articleCount: counts.articleCount,
         total: counts.imageCount + counts.articleCount,
+        // 标记标签属于哪个注册表
+        inArticleRegistry: registry.article.includes(name),
+        inImageRegistry: registry.image.includes(name),
       })).sort((a, b) => b.total - a.total)
 
       return json(200, { status: "success", data: result }, req)

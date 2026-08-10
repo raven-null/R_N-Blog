@@ -782,8 +782,9 @@
             const r=await apiFetch('action=tags');
             if(r.status!=='success')return;
             const all=r.data||[];
-            articleTagsData=all.map(t=>({name:t.name,count:t.articleCount}));
-            imageTagsData=all.map(t=>({name:t.name,count:t.imageCount}));
+            // 根据注册表分离文章标签和图片标签
+            articleTagsData=all.filter(t=>t.inArticleRegistry).map(t=>({name:t.name,count:t.articleCount}));
+            imageTagsData=all.filter(t=>t.inImageRegistry).map(t=>({name:t.name,count:t.imageCount}));
             renderTags();
         }
 
@@ -824,10 +825,9 @@
             // 调用 API 保存到注册表
             const r=await apiFetch('action=tags',{method:'POST',body:JSON.stringify({name,type:currentTagsView})});
             if(r.status==='success'){
-                data.unshift({name,count:0});
-                renderTags();
                 input.value='';
                 showToast(`${currentTagsView==='article'?'文章':'图片'}标签「${name}」已添加`,'success');
+                await loadTags(); // 重新加载标签数据
             }else showToast(r.message||'添加失败','error');
         }
 
