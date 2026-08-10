@@ -127,13 +127,13 @@ export async function deleteComment(postId: string, commentId: string) {
 }
 
 /**
- * 全站留言列表（用于管理页）：遍历所有 post 前缀键
+ * 全站留言列表（用于管理页）：遍历所有 post 前缀键，返回完整评论
  */
-export async function listAllComments(): Promise<{ postId: string; count: number; latest: any }[]> {
+export async function listAllComments(): Promise<{ postId: string; count: number; comments: any[] }[]> {
   try {
     const store = getBlobStore(COMMENT_STORE, "strong")
     const list = await store.list({ prefix: "post:" })
-    const result: { postId: string; count: number; latest: any }[] = []
+    const result: { postId: string; count: number; comments: any[] }[] = []
     for (const item of list.blobs) {
       const raw = await store.get(item.key, { type: "text" })
       const arr = raw ? (JSON.parse(raw) as any[]) : []
@@ -141,7 +141,7 @@ export async function listAllComments(): Promise<{ postId: string; count: number
         result.push({
           postId: item.key.slice("post:".length),
           count: arr.length,
-          latest: arr[arr.length - 1],
+          comments: arr,
         })
       }
     }

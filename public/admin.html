@@ -266,6 +266,33 @@
         .tags-add input{flex:1;padding:9px 14px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:13px}
         .tags-add input:focus{outline:none;border-color:var(--accent)}
 
+        /* 评论管理 */
+        .comment-manage-stats{display:flex;gap:16px;margin-bottom:16px}
+        .comment-stats-card{flex:1;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;text-align:center}
+        .comment-stats-card .num{font-size:24px;font-weight:700;color:var(--accent)}
+        .comment-stats-card .label{font-size:11px;color:var(--text-muted);margin-top:4px}
+        .comment-manage-list{display:flex;flex-direction:column;gap:10px}
+        .comment-manage-item{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px}
+        .comment-manage-item:hover{border-color:var(--border-light)}
+        .comment-manage-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:10px;flex-wrap:wrap}
+        .comment-manage-name{font-weight:600;font-size:13px;color:var(--text);display:flex;align-items:center;gap:8px}
+        .comment-manage-post{font-size:11px;color:var(--text-muted);background:var(--bg-input);padding:2px 8px;border-radius:4px}
+        .comment-manage-time{font-size:11px;color:var(--text-muted)}
+        .comment-manage-content{font-size:13px;color:var(--text-secondary,#aaa);line-height:1.6;margin-bottom:8px;word-break:break-word}
+        .comment-manage-actions{display:flex;justify-content:flex-end;gap:6px}
+
+        /* 博客设置 */
+        .settings-panel{display:flex;flex-direction:column;gap:20px;max-width:640px}
+        .settings-group{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:18px}
+        .settings-group h3{font-size:14px;color:var(--accent);margin-bottom:16px;font-weight:600}
+        .settings-field{margin-bottom:14px}
+        .settings-field:last-child{margin-bottom:0}
+        .settings-field label{display:block;font-size:12px;color:var(--text-muted);margin-bottom:6px}
+        .settings-field input,.settings-field textarea{width:100%;padding:10px 14px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:13px;font-family:inherit;resize:vertical}
+        .settings-field input:focus,.settings-field textarea:focus{outline:none;border-color:var(--accent)}
+        .settings-actions{display:flex;justify-content:flex-end}
+        .settings-actions .btn{padding:10px 32px;font-size:14px}
+
         /* 重命名弹窗 */
         .rename-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;align-items:center;justify-content:center}
         .rename-modal.open{display:flex}
@@ -357,6 +384,12 @@
             .tags-nav{overflow-x:auto;white-space:nowrap}
             .tags-add{flex-direction:column}
             .tags-grid{grid-template-columns:1fr}
+            /* 评论管理 */
+            .comment-manage-stats{flex-direction:column;gap:8px}
+            .comment-manage-head{flex-direction:column;align-items:flex-start}
+            .comment-manage-actions{justify-content:flex-start}
+            /* 博客设置 */
+            .settings-panel{max-width:100%}
             /* 弹窗 */
             .confirm-box,.rename-box,.tag-modal-box{width:90%;max-width:400px}
             #uploadLogModal .rename-box{width:90%!important;max-width:440px}
@@ -400,8 +433,10 @@
         <nav class="mobile-tabs" id="mobileTabs">
             <button class="mobile-tab active" data-tab="articles" onclick="switchTab('articles')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span>文章</span></button>
             <button class="mobile-tab" data-tab="write" onclick="switchTab('write')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg><span>写文章</span></button>
+            <button class="mobile-tab" data-tab="comments" onclick="switchTab('comments')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span>评论</span></button>
             <button class="mobile-tab" data-tab="images" onclick="switchTab('images')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><span>图片</span></button>
             <button class="mobile-tab" data-tab="tags" onclick="switchTab('tags')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg><span>标签</span></button>
+            <button class="mobile-tab" data-tab="settings" onclick="switchTab('settings')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span>设置</span></button>
         </nav>
         <div class="admin-body">
             <div class="sidebar" id="sidebar">
@@ -409,8 +444,10 @@
                 <div class="sidebar-nav">
                     <div class="sidebar-item active" onclick="switchTab('articles')" data-tab="articles"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span>文章管理</span></div>
                     <div class="sidebar-item" onclick="switchTab('write')" data-tab="write"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg><span>写文章</span></div>
+                    <div class="sidebar-item" onclick="switchTab('comments')" data-tab="comments"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span>评论管理</span></div>
                     <div class="sidebar-item" onclick="switchTab('images')" data-tab="images"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><span>图片管理</span></div>
                     <div class="sidebar-item" onclick="switchTab('tags')" data-tab="tags"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg><span>标签管理</span></div>
+                    <div class="sidebar-item" onclick="switchTab('settings')" data-tab="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span>博客设置</span></div>
                 </div>
             </div>
             <div class="content">
@@ -596,6 +633,53 @@
                         <div class="tags-grid" id="imageTagsGrid"></div>
                     </div>
                 </div>
+
+                <!-- 评论管理 -->
+                <div id="tab-comments" style="display:none">
+                    <div class="page-bar"><h2>评论管理</h2><div class="page-bar-actions"><button class="btn btn-ghost" onclick="loadComments()">刷新</button></div></div>
+                    <div class="comment-manage-stats" id="commentStats"></div>
+                    <div class="comment-manage-list" id="commentManageList"></div>
+                </div>
+
+                <!-- 博客设置 -->
+                <div id="tab-settings" style="display:none">
+                    <div class="page-bar"><h2>博客设置</h2><div class="page-bar-actions"><button class="btn btn-ghost" onclick="loadSettings()">重置</button></div></div>
+                    <div class="settings-panel">
+                        <div class="settings-group">
+                            <h3>站点信息</h3>
+                            <div class="settings-field">
+                                <label>站点名称</label>
+                                <input type="text" id="setSiteName" placeholder="渡鸦_NULL BLOG">
+                            </div>
+                            <div class="settings-field">
+                                <label>站点简介</label>
+                                <input type="text" id="setSiteDesc" placeholder="一句话描述你的博客">
+                            </div>
+                            <div class="settings-field">
+                                <label>博主昵称</label>
+                                <input type="text" id="setSiteAuthor" placeholder="渡鸦NULL">
+                            </div>
+                            <div class="settings-field">
+                                <label>博主签名</label>
+                                <input type="text" id="setSiteBio" placeholder="个人签名">
+                            </div>
+                        </div>
+                        <div class="settings-group">
+                            <h3>SEO 设置</h3>
+                            <div class="settings-field">
+                                <label>页面标题后缀</label>
+                                <input type="text" id="setTitleSuffix" placeholder=" - 渡鸦_NULL BLOG">
+                            </div>
+                            <div class="settings-field">
+                                <label>站点描述（用于 SEO）</label>
+                                <textarea id="setSeoDesc" rows="3" placeholder="站点关键词、描述等"></textarea>
+                            </div>
+                        </div>
+                        <div class="settings-actions">
+                            <button class="btn btn-primary" onclick="saveSettings()">💾 保存设置</button>
+                        </div>
+                    </div>
+                </div>
             </div>
                 </div>
             </div>
@@ -673,7 +757,7 @@
 
         function doLogin(){const k=document.getElementById('adminKeyInput').value.trim();if(!k)return;adminKey=k;localStorage.setItem('admin_key',k);apiFetch('action=login',{method:'POST',body:JSON.stringify({key:k})}).then(r=>{if(r.status==='success')showAdmin();else{document.getElementById('loginError').style.display='block';document.getElementById('loginError').textContent=r.message||'密钥错误'}}).catch(()=>{document.getElementById('loginError').style.display='block';document.getElementById('loginError').textContent='连接失败'})}
         function doLogout(){adminKey='';localStorage.removeItem('admin_key');location.reload()}
-        function showAdmin(){document.getElementById('loginPage').style.display='none';document.getElementById('adminApp').style.display='block';loadArticles()}
+        function showAdmin(){document.getElementById('loginPage').style.display='none';document.getElementById('adminApp').style.display='block';document.getElementById('sidebar').classList.add('collapsed');loadArticles()}
         async function apiFetch(p,o={}){const r=await fetch(`/api/admin?${p}`,{...o,headers:{'Content-Type':'application/json','X-Admin-Key':adminKey,...(o.headers||{})}});return r.json()}
         function toggleSidebar(){document.getElementById('sidebar').classList.toggle('collapsed')}
 
@@ -1703,11 +1787,87 @@
         function switchTab(tab){
             document.querySelectorAll('.sidebar-item').forEach(el=>el.classList.toggle('active',el.dataset.tab===tab));
             document.querySelectorAll('.mobile-tab').forEach(el=>el.classList.toggle('active',el.dataset.tab===tab));
-            ['articles','write','images','tags'].forEach(t=>document.getElementById('tab-'+t).style.display=t===tab?'block':'none');
+            ['articles','write','comments','images','tags','settings'].forEach(t=>document.getElementById('tab-'+t).style.display=t===tab?'block':'none');
             if(tab==='articles')loadArticles();
+            if(tab==='comments')loadComments();
+            if(tab==='settings')loadSettings();
             if(tab==='images'){loadData();loadTags()}
             if(tab==='tags'){loadTags();loadData()}
             if(tab==='write'){if(!editingId)resetEditor();loadArticleTagNames()}
+        }
+
+        // ===== 评论管理 =====
+        async function loadComments(){
+            try{
+                const res=await fetch('/api/comments?list=1');
+                const data=await res.json();
+                if(data.status!=='success'){showToast('加载评论失败','error');return}
+                const stats=document.getElementById('commentStats');
+                stats.innerHTML=`
+                    <div class="comment-stats-card"><div class="num">${data.total||0}</div><div class="label">评论总数</div></div>
+                    <div class="comment-stats-card"><div class="num">${(data.posts||[]).length}</div><div class="label">涉及文章</div></div>
+                `;
+                const list=document.getElementById('commentManageList');
+                const all=(data.posts||[]).flatMap(p=>(p.comments||[]).map(c=>({...c,postId:p.postId})));
+                if(!all.length){list.innerHTML='<div class="empty">暂无评论</div>';return}
+                list.innerHTML=all.map(c=>`
+                    <div class="comment-manage-item">
+                        <div class="comment-manage-head">
+                            <div class="comment-manage-name">
+                                <span>${esc(c.name||'匿名')}</span>
+                                <span class="comment-manage-post">${esc(c.postId)}</span>
+                            </div>
+                            <span class="comment-manage-time">${formatCommentTime(c.createdAt)}</span>
+                        </div>
+                        <div class="comment-manage-content">${esc(c.content)}</div>
+                        <div class="comment-manage-actions">
+                            <button class="btn btn-danger btn-sm" onclick="deleteComment('${escJs(c.postId)}','${escJs(c.id)}')">删除</button>
+                        </div>
+                    </div>
+                `).join('');
+            }catch(e){showToast('加载评论失败','error')}
+        }
+        async function deleteComment(postId,id){
+            const confirmed=await showConfirm(`确定删除这条评论？`,'删除评论','删除');
+            if(!confirmed)return;
+            const res=await fetch(`/api/comments?postId=${encodeURIComponent(postId)}&id=${encodeURIComponent(id)}`,{
+                method:'DELETE',
+                headers:{'X-Admin-Key':adminKey}
+            });
+            const data=await res.json();
+            if(data.status==='success'){showToast('已删除','success');loadComments()}
+            else showToast(data.message||'删除失败','error');
+        }
+        function formatCommentTime(ts){
+            const d=new Date(ts);
+            if(isNaN(d.getTime()))return '';
+            const pad=n=>String(n).padStart(2,'0');
+            return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        }
+
+        // ===== 博客设置 =====
+        async function loadSettings(){
+            const r=await apiFetch('action=settings');
+            const s=r.status==='success'&&r.data?r.data:{};
+            document.getElementById('setSiteName').value=s.siteName||'';
+            document.getElementById('setSiteDesc').value=s.siteDesc||'';
+            document.getElementById('setSiteAuthor').value=s.siteAuthor||'';
+            document.getElementById('setSiteBio').value=s.siteBio||'';
+            document.getElementById('setTitleSuffix').value=s.titleSuffix||'';
+            document.getElementById('setSeoDesc').value=s.seoDesc||'';
+        }
+        async function saveSettings(){
+            const body={
+                siteName:document.getElementById('setSiteName').value.trim(),
+                siteDesc:document.getElementById('setSiteDesc').value.trim(),
+                siteAuthor:document.getElementById('setSiteAuthor').value.trim(),
+                siteBio:document.getElementById('setSiteBio').value.trim(),
+                titleSuffix:document.getElementById('setTitleSuffix').value.trim(),
+                seoDesc:document.getElementById('setSeoDesc').value.trim(),
+            };
+            const r=await apiFetch('action=settings',{method:'POST',body:JSON.stringify(body)});
+            if(r.status==='success')showToast('设置已保存','success');
+            else showToast(r.message||'保存失败','error');
         }
 
         // ===== 标签管理 =====

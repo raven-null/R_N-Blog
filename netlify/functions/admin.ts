@@ -515,6 +515,37 @@ export default async (req: Request) => {
     }
   }
 
+  // ===== 博客设置 =====
+
+  if (path === "settings") {
+    const settingsStore = getBlobStore("blog-settings", "strong")
+
+    // GET: 读取设置
+    if (req.method === "GET") {
+      const raw = await settingsStore.get("site", { type: "text" })
+      const data = raw ? JSON.parse(raw) : {}
+      return json(200, { status: "success", data }, req)
+    }
+
+    // POST: 保存设置
+    if (req.method === "POST") {
+      const body = await req.json().catch(() => ({}))
+      const { siteName, siteDesc, siteAuthor, siteBio, titleSuffix, seoDesc } = body
+      const settings = {
+        siteName: siteName || "",
+        siteDesc: siteDesc || "",
+        siteAuthor: siteAuthor || "",
+        siteBio: siteBio || "",
+        titleSuffix: titleSuffix || "",
+        seoDesc: seoDesc || "",
+      }
+      await settingsStore.set("site", JSON.stringify(settings))
+      return json(200, { status: "success", data: settings }, req)
+    }
+
+    return badRequest("Method Not Allowed", req)
+  }
+
   // ===== 数据迁移 =====
 
   if (path === "migrate") {
