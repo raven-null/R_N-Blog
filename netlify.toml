@@ -46,3 +46,8 @@
   from = "/api/admin-image"
   to = "/.netlify/functions/admin-image"
   status = 200
+
+[[redirects]]
+  from = "/api/article-image"
+  to = "/.netlify/functions/article-image"
+  status = 200

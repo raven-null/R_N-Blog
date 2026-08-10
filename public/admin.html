@@ -581,12 +581,49 @@
         function renderMd(t){return'<p>'+t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/^### (.*$)/gm,'<h3>$1</h3>').replace(/^## (.*$)/gm,'<h2>$1</h2>').replace(/^# (.*$)/gm,'<h1>$1</h1>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\*(.*?)\*/g,'<em>$1</em>').replace(/~~(.*?)~~/g,'<del>$1</del>').replace(/`([^`]+)`/g,'<code>$1</code>').replace(/```(\w*)\n([\s\S]*?)```/g,'<pre><code>$2</code></pre>').replace(/\[([^\]]+)\]\(([^)]+)\)/g,'<a href="$2" target="_blank">$1</a>').replace(/!\[([^\]]*)\]\(([^)]+)\)/g,'<img src="$2" alt="$1">').replace(/^> (.*$)/gm,'<blockquote>$1</blockquote>').replace(/^- (.*$)/gm,'<li>$1</li>').replace(/^1\. (.*$)/gm,'<li>$1</li>').replace(/^---$/gm,'<hr>').replace(/\n\n/g,'</p><p>')+'</p>'}
         function handleDragOver(e){e.preventDefault();e.stopPropagation();document.getElementById('dropOverlay').classList.add('show')}
         function handleDragLeave(e){e.preventDefault();e.stopPropagation();document.getElementById('dropOverlay').classList.remove('show')}
-        async function handleDrop(e){e.preventDefault();e.stopPropagation();document.getElementById('dropOverlay').classList.remove('show');for(const f of[...e.dataTransfer.files].filter(f=>f.type.startsWith('image/'))){const url=await uploadImageAndGetUrl(f);if(url){insertAtCursor(`![${f.name}](${url})`);trackArticleImage(url)}}}
-        document.addEventListener('paste',async e=>{if(document.activeElement!==document.getElementById('edContent'))return;for(const item of[...e.clipboardData.items]){if(item.type.startsWith('image/')){e.preventDefault();const url=await uploadImageAndGetUrl(item.getAsFile());if(url){insertAtCursor(`![图片](${url})`);trackArticleImage(url)}}}});
+        async function handleDrop(e){e.preventDefault();e.stopPropagation();document.getElementById('dropOverlay').classList.remove('show');for(const f of[...e.dataTransfer.files].filter(f=>f.type.startsWith('image/'))){const url=await uploadArticleImageAndGetUrl(f);if(url){insertAtCursor(`![${f.name}](${url})`);trackArticleImage(url)}}}
+        document.addEventListener('paste',async e=>{if(document.activeElement!==document.getElementById('edContent'))return;for(const item of[...e.clipboardData.items]){if(item.type.startsWith('image/')){e.preventDefault();const url=await uploadArticleImageAndGetUrl(item.getAsFile());if(url){insertAtCursor(`![图片](${url})`);trackArticleImage(url)}}}});
         function insertAtCursor(t){const ta=document.getElementById('edContent'),p=ta.selectionStart;ta.value=ta.value.slice(0,p)+t+ta.value.slice(p);ta.focus();ta.selectionStart=ta.selectionEnd=p+t.length;updatePreview()}
 
         // ===== 图片上传 =====
         // tags 参数：可选的初始标签
+        // 上传文章图片（存入独立 article-images store，不影响图库）
+        async function uploadArticleImageAndGetUrl(file){
+            const prog=document.getElementById('uploadProgress'),pt=document.getElementById('uploadProgressText');
+            prog.classList.add('show');pt.textContent=`上传 ${file.name}...`;
+            try{
+                const compressed = await compressImage(file);
+                const body={data:compressed.data,mime:compressed.mime,name:file.name};
+                const res=await fetch('/api/article-image',{
+                    method:'POST',
+                    headers:{'Content-Type':'application/json','X-Admin-Key':adminKey},
+                    body:JSON.stringify(body)
+                });
+                const r=await res.json();
+                if(r.status==='success'){
+                    addUploadLog({file:file.name,status:'success',message:'上传成功',key:r.key,time:new Date().toLocaleTimeString()});
+                    return r.url;
+                }else{
+                    addUploadLog({file:file.name,status:'fail',message:r.message||'上传失败',time:new Date().toLocaleTimeString()});
+                    showToast(r.message||'上传失败','error');
+                    return null;
+                }
+            }catch(e){
+                addUploadLog({file:file.name,status:'fail',message:e.message||'上传异常',time:new Date().toLocaleTimeString()});
+                showToast('上传失败','error');
+                return null;
+            }finally{prog.classList.remove('show')}
+        }
+
+        // 删除文章图片（只删除独立 article-images store）
+        async function deleteArticleImageFile(key){
+            const res=await fetch(`/api/article-image?key=${encodeURIComponent(key)}`,{
+                method:'DELETE',
+                headers:{'X-Admin-Key':adminKey}
+            });
+            return res.json();
+        }
+
         async function uploadImageAndGetUrl(file, tags){
             const prog=document.getElementById('uploadProgress'),pt=document.getElementById('uploadProgressText');
             prog.classList.add('show');pt.textContent=`上传 ${file.name}...`;
@@ -741,7 +778,7 @@
         // 编辑器内上传图片并插入（多文件）
         async function uploadAndInsertToEditor(files){
             for(const f of files){
-                const url=await uploadImageAndGetUrl(f);
+                const url=await uploadArticleImageAndGetUrl(f);
                 if(url){
                     insertAtCursor(`![${f.name.replace(/\.\w+$/,'')}](${url})`);
                     trackArticleImage(url);
@@ -764,9 +801,11 @@
                 if(m)key=decodeURIComponent(m[1]);
             }
             if(!key)return;
-            // 去重
-            if(!articleImages.some(i=>i.key===key)){
-                articleImages.push({key,url});
+            // 判断图片类型：文章图片（article-image）或图库图片（admin-image）
+            const type=url.includes('/api/article-image')?'article':'gallery';
+            // 去重（同 key 同类型）
+            if(!articleImages.some(i=>i.key===key&&i.type===type)){
+                articleImages.push({key,url,type});
             }
             renderArticleImages();
         }
@@ -787,17 +826,24 @@
                 </div>
             `).join('');
         }
-        // 删除文中图片（同步后端删除）
+        // 删除文中图片：文章图片删除独立存储，图库图片仅从文中移除
         async function deleteArticleImage(key){
-            const confirmed=await showConfirm(`确定删除 ${key}？图片将同时从后端移除。`,'删除图片','删除');
+            const item=articleImages.find(i=>i.key===key);
+            const isArticleImg=item&&item.type==='article';
+            const confirmed=await showConfirm(`确定删除 ${key}？${isArticleImg?'图片将同时从后端移除。':'该图片来自图库，仅从本文移除，不影响图库。'}`,'删除图片','删除');
             if(!confirmed)return;
-            const r=await apiFetch(`action=images&key=${encodeURIComponent(key)}`,{method:'DELETE'});
-            if(r.status==='success'){
+            let ok=true;
+            if(isArticleImg){
+                const r=await deleteArticleImageFile(key);
+                if(r.status!=='success'){
+                    showToast(r.message||'删除失败','error');
+                    ok=false;
+                }
+            }
+            if(ok){
                 showToast('已删除','success');
                 articleImages=articleImages.filter(i=>i.key!==key);
                 renderArticleImages();
-            }else{
-                showToast(r.message||'删除失败','error');
             }
         }
         // 重置文中图片列表
@@ -839,7 +885,7 @@
         // 上传封面图
         async function setCoverImage(file){
             if(!file)return;
-            const url=await uploadImageAndGetUrl(file);
+            const url=await uploadArticleImageAndGetUrl(file);
             if(url){
                 document.getElementById('edImage').value=url;
                 renderCoverPreview();
@@ -1426,7 +1472,7 @@
             }
         }
         function insertFromPicker(url){insertAtCursor(`![图片](${url})`);trackArticleImage(url);closeImagePicker();showToast('已插入','success')}
-        async function uploadAndInsert(files){for(const f of files){const url=await uploadImageAndGetUrl(f);if(url){insertAtCursor(`![${f.name}](${url})`);trackArticleImage(url)}}cachedImages=[];openImagePicker()}
+        async function uploadAndInsert(files){for(const f of files){const url=await uploadArticleImageAndGetUrl(f);if(url){insertAtCursor(`![${f.name}](${url})`);trackArticleImage(url)}}cachedImages=[];openImagePicker()}
 
         // ===== 标签选择器（写文章） =====
         async function loadArticleTagNames(){
