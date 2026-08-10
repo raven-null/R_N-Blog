@@ -178,6 +178,21 @@
         .tags-nav-btn.active{background:var(--accent-dim);color:var(--accent);border-color:var(--accent)}
         .tags-info{font-size:11px;color:var(--text-muted);margin-bottom:14px;padding:8px 12px;background:var(--bg-input);border-radius:var(--radius-sm)}
         .tags-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+
+        /* 标签选择器 */
+        .tag-picker-wrap{position:relative}
+        .tag-picker-input{display:flex;flex-wrap:wrap;gap:4px;padding:6px 10px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);min-height:36px;cursor:text;align-items:center;transition:border .15s}
+        .tag-picker-input:focus-within{border-color:var(--accent)}
+        .tag-picker-input .tp-chip{display:flex;align-items:center;gap:4px;padding:2px 8px;background:var(--accent-dim);color:var(--accent);border-radius:12px;font-size:11px}
+        .tag-picker-input .tp-chip button{background:none;border:none;color:var(--accent);cursor:pointer;font-size:13px;padding:0;line-height:1;opacity:.6}
+        .tag-picker-input .tp-chip button:hover{opacity:1}
+        .tag-picker-input input{flex:1;min-width:80px;border:none;background:transparent;color:var(--text);font-size:12px;outline:none}
+        .tag-picker-input input::placeholder{color:#555}
+        .tag-picker-dropdown{display:none;position:absolute;top:100%;left:0;right:0;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);margin-top:4px;max-height:180px;overflow-y:auto;z-index:50;box-shadow:var(--shadow)}
+        .tag-picker-dropdown.open{display:block}
+        .tag-picker-dropdown .tp-item{padding:6px 12px;font-size:12px;color:var(--text-muted);cursor:pointer;transition:background .08s}
+        .tag-picker-dropdown .tp-item:hover{background:var(--bg-hover);color:var(--text)}
+        .tag-picker-dropdown .tp-item.selected{color:var(--accent);background:var(--accent-dim)}
         .tags-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px;display:flex;align-items:center;justify-content:space-between;transition:all .12s}
         .tags-card:hover{border-color:var(--border-light);background:var(--bg-hover)}
         .tags-card .tc-info{flex:1;min-width:0}
@@ -229,7 +244,16 @@
                 <!-- 写文章 -->
                 <div id="tab-write" style="display:none">
                     <div class="page-bar"><h2 id="writeTitle">写文章</h2><div class="page-bar-actions"><label class="btn btn-ghost" style="cursor:pointer">📄 导入<input type="file" accept=".md,.markdown" onchange="importToEditor(this.files[0])" style="display:none"></label><button class="btn btn-ghost" onclick="exportMarkdown()">💾 导出</button></div></div>
-                    <div class="editor-top"><input type="text" id="edTitle" placeholder="文章标题"><input type="text" id="edTags" placeholder="标签（逗号分隔）"><select id="edStatus"><option value="published">已发布</option><option value="draft">草稿</option></select></div>
+                    <div class="editor-top">
+                        <input type="text" id="edTitle" placeholder="文章标题">
+                        <div class="tag-picker-wrap" style="flex:1;min-width:200px">
+                            <div class="tag-picker-input" id="tagPickerInput" onclick="focusTagPicker()">
+                                <input type="text" id="tagPickerText" placeholder="输入或选择标签..." oninput="filterTagDropdown()" onkeydown="tagPickerKeydown(event)" onfocus="openTagDropdown()" autocomplete="off">
+                            </div>
+                            <div class="tag-picker-dropdown" id="tagPickerDropdown"></div>
+                        </div>
+                        <select id="edStatus"><option value="published">已发布</option><option value="draft">草稿</option></select>
+                    </div>
                     <div class="editor-toolbar">
                         <button onclick="mdInsert('heading')" title="标题"><b>H</b></button><button onclick="mdInsert('bold')" title="粗体"><b>B</b></button><button onclick="mdInsert('italic')" title="斜体"><i>I</i></button><button onclick="mdInsert('strike')" title="删除线"><s>S</s></button><span class="sep"></span>
                         <button onclick="mdInsert('code')" title="代码">{ }</button><button onclick="mdInsert('codeblock')" title="代码块">```</button><button onclick="mdInsert('quote')" title="引用">"</button><button onclick="mdInsert('list')" title="列表">☰</button><button onclick="mdInsert('olist')" title="有序列表">1.</button><span class="sep"></span>
@@ -321,6 +345,9 @@
         let tagModalKey='',tagModalSelected=[];
         let classifyTag='',allImageData=[];
         let imageTagNames=[];
+        let articleTagNames=[];
+        let selectedArticleTags=[];
+        let tagPickerOpen=false;
 
         function doLogin(){const k=document.getElementById('adminKeyInput').value.trim();if(!k)return;adminKey=k;localStorage.setItem('admin_key',k);apiFetch('action=login',{method:'POST',body:JSON.stringify({key:k})}).then(r=>{if(r.status==='success')showAdmin();else{document.getElementById('loginError').style.display='block';document.getElementById('loginError').textContent=r.message||'密钥错误'}}).catch(()=>{document.getElementById('loginError').style.display='block';document.getElementById('loginError').textContent='连接失败'})}
         function doLogout(){adminKey='';localStorage.removeItem('admin_key');location.reload()}
@@ -333,12 +360,12 @@
         function renderArticleList(){const t=document.getElementById('articleList');if(!articles.length){t.innerHTML='<tr><td colspan="5" class="empty">暂无文章</td></tr>';return}t.innerHTML=articles.map(a=>`<tr><td><strong>${esc(a.title)}</strong><br><small style="color:var(--text-muted);font-size:10px">${a.id}</small></td><td>${(a.tags||[]).map(t=>`<span class="tag">${esc(t)}</span>`).join('')}</td><td><span class="status-${a.status==='published'?'on':'off'}">${a.status==='published'?'● 已发布':'○ 草稿'}</span></td><td style="font-size:11px;color:var(--text-muted)">${a.date}${a.update?'<br>↑ '+a.update:''}</td><td><div class="row-actions"><button class="btn btn-ghost btn-sm" onclick="editArticle('${a.id}')">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteArticle('${a.id}','${esc(a.title)}')">删除</button></div></td></tr>`).join('')}
         async function deleteArticle(id,title){if(!confirm(`确定删除「${title}」？`))return;const r=await apiFetch(`action=articles&id=${id}`,{method:'DELETE'});if(r.status==='success'){showToast('已删除','success');loadArticles()}else showToast(r.message||'删除失败','error')}
         function editArticle(id){editingId=id;switchTab('write');document.getElementById('writeTitle').textContent='编辑文章';loadArticleForEdit(id)}
-        async function loadArticleForEdit(id){const r=await apiFetch(`action=articles&id=${id}`);if(r.status==='success'){const d=r.data;document.getElementById('edTitle').value=d.title||'';document.getElementById('edTags').value=(d.tags||[]).join(', ');document.getElementById('edStatus').value=d.status||'published';document.getElementById('edContent').value=d.content||'';updatePreview()}}
-        function importAndEdit(f){if(!f)return;const r=new FileReader();r.onload=()=>{const raw=r.result,m=raw.match(/^---\s*\n([\s\S]*?)\n---\s*\n([\s\S]*)$/);let title=f.name.replace(/\.md$/),tags='',content=raw;if(m){const fm=m[1],t=fm.match(/title:\s*(.+)/);if(t)title=t[1].trim();content=m[2]}editingId=null;switchTab('write');document.getElementById('writeTitle').textContent='导入文章';document.getElementById('edTitle').value=title;document.getElementById('edTags').value=tags;document.getElementById('edContent').value=content;updatePreview();showToast(`已导入: ${f.name}`,'success')};r.readAsText(f)}
+        async function loadArticleForEdit(id){const r=await apiFetch(`action=articles&id=${id}`);if(r.status==='success'){const d=r.data;document.getElementById('edTitle').value=d.title||'';selectedArticleTags=[...(d.tags||[])];renderTagPickerChips();document.getElementById('edStatus').value=d.status||'published';document.getElementById('edContent').value=d.content||'';updatePreview()}}
+        function importAndEdit(f){if(!f)return;const r=new FileReader();r.onload=()=>{const raw=r.result,m=raw.match(/^---\s*\n([\s\S]*?)\n---\s*\n([\s\S]*)$/);let title=f.name.replace(/\.md$/),tags=[],content=raw;if(m){const fm=m[1],t=fm.match(/title:\s*(.+)/);if(t)title=t[1].trim();const tg=fm.match(/tags:\s*\[([^\]]+)\]/);if(tg)tags=tg[1].split(',').map(s=>s.trim());content=m[2]}editingId=null;switchTab('write');document.getElementById('writeTitle').textContent='导入文章';document.getElementById('edTitle').value=title;selectedArticleTags=tags;renderTagPickerChips();document.getElementById('edContent').value=content;updatePreview();showToast(`已导入: ${f.name}`,'success')};r.readAsText(f)}
 
         // ===== 写文章 =====
-        function resetEditor(){editingId=null;document.getElementById('writeTitle').textContent='写文章';['edTitle','edTags'].forEach(el=>document.getElementById(el).value='');document.getElementById('edStatus').value='published';document.getElementById('edContent').value='';document.getElementById('edPreview').innerHTML='';document.getElementById('editorInfo').textContent='0 字'}
-        async function saveArticle(){const title=document.getElementById('edTitle').value.trim(),tags=document.getElementById('edTags').value,status=document.getElementById('edStatus').value,content=document.getElementById('edContent').value;if(!title){showToast('标题不能为空','error');return}if(!content){showToast('内容不能为空','error');return}const body={title,tags,content,status};if(editingId)body.id=editingId;const r=await apiFetch('action=articles',{method:'POST',body:JSON.stringify(body)});if(r.status==='success'){showToast('保存成功','success');resetEditor();switchTab('articles')}else showToast(r.message||'保存失败','error')}
+        function resetEditor(){editingId=null;document.getElementById('writeTitle').textContent='写文章';document.getElementById('edTitle').value='';selectedArticleTags=[];renderTagPickerChips();document.getElementById('edStatus').value='published';document.getElementById('edContent').value='';document.getElementById('edPreview').innerHTML='';document.getElementById('editorInfo').textContent='0 字'}
+        async function saveArticle(){const title=document.getElementById('edTitle').value.trim(),tags=selectedArticleTags.join(', '),status=document.getElementById('edStatus').value,content=document.getElementById('edContent').value;if(!title){showToast('标题不能为空','error');return}if(!content){showToast('内容不能为空','error');return}const body={title,tags,content,status};if(editingId)body.id=editingId;const r=await apiFetch('action=articles',{method:'POST',body:JSON.stringify(body)});if(r.status==='success'){showToast('保存成功','success');resetEditor();switchTab('articles')}else showToast(r.message||'保存失败','error')}
         function mdInsert(t){const ta=document.getElementById('edContent'),s=ta.selectionStart,e=ta.selectionEnd,sel=ta.value.slice(s,e),b=ta.value.slice(0,s),a=ta.value.slice(e);const m={heading:{b:'## ',a:'',d:'标题'},bold:{b:'**',a:'**',d:'粗体'},italic:{b:'*',a:'*',d:'斜体'},strike:{b:'~~',a:'~~',d:'删除线'},code:{b:'`',a:'`',d:'code'},codeblock:{b:'```\n',a:'\n```',d:'// 代码'},quote:{b:'> ',a:'',d:'引用'},list:{b:'- ',a:'',d:'列表项'},olist:{b:'1. ',a:'',d:'列表项'},link:{b:'[',a:'](https://)',d:'链接'},image:{b:'![',a:'](url)',d:'图片'},table:{b:'| 列1 | 列2 |\n| --- | --- |\n',a:'',d:'| 内容 | 内容 |'},hr:{b:'\n---\n',a:'',d:''}};const i=m[t];if(!i)return;const tx=sel||i.d;ta.value=b+i.b+tx+i.a+a;ta.focus();ta.selectionStart=s+i.b.length;ta.selectionEnd=s+i.b.length+tx.length;updatePreview()}
         function updatePreview(){const md=document.getElementById('edContent').value;document.getElementById('edPreview').innerHTML=renderMd(md);document.getElementById('editorInfo').textContent=md.length+' 字'}
         function renderMd(t){return'<p>'+t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/^### (.*$)/gm,'<h3>$1</h3>').replace(/^## (.*$)/gm,'<h2>$1</h2>').replace(/^# (.*$)/gm,'<h1>$1</h1>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\*(.*?)\*/g,'<em>$1</em>').replace(/~~(.*?)~~/g,'<del>$1</del>').replace(/`([^`]+)`/g,'<code>$1</code>').replace(/```(\w*)\n([\s\S]*?)```/g,'<pre><code>$2</code></pre>').replace(/\[([^\]]+)\]\(([^)]+)\)/g,'<a href="$2" target="_blank">$1</a>').replace(/!\[([^\]]*)\]\(([^)]+)\)/g,'<img src="$2" alt="$1">').replace(/^> (.*$)/gm,'<blockquote>$1</blockquote>').replace(/^- (.*$)/gm,'<li>$1</li>').replace(/^1\. (.*$)/gm,'<li>$1</li>').replace(/^---$/gm,'<hr>').replace(/\n\n/g,'</p><p>')+'</p>'}
@@ -359,7 +386,7 @@
         }
         async function uploadImages(files){for(const f of files){await uploadImageAndGetUrl(f)}await loadData()}
         function importToEditor(f){if(!f)return;const r=new FileReader();r.onload=()=>{const m=r.result.match(/^---\s*\n([\s\S]*?)\n---\s*\n([\s\S]*)$/);insertAtCursor(m?m[2]:r.result);showToast(`已插入: ${f.name}`,'success')};r.readAsText(f)}
-        function exportMarkdown(){const title=document.getElementById('edTitle').value.trim()||'untitled',md=`---\ntitle: ${title}\ndate: ${new Date().toISOString().slice(0,10)}\ntags: [${document.getElementById('edTags').value}]\nauthor: 渡鸦NULL\n---\n\n${document.getElementById('edContent').value}`,a=document.createElement('a');a.href=URL.createObjectURL(new Blob([md],{type:'text/markdown'}));a.download=`${title.replace(/[^a-zA-Z0-9\u4e00-\u9fff]/g,'-')}.md`;a.click();showToast('已导出','success')}
+        function exportMarkdown(){const title=document.getElementById('edTitle').value.trim()||'untitled',md=`---\ntitle: ${title}\ndate: ${new Date().toISOString().slice(0,10)}\ntags: [${selectedArticleTags.join(', ')}]\nauthor: 渡鸦NULL\n---\n\n${document.getElementById('edContent').value}`,a=document.createElement('a');a.href=URL.createObjectURL(new Blob([md],{type:'text/markdown'}));a.download=`${title.replace(/[^a-zA-Z0-9\u4e00-\u9fff]/g,'-')}.md`;a.click();showToast('已导出','success')}
 
         // ===== 图片管理 =====
         async function loadData(){
@@ -476,6 +503,89 @@
         function insertFromPicker(url){insertAtCursor(`![图片](${url})`);closeImagePicker();showToast('已插入','success')}
         async function uploadAndInsert(files){for(const f of files){const url=await uploadImageAndGetUrl(f);if(url)insertAtCursor(`![${f.name}](${url})`)}cachedImages=[];openImagePicker()}
 
+        // ===== 标签选择器（写文章） =====
+        async function loadArticleTagNames(){
+            const r=await apiFetch('action=tags');
+            if(r.status==='success'){
+                articleTagNames=(r.data||[]).filter(t=>t.articleCount>0).map(t=>t.name);
+            }
+        }
+
+        function renderTagPickerChips(){
+            const wrap=document.getElementById('tagPickerInput');
+            const input=document.getElementById('tagPickerText');
+            // 移除旧的 chips
+            wrap.querySelectorAll('.tp-chip').forEach(c=>c.remove());
+            // 在 input 前插入 chips
+            selectedArticleTags.forEach(tag=>{
+                const chip=document.createElement('span');
+                chip.className='tp-chip';
+                chip.innerHTML=`${esc(tag)}<button onclick="removeArticleTag('${esc(tag)}')">&times;</button>`;
+                wrap.insertBefore(chip,input);
+            });
+        }
+
+        function addArticleTag(tag){
+            tag=tag.trim();
+            if(!tag||selectedArticleTags.includes(tag))return;
+            selectedArticleTags.push(tag);
+            renderTagPickerChips();
+            closeTagDropdown();
+            document.getElementById('tagPickerText').value='';
+        }
+
+        function removeArticleTag(tag){
+            selectedArticleTags=selectedArticleTags.filter(t=>t!==tag);
+            renderTagPickerChips();
+        }
+
+        function focusTagPicker(){
+            document.getElementById('tagPickerText').focus();
+            openTagDropdown();
+        }
+
+        function openTagDropdown(){
+            if(tagPickerOpen)return;
+            tagPickerOpen=true;
+            renderTagDropdown();
+            document.getElementById('tagPickerDropdown').classList.add('open');
+            // 点击外部关闭
+            setTimeout(()=>document.addEventListener('click',closeTagDropdownOutside),0);
+        }
+
+        function closeTagDropdown(){
+            tagPickerOpen=false;
+            document.getElementById('tagPickerDropdown').classList.remove('open');
+            document.removeEventListener('click',closeTagDropdownOutside);
+        }
+
+        function closeTagDropdownOutside(e){
+            const wrap=document.querySelector('.tag-picker-wrap');
+            if(wrap&&!wrap.contains(e.target))closeTagDropdown();
+        }
+
+        function renderTagDropdown(){
+            const dd=document.getElementById('tagPickerDropdown');
+            const input=document.getElementById('tagPickerText').value.toLowerCase();
+            const filtered=articleTagNames.filter(t=>!selectedArticleTags.includes(t)&&(!input||t.toLowerCase().includes(input)));
+            if(!filtered.length){dd.innerHTML='<div style="padding:10px 12px;font-size:12px;color:var(--text-muted)">无匹配标签，回车添加新标签</div>';return}
+            dd.innerHTML=filtered.map(t=>`<div class="tp-item" onclick="addArticleTag('${esc(t)}')">${esc(t)}</div>`).join('');
+        }
+
+        function filterTagDropdown(){if(tagPickerOpen)renderTagDropdown()}
+
+        function tagPickerKeydown(e){
+            const input=e.target.value.trim();
+            if(e.key==='Enter'&&input){
+                e.preventDefault();
+                addArticleTag(input);
+            }
+            if(e.key==='Backspace'&&!input&&selectedArticleTags.length){
+                selectedArticleTags.pop();
+                renderTagPickerChips();
+            }
+        }
+
         // ===== Tab =====
         function switchTab(tab){
             document.querySelectorAll('.sidebar-item').forEach(el=>el.classList.toggle('active',el.dataset.tab===tab));
@@ -483,7 +593,7 @@
             if(tab==='articles')loadArticles();
             if(tab==='images')loadData();
             if(tab==='tags')loadTags();
-            if(tab==='write'&&!editingId)resetEditor();
+            if(tab==='write'){if(!editingId)resetEditor();loadArticleTagNames()}
         }
 
         // ===== 标签管理 =====
@@ -538,10 +648,14 @@
             if(!name){showToast('标签名不能为空','error');return}
             const data=currentTagsView==='article'?articleTagsData:imageTagsData;
             if(data.some(t=>t.name===name)){showToast('标签已存在','error');return}
-            data.unshift({name,count:0});
-            renderTags();
-            input.value='';
-            showToast(`${currentTagsView==='article'?'文章':'图片'}标签「${name}」已添加（首次使用时生效）`,'success');
+            // 调用 API 保存到注册表
+            const r=await apiFetch('action=tags',{method:'POST',body:JSON.stringify({name,type:currentTagsView})});
+            if(r.status==='success'){
+                data.unshift({name,count:0});
+                renderTags();
+                input.value='';
+                showToast(`${currentTagsView==='article'?'文章':'图片'}标签「${name}」已添加`,'success');
+            }else showToast(r.message||'添加失败','error');
         }
 
         function openRenameModal(oldName,type){

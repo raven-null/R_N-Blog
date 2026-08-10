@@ -285,6 +285,7 @@ export default async (req: Request) => {
     const imageStore = getBlobStore(IMAGE_STORE)
     const tagStore = getBlobStore("blog-image-tags")
     const articleStore = getBlobStore(ARTICLE_STORE)
+    const registryStore = getBlobStore("blog-tag-registry")
 
     async function getImageTagIndex(): Promise<Record<string, string[]>> {
       const raw = await tagStore.get("index", { type: "text" })
@@ -302,15 +303,33 @@ export default async (req: Request) => {
     async function saveArticleIndex(index: ArticleMeta[]) {
       await articleStore.set("index", JSON.stringify(index))
     }
+    // 标签注册表：{ article: string[], image: string[] }
+    async function getRegistry(): Promise<{ article: string[]; image: string[] }> {
+      const raw = await registryStore.get("index", { type: "text" })
+      if (!raw) return { article: [], image: [] }
+      try { return JSON.parse(raw) } catch { return { article: [], image: [] } }
+    }
+    async function saveRegistry(reg: { article: string[]; image: string[] }) {
+      await registryStore.set("index", JSON.stringify(reg))
+    }
 
-    // GET: 列出所有标签及其使用次数
+    // GET: 列出所有标签（注册表 + 实际使用统计）
     if (req.method === "GET") {
       const imageTagIndex = await getImageTagIndex()
       const articleIndex = await getArticleIndex()
+      const registry = await getRegistry()
 
       const tagMap: Record<string, { imageCount: number; articleCount: number }> = {}
 
-      // 统计图片标签
+      // 从注册表初始化（确保空标签也出现）
+      for (const tag of registry.article) {
+        if (!tagMap[tag]) tagMap[tag] = { imageCount: 0, articleCount: 0 }
+      }
+      for (const tag of registry.image) {
+        if (!tagMap[tag]) tagMap[tag] = { imageCount: 0, articleCount: 0 }
+      }
+
+      // 统计图片实际使用
       for (const tags of Object.values(imageTagIndex)) {
         for (const tag of tags) {
           if (!tagMap[tag]) tagMap[tag] = { imageCount: 0, articleCount: 0 }
@@ -318,7 +337,7 @@ export default async (req: Request) => {
         }
       }
 
-      // 统计文章标签
+      // 统计文章实际使用
       for (const article of articleIndex) {
         for (const tag of (article.tags || [])) {
           if (!tagMap[tag]) tagMap[tag] = { imageCount: 0, articleCount: 0 }
@@ -336,6 +355,22 @@ export default async (req: Request) => {
       return json(200, { status: "success", data: result }, req)
     }
 
+    // POST: 添加新标签到注册表
+    if (req.method === "POST") {
+      const body = await req.json().catch(() => ({}))
+      const { name, type } = body
+      if (!name) return badRequest("name 必填", req)
+      if (!type || !["article", "image"].includes(type)) return badRequest("type 必须是 article 或 image", req)
+
+      const registry = await getRegistry()
+      const list = type === "article" ? registry.article : registry.image
+      if (!list.includes(name)) {
+        list.push(name)
+        await saveRegistry(registry)
+      }
+      return json(200, { status: "success", name, type }, req)
+    }
+
     // PATCH: 重命名标签
     if (req.method === "PATCH") {
       const body = await req.json().catch(() => ({}))
@@ -345,14 +380,19 @@ export default async (req: Request) => {
 
       let imageChanges = 0, articleChanges = 0
 
+      // 更新注册表
+      const registry = await getRegistry()
+      const ai = registry.article.indexOf(oldName)
+      if (ai >= 0) registry.article[ai] = newName
+      const ii = registry.image.indexOf(oldName)
+      if (ii >= 0) registry.image[ii] = newName
+      await saveRegistry(registry)
+
       // 更新图片标签
       const imageTagIndex = await getImageTagIndex()
       for (const [key, tags] of Object.entries(imageTagIndex)) {
         const idx = tags.indexOf(oldName)
-        if (idx >= 0) {
-          tags[idx] = newName
-          imageChanges++
-        }
+        if (idx >= 0) { tags[idx] = newName; imageChanges++ }
       }
       await saveImageTagIndex(imageTagIndex)
 
@@ -360,10 +400,7 @@ export default async (req: Request) => {
       const articleIndex = await getArticleIndex()
       for (const article of articleIndex) {
         const idx = (article.tags || []).indexOf(oldName)
-        if (idx >= 0) {
-          article.tags[idx] = newName
-          articleChanges++
-        }
+        if (idx >= 0) { article.tags[idx] = newName; articleChanges++ }
       }
       await saveArticleIndex(articleIndex)
 
@@ -377,14 +414,17 @@ export default async (req: Request) => {
 
       let imageChanges = 0, articleChanges = 0
 
+      // 从注册表移除
+      const registry = await getRegistry()
+      registry.article = registry.article.filter(t => t !== tagName)
+      registry.image = registry.image.filter(t => t !== tagName)
+      await saveRegistry(registry)
+
       // 从图片中移除
       const imageTagIndex = await getImageTagIndex()
       for (const [key, tags] of Object.entries(imageTagIndex)) {
         const idx = tags.indexOf(tagName)
-        if (idx >= 0) {
-          tags.splice(idx, 1)
-          imageChanges++
-        }
+        if (idx >= 0) { tags.splice(idx, 1); imageChanges++ }
       }
       await saveImageTagIndex(imageTagIndex)
 
@@ -392,10 +432,7 @@ export default async (req: Request) => {
       const articleIndex = await getArticleIndex()
       for (const article of articleIndex) {
         const idx = (article.tags || []).indexOf(tagName)
-        if (idx >= 0) {
-          article.tags.splice(idx, 1)
-          articleChanges++
-        }
+        if (idx >= 0) { article.tags.splice(idx, 1); articleChanges++ }
       }
       await saveArticleIndex(articleIndex)
 
