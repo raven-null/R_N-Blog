@@ -129,6 +129,8 @@
         .editor-toolbar button{height:30px;padding:0 8px;display:flex;align-items:center;justify-content:center;background:transparent;border:none;color:var(--text-muted);cursor:pointer;border-radius:4px;font-size:12px;transition:all .08s}
         .editor-toolbar button:hover{background:var(--bg-hover);color:var(--accent)}
         .editor-toolbar .sep{width:1px;height:18px;background:var(--border);margin:0 4px}
+        /* 移动端预览按钮（桌面隐藏） */
+        .mobile-preview-btn{display:none}
         .editor-upload-img{height:30px;padding:0 8px;display:flex;align-items:center;justify-content:center;background:transparent;border:none;color:var(--text-muted);cursor:pointer;border-radius:4px;font-size:12px;transition:all .08s;line-height:30px}
         .editor-upload-img:hover{background:var(--bg-hover);color:var(--accent)}
         .editor-split{display:grid;grid-template-columns:1fr 1fr;gap:0;height:calc(100vh - 470px);min-height:300px;max-height:600px}
@@ -384,6 +386,9 @@
             .editor-toolbar-right{margin-left:0;width:100%;justify-content:flex-start;border-top:1px solid var(--border);margin-top:4px;padding-top:4px}
             .editor-split{grid-template-columns:1fr;height:auto}
             .editor-split .editor-right{display:none}
+            .editor-split .editor-right.show{display:block;border-radius:0 0 var(--radius-sm) var(--radius-sm)}
+            .editor-split .editor-left.hide{display:none}
+            .mobile-preview-btn{display:flex!important}
             .editor-textarea{border-radius:0 0 var(--radius-sm) var(--radius-sm);border-right:1px solid var(--border);height:300px}
             .editor-footer{flex-direction:column;gap:10px}
             .editor-footer-actions{width:100%}
@@ -543,6 +548,7 @@
                             <button onclick="mdInsert('hr')" title="分割线">— 分割线</button>
                         </div>
                         <div class="editor-toolbar-group editor-toolbar-right">
+                            <button onclick="toggleMobilePreview()" title="预览/编辑切换" class="mobile-preview-btn">👁 预览</button>
                             <button onclick="mdInsert('table')" title="插入表格">▦ 表格</button>
                             <span class="sep"></span>
                             <button onclick="openImagePicker()" title="从图库插入图片" class="toolbar-img-btn">🖼 图库</button>
@@ -909,6 +915,20 @@
         async function saveArticle(){const title=document.getElementById('edTitle').value.trim(),excerpt=document.getElementById('edExcerpt').value.trim(),tags=selectedArticleTags.join(', '),status=document.getElementById('edStatus').value,content=document.getElementById('edContent').value,image=document.getElementById('edImage').value.trim();if(!title){showToast('请填写文章标题','error');return}if(!content){showToast('请填写文章内容','error');return}const body={title,excerpt,tags,content,status,image};if(editingId)body.id=editingId;const r=await apiFetch('action=articles',{method:'POST',body:JSON.stringify(body)});if(r.status==='success'){showToast('保存成功','success');resetEditor();switchTab('articles')}else showToast(r.message||'保存失败','error')}
         function mdInsert(t){const ta=document.getElementById('edContent'),s=ta.selectionStart,e=ta.selectionEnd,sel=ta.value.slice(s,e),b=ta.value.slice(0,s),a=ta.value.slice(e);const m={heading:{b:'## ',a:'',d:'标题'},h3:{b:'### ',a:'',d:'小标题'},bold:{b:'**',a:'**',d:'加粗文字'},italic:{b:'*',a:'*',d:'斜体文字'},strike:{b:'~~',a:'~~',d:'删除线'},code:{b:'`',a:'`',d:'code'},codeblock:{b:'```\n',a:'\n```',d:'// 代码'},quote:{b:'> ',a:'',d:'引用内容'},list:{b:'- ',a:'',d:'列表项'},olist:{b:'1. ',a:'',d:'列表项'},link:{b:'[',a:'](https://)',d:'链接文字'},image:{b:'![',a:'](url)',d:'图片描述'},table:{b:'| 列1 | 列2 |\n| --- | --- |\n',a:'',d:'| 内容 | 内容 |'},hr:{b:'\n---\n',a:'',d:''}};const i=m[t];if(!i)return;const tx=sel||i.d;ta.value=b+i.b+tx+i.a+a;ta.focus();ta.selectionStart=s+i.b.length;ta.selectionEnd=s+i.b.length+tx.length;updatePreview()}
         function updatePreview(){const md=document.getElementById('edContent').value;const preview=document.getElementById('edPreview');if(!md.trim()){preview.innerHTML='<div class="preview-empty">👈 左侧开始写作，这里实时预览</div>';}else{preview.innerHTML=(typeof MarkdownParser!=='undefined'&&typeof marked!=='undefined')?MarkdownParser.parseMarkdown(md):renderMd(md);}document.getElementById('editorInfo').textContent=md.length+' 字'}
+        // 移动端：预览/编辑切换
+        function toggleMobilePreview(){
+            const btn=document.querySelector('.mobile-preview-btn');
+            const left=document.querySelector('.editor-left');
+            const right=document.querySelector('.editor-right');
+            if(!left||!right)return;
+            const showingPreview=left.classList.contains('hide');
+            left.classList.toggle('hide',!showingPreview);
+            right.classList.toggle('show',!showingPreview);
+            if(btn)btn.textContent=showingPreview?'👁 预览':'✏ 编辑';
+            // 切到预览时刷新预览
+            if(!showingPreview)updatePreview();
+            else document.getElementById('edContent')?.focus();
+        }
         function renderMd(t){return'<p>'+t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/^### (.*$)/gm,'<h3>$1</h3>').replace(/^## (.*$)/gm,'<h2>$1</h2>').replace(/^# (.*$)/gm,'<h1>$1</h1>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\*(.*?)\*/g,'<em>$1</em>').replace(/~~(.*?)~~/g,'<del>$1</del>').replace(/`([^`]+)`/g,'<code>$1</code>').replace(/```(\w*)\n([\s\S]*?)```/g,'<pre><code>$2</code></pre>').replace(/\[([^\]]+)\]\(([^)]+)\)/g,'<a href="$2" target="_blank">$1</a>').replace(/!\[([^\]]*)\]\(([^)]+)\)/g,'<img src="$2" alt="$1">').replace(/^> (.*$)/gm,'<blockquote>$1</blockquote>').replace(/^- (.*$)/gm,'<li>$1</li>').replace(/^1\. (.*$)/gm,'<li>$1</li>').replace(/^---$/gm,'<hr>').replace(/\n\n/g,'</p><p>')+'</p>'}
         function handleDragOver(e){e.preventDefault();e.stopPropagation();document.getElementById('dropOverlay').classList.add('show')}
         function handleDragLeave(e){e.preventDefault();e.stopPropagation();document.getElementById('dropOverlay').classList.remove('show')}
