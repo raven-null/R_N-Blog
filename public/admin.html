@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>管理后台 - 渡鸦_NULL BLOG</title>
+    <title>管理后台</title>
     <!-- Markdown 渲染库 -->
     <script src="js/vendor/marked.min.js"></script>
     <script src="js/markdown.js"></script>
@@ -441,7 +441,7 @@
 </head>
 <body>
     <div class="login-page" id="loginPage">
-        <div class="login-box"><h1>渡鸦_NULL</h1><p>管理后台</p><div class="login-error" id="loginError">密钥错误</div><input type="password" id="adminKeyInput" placeholder="输入管理密钥" onkeydown="if(event.key==='Enter')doLogin()"><button onclick="doLogin()">进入后台</button></div>
+        <div class="login-box"><h1>管理后台</h1><p>博客管理</p><div class="login-error" id="loginError">密钥错误</div><input type="password" id="adminKeyInput" placeholder="输入管理密钥" onkeydown="if(event.key==='Enter')doLogin()"><button onclick="doLogin()">进入后台</button></div>
     </div>
     <div class="admin" id="adminApp">
         <div class="admin-header"><h1>管理后台</h1><div class="admin-header-right"><a href="/" target="_blank">首页 ↗</a><button onclick="doLogout()">退出</button></div></div>
@@ -667,7 +667,7 @@
                             <h3>站点名称</h3>
                             <div class="settings-field">
                                 <label>顶部品牌文字（首页左上角）</label>
-                                <input type="text" id="setSiteName" placeholder="渡鸦_NULL BLOG">
+                                <input type="text" id="setSiteName" placeholder="输入站点名称">
                             </div>
                         </div>
 
@@ -678,17 +678,17 @@
                                 <label>头像</label>
                                 <div class="settings-avatar-row">
                                     <div class="settings-avatar-preview" id="settingsAvatarPreview"><img id="settingsAvatarImg" alt="" style="display:none"><span>未设置</span></div>
-                                    <input type="text" id="setAvatar" placeholder="头像图片路径，如 images/TX/01_TX.webp">
+                                    <input type="text" id="setAvatar" placeholder="输入头像图片路径">
                                     <button class="btn btn-ghost btn-sm" onclick="pickAvatarFromGallery()">🖼 选图</button>
                                 </div>
                             </div>
                             <div class="settings-field">
                                 <label>用户名</label>
-                                <input type="text" id="setAuthorName" placeholder="渡鸦NULL">
+                                <input type="text" id="setAuthorName" placeholder="输入用户名">
                             </div>
                             <div class="settings-field">
                                 <label>签名</label>
-                                <input type="text" id="setBio" placeholder="全栈开发者 · 内容创作者 · 终身学习者">
+                                <input type="text" id="setBio" placeholder="输入个人签名">
                             </div>
                         </div>
 
@@ -721,7 +721,7 @@
                             <h3>导航标签（首页文章筛选）</h3>
                             <div class="settings-field">
                                 <label>主要标签（逗号分隔，如：技术,生活,AI）</label>
-                                <input type="text" id="setNavTags" placeholder="技术,生活,AI">
+                                <input type="text" id="setNavTags" placeholder="用逗号分隔，如：技术,生活,AI">
                             </div>
                             <div class="settings-tip">首页导航栏将显示这些标签用于文章筛选，默认显示「全部」</div>
                         </div>
@@ -731,15 +731,15 @@
                             <h3>关于信息（我的视图底部）</h3>
                             <div class="settings-field">
                                 <label>版本</label>
-                                <input type="text" id="setAboutVersion" placeholder="版本 v2.0">
+                                <input type="text" id="setAboutVersion" placeholder="输入版本号，如 v1.0">
                             </div>
                             <div class="settings-field">
                                 <label>技术栈</label>
-                                <input type="text" id="setAboutTech" placeholder="纯前端 · GitHub Pages">
+                                <input type="text" id="setAboutTech" placeholder="输入技术栈描述">
                             </div>
                             <div class="settings-field">
                                 <label>最后更新</label>
-                                <input type="text" id="setAboutUpdated" placeholder="最后更新 2026-08-06">
+                                <input type="text" id="setAboutUpdated" placeholder="输入更新日期">
                             </div>
                         </div>
 
