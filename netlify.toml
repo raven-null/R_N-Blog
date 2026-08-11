@@ -48,6 +48,11 @@
   status = 200
 
 [[redirects]]
+  from = "/api/ai"
+  to = "/.netlify/functions/ai"
+  status = 200
+
+[[redirects]]
   from = "/api/admin-image"
   to = "/.netlify/functions/admin-image"
   status = 200

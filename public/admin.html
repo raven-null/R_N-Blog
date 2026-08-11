@@ -238,6 +238,33 @@
         .image-picker-item .picker-del{background:rgba(0,0,0,.6);border:none;color:var(--danger);cursor:pointer;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;opacity:0;transition:opacity .1s;flex-shrink:0}
         .image-picker-item:hover .picker-del{opacity:1}
 
+        /* AI 写作助手侧栏 */
+        .ai-writer-panel{width:380px;display:flex;flex-direction:column}
+        .ai-writer-body{flex:1;display:flex;flex-direction:column;min-height:0;padding:12px 14px}
+        .ai-writer-actions{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px}
+        .ai-writer-actions .btn{justify-content:center;padding:8px 6px;font-size:12px}
+        .ai-writer-params{display:flex;flex-direction:column;gap:8px;margin-bottom:10px;padding:10px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm)}
+        .ai-writer-param-row{display:flex;flex-direction:column;gap:4px}
+        .ai-writer-param-row label{font-size:11px;color:var(--text-muted)}
+        .ai-writer-param-row input{width:100%;padding:7px 10px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:12px;font-family:inherit}
+        .ai-writer-param-row input:focus{outline:none;border-color:var(--accent)}
+        .ai-writer-inline{flex-direction:row;align-items:center;gap:8px}
+        .ai-writer-inline input{width:90px;flex-shrink:0}
+        .ai-writer-hint{font-size:11px;color:var(--text-muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+        .ai-writer-status{padding:8px 10px;border-radius:var(--radius-sm);font-size:12px;margin-bottom:10px;background:var(--accent-dim);color:var(--accent)}
+        .ai-writer-status.error{background:rgba(239,83,80,.12);color:var(--danger)}
+        .ai-writer-result{flex:1;min-height:0;overflow-y:auto;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;font-size:13px;line-height:1.7;white-space:pre-wrap;word-break:break-word;color:var(--text)}
+        .ai-writer-result.streaming::after{content:'▍';animation:blink 1s steps(2) infinite;color:var(--accent)}
+        .ai-writer-result .markdown h1,.ai-writer-result .markdown h2,.ai-writer-result .markdown h3{color:var(--accent);margin:12px 0 6px;font-size:15px}
+        .ai-writer-result .markdown pre{background:var(--bg);padding:10px;border-radius:var(--radius-sm);overflow-x:auto;margin:8px 0;border:1px solid var(--border)}
+        .ai-writer-result .markdown code{background:var(--bg);padding:1px 5px;border-radius:3px;font-size:12px}
+        .ai-writer-result .markdown p{margin-bottom:8px}
+        .ai-writer-result .markdown ul,.ai-writer-result .markdown ol{padding-left:20px;margin-bottom:8px}
+        .ai-writer-empty{color:var(--text-muted);font-size:12px;text-align:center;padding:24px 0}
+        .ai-writer-footer{display:flex;align-items:center;gap:6px;padding-top:10px}
+        .ai-writer-footer .btn{flex-shrink:0}
+        @keyframes blink{50%{opacity:0}}
+
         .toast{position:fixed;bottom:20px;right:20px;padding:10px 20px;border-radius:var(--radius-sm);font-size:12px;z-index:999;display:none;box-shadow:var(--shadow);font-weight:500}
         .toast-success{background:var(--success);color:#000}
         .toast-error{background:var(--danger);color:#fff}
@@ -572,6 +599,7 @@
                             <button onclick="toggleMobilePreview()" title="预览/编辑切换" class="mobile-preview-btn">👁 预览</button>
                             <button onclick="mdInsert('table')" title="插入表格">▦ 表格</button>
                             <span class="sep"></span>
+                            <button onclick="openAiWriter()" title="AI 写作助手" class="ai-writer-btn">🤖 AI 写作</button>
                             <button onclick="openImagePicker()" title="从图库插入图片" class="toolbar-img-btn">🖼 图库</button>
                             <label class="editor-upload-img" title="上传图片">
                                 ⬆ 上传图片<input type="file" accept="image/*" multiple style="display:none" onchange="uploadAndInsertToEditor(this.files);this.value=''">
@@ -802,6 +830,43 @@
                             <div class="settings-tip">填写模型信息和 API 接口即可对接任意兼容 OpenAI 格式的大模型；留空则使用内置默认配置。</div>
                         </div>
 
+                        <!-- 6.5 写作 AI -->
+                        <div class="settings-group">
+                            <h3>写作 AI（后台写文章助手）</h3>
+                            <div class="settings-toggle-list" style="margin-bottom:12px">
+                                <div class="settings-toggle-item"><span>启用写作 AI</span><label class="switch"><input type="checkbox" id="setWrEnabled" checked><span class="slider"></span></label></div>
+                            </div>
+                            <div class="settings-field">
+                                <label>API 接口地址（留空则复用「AI 助手」配置）</label>
+                                <input type="text" id="setWrApiUrl" placeholder="写作用大模型接口，可与聊天不同">
+                            </div>
+                            <div class="settings-field">
+                                <label>API Key（留空则复用「AI 助手」配置）</label>
+                                <input type="password" id="setWrApiKey" placeholder="输入写作 AI 的 API Key" autocomplete="off">
+                            </div>
+                            <div class="settings-field">
+                                <label>模型名称（留空则复用「AI 助手」配置）</label>
+                                <input type="text" id="setWrModel" placeholder="如：glm-4-flash / deepseek-chat">
+                            </div>
+                            <div class="settings-field">
+                                <label>写作系统提示词（可选）</label>
+                                <textarea id="setWrSystemPrompt" rows="3" placeholder="写作助手人设，默认内置；会与「AI 助手」的提示词完全独立"></textarea>
+                            </div>
+                            <div class="settings-field">
+                                <label>写作关键词（逗号分隔，要求成稿自然融入）</label>
+                                <input type="text" id="setWrKeywords" placeholder="如：技术, AI, Web 开发">
+                            </div>
+                            <div class="settings-field">
+                                <label>最大输出 Token</label>
+                                <input type="number" id="setWrMaxTokens" min="1" max="16384" placeholder="4096">
+                            </div>
+                            <div class="settings-field">
+                                <label>温度（0 - 2，越大越随机）</label>
+                                <input type="number" id="setWrTemperature" min="0" max="2" step="0.1" placeholder="0.7">
+                            </div>
+                            <div class="settings-tip">写作 AI 与前台聊天 AI 分开配置，写文章可换更强的模型与独立的关键词/人设；未填 API 信息时自动复用「AI 助手」配置。</div>
+                        </div>
+
                         <!-- 7. 关于信息 -->
                         <div class="settings-group">
                             <h3>关于信息（我的视图底部）</h3>
@@ -859,6 +924,46 @@
         <div class="image-picker-header"><h3>选择图片插入</h3><button onclick="closeImagePicker()">&times;</button></div>
         <div class="image-picker-upload"><label>📤 上传新图片<input type="file" accept="image/*" multiple onchange="uploadAndInsert(this.files)" style="display:none"></label></div>
         <div class="image-picker-list" id="imagePickerList"></div>
+    </div>
+
+    <!-- AI 写作助手侧栏 -->
+    <div class="image-picker-panel ai-writer-panel" id="aiWriterPanel">
+        <div class="image-picker-header">
+            <h3>🤖 AI 写作助手</h3>
+            <button onclick="closeAiWriter()">&times;</button>
+        </div>
+        <div class="ai-writer-body">
+            <div class="ai-writer-actions">
+                <button class="btn btn-ghost btn-sm" onclick="aiWrite('title')">🪄 生成标题</button>
+                <button class="btn btn-ghost btn-sm" onclick="aiWrite('outline')">📋 生成大纲</button>
+                <button class="btn btn-ghost btn-sm" onclick="aiWrite('draft')">✍️ 生成全文</button>
+                <button class="btn btn-ghost btn-sm" onclick="aiWrite('continue')">➕ 续写</button>
+                <button class="btn btn-ghost btn-sm" onclick="aiWrite('polish')">🖌 润色</button>
+                <button class="btn btn-ghost btn-sm" onclick="aiWrite('summarize')">🏷 摘要+标签</button>
+            </div>
+            <div class="ai-writer-params">
+                <div class="ai-writer-param-row">
+                    <label>主题/关键词</label>
+                    <input type="text" id="aiWrTopic" placeholder="生成标题/大纲时的主题（选填）" maxlength="120">
+                </div>
+                <div class="ai-writer-param-row ai-writer-inline">
+                    <label>字数</label>
+                    <input type="number" id="aiWrWords" value="800" min="100" max="5000" step="100" style="width:90px">
+                    <span class="ai-writer-hint" id="aiWrKwHint"></span>
+                </div>
+            </div>
+            <div class="ai-writer-status" id="aiWrStatus" style="display:none"></div>
+            <div class="ai-writer-result" id="aiWrResult"><div class="ai-writer-empty">点击上方动作开始写作，结果会流式显示在这里</div></div>
+            <div class="ai-writer-footer">
+                <button class="btn btn-ghost btn-sm" id="aiWrStopBtn" style="display:none" onclick="aiStop()">⏹ 停止生成</button>
+                <span style="flex:1"></span>
+                <button class="btn btn-ghost btn-sm" id="aiWrFillTitleBtn" style="display:none" onclick="aiInsertTitle()">填入标题</button>
+                <button class="btn btn-ghost btn-sm" id="aiWrReplaceBtn" style="display:none" onclick="aiReplaceSelection()">替换选中</button>
+                <button class="btn btn-ghost btn-sm" id="aiWrInsertBtn" style="display:none" onclick="aiInsertContent()">插入正文</button>
+                <button class="btn btn-ghost btn-sm" id="aiWrExcerptBtn" style="display:none" onclick="aiInsertExcerpt()">填入摘要</button>
+                <button class="btn btn-ghost btn-sm" id="aiWrTagsBtn" style="display:none" onclick="aiInsertTags()">填入标签</button>
+            </div>
+        </div>
     </div>
 
     <div class="rename-modal" id="renameModal">
@@ -1074,6 +1179,159 @@
             const body={title,excerpt,tags,content,status,image};if(editingId)body.id=editingId;const r=await apiFetch('action=articles',{method:'POST',body:JSON.stringify(body)});if(r.status==='success'){showToast('保存成功','success');resetEditor();switchTab('articles')}else showToast(r.message||'保存失败','error')}
         function mdInsert(t){const ta=document.getElementById('edContent'),s=ta.selectionStart,e=ta.selectionEnd,sel=ta.value.slice(s,e),b=ta.value.slice(0,s),a=ta.value.slice(e);const m={heading:{b:'## ',a:'',d:'标题'},h3:{b:'### ',a:'',d:'小标题'},bold:{b:'**',a:'**',d:'加粗文字'},italic:{b:'*',a:'*',d:'斜体文字'},strike:{b:'~~',a:'~~',d:'删除线'},code:{b:'`',a:'`',d:'code'},codeblock:{b:'```\n',a:'\n```',d:'// 代码'},quote:{b:'> ',a:'',d:'引用内容'},list:{b:'- ',a:'',d:'列表项'},olist:{b:'1. ',a:'',d:'列表项'},link:{b:'[',a:'](https://)',d:'链接文字'},image:{b:'![',a:'](url)',d:'图片描述'},table:{b:'| 列1 | 列2 |\n| --- | --- |\n',a:'',d:'| 内容 | 内容 |'},hr:{b:'\n---\n',a:'',d:''}};const i=m[t];if(!i)return;const tx=sel||i.d;ta.value=b+i.b+tx+i.a+a;ta.focus();ta.selectionStart=s+i.b.length;ta.selectionEnd=s+i.b.length+tx.length;updatePreview()}
         function updatePreview(){const md=document.getElementById('edContent').value;const preview=document.getElementById('edPreview');if(!md.trim()){preview.innerHTML='<div class="preview-empty">👈 左侧开始写作，这里实时预览</div>';}else{preview.innerHTML=(typeof MarkdownParser!=='undefined'&&typeof marked!=='undefined')?MarkdownParser.parseMarkdown(md):renderMd(md);}document.getElementById('editorInfo').textContent=md.length+' 字'}
+        // ===== AI 写作助手 =====
+        let aiWrController=null;
+        let aiWrAction='';
+        function getEditorSelection(){const ta=document.getElementById('edContent');return ta.value.slice(ta.selectionStart,ta.selectionEnd)}
+        async function openAiWriter(){
+            document.getElementById('aiWriterPanel').classList.add('open');
+            try{
+                const r=await apiFetch('action=settings');
+                if(r.status==='success'&&r.data&&r.data.writingAi){
+                    const kw=(r.data.writingAi.keywords||'').trim();
+                    document.getElementById('aiWrKwHint').textContent=kw?('关键词：'+kw):'';
+                }
+            }catch(e){}
+        }
+        function closeAiWriter(){aiStop();document.getElementById('aiWriterPanel').classList.remove('open')}
+        async function aiWrite(action){
+            const ta=document.getElementById('edContent');
+            const selection=getEditorSelection();
+            const title=document.getElementById('edTitle').value.trim();
+            const content=ta.value;
+            const topic=document.getElementById('aiWrTopic').value.trim();
+            const words=parseInt(document.getElementById('aiWrWords').value)||800;
+            const existingTitles=(allArticles||[]).filter(a=>a.status==='published').map(a=>a.title).filter(Boolean);
+            if(action==='title'&&!topic&&!title){showToast('请填写主题或标题','error');return}
+            if(action==='draft'&&!title&&!topic){showToast('请先填写文章标题或主题','error');return}
+            if((action==='continue'||action==='summarize')&&!content.trim()){showToast('请先输入正文','error');return}
+            if(action==='polish'&&!selection&&!content.trim()){showToast('请选中文字或先输入正文','error');return}
+            const body={action,title,content,selection,topic,words,existingTitles};
+            aiWrAction=action;
+            const panel=document.getElementById('aiWrResult');
+            const status=document.getElementById('aiWrStatus');
+            panel.innerHTML='';panel.classList.remove('streaming');panel.classList.remove('markdown');
+            status.style.display='none';status.className='ai-writer-status';
+            document.getElementById('aiWrStopBtn').style.display='inline-flex';
+            ['aiWrFillTitleBtn','aiWrReplaceBtn','aiWrInsertBtn','aiWrExcerptBtn','aiWrTagsBtn'].forEach(id=>document.getElementById(id).style.display='none');
+            aiWrController=new AbortController();
+            let accumulated='';
+            try{
+                const res=await fetch('/api/ai',{
+                    method:'POST',
+                    headers:{'Content-Type':'application/json','X-Admin-Key':adminKey},
+                    body:JSON.stringify(body),
+                    signal:aiWrController.signal
+                });
+                if(!res.ok){
+                    const err=await res.json().catch(()=>({}));
+                    status.textContent=err.message||('请求失败（'+res.status+'）');
+                    status.classList.add('error');status.style.display='block';
+                    return;
+                }
+                const reader=res.body.getReader();
+                const decoder=new TextDecoder('utf-8');
+                let buffer='';
+                panel.classList.add('streaming');
+                while(true){
+                    const {done,value}=await reader.read();
+                    if(done)break;
+                    buffer+=decoder.decode(value,{stream:true});
+                    const lines=buffer.split('\n');
+                    buffer=lines.pop();
+                    for(const line of lines){
+                        const trimmed=line.trim();
+                        if(!trimmed.startsWith('data:'))continue;
+                        const data=trimmed.substring(5).trim();
+                        if(data==='[DONE]')continue;
+                        try{
+                            const j=JSON.parse(data);
+                            const delta=j.choices&&j.choices[0]&&j.choices[0].delta&&j.choices[0].delta.content;
+                            if(delta){accumulated+=delta;renderAiWrResult(panel,accumulated,action)}
+                        }catch(e){}
+                    }
+                }
+                panel.classList.remove('streaming');
+                aiWrShowInsertButtons();
+            }catch(e){
+                if(e.name==='AbortError'){
+                    status.textContent='已停止生成';
+                    status.style.display='block';
+                    panel.classList.remove('streaming');
+                    if(accumulated.trim())aiWrShowInsertButtons();
+                }else{
+                    status.textContent='调用失败：'+(e.message||'网络错误');
+                    status.classList.add('error');status.style.display='block';
+                    panel.classList.remove('streaming');
+                }
+            }finally{
+                aiWrController=null;
+                document.getElementById('aiWrStopBtn').style.display='none';
+            }
+        }
+        function aiStop(){if(aiWrController)aiWrController.abort()}
+        function renderAiWrResult(el,text,action){
+            if(action==='title'){
+                el.classList.remove('markdown');
+                el.textContent=text;
+                return;
+            }
+            el.classList.add('markdown');
+            if(typeof MarkdownParser!=='undefined'&&typeof marked!=='undefined'){
+                el.innerHTML=MarkdownParser.parseMarkdown(text);
+            }else{
+                el.textContent=text;
+            }
+        }
+        function aiWrShowInsertButtons(){
+            const show=id=>{const b=document.getElementById(id);if(b)b.style.display='inline-flex'};
+            if(aiWrAction==='title')show('aiWrFillTitleBtn');
+            else if(aiWrAction==='polish')show('aiWrReplaceBtn');
+            else if(aiWrAction==='summarize'){show('aiWrExcerptBtn');show('aiWrTagsBtn')}
+            else show('aiWrInsertBtn');
+        }
+        function aiInsertTitle(){
+            const first=document.getElementById('aiWrResult').innerText.split('\n').map(s=>s.trim()).filter(Boolean)[0]||'';
+            if(!first){showToast('暂无结果','error');return}
+            document.getElementById('edTitle').value=first.replace(/^\s*\d+[\.、)．]\s*/,'').replace(/^[-*]\s*/,'');
+            showToast('已填入标题','success');
+        }
+        function aiInsertContent(){
+            const ta=document.getElementById('edContent');
+            const text=document.getElementById('aiWrResult').innerText;
+            if(!text.trim()){showToast('暂无结果','error');return}
+            ta.value=ta.value?ta.value.trimEnd()+'\n\n'+text:text;
+            ta.scrollTop=ta.scrollHeight;
+            updatePreview();
+            showToast('已插入正文','success');
+        }
+        function aiReplaceSelection(){
+            const ta=document.getElementById('edContent');
+            const text=document.getElementById('aiWrResult').innerText;
+            if(!text.trim()){showToast('暂无结果','error');return}
+            const s=ta.selectionStart,e=ta.selectionEnd;
+            ta.value=ta.value.slice(0,s)+text+ta.value.slice(e);
+            ta.selectionStart=ta.selectionEnd=s+text.length;
+            ta.focus();
+            updatePreview();
+            showToast('已替换选中文字','success');
+        }
+        function aiInsertExcerpt(){
+            const text=document.getElementById('aiWrResult').innerText;
+            const tagIdx=text.indexOf('标签：');
+            const excerpt=(tagIdx>=0?text.slice(0,tagIdx):text).trim().slice(0,200);
+            document.getElementById('edExcerpt').value=excerpt;
+            showToast('已填入摘要','success');
+        }
+        function aiInsertTags(){
+            const text=document.getElementById('aiWrResult').innerText;
+            const tagIdx=text.indexOf('标签：');
+            const tagsStr=tagIdx>=0?text.slice(tagIdx+3).trim():'';
+            const tags=tagsStr.split(/[,、，\s]+/).map(s=>s.trim()).filter(Boolean).slice(0,5);
+            if(!tags.length){showToast('未识别到标签','error');return}
+            tags.forEach(t=>addArticleTag(t));
+            showToast('已填入标签','success');
+        }
         // 移动端：预览/编辑切换
         function toggleMobilePreview(){
             const btn=document.querySelector('.mobile-preview-btn');
@@ -2096,6 +2354,7 @@
             document.querySelectorAll('.sidebar-item').forEach(el=>el.classList.toggle('active',el.dataset.tab===tab));
             document.querySelectorAll('.mobile-tab').forEach(el=>el.classList.toggle('active',el.dataset.tab===tab));
             ['articles','write','comments','images','tags','settings'].forEach(t=>document.getElementById('tab-'+t).style.display=t===tab?'block':'none');
+            if(tab!=='write')closeAiWriter();
             if(tab==='articles')loadArticles();
             if(tab==='comments')loadComments();
             if(tab==='settings')loadSettings();
@@ -2196,6 +2455,16 @@
             document.getElementById('setAiMaxTokens').value=ai.maxTokens||'';
             const aiTemp=ai.temperature;
             document.getElementById('setAiTemperature').value=(aiTemp===undefined||aiTemp===null||aiTemp==='')?'':aiTemp;
+            const wr=s.writingAi||{};
+            document.getElementById('setWrEnabled').checked=wr.enabled!==false;
+            document.getElementById('setWrApiUrl').value=wr.apiUrl||'';
+            document.getElementById('setWrApiKey').value=wr.apiKey||'';
+            document.getElementById('setWrModel').value=wr.model||'';
+            document.getElementById('setWrSystemPrompt').value=wr.systemPrompt||'';
+            document.getElementById('setWrKeywords').value=wr.keywords||'';
+            document.getElementById('setWrMaxTokens').value=wr.maxTokens||'';
+            const wrTemp=wr.temperature;
+            document.getElementById('setWrTemperature').value=(wrTemp===undefined||wrTemp===null||wrTemp==='')?'':wrTemp;
         }
         // 头像预览
         function renderSettingsAvatar(src){
@@ -2399,6 +2668,16 @@
                     systemPrompt:document.getElementById('setAiSystemPrompt').value.trim(),
                     maxTokens:parseInt(document.getElementById('setAiMaxTokens').value)||2048,
                     temperature:document.getElementById('setAiTemperature').value!==''?parseFloat(document.getElementById('setAiTemperature').value):0.7,
+                },
+                writingAi:{
+                    enabled:document.getElementById('setWrEnabled').checked,
+                    apiUrl:document.getElementById('setWrApiUrl').value.trim(),
+                    apiKey:document.getElementById('setWrApiKey').value.trim(),
+                    model:document.getElementById('setWrModel').value.trim(),
+                    systemPrompt:document.getElementById('setWrSystemPrompt').value.trim(),
+                    keywords:document.getElementById('setWrKeywords').value.trim(),
+                    maxTokens:parseInt(document.getElementById('setWrMaxTokens').value)||4096,
+                    temperature:document.getElementById('setWrTemperature').value!==''?parseFloat(document.getElementById('setWrTemperature').value):0.7,
                 },
             };
             const r=await apiFetch('action=settings',{method:'POST',body:JSON.stringify(body)});

@@ -603,6 +603,17 @@ export default async (req: Request) => {
         maxTokens: 2048,
         temperature: 0.7,
       },
+      // 写作 AI（后台写文章用，与前台聊天 AI 独立配置）
+      writingAi: {
+        enabled: true,
+        apiUrl: "",
+        apiKey: "",
+        model: "",
+        systemPrompt: "",
+        keywords: "",
+        maxTokens: 4096,
+        temperature: 0.7,
+      },
     }
 
     // GET: 读取设置（公开，首页需要）
@@ -611,6 +622,8 @@ export default async (req: Request) => {
       const data = raw ? JSON.parse(raw) : {}
       const storedAi = data.ai || {}
       const aiDefaults = DEFAULT_SETTINGS.ai
+      const storedWritingAi = data.writingAi || {}
+      const writingAiDefaults = DEFAULT_SETTINGS.writingAi
       // 合并默认值，确保关键字段有值
       const merged = {
         ...DEFAULT_SETTINGS,
@@ -629,6 +642,15 @@ export default async (req: Request) => {
           maxTokens: Number(storedAi.maxTokens) > 0 ? Number(storedAi.maxTokens) : aiDefaults.maxTokens,
           temperature: typeof storedAi.temperature === "number" && !Number.isNaN(storedAi.temperature) ? storedAi.temperature : aiDefaults.temperature,
         },
+        // 写作 AI：apiUrl/apiKey/model 留空时不在此处回退（由 /api/ai 后端回退 ai），其余字段用默认值
+        writingAi: {
+          ...writingAiDefaults,
+          ...storedWritingAi,
+          systemPrompt: storedWritingAi.systemPrompt || writingAiDefaults.systemPrompt,
+          keywords: storedWritingAi.keywords || writingAiDefaults.keywords,
+          maxTokens: Number(storedWritingAi.maxTokens) > 0 ? Number(storedWritingAi.maxTokens) : writingAiDefaults.maxTokens,
+          temperature: typeof storedWritingAi.temperature === "number" && !Number.isNaN(storedWritingAi.temperature) ? storedWritingAi.temperature : writingAiDefaults.temperature,
+        },
         navTags: data.navTags && data.navTags.length ? data.navTags : DEFAULT_SETTINGS.navTags,
       }
       return json(200, { status: "success", data: merged }, req)
@@ -640,7 +662,7 @@ export default async (req: Request) => {
     }
     if (req.method === "POST") {
       const body = await req.json().catch(() => ({}))
-      const { siteTitle, favicon, siteName, avatar, authorName, bio, views, stats, navTags, about, ai } = body
+      const { siteTitle, favicon, siteName, avatar, authorName, bio, views, stats, navTags, about, ai, writingAi } = body
 
       // 修改密码操作
       if (body.oldPassword !== undefined || body.newPassword !== undefined) {
@@ -691,6 +713,16 @@ export default async (req: Request) => {
           systemPrompt: String(ai?.systemPrompt || "").trim(),
           maxTokens: Number(ai?.maxTokens) > 0 ? Number(ai?.maxTokens) : 2048,
           temperature: typeof ai?.temperature === "number" && !Number.isNaN(ai.temperature) ? ai.temperature : 0.7,
+        },
+        writingAi: {
+          enabled: writingAi?.enabled !== false,
+          apiUrl: String(writingAi?.apiUrl || "").trim(),
+          apiKey: String(writingAi?.apiKey || "").trim(),
+          model: String(writingAi?.model || "").trim(),
+          systemPrompt: String(writingAi?.systemPrompt || "").trim(),
+          keywords: String(writingAi?.keywords || "").trim(),
+          maxTokens: Number(writingAi?.maxTokens) > 0 ? Number(writingAi?.maxTokens) : 4096,
+          temperature: typeof writingAi?.temperature === "number" && !Number.isNaN(writingAi.temperature) ? writingAi.temperature : 0.7,
         },
       }
       await settingsStore.set("site", JSON.stringify(settings))
