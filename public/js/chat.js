@@ -437,6 +437,14 @@ const AIChat = {
 
     openWindow() {
         const chatWindow = document.getElementById('chatWindow');
+        // 已打开时只聚焦输入框，不重放动画（避免每次发送消息都闪烁）
+        if (chatWindow.classList.contains('show')) {
+            const input = document.getElementById('chatInput');
+            if (input) input.focus({ preventScroll: true });
+            this.unreadCount = 0;
+            this.updateBadge();
+            return;
+        }
         const useAnime = this.chatAnime;
         chatWindow.style.visibility = 'visible';
         chatWindow.style.opacity = useAnime ? '0' : '1';
