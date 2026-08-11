@@ -769,7 +769,40 @@
                             <div class="settings-tip">首页导航栏将显示这些标签用于文章筛选，默认显示「全部」</div>
                         </div>
 
-                        <!-- 6. 关于信息 -->
+                        <!-- 6. AI 助手 -->
+                        <div class="settings-group">
+                            <h3>AI 助手（聊天机器人）</h3>
+                            <div class="settings-toggle-list" style="margin-bottom:12px">
+                                <div class="settings-toggle-item"><span>启用 AI 助手</span><label class="switch"><input type="checkbox" id="setAiEnabled" checked><span class="slider"></span></label></div>
+                            </div>
+                            <div class="settings-field">
+                                <label>API 接口地址</label>
+                                <input type="text" id="setAiApiUrl" placeholder="如：https://open.bigmodel.cn/api/paas/v4/chat/completions">
+                            </div>
+                            <div class="settings-field">
+                                <label>API Key</label>
+                                <input type="password" id="setAiApiKey" placeholder="输入 API Key" autocomplete="off">
+                            </div>
+                            <div class="settings-field">
+                                <label>模型名称</label>
+                                <input type="text" id="setAiModel" placeholder="如：glm-4-flash">
+                            </div>
+                            <div class="settings-field">
+                                <label>系统提示词（可选）</label>
+                                <textarea id="setAiSystemPrompt" rows="3" placeholder="设置 AI 的角色与回复风格"></textarea>
+                            </div>
+                            <div class="settings-field">
+                                <label>最大输出 Token</label>
+                                <input type="number" id="setAiMaxTokens" min="1" max="8192" placeholder="2048">
+                            </div>
+                            <div class="settings-field">
+                                <label>温度（0 - 2，越大越随机）</label>
+                                <input type="number" id="setAiTemperature" min="0" max="2" step="0.1" placeholder="0.7">
+                            </div>
+                            <div class="settings-tip">填写模型信息和 API 接口即可对接任意兼容 OpenAI 格式的大模型；留空则使用内置默认配置。</div>
+                        </div>
+
+                        <!-- 7. 关于信息 -->
                         <div class="settings-group">
                             <h3>关于信息（我的视图底部）</h3>
                             <div class="settings-field">
@@ -786,7 +819,7 @@
                             </div>
                         </div>
 
-                        <!-- 7. 后台密码 -->
+                        <!-- 8. 后台密码 -->
                         <div class="settings-group">
                             <h3>后台密码</h3>
                             <div class="settings-field">
@@ -2154,6 +2187,15 @@
             document.getElementById('setAboutVersion').value=s.about?s.about.version||'':'';
             document.getElementById('setAboutTech').value=s.about?s.about.tech||'':'';
             document.getElementById('setAboutUpdated').value=s.about?s.about.updated||'':'';
+            const ai=s.ai||{};
+            document.getElementById('setAiEnabled').checked=ai.enabled!==false;
+            document.getElementById('setAiApiUrl').value=ai.apiUrl||'';
+            document.getElementById('setAiApiKey').value=ai.apiKey||'';
+            document.getElementById('setAiModel').value=ai.model||'';
+            document.getElementById('setAiSystemPrompt').value=ai.systemPrompt||'';
+            document.getElementById('setAiMaxTokens').value=ai.maxTokens||'';
+            const aiTemp=ai.temperature;
+            document.getElementById('setAiTemperature').value=(aiTemp===undefined||aiTemp===null||aiTemp==='')?'':aiTemp;
         }
         // 头像预览
         function renderSettingsAvatar(src){
@@ -2348,6 +2390,15 @@
                     version:document.getElementById('setAboutVersion').value.trim(),
                     tech:document.getElementById('setAboutTech').value.trim(),
                     updated:document.getElementById('setAboutUpdated').value.trim(),
+                },
+                ai:{
+                    enabled:document.getElementById('setAiEnabled').checked,
+                    apiUrl:document.getElementById('setAiApiUrl').value.trim(),
+                    apiKey:document.getElementById('setAiApiKey').value.trim(),
+                    model:document.getElementById('setAiModel').value.trim(),
+                    systemPrompt:document.getElementById('setAiSystemPrompt').value.trim(),
+                    maxTokens:parseInt(document.getElementById('setAiMaxTokens').value)||2048,
+                    temperature:document.getElementById('setAiTemperature').value!==''?parseFloat(document.getElementById('setAiTemperature').value):0.7,
                 },
             };
             const r=await apiFetch('action=settings',{method:'POST',body:JSON.stringify(body)});

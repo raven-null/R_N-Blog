@@ -594,6 +594,15 @@ export default async (req: Request) => {
       stats: { posts: true, tags: true, words: true, images: true },
       navTags: [],
       about: { version: "", tech: "", updated: "" },
+      ai: {
+        enabled: true,
+        apiUrl: "",
+        apiKey: "",
+        model: "",
+        systemPrompt: "",
+        maxTokens: 2048,
+        temperature: 0.7,
+      },
     }
 
     // GET: 读取设置（公开，首页需要）
@@ -607,6 +616,7 @@ export default async (req: Request) => {
         views: { ...DEFAULT_SETTINGS.views, ...(data.views || {}) },
         stats: { ...DEFAULT_SETTINGS.stats, ...(data.stats || {}) },
         about: { ...DEFAULT_SETTINGS.about, ...(data.about || {}) },
+        ai: { ...DEFAULT_SETTINGS.ai, ...(data.ai || {}) },
         navTags: data.navTags && data.navTags.length ? data.navTags : DEFAULT_SETTINGS.navTags,
       }
       return json(200, { status: "success", data: merged }, req)
@@ -618,7 +628,7 @@ export default async (req: Request) => {
     }
     if (req.method === "POST") {
       const body = await req.json().catch(() => ({}))
-      const { siteTitle, favicon, siteName, avatar, authorName, bio, views, stats, navTags, about } = body
+      const { siteTitle, favicon, siteName, avatar, authorName, bio, views, stats, navTags, about, ai } = body
 
       // 修改密码操作
       if (body.oldPassword !== undefined || body.newPassword !== undefined) {
@@ -660,6 +670,15 @@ export default async (req: Request) => {
           version: String(about?.version || "").trim(),
           tech: String(about?.tech || "").trim(),
           updated: String(about?.updated || "").trim(),
+        },
+        ai: {
+          enabled: ai?.enabled !== false,
+          apiUrl: String(ai?.apiUrl || "").trim(),
+          apiKey: String(ai?.apiKey || "").trim(),
+          model: String(ai?.model || "").trim(),
+          systemPrompt: String(ai?.systemPrompt || "").trim(),
+          maxTokens: Number(ai?.maxTokens) > 0 ? Number(ai?.maxTokens) : 2048,
+          temperature: typeof ai?.temperature === "number" && !Number.isNaN(ai.temperature) ? ai.temperature : 0.7,
         },
       }
       await settingsStore.set("site", JSON.stringify(settings))

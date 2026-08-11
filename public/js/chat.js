@@ -4,8 +4,9 @@
  * 支持流式输出、多会话、Markdown 渲染、划词助手等
  */
 const AIChat = {
-    // API 配置 - 请替换为你的 API Key
+    // API 配置 - 可在后台「博客设置 → AI 助手」中修改
     config: {
+        enabled: true,
         apiUrl: 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
         apiKey: '5dc4e465fad643a7b486d85e2f35594f.l105oILErFBpytEq',
         model: 'glm-4-flash',
@@ -36,7 +37,10 @@ const AIChat = {
     unreadCount: 0,
 
     // 初始化
-    init() {
+    async init() {
+        await this.loadConfig();
+        // 后台设置中禁用 AI 助手时不再渲染界面
+        if (this.config.enabled === false) return;
         this.createChatUI();
         this.bindEvents();
         this.loadSessions();
@@ -51,6 +55,29 @@ const AIChat = {
         if (this.chatAnime) {
             const chatWindow = document.getElementById('chatWindow');
             if (chatWindow) chatWindow.classList.add('anime-driven');
+        }
+    },
+
+    // 从博客设置加载 AI 配置（后台「博客设置 → AI 助手」填写）
+    async loadConfig() {
+        try {
+            const res = await fetch('/api/admin?action=settings');
+            const data = await res.json();
+            if (data.status === 'success' && data.data && data.data.ai) {
+                const ai = data.data.ai;
+                if (ai.enabled !== undefined) this.config.enabled = ai.enabled;
+                if (ai.apiUrl) this.config.apiUrl = ai.apiUrl;
+                if (ai.apiKey) this.config.apiKey = ai.apiKey;
+                if (ai.model) this.config.model = ai.model;
+                if (ai.systemPrompt) this.systemPrompt = ai.systemPrompt;
+                if (ai.maxTokens > 0) this.config.maxTokens = Number(ai.maxTokens);
+                if (ai.temperature !== undefined && ai.temperature !== null && ai.temperature !== '') {
+                    const t = Number(ai.temperature);
+                    if (!Number.isNaN(t)) this.config.temperature = t;
+                }
+            }
+        } catch (e) {
+            console.warn('[AIChat] 配置加载失败，使用默认配置:', e);
         }
     },
 
