@@ -84,6 +84,18 @@
         .status-off{color:var(--text-muted)}
         .row-actions{display:flex;gap:4px}
 
+        /* 文章分组（已发布 / 草稿） */
+        .article-group{margin-bottom:18px}
+        .article-group-header{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:var(--text);padding:6px 2px;text-transform:uppercase;letter-spacing:.5px}
+        .article-group-header .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+        .article-group-header .dot.on{background:var(--success)}
+        .article-group-header .dot.off{background:var(--text-muted)}
+        .article-group-count{background:var(--accent-dim);color:var(--accent);border-radius:10px;padding:1px 8px;font-size:11px;font-weight:600}
+        .article-table tr[draggable="true"]{cursor:grab}
+        .article-table tr.dragging{opacity:.45;background:var(--bg-hover)}
+        .drag-handle{color:var(--text-muted);cursor:grab;user-select:none;text-align:center;white-space:nowrap;font-size:12px;letter-spacing:-1px}
+        .article-table tr.drag-over td{border-top:2px solid var(--accent)}
+
         /* 文章搜索框 */
         .article-search-box{display:flex;align-items:center;gap:8px;padding:8px 14px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:14px;transition:border .15s}
         .article-search-box:focus-within{border-color:var(--accent)}
@@ -480,7 +492,16 @@
                         <input type="text" id="articleSearchInput" placeholder="搜索文章标题、标签..." oninput="filterArticles()">
                         <button class="article-search-clear" onclick="clearArticleSearch()" title="清空" style="display:none">&times;</button>
                     </div>
-                    <table class="article-table"><thead><tr><th>标题</th><th>标签</th><th>状态</th><th>日期</th><th>操作</th></tr></thead><tbody id="articleList"></tbody></table>
+                    <div id="articleList">
+                        <div class="article-group">
+                            <div class="article-group-header"><span class="dot on"></span><span>已发布</span><span class="article-group-count" id="publishedCount">0</span></div>
+                            <table class="article-table"><thead><tr><th style="width:30px" title="拖动调整排序"></th><th>标题</th><th>标签</th><th>状态</th><th>日期</th><th>操作</th></tr></thead><tbody id="publishedList"></tbody></table>
+                        </div>
+                        <div class="article-group">
+                            <div class="article-group-header"><span class="dot off"></span><span>草稿</span><span class="article-group-count" id="draftCount">0</span></div>
+                            <table class="article-table"><thead><tr><th style="width:30px" title="拖动调整排序"></th><th>标题</th><th>标签</th><th>状态</th><th>日期</th><th>操作</th></tr></thead><tbody id="draftList"></tbody></table>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- 写文章 -->
@@ -904,7 +925,73 @@
             const btn=document.getElementById('articleSearchInput')?.nextElementSibling;
             if(btn)btn.style.display=show?'':'none';
         }
-        function renderArticleList(){const t=document.getElementById('articleList');if(!articles.length){t.innerHTML='<tr><td colspan="5" class="empty">暂无文章</td></tr>';return}t.innerHTML=articles.map(a=>`<tr><td><strong>${esc(a.title)}</strong><br><small style="color:var(--text-muted);font-size:10px">${esc(a.id)}</small></td><td>${(a.tags||[]).map(t=>`<span class="tag">${esc(t)}</span>`).join('')}</td><td><span class="status-${a.status==='published'?'on':'off'}">${a.status==='published'?'● 已发布':'○ 草稿'}</span></td><td style="font-size:11px;color:var(--text-muted)">${a.date}${a.update?'<br>↑ '+a.update:''}</td><td><div class="row-actions"><button class="btn btn-ghost btn-sm" onclick="editArticle('${escJs(a.id)}')">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteArticle('${escJs(a.id)}','${escJs(a.title)}')">删除</button></div></td></tr>`).join('')}
+        function articleRowHtml(a){return `<tr draggable="true" data-id="${esc(a.id)}"><td class="drag-handle" title="拖动调整排序">⋮⋮</td><td><strong>${esc(a.title)}</strong><br><small style="color:var(--text-muted);font-size:10px">${esc(a.id)}</small></td><td>${(a.tags||[]).map(t=>`<span class="tag">${esc(t)}</span>`).join('')}</td><td><span class="status-${a.status==='published'?'on':'off'}">${a.status==='published'?'● 已发布':'○ 草稿'}</span></td><td style="font-size:11px;color:var(--text-muted)">${a.date}${a.update?'<br>↑ '+a.update:''}</td><td><div class="row-actions"><button class="btn btn-ghost btn-sm" onclick="editArticle('${escJs(a.id)}')">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteArticle('${escJs(a.id)}','${escJs(a.title)}')">删除</button></div></td></tr>`}
+        // 渲染文章列表：已发布 / 草稿 分组显示
+        function renderArticleList(){
+            const kw=(document.getElementById('articleSearchInput')?.value||'').trim();
+            const noMatch=kw?'无匹配文章':'暂无文章';
+            const published=articles.filter(a=>a.status==='published');
+            const drafts=articles.filter(a=>a.status!=='published');
+            document.getElementById('publishedCount').textContent=published.length;
+            document.getElementById('draftCount').textContent=drafts.length;
+            document.getElementById('publishedList').innerHTML=published.length?published.map(articleRowHtml).join(''):`<tr><td colspan="6" class="empty">${noMatch}</td></tr>`;
+            document.getElementById('draftList').innerHTML=drafts.length?drafts.map(articleRowHtml).join(''):`<tr><td colspan="6" class="empty">${noMatch}</td></tr>`;
+        }
+        // ===== 文章拖拽排序 =====
+        let dragArticleRow=null;
+        function articleListOrderedIds(){const ids=[];document.querySelectorAll('#articleList tbody tr[data-id]').forEach(tr=>ids.push(tr.dataset.id));return ids}
+        // 拖拽后同步本地顺序（保证与后端保存顺序一致）
+        function syncArticlesFromDOM(){
+            const map=new Map(allArticles.map(a=>[a.id,a]));
+            const ids=articleListOrderedIds();
+            const visible=ids.map(id=>map.get(id)).filter(Boolean);
+            const rest=allArticles.filter(a=>!ids.includes(a.id));
+            allArticles=visible.concat(rest);
+            applyArticleFilter();
+        }
+        async function persistArticleOrder(){
+            const ids=articleListOrderedIds();
+            try{
+                const r=await apiFetch('action=articles&reorder=1',{method:'POST',body:JSON.stringify({ids})});
+                if(r.status==='success')showToast('排序已保存','success');
+                else showToast(r.message||'排序保存失败','error');
+            }catch{showToast('排序保存失败','error')}
+        }
+        document.addEventListener('dragstart',e=>{
+            const tr=e.target.closest('#articleList tr[data-id]');
+            if(!tr)return;
+            dragArticleRow=tr;
+            tr.classList.add('dragging');
+            e.dataTransfer.effectAllowed='move';
+            try{e.dataTransfer.setData('text/plain',tr.dataset.id)}catch{}
+        });
+        document.addEventListener('dragover',e=>{
+            e.preventDefault();
+            const tr=e.target.closest('#articleList tr[data-id]');
+            if(!tr||!dragArticleRow||tr===dragArticleRow)return;
+            if(tr.parentNode!==dragArticleRow.parentNode)return; // 禁止跨组拖动
+            const rect=tr.getBoundingClientRect();
+            const after=(e.clientY-rect.top)>rect.height/2;
+            if(after){
+                if(tr.nextElementSibling!==dragArticleRow)tr.after(dragArticleRow);
+            }else{
+                if(tr.previousElementSibling!==dragArticleRow)tr.before(dragArticleRow);
+            }
+            document.querySelectorAll('#articleList tr.drag-over').forEach(r=>r.classList.remove('drag-over'));
+            tr.classList.add('drag-over');
+        });
+        document.addEventListener('drop',e=>{
+            if(!dragArticleRow)return;
+            e.preventDefault();
+            document.querySelectorAll('#articleList tr.dragging,#articleList tr.drag-over').forEach(r=>r.classList.remove('dragging','drag-over'));
+            dragArticleRow=null;
+            syncArticlesFromDOM();
+            persistArticleOrder();
+        });
+        document.addEventListener('dragend',()=>{
+            document.querySelectorAll('#articleList tr.dragging,#articleList tr.drag-over').forEach(r=>r.classList.remove('dragging','drag-over'));
+            dragArticleRow=null;
+        });
         async function deleteArticle(id,title){if(!confirm(`确定删除「${title}」？`))return;const r=await apiFetch(`action=articles&id=${id}`,{method:'DELETE'});if(r.status==='success'){showToast('已删除','success');loadArticles()}else showToast(r.message||'删除失败','error')}
         function editArticle(id){editingId=id;switchTab('write');document.getElementById('writeTitle').textContent='编辑文章';loadArticleForEdit(id)}
         async function loadArticleForEdit(id){const r=await apiFetch(`action=articles&id=${id}`);if(r.status==='success'){const d=r.data;document.getElementById('edTitle').value=d.title||'';document.getElementById('edExcerpt').value=d.excerpt||'';document.getElementById('edImage').value=d.image||'';renderCoverPreview();selectedArticleTags=[...(d.tags||[])];renderTagPickerChips();document.getElementById('edStatus').value=d.status||'published';document.getElementById('edContent').value=d.content||'';scanArticleImagesFromContent(d.content||'');updatePreview()}}

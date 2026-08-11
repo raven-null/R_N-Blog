@@ -119,6 +119,22 @@ export default async (req: Request) => {
       return json(401, { status: "error", message: "未授权" }, req)
     }
 
+    // 重排文章索引（拖拽排序）：body.ids 为期望的全量顺序 id 列表
+    if (url.searchParams.get("reorder") === "1") {
+      const body = await req.json().catch(() => ({}))
+      const ids = Array.isArray(body.ids) ? body.ids.filter((x: unknown) => typeof x === "string") : []
+      const index = await getArticleIndexStrong(store)
+      const byId = new Map(index.map(a => [a.id, a]))
+      const next: ArticleMeta[] = []
+      for (const id of ids) {
+        const meta = byId.get(id)
+        if (meta) { next.push(meta); byId.delete(id) }
+      }
+      for (const meta of byId.values()) next.push(meta)
+      await saveArticleIndex(store, next)
+      return json(200, { status: "success", message: "已更新排序" }, req)
+    }
+
     // POST: 创建或更新
     if (req.method === "POST") {
       const body = await req.json().catch(() => ({}))
@@ -186,10 +202,10 @@ export default async (req: Request) => {
       }
 
       if (existing >= 0) {
-        index[existing] = meta
-      } else {
-        index.unshift(meta)
+        index.splice(existing, 1)
       }
+      // 新建或编辑后始终置顶
+      index.unshift(meta)
       await saveArticleIndex(store, index)
 
       return json(200, { status: "success", data: meta }, req)
