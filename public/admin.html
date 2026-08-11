@@ -247,7 +247,9 @@
         .image-picker-item:hover .picker-del{opacity:1}
 
         /* AI 写作助手侧栏 */
-        .ai-writer-panel{width:380px;flex-direction:column}
+        .ai-writer-panel{top:52px;height:calc(100vh - 52px);width:380px;flex-direction:column}
+        .ai-writer-tab{position:fixed;top:64px;right:0;z-index:101;padding:10px 12px;background:var(--bg-card);border:1px solid var(--border);border-left:none;border-radius:10px 0 0 10px;color:var(--accent);cursor:pointer;font-size:12px;font-family:inherit;box-shadow:var(--shadow);transition:all .15s}
+        .ai-writer-tab:hover{background:var(--bg-hover)}
         .ai-writer-body{flex:1;display:flex;flex-direction:column;min-height:0;padding:12px 14px}
         .ai-writer-status{padding:8px 10px;border-radius:var(--radius-sm);font-size:12px;margin-bottom:10px;background:var(--accent-dim);color:var(--accent)}
         .ai-writer-status.error{background:rgba(239,83,80,.12);color:var(--danger)}
@@ -456,6 +458,8 @@
             #uploadLogModal .rename-box{width:90%!important;max-width:440px}
             /* 图片选择面板全屏 */
             .image-picker-panel{width:100%}
+            .ai-writer-panel{top:0;height:100vh}
+            .ai-writer-tab{top:auto;bottom:20px;right:12px;border:1px solid var(--border);border-radius:20px;padding:8px 14px}
             /* 编辑器 */
             .write-settings-row{flex-direction:column;align-items:stretch}
             .write-settings-row>input{min-width:0}
@@ -928,7 +932,10 @@
     <div class="image-picker-panel ai-writer-panel" id="aiWriterPanel">
         <div class="image-picker-header">
             <h3>🤖 AI 写作助手</h3>
-            <button onclick="closeAiWriter()">&times;</button>
+            <div style="display:flex;gap:4px;align-items:center">
+                <button onclick="aiWriterCollapse()" title="折叠（不中断生成）">»</button>
+                <button onclick="closeAiWriter()" title="关闭（不中断生成）">&times;</button>
+            </div>
         </div>
         <div class="ai-writer-body">
             <div class="ai-writer-status" id="aiWrStatus" style="display:none"></div>
@@ -948,6 +955,8 @@
             <div class="ai-writer-hintrow" id="aiWrKwHint"></div>
         </div>
     </div>
+    <!-- AI 写作助手折叠后的迷你入口 -->
+    <button class="ai-writer-tab" id="aiWriterTab" style="display:none" onclick="aiWriterExpand()">🤖 AI 写作</button>
 
     <div class="rename-modal" id="renameModal">
         <div class="rename-box"><h3>重命名标签</h3><input type="text" id="renameInput" placeholder="新名称" onkeydown="if(event.key==='Enter')confirmRename()"><div class="rename-actions"><button class="btn btn-ghost" onclick="closeRenameModal()">取消</button><button class="btn btn-primary" onclick="confirmRename()">确认</button></div></div>
@@ -1167,6 +1176,7 @@
         let aiWrRaw='';
         function getEditorSelection(){const ta=document.getElementById('edContent');return ta.value.slice(ta.selectionStart,ta.selectionEnd)}
         async function openAiWriter(){
+            document.getElementById('aiWriterTab').style.display='none';
             document.getElementById('aiWriterPanel').classList.add('open');
             setTimeout(()=>document.getElementById('aiWrInput').focus(),50);
             try{
@@ -1177,7 +1187,21 @@
                 }
             }catch(e){}
         }
-        function closeAiWriter(){aiStop();document.getElementById('aiWriterPanel').classList.remove('open')}
+        // 折叠：仅隐藏面板，不中断 AI 生成
+        function aiWriterCollapse(){
+            document.getElementById('aiWriterPanel').classList.remove('open');
+            document.getElementById('aiWriterTab').style.display='block';
+        }
+        function aiWriterExpand(){
+            document.getElementById('aiWriterTab').style.display='none';
+            document.getElementById('aiWriterPanel').classList.add('open');
+            setTimeout(()=>document.getElementById('aiWrInput').focus(),50);
+        }
+        // 关闭：仅隐藏面板与迷你入口，不中断 AI 生成
+        function closeAiWriter(){
+            document.getElementById('aiWriterPanel').classList.remove('open');
+            document.getElementById('aiWriterTab').style.display='none';
+        }
         // 单次流式请求：返回是否以 [DONE] 正常结束（被平台超时中断时返回 false）
         async function aiStreamOnce(body,panel,status,onDelta){
             const res=await fetch('/api/ai',{
