@@ -1182,6 +1182,7 @@
         // ===== AI 写作助手 =====
         let aiWrController=null;
         let aiWrAction='';
+        let aiWrRaw='';
         function getEditorSelection(){const ta=document.getElementById('edContent');return ta.value.slice(ta.selectionStart,ta.selectionEnd)}
         async function openAiWriter(){
             document.getElementById('aiWriterPanel').classList.add('open');
@@ -1216,6 +1217,7 @@
             ['aiWrFillTitleBtn','aiWrReplaceBtn','aiWrInsertBtn','aiWrExcerptBtn','aiWrTagsBtn'].forEach(id=>document.getElementById(id).style.display='none');
             aiWrController=new AbortController();
             let accumulated='';
+            aiWrRaw='';
             try{
                 const res=await fetch('/api/ai',{
                     method:'POST',
@@ -1247,7 +1249,7 @@
                         try{
                             const j=JSON.parse(data);
                             const delta=j.choices&&j.choices[0]&&j.choices[0].delta&&j.choices[0].delta.content;
-                            if(delta){accumulated+=delta;renderAiWrResult(panel,accumulated,action)}
+                            if(delta){accumulated+=delta;aiWrRaw=accumulated;renderAiWrResult(panel,accumulated,action)}
                         }catch(e){}
                     }
                 }
@@ -1291,14 +1293,14 @@
             else show('aiWrInsertBtn');
         }
         function aiInsertTitle(){
-            const first=document.getElementById('aiWrResult').innerText.split('\n').map(s=>s.trim()).filter(Boolean)[0]||'';
+            const first=aiWrRaw.split('\n').map(s=>s.trim().replace(/\*\*/g,'')).filter(Boolean)[0]||'';
             if(!first){showToast('暂无结果','error');return}
-            document.getElementById('edTitle').value=first.replace(/^\s*\d+[\.、)．]\s*/,'').replace(/^[-*]\s*/,'');
+            document.getElementById('edTitle').value=first.replace(/^\s*\d+[\.、)．]\s*/,'').replace(/^[-*]\s*/,'').replace(/^#+\s*/,'');
             showToast('已填入标题','success');
         }
         function aiInsertContent(){
             const ta=document.getElementById('edContent');
-            const text=document.getElementById('aiWrResult').innerText;
+            const text=aiWrRaw;
             if(!text.trim()){showToast('暂无结果','error');return}
             ta.value=ta.value?ta.value.trimEnd()+'\n\n'+text:text;
             ta.scrollTop=ta.scrollHeight;
@@ -1307,7 +1309,7 @@
         }
         function aiReplaceSelection(){
             const ta=document.getElementById('edContent');
-            const text=document.getElementById('aiWrResult').innerText;
+            const text=aiWrRaw;
             if(!text.trim()){showToast('暂无结果','error');return}
             const s=ta.selectionStart,e=ta.selectionEnd;
             ta.value=ta.value.slice(0,s)+text+ta.value.slice(e);
@@ -1316,18 +1318,21 @@
             updatePreview();
             showToast('已替换选中文字','success');
         }
+        function aiWrParseTags(){
+            const text=aiWrRaw;
+            const m=text.match(/标签[：:]\s*([^\n]+)/);
+            if(!m)return [];
+            return m[1].split(/[,、，\s]+/).map(s=>s.trim().replace(/\*\*/g,'').replace(/^[-*]\s*/,'')).filter(Boolean).slice(0,5);
+        }
         function aiInsertExcerpt(){
-            const text=document.getElementById('aiWrResult').innerText;
-            const tagIdx=text.indexOf('标签：');
-            const excerpt=(tagIdx>=0?text.slice(0,tagIdx):text).trim().slice(0,200);
+            const text=aiWrRaw;
+            const idx=text.search(/标签[：:]/);
+            const excerpt=(idx>=0?text.slice(0,idx):text).trim().replace(/^#+\s*/,'').slice(0,200);
             document.getElementById('edExcerpt').value=excerpt;
             showToast('已填入摘要','success');
         }
         function aiInsertTags(){
-            const text=document.getElementById('aiWrResult').innerText;
-            const tagIdx=text.indexOf('标签：');
-            const tagsStr=tagIdx>=0?text.slice(tagIdx+3).trim():'';
-            const tags=tagsStr.split(/[,、，\s]+/).map(s=>s.trim()).filter(Boolean).slice(0,5);
+            const tags=aiWrParseTags();
             if(!tags.length){showToast('未识别到标签','error');return}
             tags.forEach(t=>addArticleTag(t));
             showToast('已填入标签','success');
