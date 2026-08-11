@@ -43,7 +43,7 @@ const AIChat = {
         if (this.config.enabled === false) return;
         this.createChatUI();
         this.bindEvents();
-        this.loadSessions();
+        await this.loadSessions();
         this.initDrag();
         this.initResize();
         this.initSelectionBubble();
@@ -211,7 +211,7 @@ const AIChat = {
         }
 
         // 窗口大小变化时保存状态（配合拖拽）
-        window.addEventListener('beforeunload', () => this.saveWindowState());
+        window.addEventListener('beforeunload', () => { this.saveWindowState(); this._flushSessions(); });
     },
 
     // 初始化拖拽（含位置记忆）
@@ -806,7 +806,10 @@ const AIChat = {
     },
 
     deleteSession(id) {
-        if (this.sessions.length <= 1) return;
+        if (this.sessions.length <= 1) {
+            this.showNotice('至少保留一个会话');
+            return;
+        }
         const idx = this.sessions.findIndex(s => s.id === id);
         if (idx < 0) return;
         this.sessions.splice(idx, 1);
@@ -862,31 +865,92 @@ const AIChat = {
         }
     },
 
+    // 获取访客唯一标识（本地持久化，用于将会话同步到服务端 Blobs）
+    getClientId() {
+        if (this._clientId) return this._clientId;
+        let id = '';
+        try { id = localStorage.getItem('chat-client-id') || ''; } catch (e) { }
+        if (!id) {
+            id = 'c_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+            try { localStorage.setItem('chat-client-id', id); } catch (e) { }
+        }
+        this._clientId = id;
+        return id;
+    },
+
+    // 保存会话：本地缓存 + 防抖同步到服务端 Blobs
     saveSessions() {
+        // 本地缓存立即写入（同步，保证刷新不丢）
         try {
             localStorage.setItem('chat-sessions', JSON.stringify(this.sessions));
             localStorage.setItem('chat-current-session', this.currentSessionId);
         } catch (e) { }
+        // 服务端 Blobs 防抖写入
+        if (this._saveTimer) clearTimeout(this._saveTimer);
+        this._saveTimer = setTimeout(() => { this._flushSessions(); }, 500);
     },
 
-    loadSessions() {
+    // 将当前会话状态同步到服务端 Blobs
+    async _flushSessions() {
+        if (this._saveTimer) { clearTimeout(this._saveTimer); this._saveTimer = null; }
         try {
-            const saved = JSON.parse(localStorage.getItem('chat-sessions'));
-            if (Array.isArray(saved) && saved.length) {
-                this.sessions = saved;
-                const cur = localStorage.getItem('chat-current-session');
+            const payload = {
+                clientId: this.getClientId(),
+                sessions: this.sessions,
+                currentSessionId: this.currentSessionId
+            };
+            await fetch('/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+                keepalive: true
+            });
+        } catch (e) {
+            console.warn('[AIChat] 会话同步到服务端失败:', e);
+        }
+    },
+
+    // 加载会话：优先服务端 Blobs，其次本地缓存
+    async loadSessions() {
+        let loaded = false;
+        try {
+            const res = await fetch(`/api/chat?clientId=${encodeURIComponent(this.getClientId())}`);
+            const data = await res.json();
+            if (data.status === 'success' && data.data && Array.isArray(data.data.sessions) && data.data.sessions.length) {
+                this.sessions = data.data.sessions;
+                const cur = data.data.currentSessionId;
                 this.currentSessionId = cur && this.sessions.some(s => s.id === cur) ? cur : this.sessions[0].id;
-            } else {
-                this.sessions = [{ id: Date.now().toString(36), name: '会话 1', messages: [] }];
-                this.currentSessionId = this.sessions[0].id;
+                loaded = true;
             }
         } catch (e) {
-            this.sessions = [{ id: Date.now().toString(36), name: '会话 1', messages: [] }];
-            this.currentSessionId = this.sessions[0].id;
+            console.warn('[AIChat] 服务端会话加载失败，使用本地缓存:', e);
         }
+
+        if (!loaded) {
+            try {
+                const saved = JSON.parse(localStorage.getItem('chat-sessions'));
+                if (Array.isArray(saved) && saved.length) {
+                    this.sessions = saved;
+                    const cur = localStorage.getItem('chat-current-session');
+                    this.currentSessionId = cur && this.sessions.some(s => s.id === cur) ? cur : this.sessions[0].id;
+                    loaded = true;
+                }
+            } catch (e) { }
+        }
+
+        if (!loaded) this.createDefaultSession();
+
+        // 无论来自何处，都将本地缓存与服务端同步一次
+        this.saveSessions();
         this.messages = this.getSession().messages;
         this.messages.forEach(msg => this.addMessage(msg.role, msg.content, { withActions: msg.role === 'assistant' }));
         this.renderSessionList();
+    },
+
+    // 创建默认会话
+    createDefaultSession() {
+        this.sessions = [{ id: Date.now().toString(36), name: '会话 1', messages: [] }];
+        this.currentSessionId = this.sessions[0].id;
     },
 
     // 添加消息到界面
@@ -964,7 +1028,9 @@ const AIChat = {
 
     // 清空当前会话
     clearChat() {
-        this.messages = [];
+        const session = this.getSession();
+        if (session) session.messages = [];
+        this.messages = session ? session.messages : [];
         this.saveSessions();
         this.clearMessagesDOM('对话已清空，重新开始吧！');
     },
