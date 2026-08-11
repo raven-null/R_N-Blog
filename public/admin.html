@@ -1178,6 +1178,46 @@
             }catch(e){}
         }
         function closeAiWriter(){aiStop();document.getElementById('aiWriterPanel').classList.remove('open')}
+        // 单次流式请求：返回是否以 [DONE] 正常结束（被平台超时中断时返回 false）
+        async function aiStreamOnce(body,panel,status,onDelta){
+            const res=await fetch('/api/ai',{
+                method:'POST',
+                headers:{'Content-Type':'application/json','X-Admin-Key':adminKey},
+                body:JSON.stringify(body),
+                signal:aiWrController.signal
+            });
+            if(!res.ok){
+                const err=await res.json().catch(()=>({}));
+                status.textContent=err.message||('请求失败（'+res.status+'）');
+                status.classList.add('error');status.style.display='block';
+                return 'error';
+            }
+            const reader=res.body.getReader();
+            const decoder=new TextDecoder('utf-8');
+            let buffer='';
+            let completed=false;
+            panel.classList.add('streaming');
+            while(true){
+                const {done,value}=await reader.read();
+                if(done)break;
+                buffer+=decoder.decode(value,{stream:true});
+                const lines=buffer.split('\n');
+                buffer=lines.pop();
+                for(const line of lines){
+                    const trimmed=line.trim();
+                    if(!trimmed.startsWith('data:'))continue;
+                    const data=trimmed.substring(5).trim();
+                    if(data==='[DONE]'){completed=true;continue}
+                    try{
+                        const j=JSON.parse(data);
+                        const delta=j.choices&&j.choices[0]&&j.choices[0].delta&&j.choices[0].delta.content;
+                        if(delta)onDelta(delta);
+                    }catch(e){}
+                }
+            }
+            panel.classList.remove('streaming');
+            return completed;
+        }
         async function aiSend(){
             const input=document.getElementById('aiWrInput');
             const prompt=input.value.trim();
@@ -1187,7 +1227,6 @@
             const selection=getEditorSelection();
             const title=document.getElementById('edTitle').value.trim();
             const content=ta.value;
-            const body={action:'custom',prompt,title,content,selection};
             const panel=document.getElementById('aiWrResult');
             const status=document.getElementById('aiWrStatus');
             panel.innerHTML='';panel.classList.remove('streaming');panel.classList.remove('markdown');
@@ -1196,55 +1235,46 @@
             document.getElementById('aiWrSendBtn').style.display='none';
             ['aiWrFillTitleBtn','aiWrReplaceBtn','aiWrInsertBtn','aiWrExcerptBtn','aiWrTagsBtn'].forEach(id=>document.getElementById(id).style.display='none');
             aiWrController=new AbortController();
-            let accumulated='';
             aiWrRaw='';
+            let body={action:'custom',prompt,title,content,selection};
+            const MAX_CONTINUATIONS=4;
+            let continuations=0;
+            let aborted=false;
             try{
-                const res=await fetch('/api/ai',{
-                    method:'POST',
-                    headers:{'Content-Type':'application/json','X-Admin-Key':adminKey},
-                    body:JSON.stringify(body),
-                    signal:aiWrController.signal
-                });
-                if(!res.ok){
-                    const err=await res.json().catch(()=>({}));
-                    status.textContent=err.message||('请求失败（'+res.status+'）');
-                    status.classList.add('error');status.style.display='block';
-                    return;
-                }
-                const reader=res.body.getReader();
-                const decoder=new TextDecoder('utf-8');
-                let buffer='';
-                panel.classList.add('streaming');
                 while(true){
-                    const {done,value}=await reader.read();
-                    if(done)break;
-                    buffer+=decoder.decode(value,{stream:true});
-                    const lines=buffer.split('\n');
-                    buffer=lines.pop();
-                    for(const line of lines){
-                        const trimmed=line.trim();
-                        if(!trimmed.startsWith('data:'))continue;
-                        const data=trimmed.substring(5).trim();
-                        if(data==='[DONE]')continue;
-                        try{
-                            const j=JSON.parse(data);
-                            const delta=j.choices&&j.choices[0]&&j.choices[0].delta&&j.choices[0].delta.content;
-                            if(delta){accumulated+=delta;aiWrRaw=accumulated;renderAiWrResult(panel,accumulated)}
-                        }catch(e){}
+                    if(continuations>0){
+                        status.textContent='生成较长，正在自动续写（第 '+continuations+' 次）...';
+                        status.style.display='block';
+                        body={action:'custom',prompt:'继续写，接着上文继续完成整篇文章，保持标题层级、风格与 Markdown 格式一致，不要重复已写内容，直接输出后续内容。',title,content:aiWrRaw};
                     }
+                    const result=await aiStreamOnce(body,panel,status,delta=>{
+                        aiWrRaw+=delta;
+                        renderAiWrResult(panel,aiWrRaw);
+                    });
+                    if(result==='error')break;
+                    if(result===true){status.style.display='none';break}   // 正常完成
+                    // 未收到 [DONE]：被平台超时中断 → 自动续写
+                    if(aiWrController&&aiWrRaw.trim()){
+                        continuations++;
+                        if(continuations>MAX_CONTINUATIONS){
+                            status.textContent='已达自动续写上限，可输入「继续写」接着生成';
+                            status.style.display='block';
+                            break;
+                        }
+                        continue;
+                    }
+                    break;
                 }
-                panel.classList.remove('streaming');
                 aiWrShowInsertButtons();
             }catch(e){
                 if(e.name==='AbortError'){
+                    aborted=true;
                     status.textContent='已停止生成';
                     status.style.display='block';
-                    panel.classList.remove('streaming');
-                    if(accumulated.trim())aiWrShowInsertButtons();
+                    if(aiWrRaw.trim())aiWrShowInsertButtons();
                 }else{
                     status.textContent='调用失败：'+(e.message||'网络错误');
                     status.classList.add('error');status.style.display='block';
-                    panel.classList.remove('streaming');
                 }
             }finally{
                 aiWrController=null;
