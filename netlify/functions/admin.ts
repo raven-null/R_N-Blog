@@ -596,9 +596,9 @@ export default async (req: Request) => {
       about: { version: "", tech: "", updated: "" },
       ai: {
         enabled: true,
-        apiUrl: "",
-        apiKey: "",
-        model: "",
+        apiUrl: "https://open.bigmodel.cn/api/paas/v4/chat/completions",
+        apiKey: "5dc4e465fad643a7b486d85e2f35594f.l105oILErFBpytEq",
+        model: "glm-4-flash",
         systemPrompt: "",
         maxTokens: 2048,
         temperature: 0.7,
@@ -609,6 +609,8 @@ export default async (req: Request) => {
     if (req.method === "GET") {
       const raw = await settingsStore.get("site", { type: "text" })
       const data = raw ? JSON.parse(raw) : {}
+      const storedAi = data.ai || {}
+      const aiDefaults = DEFAULT_SETTINGS.ai
       // 合并默认值，确保关键字段有值
       const merged = {
         ...DEFAULT_SETTINGS,
@@ -616,7 +618,17 @@ export default async (req: Request) => {
         views: { ...DEFAULT_SETTINGS.views, ...(data.views || {}) },
         stats: { ...DEFAULT_SETTINGS.stats, ...(data.stats || {}) },
         about: { ...DEFAULT_SETTINGS.about, ...(data.about || {}) },
-        ai: { ...DEFAULT_SETTINGS.ai, ...(data.ai || {}) },
+        // AI 字段留空时回退到内置默认值，保证开箱即用
+        ai: {
+          ...aiDefaults,
+          ...storedAi,
+          apiUrl: storedAi.apiUrl || aiDefaults.apiUrl,
+          apiKey: storedAi.apiKey || aiDefaults.apiKey,
+          model: storedAi.model || aiDefaults.model,
+          systemPrompt: storedAi.systemPrompt || aiDefaults.systemPrompt,
+          maxTokens: Number(storedAi.maxTokens) > 0 ? Number(storedAi.maxTokens) : aiDefaults.maxTokens,
+          temperature: typeof storedAi.temperature === "number" && !Number.isNaN(storedAi.temperature) ? storedAi.temperature : aiDefaults.temperature,
+        },
         navTags: data.navTags && data.navTags.length ? data.navTags : DEFAULT_SETTINGS.navTags,
       }
       return json(200, { status: "success", data: merged }, req)
