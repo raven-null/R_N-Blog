@@ -2114,9 +2114,10 @@ body.view-gallery-active .gallery-tag-btn {
 /* 会话管理面板 */
 .chat-session-panel {
     position: absolute;
-    top: 100%;
+    top: 56px;
     left: 12px;
     right: 12px;
+    bottom: auto;
     background: var(--bg-primary);
     border: 1px solid var(--border);
     border-radius: 10px;
