@@ -33,9 +33,10 @@ async function readAiConfigs(): Promise<{ writingAi: any; chatAi: any }> {
   }
 }
 
-// 拼接系统提示词：写作人设 + 关键词约束
+// 拼接系统提示词：写作人设 + 关键词约束 + 要求遵循
 function buildSystemPrompt(writingAi: any, bodyKeywords?: string): string {
   let system = (writingAi.systemPrompt || DEFAULT_WRITING_PROMPT).trim()
+  system += "\n\n请严格遵循用户的写作要求：主题、字数、风格、格式都要尽量满足。若用户要求生成 N 字的文章，正文应尽量达到该字数，内容要充实完整，不要提前草草结束。"
   const keywords = String(bodyKeywords || writingAi.keywords || "")
     .split(",")
     .map((s: string) => s.trim())
@@ -57,12 +58,20 @@ function buildUserMessage(action: string, b: any): string {
   const existingTitles = Array.isArray(b.existingTitles) ? b.existingTitles.slice(0, 30).join("、") : ""
 
   switch (action) {
+    case "custom":
+      {
+        const prompt = String(b.prompt || "").trim()
+        const ctx: string[] = []
+        if (title) ctx.push(`当前文章标题：${title}`)
+        if (content) ctx.push(`当前正文（供续写/修改参考）：\n${content.slice(0, 6000)}`)
+        return ctx.length ? `${prompt}\n\n（下面是当前编辑中的文章上下文，供你参考）\n${ctx.join("\n\n")}` : prompt
+      }
     case "title":
       return `请为以下主题生成 5-10 个吸引人的中文博客标题（每行一个，不要编号）：\n主题：${topic || title || "（未提供，请先给出主题）"}\n${existingTitles ? `已有文章标题（请避免重复）：${existingTitles}` : ""}`
     case "outline":
       return `请为《${title || "未命名"}》生成 Markdown 大纲（用 ## 与 ### 标题，并在每个标题下用 - 简述要点）：\n${content ? `背景内容：\n${content.slice(0, 3000)}` : ""}`
     case "draft":
-      return `请根据以下信息写一篇约 ${words} 字的中文博客初稿（Markdown 格式，含代码块时请给出可运行示例）：\n标题：${title || "未命名"}\n${outline ? `大纲：\n${outline}\n` : ""}${content ? `已有内容（可续写或重写）：\n${content.slice(0, 5000)}\n` : ""}`
+      return `请根据以下信息写一篇中文博客初稿（Markdown 格式，含代码块时请给出可运行示例）：\n标题：${title || "未命名"}\n${topic ? `主题/关键词：${topic}\n` : ""}${outline ? `大纲：\n${outline}\n` : ""}${content ? `已有内容（可续写或重写）：\n${content.slice(0, 5000)}\n` : ""}`
     case "continue":
       return `请接着下面的正文继续写，保持语气、结构与 Markdown 风格一致：\n${content || "（正文为空，请先输入内容）"}`
     case "polish":
@@ -113,7 +122,10 @@ export default async (req: Request) => {
   const action = String(body.action || "draft").trim()
   const system = buildSystemPrompt(writingAi, body.keywords)
   const user = buildUserMessage(action, body)
-  const maxTokens = Number(writingAi.maxTokens) > 0 ? Number(writingAi.maxTokens) : 4096
+  // 输出预算：按请求字数适当放大，但不超过配置上限与 16384
+  const words = Number(body.words) > 0 ? Number(body.words) : 800
+  const baseMax = Number(writingAi.maxTokens) > 0 ? Number(writingAi.maxTokens) : 4096
+  const maxTokens = Math.min(16384, Math.max(baseMax, words * 2 + 1024))
   const temperature = typeof writingAi.temperature === "number" && !Number.isNaN(writingAi.temperature) ? writingAi.temperature : 0.7
 
   try {

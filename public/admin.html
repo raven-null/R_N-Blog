@@ -249,23 +249,18 @@
         /* AI 写作助手侧栏 */
         .ai-writer-panel{width:380px;flex-direction:column}
         .ai-writer-body{flex:1;display:flex;flex-direction:column;min-height:0;padding:12px 14px}
-        .ai-writer-actions{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px}
-        .ai-writer-actions .btn{justify-content:center;padding:8px 6px;font-size:12px}
-        .ai-writer-params{display:flex;flex-direction:column;gap:8px;margin-bottom:10px;padding:10px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm)}
-        .ai-writer-param-row{display:flex;flex-direction:column;gap:4px}
-        .ai-writer-param-row label{font-size:11px;color:var(--text-muted)}
-        .ai-writer-param-row input{width:100%;padding:7px 10px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:12px;font-family:inherit}
-        .ai-writer-param-row input:focus{outline:none;border-color:var(--accent)}
-        .ai-writer-inline{flex-direction:row;align-items:center;gap:8px}
-        .ai-writer-inline input{width:90px;flex-shrink:0}
-        .ai-writer-hint{font-size:11px;color:var(--text-muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
         .ai-writer-status{padding:8px 10px;border-radius:var(--radius-sm);font-size:12px;margin-bottom:10px;background:var(--accent-dim);color:var(--accent)}
         .ai-writer-status.error{background:rgba(239,83,80,.12);color:var(--danger)}
         .ai-writer-result{flex:1;min-height:0;overflow-y:auto;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px;font-size:14px;line-height:1.8;word-break:break-word;color:var(--text)}
         .ai-writer-result.streaming::after{content:'▍';animation:blink 1s steps(2) infinite;color:var(--accent)}
         .ai-writer-empty{color:var(--text-muted);font-size:12px;text-align:center;padding:24px 0}
-        .ai-writer-footer{display:flex;align-items:center;gap:6px;padding-top:10px}
-        .ai-writer-footer .btn{flex-shrink:0}
+        .ai-writer-insert{display:flex;flex-wrap:wrap;gap:6px;padding-top:10px}
+        .ai-writer-insert .btn{flex-shrink:0}
+        .ai-writer-input{display:flex;align-items:flex-end;gap:8px;padding-top:10px}
+        .ai-writer-input textarea{flex:1;min-height:52px;max-height:120px;padding:9px 12px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:13px;font-family:inherit;resize:none;line-height:1.6}
+        .ai-writer-input textarea:focus{outline:none;border-color:var(--accent)}
+        .ai-writer-input .btn{height:52px;flex-shrink:0}
+        .ai-writer-hintrow{font-size:11px;color:var(--text-muted);padding-top:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
         @keyframes blink{50%{opacity:0}}
 
         .toast{position:fixed;bottom:20px;right:20px;padding:10px 20px;border-radius:var(--radius-sm);font-size:12px;z-index:999;display:none;box-shadow:var(--shadow);font-weight:500}
@@ -936,36 +931,21 @@
             <button onclick="closeAiWriter()">&times;</button>
         </div>
         <div class="ai-writer-body">
-            <div class="ai-writer-actions">
-                <button class="btn btn-ghost btn-sm" onclick="aiWrite('title')">🪄 生成标题</button>
-                <button class="btn btn-ghost btn-sm" onclick="aiWrite('outline')">📋 生成大纲</button>
-                <button class="btn btn-ghost btn-sm" onclick="aiWrite('draft')">✍️ 生成全文</button>
-                <button class="btn btn-ghost btn-sm" onclick="aiWrite('continue')">➕ 续写</button>
-                <button class="btn btn-ghost btn-sm" onclick="aiWrite('polish')">🖌 润色</button>
-                <button class="btn btn-ghost btn-sm" onclick="aiWrite('summarize')">🏷 摘要+标签</button>
-            </div>
-            <div class="ai-writer-params">
-                <div class="ai-writer-param-row">
-                    <label>主题/关键词</label>
-                    <input type="text" id="aiWrTopic" placeholder="生成标题/大纲时的主题（选填）" maxlength="120">
-                </div>
-                <div class="ai-writer-param-row ai-writer-inline">
-                    <label>字数</label>
-                    <input type="number" id="aiWrWords" value="800" min="100" max="5000" step="100" style="width:90px">
-                    <span class="ai-writer-hint" id="aiWrKwHint"></span>
-                </div>
-            </div>
             <div class="ai-writer-status" id="aiWrStatus" style="display:none"></div>
-            <div class="ai-writer-result" id="aiWrResult"><div class="ai-writer-empty">点击上方动作开始写作，结果会流式显示在这里</div></div>
-            <div class="ai-writer-footer">
-                <button class="btn btn-ghost btn-sm" id="aiWrStopBtn" style="display:none" onclick="aiStop()">⏹ 停止生成</button>
-                <span style="flex:1"></span>
-                <button class="btn btn-ghost btn-sm" id="aiWrFillTitleBtn" style="display:none" onclick="aiInsertTitle()">填入标题</button>
-                <button class="btn btn-ghost btn-sm" id="aiWrReplaceBtn" style="display:none" onclick="aiReplaceSelection()">替换选中</button>
-                <button class="btn btn-ghost btn-sm" id="aiWrInsertBtn" style="display:none" onclick="aiInsertContent()">插入正文</button>
-                <button class="btn btn-ghost btn-sm" id="aiWrExcerptBtn" style="display:none" onclick="aiInsertExcerpt()">填入摘要</button>
-                <button class="btn btn-ghost btn-sm" id="aiWrTagsBtn" style="display:none" onclick="aiInsertTags()">填入标签</button>
+            <div class="ai-writer-result" id="aiWrResult"><div class="ai-writer-empty">直接说出你的写作要求，例如：「写一篇 3000 字的从零开始学 Python 的教程」。要求会自动带当前标题与正文作为上下文。</div></div>
+            <div class="ai-writer-insert">
+                <button class="btn btn-ghost btn-sm" onclick="aiInsertTitle()" id="aiWrFillTitleBtn" style="display:none">填入标题</button>
+                <button class="btn btn-ghost btn-sm" onclick="aiInsertContent()" id="aiWrInsertBtn" style="display:none">插入正文</button>
+                <button class="btn btn-ghost btn-sm" onclick="aiReplaceSelection()" id="aiWrReplaceBtn" style="display:none">替换选中</button>
+                <button class="btn btn-ghost btn-sm" onclick="aiInsertExcerpt()" id="aiWrExcerptBtn" style="display:none">填入摘要</button>
+                <button class="btn btn-ghost btn-sm" onclick="aiInsertTags()" id="aiWrTagsBtn" style="display:none">填入标签</button>
             </div>
+            <div class="ai-writer-input">
+                <textarea id="aiWrInput" rows="2" placeholder="说出你的写作要求，回车发送（Shift+Enter 换行）" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();aiSend()}"></textarea>
+                <button class="btn btn-primary" id="aiWrSendBtn" onclick="aiSend()">发送</button>
+                <button class="btn btn-ghost" id="aiWrStopBtn" style="display:none" onclick="aiStop()">⏹ 停止</button>
+            </div>
+            <div class="ai-writer-hintrow" id="aiWrKwHint"></div>
         </div>
     </div>
 
@@ -1184,39 +1164,36 @@
         function updatePreview(){const md=document.getElementById('edContent').value;const preview=document.getElementById('edPreview');if(!md.trim()){preview.innerHTML='<div class="preview-empty">👈 左侧开始写作，这里实时预览</div>';}else{preview.innerHTML=(typeof MarkdownParser!=='undefined'&&typeof marked!=='undefined')?MarkdownParser.parseMarkdown(md):renderMd(md);}document.getElementById('editorInfo').textContent=md.length+' 字'}
         // ===== AI 写作助手 =====
         let aiWrController=null;
-        let aiWrAction='';
         let aiWrRaw='';
         function getEditorSelection(){const ta=document.getElementById('edContent');return ta.value.slice(ta.selectionStart,ta.selectionEnd)}
         async function openAiWriter(){
             document.getElementById('aiWriterPanel').classList.add('open');
+            setTimeout(()=>document.getElementById('aiWrInput').focus(),50);
             try{
                 const r=await apiFetch('action=settings');
                 if(r.status==='success'&&r.data&&r.data.writingAi){
                     const kw=(r.data.writingAi.keywords||'').trim();
-                    document.getElementById('aiWrKwHint').textContent=kw?('关键词：'+kw):'';
+                    document.getElementById('aiWrKwHint').textContent=kw?('已配置写作关键词：'+kw):'';
                 }
             }catch(e){}
         }
         function closeAiWriter(){aiStop();document.getElementById('aiWriterPanel').classList.remove('open')}
-        async function aiWrite(action){
+        async function aiSend(){
+            const input=document.getElementById('aiWrInput');
+            const prompt=input.value.trim();
+            if(!prompt){showToast('请输入写作要求','error');input.focus();return}
+            if(aiWrController){showToast('正在生成中，请先停止或等待','error');return}
             const ta=document.getElementById('edContent');
             const selection=getEditorSelection();
             const title=document.getElementById('edTitle').value.trim();
             const content=ta.value;
-            const topic=document.getElementById('aiWrTopic').value.trim();
-            const words=parseInt(document.getElementById('aiWrWords').value)||800;
-            const existingTitles=(allArticles||[]).filter(a=>a.status==='published').map(a=>a.title).filter(Boolean);
-            if(action==='title'&&!topic&&!title){showToast('请填写主题或标题','error');return}
-            if(action==='draft'&&!title&&!topic){showToast('请先填写文章标题或主题','error');return}
-            if((action==='continue'||action==='summarize')&&!content.trim()){showToast('请先输入正文','error');return}
-            if(action==='polish'&&!selection&&!content.trim()){showToast('请选中文字或先输入正文','error');return}
-            const body={action,title,content,selection,topic,words,existingTitles};
-            aiWrAction=action;
+            const body={action:'custom',prompt,title,content,selection};
             const panel=document.getElementById('aiWrResult');
             const status=document.getElementById('aiWrStatus');
             panel.innerHTML='';panel.classList.remove('streaming');panel.classList.remove('markdown');
             status.style.display='none';status.className='ai-writer-status';
             document.getElementById('aiWrStopBtn').style.display='inline-flex';
+            document.getElementById('aiWrSendBtn').style.display='none';
             ['aiWrFillTitleBtn','aiWrReplaceBtn','aiWrInsertBtn','aiWrExcerptBtn','aiWrTagsBtn'].forEach(id=>document.getElementById(id).style.display='none');
             aiWrController=new AbortController();
             let accumulated='';
@@ -1252,7 +1229,7 @@
                         try{
                             const j=JSON.parse(data);
                             const delta=j.choices&&j.choices[0]&&j.choices[0].delta&&j.choices[0].delta.content;
-                            if(delta){accumulated+=delta;aiWrRaw=accumulated;renderAiWrResult(panel,accumulated,action)}
+                            if(delta){accumulated+=delta;aiWrRaw=accumulated;renderAiWrResult(panel,accumulated)}
                         }catch(e){}
                     }
                 }
@@ -1272,16 +1249,12 @@
             }finally{
                 aiWrController=null;
                 document.getElementById('aiWrStopBtn').style.display='none';
+                document.getElementById('aiWrSendBtn').style.display='inline-block';
+                input.focus();
             }
         }
         function aiStop(){if(aiWrController)aiWrController.abort()}
-        function renderAiWrResult(el,text,action){
-            if(action==='title'){
-                el.classList.remove('markdown');
-                el.style.whiteSpace='pre-wrap';
-                el.textContent=text;
-                return;
-            }
+        function renderAiWrResult(el,text){
             el.classList.add('markdown');
             el.style.whiteSpace='normal';
             if(typeof MarkdownParser!=='undefined'&&typeof marked!=='undefined'){
@@ -1292,10 +1265,10 @@
         }
         function aiWrShowInsertButtons(){
             const show=id=>{const b=document.getElementById(id);if(b)b.style.display='inline-flex'};
-            if(aiWrAction==='title')show('aiWrFillTitleBtn');
-            else if(aiWrAction==='polish')show('aiWrReplaceBtn');
-            else if(aiWrAction==='summarize'){show('aiWrExcerptBtn');show('aiWrTagsBtn')}
-            else show('aiWrInsertBtn');
+            show('aiWrFillTitleBtn');
+            show('aiWrInsertBtn');
+            show('aiWrReplaceBtn');
+            if(/标签[：:]/.test(aiWrRaw)){show('aiWrExcerptBtn');show('aiWrTagsBtn')}
         }
         function aiInsertTitle(){
             const first=aiWrRaw.split('\n').map(s=>s.trim().replace(/\*\*/g,'')).filter(Boolean)[0]||'';
