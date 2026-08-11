@@ -495,11 +495,11 @@
                     <div id="articleList">
                         <div class="article-group">
                             <div class="article-group-header"><span class="dot on"></span><span>已发布</span><span class="article-group-count" id="publishedCount">0</span></div>
-                            <table class="article-table"><thead><tr><th style="width:30px" title="拖动调整排序"></th><th>标题</th><th>标签</th><th>状态</th><th>日期</th><th>操作</th></tr></thead><tbody id="publishedList"></tbody></table>
+                            <table class="article-table"><thead><tr><th style="width:30px" title="拖动调整排序"></th><th>标题</th><th>标签</th><th>日期</th><th>操作</th></tr></thead><tbody id="publishedList"></tbody></table>
                         </div>
                         <div class="article-group">
                             <div class="article-group-header"><span class="dot off"></span><span>草稿</span><span class="article-group-count" id="draftCount">0</span></div>
-                            <table class="article-table"><thead><tr><th style="width:30px" title="拖动调整排序"></th><th>标题</th><th>标签</th><th>状态</th><th>日期</th><th>操作</th></tr></thead><tbody id="draftList"></tbody></table>
+                            <table class="article-table"><thead><tr><th style="width:30px" title="拖动调整排序"></th><th>标题</th><th>标签</th><th>日期</th><th>操作</th></tr></thead><tbody id="draftList"></tbody></table>
                         </div>
                     </div>
                 </div>
@@ -925,7 +925,13 @@
             const btn=document.getElementById('articleSearchInput')?.nextElementSibling;
             if(btn)btn.style.display=show?'':'none';
         }
-        function articleRowHtml(a){return `<tr draggable="true" data-id="${esc(a.id)}"><td class="drag-handle" title="拖动调整排序">⋮⋮</td><td><strong>${esc(a.title)}</strong><br><small style="color:var(--text-muted);font-size:10px">${esc(a.id)}</small></td><td>${(a.tags||[]).map(t=>`<span class="tag">${esc(t)}</span>`).join('')}</td><td><span class="status-${a.status==='published'?'on':'off'}">${a.status==='published'?'● 已发布':'○ 草稿'}</span></td><td style="font-size:11px;color:var(--text-muted)">${a.date}${a.update?'<br>↑ '+a.update:''}</td><td><div class="row-actions"><button class="btn btn-ghost btn-sm" onclick="editArticle('${escJs(a.id)}')">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteArticle('${escJs(a.id)}','${escJs(a.title)}')">删除</button></div></td></tr>`}
+        function articleRowHtml(a){
+            const isPub=a.status==='published';
+            const statusBtn=isPub
+                ? `<button class="btn btn-ghost btn-sm" onclick="toggleArticleStatus('${escJs(a.id)}','draft')">下架</button>`
+                : `<button class="btn btn-primary btn-sm" onclick="toggleArticleStatus('${escJs(a.id)}','published')">发布</button>`;
+            return `<tr draggable="true" data-id="${esc(a.id)}"><td class="drag-handle" title="拖动调整排序">⋮⋮</td><td><strong>${esc(a.title)}</strong><br><small style="color:var(--text-muted);font-size:10px">${esc(a.id)}</small></td><td>${(a.tags||[]).map(t=>`<span class="tag">${esc(t)}</span>`).join('')}</td><td style="font-size:11px;color:var(--text-muted)">${a.date}${a.update?'<br>↑ '+a.update:''}</td><td><div class="row-actions">${statusBtn}<button class="btn btn-ghost btn-sm" onclick="editArticle('${escJs(a.id)}')">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteArticle('${escJs(a.id)}','${escJs(a.title)}')">删除</button></div></td></tr>`;
+        }
         // 渲染文章列表：已发布 / 草稿 分组显示
         function renderArticleList(){
             const kw=(document.getElementById('articleSearchInput')?.value||'').trim();
@@ -934,8 +940,20 @@
             const drafts=articles.filter(a=>a.status!=='published');
             document.getElementById('publishedCount').textContent=published.length;
             document.getElementById('draftCount').textContent=drafts.length;
-            document.getElementById('publishedList').innerHTML=published.length?published.map(articleRowHtml).join(''):`<tr><td colspan="6" class="empty">${noMatch}</td></tr>`;
-            document.getElementById('draftList').innerHTML=drafts.length?drafts.map(articleRowHtml).join(''):`<tr><td colspan="6" class="empty">${noMatch}</td></tr>`;
+            document.getElementById('publishedList').innerHTML=published.length?published.map(articleRowHtml).join(''):`<tr><td colspan="5" class="empty">${noMatch}</td></tr>`;
+            document.getElementById('draftList').innerHTML=drafts.length?drafts.map(articleRowHtml).join(''):`<tr><td colspan="5" class="empty">${noMatch}</td></tr>`;
+        }
+        // 一键发布 / 下架
+        async function toggleArticleStatus(id,status){
+            const action=status==='published'?'发布':'下架';
+            const article=allArticles.find(a=>a.id===id);
+            if(!article)return;
+            if(!confirm(`确定${action}「${article.title}」？`))return;
+            try{
+                const r=await apiFetch('action=articles',{method:'PATCH',body:JSON.stringify({id,status})});
+                if(r.status==='success'){showToast(r.message||(action+'成功'),'success');loadArticles()}
+                else showToast(r.message||(action+'失败'),'error');
+            }catch{showToast(action+'失败','error')}
         }
         // ===== 文章拖拽排序 =====
         let dragArticleRow=null;

@@ -224,6 +224,34 @@ export default async (req: Request) => {
 
       return json(200, { status: "success", message: "已删除" }, req)
     }
+
+    // PATCH: 修改文章状态（发布 / 下架）
+    if (req.method === "PATCH") {
+      const body = await req.json().catch(() => ({}))
+      const { id, status } = body
+      if (!id) return badRequest("id 必填", req)
+      if (status !== "published" && status !== "draft") return badRequest("status 必须是 published 或 draft", req)
+
+      const raw = await store.get(id, { type: "text" })
+      if (!raw) return json(404, { status: "error", message: "文章不存在" }, req)
+      const article = JSON.parse(raw)
+      article.status = status
+      article.updatedAt = new Date().toISOString().slice(0, 10)
+      await store.set(id, JSON.stringify(article))
+
+      // 更新索引（状态变更后置顶）
+      const index = await getArticleIndexStrong(store)
+      const idx = index.findIndex(a => a.id === id)
+      if (idx >= 0) {
+        index[idx].status = status
+        const meta = index[idx]
+        index.splice(idx, 1)
+        index.unshift(meta)
+      }
+      await saveArticleIndex(store, index)
+
+      return json(200, { status: "success", message: status === "published" ? "已发布" : "已下架为草稿" }, req)
+    }
   }
 
   // ===== 图片管理 =====
