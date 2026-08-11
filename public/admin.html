@@ -85,12 +85,13 @@
         .row-actions{display:flex;gap:4px}
 
         /* 文章分组（已发布 / 草稿） */
-        .article-group{margin-bottom:18px}
-        .article-group-header{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:var(--text);padding:6px 2px;text-transform:uppercase;letter-spacing:.5px}
+        .article-group-header{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.5px}
         .article-group-header .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
         .article-group-header .dot.on{background:var(--success)}
         .article-group-header .dot.off{background:var(--text-muted)}
         .article-group-count{background:var(--accent-dim);color:var(--accent);border-radius:10px;padding:1px 8px;font-size:11px;font-weight:600}
+        .article-table tr.article-group-header-row td{background:var(--bg-card);border-bottom:1px solid var(--border);padding:12px 12px 8px}
+        .article-table tr.article-group-header-row:hover{background:var(--bg-card)}
         .article-table tr[draggable="true"]{cursor:grab}
         .article-table tr.dragging{opacity:.45;background:var(--bg-hover)}
         .drag-handle{color:var(--text-muted);cursor:grab;user-select:none;text-align:center;white-space:nowrap;font-size:12px;letter-spacing:-1px}
@@ -334,14 +335,14 @@
         .rename-box input:focus{outline:none;border-color:var(--accent)}
         .rename-box .rename-actions{display:flex;gap:8px;justify-content:flex-end}
 
-        /* 通用确认弹窗 */
-        .confirm-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:2000;align-items:center;justify-content:center}
-        .confirm-modal.open{display:flex}
-        .confirm-box{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;width:380px;box-shadow:var(--shadow);text-align:center}
-        .confirm-box h3{font-size:15px;margin-bottom:12px;color:var(--accent)}
-        .confirm-message{font-size:13px;color:var(--text-muted);margin-bottom:20px;line-height:1.6;word-break:break-all}
+        /* 通用确认弹窗（就近弹出，避免远距离移动鼠标） */
+        .confirm-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:2000}
+        .confirm-modal.open{display:block}
+        .confirm-box{position:fixed;z-index:2001;width:300px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);text-align:center}
+        .confirm-box h3{font-size:14px;margin:0 0 8px;color:var(--accent)}
+        .confirm-message{font-size:12px;color:var(--text-muted);margin-bottom:14px;line-height:1.5;word-break:break-all}
         .confirm-actions{display:flex;gap:8px;justify-content:center}
-        .confirm-actions .btn{padding:8px 28px}
+        .confirm-actions .btn{flex:1;min-width:88px;padding:8px 12px}
 
         /* 图片灯箱 */
         .admin-lightbox{display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:1000;align-items:center;justify-content:center;flex-direction:column}
@@ -384,6 +385,8 @@
             .article-table td{border:none;border-bottom:1px solid var(--border);padding:8px 10px}
             .article-table tr{border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:10px;background:var(--bg-card)}
             .article-table tr td:first-child{padding-top:12px}
+            .article-table tr.article-group-header-row{border:none;background:transparent;margin:6px 0 2px}
+            .article-table tr.article-group-header-row td{padding:4px 10px;border:none;background:transparent}
             .article-search-box{margin-bottom:12px;padding:8px 12px}
             .row-actions{justify-content:flex-end}
             /* 写文章 */
@@ -493,14 +496,11 @@
                         <button class="article-search-clear" onclick="clearArticleSearch()" title="清空" style="display:none">&times;</button>
                     </div>
                     <div id="articleList">
-                        <div class="article-group">
-                            <div class="article-group-header"><span class="dot on"></span><span>已发布</span><span class="article-group-count" id="publishedCount">0</span></div>
-                            <table class="article-table"><thead><tr><th style="width:30px" title="拖动调整排序"></th><th>标题</th><th>标签</th><th>日期</th><th>操作</th></tr></thead><tbody id="publishedList"></tbody></table>
-                        </div>
-                        <div class="article-group">
-                            <div class="article-group-header"><span class="dot off"></span><span>草稿</span><span class="article-group-count" id="draftCount">0</span></div>
-                            <table class="article-table"><thead><tr><th style="width:30px" title="拖动调整排序"></th><th>标题</th><th>标签</th><th>日期</th><th>操作</th></tr></thead><tbody id="draftList"></tbody></table>
-                        </div>
+                        <table class="article-table">
+                            <thead><tr><th style="width:30px" title="拖动调整排序"></th><th>标题</th><th>标签</th><th>日期</th><th>操作</th></tr></thead>
+                            <tbody id="publishedBody"></tbody>
+                            <tbody id="draftBody"></tbody>
+                        </table>
                     </div>
                 </div>
 
@@ -932,23 +932,27 @@
                 : `<button class="btn btn-primary btn-sm" onclick="toggleArticleStatus('${escJs(a.id)}','published')">发布</button>`;
             return `<tr draggable="true" data-id="${esc(a.id)}"><td class="drag-handle" title="拖动调整排序">⋮⋮</td><td><strong>${esc(a.title)}</strong><br><small style="color:var(--text-muted);font-size:10px">${esc(a.id)}</small></td><td>${(a.tags||[]).map(t=>`<span class="tag">${esc(t)}</span>`).join('')}</td><td style="font-size:11px;color:var(--text-muted)">${a.date}${a.update?'<br>↑ '+a.update:''}</td><td><div class="row-actions">${statusBtn}<button class="btn btn-ghost btn-sm" onclick="editArticle('${escJs(a.id)}')">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteArticle('${escJs(a.id)}','${escJs(a.title)}')">删除</button></div></td></tr>`;
         }
-        // 渲染文章列表：已发布 / 草稿 分组显示
+        // 渲染文章列表：已发布 / 草稿 在同一表格中分组显示（保证列对齐）
+        function articleGroupRowsHtml(label,dotClass,countId,items,noMatch){
+            const header=`<tr class="article-group-header-row"><td colspan="5"><div class="article-group-header"><span class="dot ${dotClass}"></span><span>${label}</span><span class="article-group-count" id="${countId}">${items.length}</span></div></td></tr>`;
+            const body=items.length?items.map(articleRowHtml).join(''):`<tr><td colspan="5" class="empty">${noMatch}</td></tr>`;
+            return header+body;
+        }
         function renderArticleList(){
             const kw=(document.getElementById('articleSearchInput')?.value||'').trim();
             const noMatch=kw?'无匹配文章':'暂无文章';
             const published=articles.filter(a=>a.status==='published');
             const drafts=articles.filter(a=>a.status!=='published');
-            document.getElementById('publishedCount').textContent=published.length;
-            document.getElementById('draftCount').textContent=drafts.length;
-            document.getElementById('publishedList').innerHTML=published.length?published.map(articleRowHtml).join(''):`<tr><td colspan="5" class="empty">${noMatch}</td></tr>`;
-            document.getElementById('draftList').innerHTML=drafts.length?drafts.map(articleRowHtml).join(''):`<tr><td colspan="5" class="empty">${noMatch}</td></tr>`;
+            document.getElementById('publishedBody').innerHTML=articleGroupRowsHtml('已发布','on','publishedCount',published,noMatch);
+            document.getElementById('draftBody').innerHTML=articleGroupRowsHtml('草稿','off','draftCount',drafts,noMatch);
         }
         // 一键发布 / 下架
         async function toggleArticleStatus(id,status){
             const action=status==='published'?'发布':'下架';
             const article=allArticles.find(a=>a.id===id);
             if(!article)return;
-            if(!confirm(`确定${action}「${article.title}」？`))return;
+            const confirmed=await showConfirm(`确定${action}「${article.title}」？`,action==='发布'?'发布文章':'下架文章',action);
+            if(!confirmed)return;
             try{
                 const r=await apiFetch('action=articles',{method:'PATCH',body:JSON.stringify({id,status})});
                 if(r.status==='success'){showToast(r.message||(action+'成功'),'success');loadArticles()}
@@ -1010,7 +1014,7 @@
             document.querySelectorAll('#articleList tr.dragging,#articleList tr.drag-over').forEach(r=>r.classList.remove('dragging','drag-over'));
             dragArticleRow=null;
         });
-        async function deleteArticle(id,title){if(!confirm(`确定删除「${title}」？`))return;const r=await apiFetch(`action=articles&id=${id}`,{method:'DELETE'});if(r.status==='success'){showToast('已删除','success');loadArticles()}else showToast(r.message||'删除失败','error')}
+        async function deleteArticle(id,title){const confirmed=await showConfirm(`确定删除「${title}」？删除后不可恢复！`,'删除文章','删除');if(!confirmed)return;const r=await apiFetch(`action=articles&id=${id}`,{method:'DELETE'});if(r.status==='success'){showToast('已删除','success');loadArticles()}else showToast(r.message||'删除失败','error')}
         function editArticle(id){editingId=id;switchTab('write');document.getElementById('writeTitle').textContent='编辑文章';loadArticleForEdit(id)}
         async function loadArticleForEdit(id){const r=await apiFetch(`action=articles&id=${id}`);if(r.status==='success'){const d=r.data;document.getElementById('edTitle').value=d.title||'';document.getElementById('edExcerpt').value=d.excerpt||'';document.getElementById('edImage').value=d.image||'';renderCoverPreview();selectedArticleTags=[...(d.tags||[])];renderTagPickerChips();document.getElementById('edStatus').value=d.status||'published';document.getElementById('edContent').value=d.content||'';scanArticleImagesFromContent(d.content||'');updatePreview()}}
         function importAndEdit(f){if(!f)return;const r=new FileReader();r.onload=()=>{const raw=r.result,m=raw.match(/^---\s*\n([\s\S]*?)\n---\s*\n([\s\S]*)$/);let title=f.name.replace(/\.md$/),excerpt='',tags=[],content=raw,image='';if(m){const fm=m[1],t=fm.match(/title:\s*(.+)/);if(t)title=t[1].trim();const tg=fm.match(/tags:\s*\[([^\]]+)\]/);if(tg)tags=tg[1].split(',').map(s=>s.trim());const ex=fm.match(/excerpt:\s*(.+)/);if(ex)excerpt=ex[1].trim();const im=fm.match(/image:\s*(.+)/);if(im)image=im[1].trim();content=m[2]}editingId=null;switchTab('write');document.getElementById('writeTitle').textContent='导入文章';document.getElementById('edTitle').value=title;document.getElementById('edExcerpt').value=excerpt;document.getElementById('edImage').value=image;renderCoverPreview();selectedArticleTags=tags;renderTagPickerChips();document.getElementById('edContent').value=content;scanArticleImagesFromContent(content);updatePreview();showToast(`已导入: ${f.name}`,'success')};r.readAsText(f)}
@@ -1775,23 +1779,43 @@
             }
         }
 
-        // 通用确认弹窗：resolve(true) 确认，resolve(false) 取消
-        function showConfirm(message, title='确认操作', okText='确认'){
+        // 记录最近一次点击位置，弹窗就近弹出
+        document.addEventListener('click',e=>{window.__lastClick={x:e.clientX,y:e.clientY}},true);
+        // 通用确认弹窗：就近（光标/锚点）弹出，resolve(true) 确认，resolve(false) 取消
+        function showConfirm(message, title='确认操作', okText='确认', anchor){
             return new Promise(resolve=>{
                 const modal=document.getElementById('confirmModal');
+                const box=modal.querySelector('.confirm-box');
                 document.getElementById('confirmTitle').textContent=title;
                 document.getElementById('confirmMessage').textContent=message;
                 const okBtn=document.getElementById('confirmOkBtn');
+                const cancelBtn=document.getElementById('confirmCancelBtn');
                 okBtn.textContent=okText;
-                const done=(result)=>{
-                    closeConfirmModal();
-                    okBtn.onclick=null;
-                    document.getElementById('confirmCancelBtn').onclick=null;
+                okBtn.className=okText==='删除'?'btn btn-danger':'btn btn-primary';
+                let settled=false;
+                const finish=(result)=>{
+                    if(settled)return;
+                    settled=true;
+                    modal.classList.remove('open');
+                    modal.onclick=null;okBtn.onclick=null;cancelBtn.onclick=null;
                     resolve(result);
                 };
-                okBtn.onclick=()=>done(true);
-                document.getElementById('confirmCancelBtn').onclick=()=>done(false);
+                okBtn.onclick=()=>finish(true);
+                cancelBtn.onclick=()=>finish(false);
+                modal.onclick=e=>{if(e.target===modal)finish(false)};
+                // 就近定位：优先锚点/最近点击位置，超出视口则自动修正，无锚点则居中
+                box.style.transform='none';box.style.left='0px';box.style.top='0px';
                 modal.classList.add('open');
+                const a=anchor||window.__lastClick;
+                if(a&&a.x!=null&&a.y!=null){
+                    const r=box.getBoundingClientRect();
+                    let x=a.x+12,y=a.y+12;
+                    x=Math.max(8,Math.min(x,window.innerWidth-r.width-8));
+                    y=Math.max(8,Math.min(y,window.innerHeight-r.height-8));
+                    box.style.left=x+'px';box.style.top=y+'px';
+                }else{
+                    box.style.left='50%';box.style.top='50%';box.style.transform='translate(-50%,-50%)';
+                }
             });
         }
         function closeConfirmModal(){document.getElementById('confirmModal').classList.remove('open')}
