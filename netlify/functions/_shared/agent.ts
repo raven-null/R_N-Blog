@@ -32,7 +32,7 @@ export interface AgentSettings {
 }
 
 export const DEFAULT_AGENT_SETTINGS: AgentSettings = {
-  enabled: false,
+  enabled: true,
   triggerKeywords: ["@管理员", "@ai", "@博主"],
   publishStrategy: "draft",
   maxTasksPerIpPerDay: 3,
@@ -51,7 +51,7 @@ export async function getAgentSettings(): Promise<AgentSettings> {
       ? a.triggerKeywords.split(",").map((s: string) => s.trim()).filter(Boolean)
       : Array.isArray(a.triggerKeywords) ? a.triggerKeywords : []
     return {
-      enabled: a.enabled === true,
+      enabled: a.enabled !== false,
       triggerKeywords: kw.length ? kw : DEFAULT_AGENT_SETTINGS.triggerKeywords,
       publishStrategy: a.publishStrategy === "published" ? "published" : "draft",
       maxTasksPerIpPerDay: Number(a.maxTasksPerIpPerDay) > 0 ? Number(a.maxTasksPerIpPerDay) : DEFAULT_AGENT_SETTINGS.maxTasksPerIpPerDay,

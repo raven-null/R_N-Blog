@@ -932,6 +932,11 @@
             white-space: pre-wrap;
         }
 
+        .comment-item-content .mention {
+            color: var(--accent);
+            font-weight: 600;
+        }
+
         .comment-item-image {
             margin-top: 10px;
             max-width: 100%;
@@ -2366,7 +2371,7 @@
                                 </div>
                                 <span class="comment-item-time">${this.formatCommentDate(c.createdAt)}</span>
                             </div>
-                            <div class="comment-item-content">${this.esc(c.content)}</div>
+                            <div class="comment-item-content">${this.renderCommentContent(c.content)}</div>
                             ${c.image ? `<img class="comment-item-image" src="${this.esc(this.commentImageSrc(c.image))}" alt="留言图片" loading="lazy" onclick="openLightbox(this)" style="cursor:zoom-in">` : ''}
                         </div>
                     `).join('');
@@ -2435,6 +2440,12 @@
                     // 稍后刷新评论区，展示 AI Agent 的受理回复
                     setTimeout(() => this.loadComments(), 2500);
                 } catch (e) {}
+            },
+
+            // 评论内容渲染：转义后高亮 @提及（@名字 显示主题色）
+            renderCommentContent(str) {
+                const text = this.esc(str);
+                return text.replace(/@([\u4e00-\u9fa5\w\-]{1,20})/g, '<span class="mention">@$1</span>');
             },
 
             // HTML 转义

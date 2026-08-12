@@ -106,9 +106,6 @@ export default async (req: Request) => {
     }
 
     // source === comment
-    if (!settings.enabled) {
-      return json(200, { status: "ignored", message: "AI Agent 未开启" }, req)
-    }
     const postId = String(body.postId || "")
     const commentId = String(body.commentId || "")
     if (!postId || !commentId) return badRequest("postId / commentId 必填", req)
@@ -119,6 +116,12 @@ export default async (req: Request) => {
     const commentContent = String(comment.content || "")
     if (!matchTrigger(commentContent, settings.triggerKeywords)) {
       return json(200, { status: "ignored", message: "评论未包含触发词" }, req)
+    }
+
+    // 未开启时回评说明，避免「没反应」
+    if (!settings.enabled) {
+      await writeAgentComment(postId, `🤖 AI Agent 未开启，管理员可在「博客设置 → AI Agent」开启后重试`, settings.commentName)
+      return json(200, { status: "ignored", message: "AI Agent 未开启" }, req)
     }
 
     // 限流
@@ -149,10 +152,15 @@ export default async (req: Request) => {
 async function kickAgentRun(taskId: string, runKey: string, baseUrl: URL): Promise<void> {
   try {
     const target = new URL("/api/agent-run?task=" + encodeURIComponent(taskId), baseUrl.origin).href
+    // 最多等 3 秒（后台函数应秒回 202），避免阻塞主响应
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 3000)
     await fetch(target, {
       method: "POST",
       headers: { "x-agent-run-key": runKey },
-    })
+      signal: controller.signal,
+    }).catch(() => {})
+    clearTimeout(timer)
   } catch (e) {
     // 触发失败不阻塞主流程：任务保持 pending，可在后台面板手动重试
   }

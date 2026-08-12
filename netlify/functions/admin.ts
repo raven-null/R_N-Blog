@@ -659,7 +659,7 @@ export default async (req: Request) => {
         navTags: data.navTags && data.navTags.length ? data.navTags : DEFAULT_SETTINGS.navTags,
         // AI Agent 设置
         agent: {
-          enabled: storedAgent.enabled === true,
+          enabled: storedAgent.enabled !== false,
           triggerKeywords: Array.isArray(storedAgent.triggerKeywords) && storedAgent.triggerKeywords.length
             ? storedAgent.triggerKeywords
             : agentDefaults.triggerKeywords,
@@ -742,7 +742,7 @@ export default async (req: Request) => {
           temperature: typeof writingAi?.temperature === "number" && !Number.isNaN(writingAi.temperature) ? writingAi.temperature : 0.7,
         },
         agent: {
-          enabled: agent?.enabled === true,
+          enabled: agent?.enabled !== false,
           triggerKeywords: String(agent?.triggerKeywords || "").split(",").map((t: string) => t.trim()).filter(Boolean),
           publishStrategy: agent?.publishStrategy === "published" ? "published" : "draft",
           maxTasksPerIpPerDay: Number(agent?.maxTasksPerIpPerDay) > 0 ? Number(agent?.maxTasksPerIpPerDay) : DEFAULT_AGENT_SETTINGS.maxTasksPerIpPerDay,

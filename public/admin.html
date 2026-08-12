@@ -379,6 +379,7 @@
         .comment-manage-post{font-size:11px;color:var(--text-muted);background:var(--bg-input);padding:2px 8px;border-radius:4px}
         .comment-manage-time{font-size:11px;color:var(--text-muted)}
         .comment-manage-content{font-size:13px;color:var(--text-secondary,#aaa);line-height:1.6;margin-bottom:8px;word-break:break-word}
+        .comment-manage-content .mention{color:var(--accent);font-weight:600}
         .comment-manage-actions{display:flex;justify-content:flex-end;gap:6px}
 
         /* 博客设置（瀑布流布局，列数自适应） */
@@ -2651,7 +2652,7 @@
                             </div>
                             <span class="comment-manage-time">${formatCommentTime(c.createdAt)}</span>
                         </div>
-                        <div class="comment-manage-content">${esc(c.content)}</div>
+                        <div class="comment-manage-content">${esc(c.content).replace(/@([\u4e00-\u9fa5\w\-]{1,20})/g,'<span class="mention">@$1</span>')}</div>
                         <div class="comment-manage-actions">
                             <button class="btn btn-danger btn-sm" onclick="deleteComment('${escJs(c.postId)}','${escJs(c.id)}')">删除</button>
                         </div>
@@ -2721,7 +2722,7 @@
             const wrTemp=wr.temperature;
             document.getElementById('setWrTemperature').value=(wrTemp===undefined||wrTemp===null||wrTemp==='')?'':wrTemp;
             const ag=s.agent||{};
-            document.getElementById('setAgEnabled').checked=ag.enabled===true;
+            document.getElementById('setAgEnabled').checked=ag.enabled!==false;
             document.getElementById('setAgKeywords').value=(ag.triggerKeywords||[]).join(',');
             document.getElementById('setAgPublish').value=ag.publishStrategy||'draft';
             document.getElementById('setAgMaxPerIp').value=ag.maxTasksPerIpPerDay||'';
