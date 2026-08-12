@@ -2576,3 +2576,178 @@ Netlify 同步函数约 10s 超时，3000 字生成远超此限，需异步执�
 - 二者共享模型配置（writingAi 优先 / 回退 ai）、写作人设与关键词约束，保持风格一致
 - Agent 面板可与 AI 写作侧栏并存：一个自动执行，一个人工精修
 
+---
+
+# AI 设置优化方案（模型库选择 + 三套提示词分离）
+
+> 目标：AI 设置从"手填接口地址 / 模型名"改为"选模型 + 填 API Key 即可用"（类似 /connect + /model 的体验）；并把「AI 助手（聊天）」「写作 AI」「AI Agent」的系统提示词分开管理，写作 AI 与 AI Agent 可共用一套。
+
+## 1. 现状与痛点
+
+| 现状（后台「AI 设置」） | 痛点 |
+|-------------------------|------|
+| API 接口地址需手填（如 `https://open.bigmodel.cn/api/paas/v4/chat/completions`） | 用户经常找不到、抄错，`v1` / `v4` / `/compatible-mode` 五花八门 |
+| 模型名称需手填（如 `glm-4-flash`、`deepseek-chat`） | 不知道确切 ID，填错即报错 |
+| 提示词三处：`ai.systemPrompt`（聊天）、`writingAi.systemPrompt`（写作）、Agent 直接复用写作 | AI Agent 无法独立设定人设；三处心智负担重 |
+| 无法验证 Key/模型是否可用 | 填完保存后要等实际调用才发现配错 |
+
+## 2. 设计目标
+
+1. **免填地址与模型名**：内置「模型库」，只做两件事——① 选厂商 + 选模型；② 粘贴 API Key。
+2. **可验证**：提供「测试连接」，发一条极短请求确认 Key 与模型可用，打勾提示。
+3. **三套提示词分离**：聊天 / 写作 / Agent 各自独立；写作与 Agent 默认一致、可一键共用。
+
+## 3. 核心设计：内置模型库（Model Catalog）
+
+### 3.1 数据模型（前后端共享）
+
+```ts
+// netlify/functions/_shared/models.ts（权威来源）
+interface CatalogModel {
+  id: string            // 模型 ID，如 "glm-4-flash"
+  label: string         // 中文友好名，如 "GLM-4-Flash（免费 · 快速）"
+  apiUrl: string        // 官方 OpenAI 兼容接口地址
+  tags?: string[]       // ["免费","快速","推理","长上下文"] 等徽标
+}
+interface CatalogProvider {
+  id: string            // "zhipu" | "deepseek" | ...
+  name: string          // 厂商名，如 "智谱 GLM"
+  models: CatalogModel[]
+  needBaseUrl?: boolean // 自定义厂商为 true，需另填 apiUrl
+}
+```
+
+### 3.2 初版模型库（可扩展）
+
+| 厂商 | 模型 ID | 中文名 | 接口地址 |
+|------|---------|--------|----------|
+| 智谱 GLM | `glm-4-flash` | GLM-4-Flash（免费·快速） | `https://open.bigmodel.cn/api/paas/v4/chat/completions` |
+| | `glm-4-air` | GLM-4-Air（性价比） | 同上 |
+| | `glm-4-plus` | GLM-4-Plus（更强） | 同上 |
+| | `glm-4-long` | GLM-4-Long（长文 1M） | 同上 |
+| DeepSeek | `deepseek-chat` | DeepSeek-V3（对话） | `https://api.deepseek.com/chat/completions` |
+| | `deepseek-reasoner` | DeepSeek-R1（推理） | 同上 |
+| OpenAI | `gpt-4o-mini` | GPT-4o mini（快速） | `https://api.openai.com/v1/chat/completions` |
+| | `gpt-4o` | GPT-4o | 同上 |
+| Moonshot | `moonshot-v1-8k` / `moonshot-v1-32k` | Kimi 系列 | `https://api.moonshot.cn/v1/chat/completions` |
+| 通义千问 | `qwen-turbo` / `qwen-plus` / `qwen-max` | Qwen 系列 | `https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions` |
+| 自定义 | 手填 | — | 需手填接口地址 + 模型名（保留现有表单作为兜底） |
+
+> 说明：以上均为 OpenAI 兼容接口；`model` 在真实请求中按目录映射为厂商要求的 ID。
+
+### 3.3 运行时解析
+
+- 前端只提交 `{ provider, model, apiKey }`（自定义厂商可带 `apiUrl` / `model`）。
+- 后端 `resolveModelApiUrl(provider, model)`：在目录中命中则返回其 `apiUrl`；未命中（自定义）则用存储的手填地址。
+- **兼容旧数据**：旧设置里已保存 `apiUrl` / `model` 的，无 `provider` 时回退用原字段，用户无需重配。
+
+## 4. 设计：AI 设置 UI（/connect + /model 模式）
+
+「AI 设置」Tab 下三个卡片结构统一：
+
+```
+┌─ AI 助手（聊天机器人）────────────────┐
+│  启用开关                              │
+│  厂商    [智谱 GLM ▾]  → 模型 [GLM-4-Flash ▾]   （联动下拉，带中文名+徽标）
+│  API Key [••••••••••••]  [测试连接]            （通过后打 ✓）
+│  ── 高级设置 ▾（折叠）──
+│    系统提示词 / 最大输出 Token / 温度
+└────────────────────────────────────────┘
+```
+
+- **厂商 → 模型二级联动**：选厂商后模型下拉只显示该厂商模型；模型项带中文名 + 免费/快速等徽标。
+- **自定义厂商**：模型下拉末位提供「自定义」，展开时显示手填地址 + 模型名（保底，不丢现有能力）。
+- **测试连接**：按钮调后端 `action=test-ai`（鉴权），用当前 Key + 选中模型发一条 `max_tokens` 极小的请求；成功显示 `✓ 连接成功`，失败提示具体原因（Key 无效 / 模型不存在 / 网络）。
+- **高级设置折叠**：系统提示词、Token、温度默认收起，满足"少填"诉求；只在需要时展开。
+
+## 5. 设计：三套系统提示词分离
+
+### 5.1 字段划分
+
+| 用途 | 字段 | 默认 | 面向 |
+|------|------|------|------|
+| AI 助手（聊天） | `ai.systemPrompt` | 日常对话人设 | 前台聊天机器人 |
+| 写作 AI | `writingAi.systemPrompt` | 博客写作人设（现有 DEFAULT_WRITING_PROMPT） | 后台「AI 写作」助手 |
+| AI Agent | `agent.systemPrompt`（**新增**） | 与写作 AI 相同 | 自动写作发布 |
+
+### 5.2 共用开关
+
+- 写作 AI 与 AI Agent 提供「使用与写作 AI 相同的提示词」开关（`agent.shareWritingPrompt`）。
+- 开启（默认）：Agent 直接读 `writingAi.systemPrompt`，只维护一处。
+- 关闭：Agent 使用独立 `agent.systemPrompt`。
+
+### 5.3 后端解析优先级（Agent 生成时）
+
+```
+agent.systemPrompt（若 shareWritingPrompt=false 且非空）
+  → 否则 writingAi.systemPrompt
+  → 否则默认写作人设 DEFAULT_WRITING_PROMPT
+```
+
+## 6. 数据模型与兼容
+
+### 6.1 新增 / 调整字段
+
+```ts
+ai: {
+  provider: "zhipu" | "deepseek" | ... | "custom",
+  model: "glm-4-flash",        // 目录模型 ID 或自定义模型名
+  apiKey: "...",
+  customApiUrl: "",            // 仅 provider=custom 时使用
+  systemPrompt: "...", maxTokens, temperature, enabled
+}
+writingAi: { 同上 + keywords }
+agent: {
+  ...现有（enabled/triggerKeywords/publishStrategy/限流）,
+  shareWritingPrompt: true,    // 新增：默认与写作 AI 共用提示词
+  systemPrompt: "",            // 新增：独立提示词（共用开关关闭时生效）
+}
+```
+
+### 6.2 兼容策略
+
+- 旧数据无 `provider`：按"自定义"处理，沿用 `apiUrl` + `model`，界面显示「自定义」。
+- 目录中模型升级 / 下线：`resolveModelApiUrl` 未命中时回退到存储的 `customApiUrl`，不阻断使用。
+
+## 7. 后端改动清单
+
+| 文件 | 改动 |
+|------|------|
+| `netlify/functions/_shared/models.ts` | 新建模型库 + `resolveModelApiUrl()` |
+| `netlify/functions/_shared/ai.ts` | `resolveLlmConfig` 接入目录解析（provider/model → apiUrl），保留 writingAi→ai 回退 |
+| `netlify/functions/_shared/agent.ts` | `getAgentSettings` 增加 `shareWritingPrompt` / `systemPrompt` |
+| `netlify/functions/admin.ts` | settings 读写新字段；新增 `action=models`（返回模型库）与 `action=test-ai`（测试连接） |
+| `netlify/functions/agent-run.ts` | 生成时按「5.3」优先级取 Agent 提示词 |
+
+## 8. 前端改动清单
+
+| 文件 | 改动 |
+|------|------|
+| `public/admin.html` | AI 设置三个卡片重写为「厂商→模型→Key→测试连接 + 高级折叠」；`loadSettings` / `saveSettings` 适配新字段 |
+| 后台「AI Agent」面板 / 写文章「AI 写作」侧栏 | 无需改动（模型走统一配置） |
+
+## 9. 交互细节
+
+- 模型下拉懒加载：进入 AI 设置 Tab 时拉取 `action=models`（体积小，可内嵌常量兜底）。
+- 切换厂商时清空已选模型；切换模型不丢 Key。
+- 「测试连接」串行（同一时刻只测一个），防止连点。
+- 保存时若检测到 Key 变化但未测试，仅在配置有效时提示"建议先测试连接"。
+
+## 10. 分阶段实施与优先级
+
+| 优先级 | 事项 | 收益 | 工作量 |
+|--------|------|------|--------|
+| P0 | `_shared/models.ts` 模型库 + 后端解析 | 免填地址/模型名 | 中 |
+| P0 | AI 设置 UI：厂商→模型→Key 联动下拉 + 高级折叠 | 核心体验 | 中 |
+| P0 | Agent 提示词分离（`agent.systemPrompt` + 共用开关） | 人设独立可控 | 小 |
+| P1 | `action=test-ai` 测试连接 | 配错即时发现 | 小 |
+| P1 | 自定义厂商兜底 + 旧数据兼容 | 不丢能力 | 小 |
+| P2 | 更多厂商 / 模型扩充、用量与成本统计 | 长期优化 | 中 |
+
+## 11. 风险与注意事项
+
+- **接口地址变化**：模型库中的 apiUrl 由官方兼容接口固化，个别厂商可能调整；未命中自动回退自定义地址，或由用户在「自定义」中修正。
+- **Key 安全**：测试连接与真实调用都只走后端（`X-Admin-Key` 鉴权），前端不持久化 Key 明文于页面外；Key 仍存于 Blobs 设置中（现状）。
+- **与现有行为兼容**：AI 助手 / 写作 AI / Agent 的调用入口（`/api/ai`、`/api/agent-run`）签名不变，仅内部解析模型配置，线上无感升级。
+
+
