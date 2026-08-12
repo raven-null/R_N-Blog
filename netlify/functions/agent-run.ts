@@ -69,7 +69,7 @@ async function runTask(task: any): Promise<void> {
         { role: "user", content: `文章内容：\n${articleText}\n\n用户问题：${task.instruction}` },
       ])
       if (!res.ok) throw new Error(res.error || "回答失败")
-      const answer = (res.text || "（无回复）").slice(0, 2000)
+      const answer = stripMarkdown(res.text || "（无回复）").slice(0, 2000)
       task.status = "done"
       task.finishedAt = Date.now()
       task.progress = "已回答"
@@ -144,6 +144,25 @@ async function runTask(task: any): Promise<void> {
       await writeAgentComment(task.postId, `🤖 很抱歉，任务执行失败：${task.error}`, name)
     }
   }
+}
+
+/** 把 Markdown 语法剥离为纯文本（问答评论用，不保留格式符号） */
+function stripMarkdown(text: string): string {
+  return text
+    .replace(/```[\s\S]*?```/g, m => m.replace(/```/g, ""))
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/^\s*>\s?/gm, "")
+    .replace(/^\s*[-*•]\s+/gm, "· ")
+    .replace(/^\s*\d+[.、)．]\s+/gm, "")
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/\*([^*]+)\*/g, "$1")
+    .replace(/~~([^~]+)~~/g, "$1")
+    .replace(/^\s*---+$/gm, "")
+    .replace(/[ \t]+$/gm, "")
+    .trim()
 }
 
 /** 分段续写生成完整文章 */
