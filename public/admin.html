@@ -389,14 +389,18 @@
         .settings-tab{padding:7px 18px;border:1px solid var(--border);border-radius:20px;background:transparent;color:var(--text-muted);font-size:13px;cursor:pointer;transition:all .15s;font-family:inherit}
         .settings-tab:hover{border-color:var(--accent);color:var(--accent)}
         .settings-tab.active{background:var(--accent);border-color:var(--accent);color:#000;font-weight:600}
-        .settings-section{display:none;max-width:900px}
-        .settings-section.active{display:block}
-        .settings-group{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:18px;margin-bottom:20px;display:block;cursor:grab;transition:box-shadow .15s,border-color .15s,opacity .15s}
+        .settings-section{display:none}
+        .settings-section.active{display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:16px;align-items:start}
+        .settings-group{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;display:block;cursor:grab;transition:box-shadow .15s,border-color .15s,opacity .15s;min-width:0}
         .settings-group:hover{border-color:var(--border-light)}
         .settings-group.dragging{opacity:.45;cursor:grabbing;border-color:var(--accent);box-shadow:var(--shadow)}
-        .settings-group h3{font-size:14px;color:var(--accent);margin-bottom:16px;font-weight:600;display:flex;align-items:center;justify-content:space-between;user-select:none}
-        .settings-grip{color:var(--text-muted);font-size:14px;cursor:grab;letter-spacing:1px;transition:color .15s;padding:2px 4px}
+        .settings-group h3{font-size:14px;color:var(--accent);margin-bottom:12px;font-weight:600;display:flex;align-items:center;gap:8px;user-select:none;cursor:pointer}
+        .settings-group h3 .settings-title{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+        .settings-grip{color:var(--text-muted);font-size:14px;cursor:grab;letter-spacing:1px;transition:color .15s;padding:2px 4px;flex-shrink:0}
         .settings-grip:hover{color:var(--accent)}
+        .settings-chevron{color:var(--text-muted);font-size:12px;cursor:pointer;transition:transform .2s;flex-shrink:0;padding:2px}
+        .settings-group.collapsed .settings-chevron{transform:rotate(-90deg)}
+        .settings-group.collapsed > :not(h3){display:none}
         .settings-field{margin-bottom:14px}
         .settings-field:last-child{margin-bottom:0}
         .settings-field label{display:block;font-size:12px;color:var(--text-muted);margin-bottom:6px}
@@ -756,7 +760,7 @@
                         <div class="settings-section active" data-section="front">
                         <!-- 1. 站点名称与标题 -->
                         <div class="settings-group">
-                            <h3>站点名称与标题<span class="settings-grip" title="拖动排序">⠿</span></h3>
+                            <h3><span class="settings-title">站点名称与标题</span><span class="settings-grip" title="拖动排序">⠿</span><span class="settings-chevron" title="展开/收起">▾</span></h3>
                             <div class="settings-field">
                                 <label>网站标题（浏览器标签页显示）</label>
                                 <input type="text" id="setSiteTitle" placeholder="我的博客">
@@ -779,7 +783,7 @@
 
                         <!-- 2. 个人资料 -->
                         <div class="settings-group">
-                            <h3>个人资料（我的视图欢迎区）<span class="settings-grip" title="拖动排序">⠿</span></h3>
+                            <h3><span class="settings-title">个人资料（我的视图欢迎区）</span><span class="settings-grip" title="拖动排序">⠿</span><span class="settings-chevron" title="展开/收起">▾</span></h3>
                             <div class="settings-field">
                                 <label>头像</label>
                                 <div class="settings-avatar-row">
@@ -802,7 +806,7 @@
 
                         <!-- 3. 导航页面开关 -->
                         <div class="settings-group">
-                            <h3>导航页面（首页顶部视图）<span class="settings-grip" title="拖动排序">⠿</span></h3>
+                            <h3><span class="settings-title">导航页面（首页顶部视图）</span><span class="settings-grip" title="拖动排序">⠿</span><span class="settings-chevron" title="展开/收起">▾</span></h3>
                             <div class="settings-toggle-list">
                                 <div class="settings-toggle-item"><span>文章</span><label class="switch"><input type="checkbox" id="setViewBlog" checked><span class="slider"></span></label></div>
                                 <div class="settings-toggle-item"><span>图库</span><label class="switch"><input type="checkbox" id="setViewGallery" checked><span class="slider"></span></label></div>
@@ -814,7 +818,7 @@
 
                         <!-- 4. 仪表盘统计 -->
                         <div class="settings-group">
-                            <h3>仪表盘统计（我的视图）<span class="settings-grip" title="拖动排序">⠿</span></h3>
+                            <h3><span class="settings-title">仪表盘统计（我的视图）</span><span class="settings-grip" title="拖动排序">⠿</span><span class="settings-chevron" title="展开/收起">▾</span></h3>
                             <div class="settings-toggle-list">
                                 <div class="settings-toggle-item"><span>文章数</span><label class="switch"><input type="checkbox" id="setStatPosts" checked><span class="slider"></span></label></div>
                                 <div class="settings-toggle-item"><span>标签数</span><label class="switch"><input type="checkbox" id="setStatTags" checked><span class="slider"></span></label></div>
@@ -826,7 +830,7 @@
 
                         <!-- 5. 导航标签 -->
                         <div class="settings-group">
-                            <h3>导航标签（首页文章筛选）<span class="settings-grip" title="拖动排序">⠿</span></h3>
+                            <h3><span class="settings-title">导航标签（首页文章筛选）</span><span class="settings-grip" title="拖动排序">⠿</span><span class="settings-chevron" title="展开/收起">▾</span></h3>
                             <div class="settings-field">
                                 <label>主要标签（逗号分隔，如：技术,生活,AI）</label>
                                 <input type="text" id="setNavTags" placeholder="用逗号分隔，如：技术,生活,AI">
@@ -838,7 +842,7 @@
                         <div class="settings-section" data-section="ai">
                         <!-- 6. AI 助手 -->
                         <div class="settings-group">
-                            <h3>AI 助手（聊天机器人）<span class="settings-grip" title="拖动排序">⠿</span></h3>
+                            <h3><span class="settings-title">AI 助手（聊天机器人）</span><span class="settings-grip" title="拖动排序">⠿</span><span class="settings-chevron" title="展开/收起">▾</span></h3>
                             <div class="settings-toggle-list" style="margin-bottom:12px">
                                 <div class="settings-toggle-item"><span>启用 AI 助手</span><label class="switch"><input type="checkbox" id="setAiEnabled" checked><span class="slider"></span></label></div>
                             </div>
@@ -871,7 +875,7 @@
 
                         <!-- 6.5 写作 AI -->
                         <div class="settings-group">
-                            <h3>写作 AI（后台写文章助手）<span class="settings-grip" title="拖动排序">⠿</span></h3>
+                            <h3><span class="settings-title">写作 AI（后台写文章助手）</span><span class="settings-grip" title="拖动排序">⠿</span><span class="settings-chevron" title="展开/收起">▾</span></h3>
                             <div class="settings-toggle-list" style="margin-bottom:12px">
                                 <div class="settings-toggle-item"><span>启用写作 AI</span><label class="switch"><input type="checkbox" id="setWrEnabled" checked><span class="slider"></span></label></div>
                             </div>
@@ -908,7 +912,7 @@
 
                         <!-- 6.5 AI Agent（自动写作发布） -->
                         <div class="settings-group">
-                            <h3>AI Agent（自动写作发布）<span class="settings-grip" title="拖动排序">⠿</span></h3>
+                            <h3><span class="settings-title">AI Agent（自动写作发布）</span><span class="settings-grip" title="拖动排序">⠿</span><span class="settings-chevron" title="展开/收起">▾</span></h3>
                             <div class="settings-toggle-list" style="margin-bottom:12px">
                                 <div class="settings-toggle-item"><span>启用 AI Agent（评论区 @触发自动写文章）</span><label class="switch"><input type="checkbox" id="setAgEnabled" checked><span class="slider"></span></label></div>
                             </div>
@@ -946,7 +950,7 @@
                         <div class="settings-section active" data-section="front">
                         <!-- 7. 关于信息 -->
                         <div class="settings-group">
-                            <h3>关于信息（我的视图底部）<span class="settings-grip" title="拖动排序">⠿</span></h3>
+                            <h3><span class="settings-title">关于信息（我的视图底部）</span><span class="settings-grip" title="拖动排序">⠿</span><span class="settings-chevron" title="展开/收起">▾</span></h3>
                             <div class="settings-field">
                                 <label>版本</label>
                                 <input type="text" id="setAboutVersion" placeholder="输入版本号，如 v1.0">
@@ -965,7 +969,7 @@
                         <div class="settings-section" data-section="backend">
                         <!-- 8. 后台密码 -->
                         <div class="settings-group">
-                            <h3>后台密码<span class="settings-grip" title="拖动排序">⠿</span></h3>
+                            <h3><span class="settings-title">后台密码</span><span class="settings-grip" title="拖动排序">⠿</span><span class="settings-chevron" title="展开/收起">▾</span></h3>
                             <div class="settings-field">
                                 <label>当前密码</label>
                                 <input type="password" id="setOldPassword" placeholder="输入当前密码" autocomplete="off">
@@ -3162,8 +3166,39 @@
         let settingsDragCard=null;
         const settingsOrderKey='admin_settings_order_v1';
         function settingsCardKey(card){
-            const h=card.querySelector('h3');
+            const h=card.querySelector('h3 .settings-title')||card.querySelector('h3');
             return h?h.textContent.replace(/⠿/g,'').trim():'';
+        }
+        // 卡片折叠：点标题展开/收起，状态存 localStorage
+        let suppressSettingsClick=false;
+        function saveSettingsCollapse(){
+            const collapsed=[];
+            document.querySelectorAll('.settings-section .settings-group.collapsed').forEach(c=>collapsed.push(settingsCardKey(c)));
+            try{localStorage.setItem('admin_settings_collapsed',JSON.stringify(collapsed))}catch(e){}
+        }
+        function restoreSettingsCollapse(){
+            try{
+                const raw=localStorage.getItem('admin_settings_collapsed');
+                if(!raw)return;
+                const names=JSON.parse(raw);
+                if(!Array.isArray(names))return;
+                document.querySelectorAll('.settings-section .settings-group').forEach(c=>{
+                    if(names.includes(settingsCardKey(c)))c.classList.add('collapsed');
+                });
+            }catch(e){}
+        }
+        function initSettingsCollapse(){
+            document.querySelectorAll('.settings-section .settings-group').forEach(card=>{
+                const h=card.querySelector('h3');
+                if(!h)return;
+                h.addEventListener('click',e=>{
+                    if(suppressSettingsClick){suppressSettingsClick=false;return}
+                    if(e.target.closest('.settings-grip'))return;
+                    card.classList.toggle('collapsed');
+                    saveSettingsCollapse();
+                });
+            });
+            restoreSettingsCollapse();
         }
         function saveSettingsOrder(){
             const order={};
@@ -3211,6 +3246,7 @@
                     card.addEventListener('drop',e=>e.preventDefault());
                     card.addEventListener('dragend',()=>{
                         card.classList.remove('dragging');
+                        suppressSettingsClick=true;
                         if(settingsDragCard===card){
                             settingsDragCard=null;
                             saveSettingsOrder();
@@ -3221,6 +3257,7 @@
         }
         document.addEventListener('DOMContentLoaded',()=>{
             initSettingsDrag();
+            initSettingsCollapse();
             restoreSettingsOrder();
         });
 
