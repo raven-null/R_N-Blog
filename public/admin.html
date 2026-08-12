@@ -8,6 +8,11 @@
     <!-- Markdown 渲染库 -->
     <script src="js/vendor/marked.min.js"></script>
     <script src="js/markdown.js"></script>
+    <!-- 所见即所得编辑器（Obsidian 式，无需手写 Markdown） -->
+    <link rel="stylesheet" href="js/vendor/toastui-editor.min.css">
+    <link rel="stylesheet" href="js/vendor/toastui-editor-dark.min.css">
+    <script src="js/vendor/toastui-editor.min.js"></script>
+    <script src="js/vendor/toastui-i18n-zh-cn.js"></script>
     <style>
         *{margin:0;padding:0;box-sizing:border-box}
         :root{--bg:#080808;--bg-card:#111;--bg-input:#1a1a1a;--bg-hover:#1c1c1c;--bg-active:#1a2a3a;--text:#ddd;--text-muted:#777;--accent:#4fc3f7;--accent-dim:rgba(79,195,247,.1);--border:#252525;--border-light:#333;--danger:#ef5350;--success:#66bb6a;--warning:#ffa726;--radius:10px;--radius-sm:6px;--shadow:0 8px 32px rgba(0,0,0,.5);--sidebar-w:220px;--sidebar-collapsed:52px}
@@ -136,51 +141,81 @@
         .write-article-img-item .del{position:absolute;top:0;right:0;width:16px;height:16px;background:rgba(0,0,0,.7);border:none;color:var(--danger);cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;border-radius:0 0 0 4px;opacity:0;transition:opacity .1s}
         .write-article-img-item:hover .del{opacity:1}
 
-        .editor-toolbar{display:flex;justify-content:space-between;gap:8px;padding:6px 10px;background:var(--bg-card);border:1px solid var(--border);border-bottom:none;border-radius:var(--radius-sm) var(--radius-sm) 0 0;flex-wrap:wrap;align-items:center}
-        .editor-toolbar-group{display:flex;gap:1px;flex-wrap:wrap;align-items:center}
-        .editor-toolbar-right{justify-content:flex-end;margin-left:auto}
-        .editor-toolbar button{height:30px;padding:0 8px;display:flex;align-items:center;justify-content:center;background:transparent;border:none;color:var(--text-muted);cursor:pointer;border-radius:4px;font-size:12px;transition:all .08s}
-        .editor-toolbar button:hover{background:var(--bg-hover);color:var(--accent)}
-        .editor-toolbar .sep{width:1px;height:18px;background:var(--border);margin:0 4px}
-        /* 移动端预览按钮（桌面隐藏） */
-        .mobile-preview-btn{display:none}
-        .editor-upload-img{height:30px;padding:0 8px;display:flex;align-items:center;justify-content:center;background:transparent;border:none;color:var(--text-muted);cursor:pointer;border-radius:4px;font-size:12px;transition:all .08s;line-height:30px}
-        .editor-upload-img:hover{background:var(--bg-hover);color:var(--accent)}
-        .editor-split{display:grid;grid-template-columns:1fr 1fr;gap:0;height:calc(100vh - 470px);min-height:300px;max-height:600px}
-        .editor-left{position:relative;display:flex;flex-direction:column;overflow:hidden}
-        .editor-textarea{width:100%;height:100%;flex:1;background:var(--bg-input);border:1px solid var(--border);border-radius:0 0 0 var(--radius-sm);color:var(--text);font-family:'JetBrains Mono','Fira Code',monospace;font-size:13px;padding:14px;resize:none;line-height:1.7;border-right:none;overflow-y:auto}
-        .editor-textarea:focus{outline:none;border-color:var(--border)}
-        .editor-right{display:flex;flex-direction:column;overflow:hidden}
-        .editor-preview{background:var(--bg-card);border:1px solid var(--border);border-radius:0 0 var(--radius-sm) 0;padding:18px;overflow-y:auto;font-size:14px;line-height:1.8;flex:1;min-height:0}
-        .preview-empty{display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted);font-size:13px;text-align:center}
-        .editor-preview h1,.editor-preview h2,.editor-preview h3,.ai-writer-result h1,.ai-writer-result h2,.ai-writer-result h3{color:var(--accent);margin:18px 0 8px;font-weight:600}
-        .editor-preview h1,.ai-writer-result h1{font-size:22px;border-bottom:1px solid var(--border);padding-bottom:6px}
-        .editor-preview h2,.ai-writer-result h2{font-size:18px}.editor-preview h3,.ai-writer-result h3{font-size:15px}
-        .editor-preview p,.ai-writer-result p{margin-bottom:10px}
-        .editor-preview code,.ai-writer-result code{background:var(--bg);padding:2px 5px;border-radius:3px;font-size:12px;font-family:'JetBrains Mono',monospace}
-        .editor-preview pre,.ai-writer-result pre{background:var(--bg);padding:12px;border-radius:var(--radius-sm);overflow-x:auto;margin-bottom:12px;border:1px solid var(--border)}
-        .editor-preview pre code,.ai-writer-result pre code{padding:0;background:none}
-        .editor-preview blockquote,.ai-writer-result blockquote{border-left:3px solid var(--accent);padding:6px 12px;color:var(--text-muted);margin-bottom:10px;background:var(--accent-dim);border-radius:0 var(--radius-sm) var(--radius-sm) 0}
-        .editor-preview ul,.editor-preview ol,.ai-writer-result ul,.ai-writer-result ol{padding-left:22px;margin-bottom:10px}
-        .editor-preview a,.ai-writer-result a{color:var(--accent)}
-        .editor-preview img,.ai-writer-result img{max-width:100%;border-radius:var(--radius-sm);margin:8px 0}
-        .editor-preview table,.ai-writer-result table{width:100%;border-collapse:collapse;margin-bottom:12px}
-        .editor-preview th,.editor-preview td,.ai-writer-result th,.ai-writer-result td{border:1px solid var(--border);padding:8px 10px;text-align:left}
-        .editor-preview th,.ai-writer-result th{background:var(--bg-input);font-weight:600;font-size:12px}
-        .editor-preview hr,.ai-writer-result hr{border:none;border-top:1px solid var(--border);margin:16px 0}
-        /* 代码块组件（MarkdownParser 生成，前后台统一） */
-        .editor-preview .code-block,.ai-writer-result .code-block{margin:14px 0;border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;background:var(--bg)}
-        .editor-preview .code-header,.ai-writer-result .code-header{display:flex;align-items:center;justify-content:space-between;padding:6px 12px;background:var(--bg-input);border-bottom:1px solid var(--border)}
-        .editor-preview .code-lang,.ai-writer-result .code-lang{font-size:11px;color:var(--text-muted);font-family:'JetBrains Mono',monospace}
-        .editor-preview .code-block pre,.ai-writer-result .code-block pre{margin:0;border:none;border-radius:0;background:var(--bg)}
-        .editor-preview .copy-btn,.ai-writer-result .copy-btn{background:transparent;border:1px solid var(--border);border-radius:4px;color:var(--text-muted);font-size:11px;padding:2px 8px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;transition:all .15s}
-        .editor-preview .copy-btn:hover,.ai-writer-result .copy-btn:hover{border-color:var(--accent);color:var(--accent)}
-        .editor-preview .copy-btn svg,.ai-writer-result .copy-btn svg{width:12px;height:12px}
+        /* ===== 所见即所得编辑器（Toast UI，Obsidian 式） ===== */
+        .editor-extras{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+        .editor-extras-hint{margin-left:auto;font-size:11px;color:var(--text-muted)}
+        .editor-container{height:calc(100vh - 470px);min-height:320px;max-height:640px;border-radius:var(--radius-sm);overflow:hidden}
+        .editor-container .toastui-editor-defaultUI{height:100%!important;display:flex;flex-direction:column}
+        .editor-container .toastui-editor-main{flex:1;min-height:0}
+        .editor-container .toastui-editor-ww-container,.editor-container .toastui-editor-md-container{height:100%}
+        .editor-container .toastui-editor-ww-container .toastui-editor{height:100%;overflow-y:auto}
+        /* 暗色主题与站点配色统一 */
+        .toastui-editor-dark.toastui-editor-defaultUI{border-color:var(--border)}
+        .toastui-editor-dark .toastui-editor-md-container,.toastui-editor-dark .toastui-editor-ww-container{background-color:var(--bg-input)}
+        .toastui-editor-dark .toastui-editor-defaultUI-toolbar{background-color:var(--bg-card);border-bottom-color:var(--border)}
+        .toastui-editor-dark .toastui-editor-toolbar-icons{border-color:var(--bg-card)}
+        .toastui-editor-dark .toastui-editor-toolbar-icons.active{background-color:var(--accent-dim);border-color:var(--accent)}
+        .toastui-editor-dark .toastui-editor-defaultUI-toolbar button:not(:disabled):hover{background-color:var(--bg-hover);border-color:var(--bg-hover)}
+        .toastui-editor-dark .toastui-editor-toolbar-divider{background-color:var(--border)}
+        .toastui-editor-dark .toastui-editor-mode-switch{background-color:var(--bg-card);border-color:var(--border)}
+        .toastui-editor-dark .toastui-editor-mode-switch .tab-item{color:var(--text-muted)}
+        .toastui-editor-dark .toastui-editor-mode-switch .tab-item.active{color:var(--accent)}
+        .toastui-editor .toastui-editor-contents{background:var(--bg-input);color:var(--text);font-size:14px;line-height:1.8;padding:14px}
+        .toastui-editor-contents h1,.toastui-editor-contents h2,.toastui-editor-contents h3{color:var(--accent);margin:18px 0 8px;font-weight:600}
+        .toastui-editor-contents h1{font-size:22px;border-bottom:1px solid var(--border);padding-bottom:6px}
+        .toastui-editor-contents h2{font-size:18px}.toastui-editor-contents h3{font-size:15px}
+        .toastui-editor-contents p{margin-bottom:10px}
+        .toastui-editor-contents code{background:var(--bg);color:var(--accent);padding:2px 5px;border-radius:3px;font-size:12px;font-family:'JetBrains Mono',monospace}
+        .toastui-editor-contents pre{background:var(--bg);padding:12px;border-radius:var(--radius-sm);overflow-x:auto;margin-bottom:12px;border:1px solid var(--border)}
+        .toastui-editor-contents pre code{padding:0;background:none;color:var(--text)}
+        .toastui-editor-contents blockquote{border-left:3px solid var(--accent);padding:6px 12px;color:var(--text-muted);margin-bottom:10px;background:var(--accent-dim);border-radius:0 var(--radius-sm) var(--radius-sm) 0}
+        .toastui-editor-contents ul,.toastui-editor-contents ol{padding-left:22px;margin-bottom:10px}
+        .toastui-editor-contents a{color:var(--accent)}
+        .toastui-editor-contents img{max-width:100%;border-radius:var(--radius-sm);margin:8px 0}
+        .toastui-editor-contents table{width:100%;border-collapse:collapse;margin-bottom:12px}
+        .toastui-editor-contents th,.toastui-editor-contents td{border:1px solid var(--border);padding:8px 10px;text-align:left}
+        .toastui-editor-contents th{background:var(--bg-input);font-weight:600;font-size:12px}
+        .toastui-editor-contents hr{border:none;border-top:1px solid var(--border);margin:16px 0}
+        /* 弹窗（插入链接/图片/表格）暗色 */
+        .toastui-editor-dark .toastui-editor-popup{background:var(--bg-card);border-color:var(--border);box-shadow:var(--shadow)}
+        .toastui-editor-dark .toastui-editor-popup input[type="text"]{background:var(--bg-input);border-color:var(--border);color:var(--text)}
+        .toastui-editor-dark .toastui-editor-popup input[type="text"]:focus{border-color:var(--accent);outline:none}
+        .toastui-editor-dark .toastui-editor-popup label{color:var(--text-muted)}
+        .toastui-editor-dark .toastui-editor-popup .toastui-editor-button{background:var(--bg-input);border-color:var(--border);color:var(--text)}
+        .toastui-editor-dark .toastui-editor-popup .toastui-editor-button:hover{background:var(--bg-hover);border-color:var(--accent);color:var(--accent)}
+        .toastui-editor-dark .toastui-editor-popup .toastui-editor-ok-button{background:var(--accent);border-color:var(--accent);color:#000;font-weight:600}
+        .toastui-editor-dark .toastui-editor-popup .toastui-editor-ok-button:hover{background:var(--accent);border-color:var(--accent);color:#000}
+        .toastui-editor-dark .toastui-editor-popup .toastui-editor-table-selection{background:var(--accent-dim)}
+        .toastui-editor-dark .toastui-editor-popup .toastui-editor-table-selection-layer{border-color:var(--accent)}
+        .toastui-editor-dark .toastui-editor-popup .toastui-editor-table-cell{background:var(--bg-hover);border-color:var(--border)}
+        .toastui-editor-dark .toastui-editor-tooltip{background:#1a1a1a;border:1px solid var(--border);color:var(--text)}
+        .toastui-editor-dark .toastui-editor-tooltip .arrow{background:#1a1a1a;border-color:var(--border)}
+        /* AI 写作结果样式（与渲染库输出统一） */
+        .ai-writer-result h1,.ai-writer-result h2,.ai-writer-result h3{color:var(--accent);margin:18px 0 8px;font-weight:600}
+        .ai-writer-result h1{font-size:22px;border-bottom:1px solid var(--border);padding-bottom:6px}
+        .ai-writer-result h2{font-size:18px}.ai-writer-result h3{font-size:15px}
+        .ai-writer-result p{margin-bottom:10px}
+        .ai-writer-result code{background:var(--bg);padding:2px 5px;border-radius:3px;font-size:12px;font-family:'JetBrains Mono',monospace}
+        .ai-writer-result pre{background:var(--bg);padding:12px;border-radius:var(--radius-sm);overflow-x:auto;margin-bottom:12px;border:1px solid var(--border)}
+        .ai-writer-result pre code{padding:0;background:none}
+        .ai-writer-result blockquote{border-left:3px solid var(--accent);padding:6px 12px;color:var(--text-muted);margin-bottom:10px;background:var(--accent-dim);border-radius:0 var(--radius-sm) var(--radius-sm) 0}
+        .ai-writer-result ul,.ai-writer-result ol{padding-left:22px;margin-bottom:10px}
+        .ai-writer-result a{color:var(--accent)}
+        .ai-writer-result img{max-width:100%;border-radius:var(--radius-sm);margin:8px 0}
+        .ai-writer-result table{width:100%;border-collapse:collapse;margin-bottom:12px}
+        .ai-writer-result th,.ai-writer-result td{border:1px solid var(--border);padding:8px 10px;text-align:left}
+        .ai-writer-result th{background:var(--bg-input);font-weight:600;font-size:12px}
+        .ai-writer-result hr{border:none;border-top:1px solid var(--border);margin:16px 0}
+        .ai-writer-result .code-block{margin:14px 0;border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;background:var(--bg)}
+        .ai-writer-result .code-header{display:flex;align-items:center;justify-content:space-between;padding:6px 12px;background:var(--bg-input);border-bottom:1px solid var(--border)}
+        .ai-writer-result .code-lang{font-size:11px;color:var(--text-muted);font-family:'JetBrains Mono',monospace}
+        .ai-writer-result .code-block pre{margin:0;border:none;border-radius:0;background:var(--bg)}
+        .ai-writer-result .copy-btn{background:transparent;border:1px solid var(--border);border-radius:4px;color:var(--text-muted);font-size:11px;padding:2px 8px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;transition:all .15s}
+        .ai-writer-result .copy-btn:hover{border-color:var(--accent);color:var(--accent)}
+        .ai-writer-result .copy-btn svg{width:12px;height:12px}
         .editor-footer{display:flex;margin-top:12px;align-items:center;justify-content:space-between}
         .editor-info{font-size:11px;color:var(--text-muted)}
         .editor-footer-actions{display:flex;gap:8px}
-        .drop-overlay{display:none;position:absolute;inset:0;background:rgba(79,195,247,.08);border:2px dashed var(--accent);border-radius:var(--radius-sm);z-index:10;align-items:center;justify-content:center;font-size:15px;color:var(--accent);pointer-events:none}
-        .drop-overlay.show{display:flex}
 
         /* 图片管理 */
         .imgm-top{display:flex;gap:12px;margin-bottom:16px;align-items:center}
@@ -423,15 +458,8 @@
             .write-cover-actions{flex-direction:row;flex-wrap:wrap;justify-content:flex-start}
             .write-cover-actions .cover-btn{flex:1;min-width:110px;text-align:center}
             .write-article-images{max-height:none;min-height:60px}
-            .editor-toolbar{padding:6px}
-            .editor-toolbar-group button{font-size:11px;padding:0 6px}
-            .editor-toolbar-right{margin-left:0;width:100%;justify-content:flex-start;border-top:1px solid var(--border);margin-top:4px;padding-top:4px}
-            .editor-split{grid-template-columns:1fr;height:auto}
-            .editor-split .editor-right{display:none}
-            .editor-split .editor-right.show{display:block;border-radius:0 0 var(--radius-sm) var(--radius-sm)}
-            .editor-split .editor-left.hide{display:none}
-            .mobile-preview-btn{display:flex!important}
-            .editor-textarea{border-radius:0 0 var(--radius-sm) var(--radius-sm);border-right:1px solid var(--border);height:300px}
+            .editor-extras-hint{display:none}
+            .editor-container{height:60vh;max-height:480px}
             .editor-footer{flex-direction:column;gap:10px}
             .editor-footer-actions{width:100%}
             .editor-footer-actions .btn{flex:1;justify-content:center}
@@ -578,50 +606,16 @@
                             </div>
                         </div>
                     </div>
-                    <!-- 编辑工具栏 -->
-                    <div class="editor-toolbar" id="editorToolbar">
-                        <div class="editor-toolbar-group">
-                            <button onclick="mdInsert('heading')" title="二级标题"><b>H2</b></button>
-                            <button onclick="mdInsert('h3')" title="三级标题"><b>H3</b></button>
-                            <span class="sep"></span>
-                            <button onclick="mdInsert('bold')" title="加粗">B</button>
-                            <button onclick="mdInsert('italic')" title="斜体"><i>I</i></button>
-                            <button onclick="mdInsert('strike')" title="删除线"><s>S</s></button>
-                            <button onclick="mdInsert('quote')" title="引用">❝</button>
-                            <span class="sep"></span>
-                            <button onclick="mdInsert('list')" title="无序列表">• 列表</button>
-                            <button onclick="mdInsert('olist')" title="有序列表">1. 列表</button>
-                            <span class="sep"></span>
-                            <button onclick="mdInsert('link')" title="插入链接">🔗 链接</button>
-                            <button onclick="mdInsert('code')" title="行内代码">`代码`</button>
-                            <button onclick="mdInsert('codeblock')" title="代码块">代码块</button>
-                            <button onclick="mdInsert('hr')" title="分割线">— 分割线</button>
-                        </div>
-                        <div class="editor-toolbar-group editor-toolbar-right">
-                            <button onclick="toggleMobilePreview()" title="预览/编辑切换" class="mobile-preview-btn">👁 预览</button>
-                            <button onclick="mdInsert('table')" title="插入表格">▦ 表格</button>
-                            <span class="sep"></span>
-                            <button onclick="openAiWriter()" title="AI 写作助手" class="ai-writer-btn">🤖 AI 写作</button>
-                            <button onclick="openImagePicker()" title="从图库插入图片" class="toolbar-img-btn">🖼 图库</button>
-                            <label class="editor-upload-img" title="上传图片">
-                                ⬆ 上传图片<input type="file" accept="image/*" multiple style="display:none" onchange="uploadAndInsertToEditor(this.files);this.value=''">
-                            </label>
-                            <div class="upload-progress" id="uploadProgress"><div class="spinner"></div><span id="uploadProgressText">上传中...</span></div>
-                        </div>
+                    <!-- 编辑器附加操作 -->
+                    <div class="editor-extras">
+                        <button class="btn btn-ghost" onclick="openAiWriter()" title="AI 写作助手">🤖 AI 写作</button>
+                        <button class="btn btn-ghost" onclick="openImagePicker()" title="从图库插入图片">🖼 图库</button>
+                        <label class="btn btn-ghost" style="cursor:pointer" title="上传图片">⬆ 上传图片<input type="file" accept="image/*" multiple style="display:none" onchange="uploadAndInsertToEditor(this.files);this.value=''"></label>
+                        <div class="upload-progress" id="uploadProgress"><div class="spinner"></div><span id="uploadProgressText">上传中...</span></div>
+                        <span class="editor-extras-hint">选中文字后点击编辑器上方按钮即可排版，所见即所得，无需手写 Markdown</span>
                     </div>
-                    <!-- 编辑器主体：左侧编辑 + 右侧预览 -->
-                    <div class="editor-split">
-                        <div class="editor-left">
-                            <textarea class="editor-textarea" id="edContent" placeholder="开始写作吧...
-支持：拖拽或粘贴图片自动上传；选中文字后点击上方按钮快速排版；直接输入 Markdown 语法（如 ## 标题）" oninput="updatePreview()" ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)"></textarea>
-                            <div class="drop-overlay" id="dropOverlay">📤 松开上传图片</div>
-                        </div>
-                        <div class="editor-right">
-                            <div class="editor-preview" id="edPreview">
-                                <div class="preview-empty">👈 左侧开始写作，这里实时预览</div>
-                            </div>
-                        </div>
-                    </div>
+                    <!-- 所见即所得编辑器（Obsidian 式） -->
+                    <div class="editor-container" id="editorContainer"></div>
                     <div class="editor-footer">
                         <span class="editor-info" id="editorInfo">0 字</span>
                         <div class="editor-footer-actions">
@@ -1146,12 +1140,12 @@
         });
         async function deleteArticle(id,title){const confirmed=await showConfirm(`确定删除「${title}」？删除后不可恢复！`,'删除文章','删除');if(!confirmed)return;const r=await apiFetch(`action=articles&id=${id}`,{method:'DELETE'});if(r.status==='success'){showToast('已删除','success');loadArticles()}else showToast(r.message||'删除失败','error')}
         function editArticle(id){editingId=id;switchTab('write');document.getElementById('writeTitle').textContent='编辑文章';loadArticleForEdit(id)}
-        async function loadArticleForEdit(id){const r=await apiFetch(`action=articles&id=${id}`);if(r.status==='success'){const d=r.data;document.getElementById('edTitle').value=d.title||'';document.getElementById('edExcerpt').value=d.excerpt||'';document.getElementById('edImage').value=d.image||'';renderCoverPreview();selectedArticleTags=[...(d.tags||[])];renderTagPickerChips();document.getElementById('edStatus').value=d.status||'published';document.getElementById('edContent').value=d.content||'';scanArticleImagesFromContent(d.content||'');updatePreview()}}
-        function importAndEdit(f){if(!f)return;const r=new FileReader();r.onload=()=>{const raw=r.result,m=raw.match(/^---\s*\n([\s\S]*?)\n---\s*\n([\s\S]*)$/);let title=f.name.replace(/\.md$/),excerpt='',tags=[],content=raw,image='';if(m){const fm=m[1],t=fm.match(/title:\s*(.+)/);if(t)title=t[1].trim();const tg=fm.match(/tags:\s*\[([^\]]+)\]/);if(tg)tags=tg[1].split(',').map(s=>s.trim());const ex=fm.match(/excerpt:\s*(.+)/);if(ex)excerpt=ex[1].trim();const im=fm.match(/image:\s*(.+)/);if(im)image=im[1].trim();content=m[2]}editingId=null;switchTab('write');document.getElementById('writeTitle').textContent='导入文章';document.getElementById('edTitle').value=title;document.getElementById('edExcerpt').value=excerpt;document.getElementById('edImage').value=image;renderCoverPreview();selectedArticleTags=tags;renderTagPickerChips();document.getElementById('edContent').value=content;scanArticleImagesFromContent(content);updatePreview();showToast(`已导入: ${f.name}`,'success')};r.readAsText(f)}
+        async function loadArticleForEdit(id){const r=await apiFetch(`action=articles&id=${id}`);if(r.status==='success'){const d=r.data;document.getElementById('edTitle').value=d.title||'';document.getElementById('edExcerpt').value=d.excerpt||'';document.getElementById('edImage').value=d.image||'';renderCoverPreview();selectedArticleTags=[...(d.tags||[])];renderTagPickerChips();document.getElementById('edStatus').value=d.status||'published';setEditorContent(d.content||'')}}
+        function importAndEdit(f){if(!f)return;const r=new FileReader();r.onload=()=>{const raw=r.result,m=raw.match(/^---\s*\n([\s\S]*?)\n---\s*\n([\s\S]*)$/);let title=f.name.replace(/\.md$/),excerpt='',tags=[],content=raw,image='';if(m){const fm=m[1],t=fm.match(/title:\s*(.+)/);if(t)title=t[1].trim();const tg=fm.match(/tags:\s*\[([^\]]+)\]/);if(tg)tags=tg[1].split(',').map(s=>s.trim());const ex=fm.match(/excerpt:\s*(.+)/);if(ex)excerpt=ex[1].trim();const im=fm.match(/image:\s*(.+)/);if(im)image=im[1].trim();content=m[2]}editingId=null;switchTab('write');document.getElementById('writeTitle').textContent='导入文章';document.getElementById('edTitle').value=title;document.getElementById('edExcerpt').value=excerpt;document.getElementById('edImage').value=image;renderCoverPreview();selectedArticleTags=tags;renderTagPickerChips();setEditorContent(content);showToast(`已导入: ${f.name}`,'success')};r.readAsText(f)}
 
         // ===== 写文章 =====
-        function resetEditor(){editingId=null;document.getElementById('writeTitle').textContent='写文章';document.getElementById('edTitle').value='';document.getElementById('edExcerpt').value='';document.getElementById('edImage').value='';renderCoverPreview();selectedArticleTags=[];renderTagPickerChips();document.getElementById('edStatus').value='published';document.getElementById('edContent').value='';resetArticleImages();updatePreview();document.getElementById('editorInfo').textContent='0 字'}
-        async function saveArticle(){const title=document.getElementById('edTitle').value.trim(),excerpt=document.getElementById('edExcerpt').value.trim(),tags=selectedArticleTags.join(', '),status=document.getElementById('edStatus').value,content=document.getElementById('edContent').value;let image=document.getElementById('edImage').value.trim();if(!title){showToast('请填写文章标题','error');return}if(!content){showToast('请填写文章内容','error');return}
+        function resetEditor(){editingId=null;document.getElementById('writeTitle').textContent='写文章';document.getElementById('edTitle').value='';document.getElementById('edExcerpt').value='';document.getElementById('edImage').value='';renderCoverPreview();selectedArticleTags=[];renderTagPickerChips();document.getElementById('edStatus').value='published';setEditorContent('')}
+        async function saveArticle(){const title=document.getElementById('edTitle').value.trim(),excerpt=document.getElementById('edExcerpt').value.trim(),tags=selectedArticleTags.join(', '),status=document.getElementById('edStatus').value,content=getEditorContent();let image=document.getElementById('edImage').value.trim();if(!title){showToast('请填写文章标题','error');return}if(!content){showToast('请填写文章内容','error');return}
             // 未设置封面图时：图库有图则随机选一张，图库空则报错
             if(!image){
                 const galleryRes=await apiFetch('action=images');
@@ -1169,12 +1163,49 @@
                 }
             }
             const body={title,excerpt,tags,content,status,image};if(editingId)body.id=editingId;const r=await apiFetch('action=articles',{method:'POST',body:JSON.stringify(body)});if(r.status==='success'){showToast('保存成功','success');resetEditor();switchTab('articles')}else showToast(r.message||'保存失败','error')}
-        function mdInsert(t){const ta=document.getElementById('edContent'),s=ta.selectionStart,e=ta.selectionEnd,sel=ta.value.slice(s,e),b=ta.value.slice(0,s),a=ta.value.slice(e);const m={heading:{b:'## ',a:'',d:'标题'},h3:{b:'### ',a:'',d:'小标题'},bold:{b:'**',a:'**',d:'加粗文字'},italic:{b:'*',a:'*',d:'斜体文字'},strike:{b:'~~',a:'~~',d:'删除线'},code:{b:'`',a:'`',d:'code'},codeblock:{b:'```\n',a:'\n```',d:'// 代码'},quote:{b:'> ',a:'',d:'引用内容'},list:{b:'- ',a:'',d:'列表项'},olist:{b:'1. ',a:'',d:'列表项'},link:{b:'[',a:'](https://)',d:'链接文字'},image:{b:'![',a:'](url)',d:'图片描述'},table:{b:'| 列1 | 列2 |\n| --- | --- |\n',a:'',d:'| 内容 | 内容 |'},hr:{b:'\n---\n',a:'',d:''}};const i=m[t];if(!i)return;const tx=sel||i.d;ta.value=b+i.b+tx+i.a+a;ta.focus();ta.selectionStart=s+i.b.length;ta.selectionEnd=s+i.b.length+tx.length;updatePreview()}
-        function updatePreview(){const md=document.getElementById('edContent').value;const preview=document.getElementById('edPreview');if(!md.trim()){preview.innerHTML='<div class="preview-empty">👈 左侧开始写作，这里实时预览</div>';}else{preview.innerHTML=(typeof MarkdownParser!=='undefined'&&typeof marked!=='undefined')?MarkdownParser.parseMarkdown(md):renderMd(md);}document.getElementById('editorInfo').textContent=md.length+' 字'}
+        // ===== 所见即所得编辑器（Toast UI，Obsidian 式） =====
+        let toastEditor=null;
+        function ensureEditor(){
+            if(toastEditor)return toastEditor;
+            if(typeof toastui==='undefined'||!toastui.Editor){
+                const el=document.getElementById('editorContainer');
+                if(el)el.innerHTML='<div class="preview-empty" style="height:100%;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:13px">编辑器加载失败，请刷新页面重试</div>';
+                return null;
+            }
+            toastEditor=new toastui.Editor({
+                el:document.getElementById('editorContainer'),
+                height:'auto',
+                minHeight:'320px',
+                initialEditType:'wysiwyg',
+                previewStyle:'vertical',
+                theme:'dark',
+                language:'zh-CN',
+                placeholder:'开始写作吧……选中文字后点击上方按钮即可排版，拖拽或粘贴图片会自动上传，无需手写 Markdown',
+                toolbarItems:[
+                    ['heading','bold','italic','strike'],
+                    ['hr','quote'],
+                    ['ul','ol','task'],
+                    ['table','link','image','code','codeblock']
+                ],
+                hooks:{
+                    addImageBlobHook:async(blob,callback)=>{
+                        const url=await uploadArticleImageAndGetUrl(blob);
+                        if(url){callback(url,blob.name||'图片');trackArticleImage(url)}
+                        else showToast('图片上传失败','error');
+                    }
+                }
+            });
+            toastEditor.on('change',updateEditorInfo);
+            updateEditorInfo();
+            return toastEditor;
+        }
+        function getEditorContent(){const ed=ensureEditor();return ed?ed.getMarkdown():''}
+        function setEditorContent(md){const ed=ensureEditor();if(!ed)return;ed.setMarkdown(md||'');scanArticleImagesFromContent(md||'');updateEditorInfo()}
+        function updateEditorInfo(){const el=document.getElementById('editorInfo');if(el&&toastEditor)el.textContent=toastEditor.getMarkdown().length+' 字'}
         // ===== AI 写作助手 =====
         let aiWrController=null;
         let aiWrRaw='';
-        function getEditorSelection(){const ta=document.getElementById('edContent');return ta.value.slice(ta.selectionStart,ta.selectionEnd)}
+        function getEditorSelection(){const ed=ensureEditor();return ed?ed.getSelectedText():''}
         async function openAiWriter(){
             document.getElementById('aiWriterTab').style.display='none';
             document.getElementById('aiWriterPanel').classList.add('open');
@@ -1247,10 +1278,9 @@
             const prompt=input.value.trim();
             if(!prompt){showToast('请输入写作要求','error');input.focus();return}
             if(aiWrController){showToast('正在生成中，请先停止或等待','error');return}
-            const ta=document.getElementById('edContent');
             const selection=getEditorSelection();
             const title=document.getElementById('edTitle').value.trim();
-            const content=ta.value;
+            const content=getEditorContent();
             const panel=document.getElementById('aiWrResult');
             const status=document.getElementById('aiWrStatus');
             panel.innerHTML='';panel.classList.remove('streaming');panel.classList.remove('markdown');
@@ -1331,23 +1361,20 @@
             showToast('已填入标题','success');
         }
         function aiInsertContent(){
-            const ta=document.getElementById('edContent');
+            const ed=ensureEditor();
             const text=aiWrRaw;
             if(!text.trim()){showToast('暂无结果','error');return}
-            ta.value=ta.value?ta.value.trimEnd()+'\n\n'+text:text;
-            ta.scrollTop=ta.scrollHeight;
-            updatePreview();
+            const cur=ed.getMarkdown();
+            ed.setMarkdown(cur?cur.trimEnd()+'\n\n'+text:text);
+            updateEditorInfo();
             showToast('已插入正文','success');
         }
         function aiReplaceSelection(){
-            const ta=document.getElementById('edContent');
+            const ed=ensureEditor();
             const text=aiWrRaw;
             if(!text.trim()){showToast('暂无结果','error');return}
-            const s=ta.selectionStart,e=ta.selectionEnd;
-            ta.value=ta.value.slice(0,s)+text+ta.value.slice(e);
-            ta.selectionStart=ta.selectionEnd=s+text.length;
-            ta.focus();
-            updatePreview();
+            ed.insertText(text);
+            updateEditorInfo();
             showToast('已替换选中文字','success');
         }
         function aiWrParseTags(){
@@ -1393,26 +1420,8 @@
             ta.remove();
             if(done)done();
         }
-        // 移动端：预览/编辑切换
-        function toggleMobilePreview(){
-            const btn=document.querySelector('.mobile-preview-btn');
-            const left=document.querySelector('.editor-left');
-            const right=document.querySelector('.editor-right');
-            if(!left||!right)return;
-            const showingPreview=left.classList.contains('hide');
-            left.classList.toggle('hide',!showingPreview);
-            right.classList.toggle('show',!showingPreview);
-            if(btn)btn.textContent=showingPreview?'👁 预览':'✏ 编辑';
-            // 切到预览时刷新预览
-            if(!showingPreview)updatePreview();
-            else document.getElementById('edContent')?.focus();
-        }
-        function renderMd(t){return'<p>'+t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/^### (.*$)/gm,'<h3>$1</h3>').replace(/^## (.*$)/gm,'<h2>$1</h2>').replace(/^# (.*$)/gm,'<h1>$1</h1>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\*(.*?)\*/g,'<em>$1</em>').replace(/~~(.*?)~~/g,'<del>$1</del>').replace(/`([^`]+)`/g,'<code>$1</code>').replace(/```(\w*)\n([\s\S]*?)```/g,'<pre><code>$2</code></pre>').replace(/\[([^\]]+)\]\(([^)]+)\)/g,'<a href="$2" target="_blank">$1</a>').replace(/!\[([^\]]*)\]\(([^)]+)\)/g,'<img src="$2" alt="$1">').replace(/^> (.*$)/gm,'<blockquote>$1</blockquote>').replace(/^- (.*$)/gm,'<li>$1</li>').replace(/^1\. (.*$)/gm,'<li>$1</li>').replace(/^---$/gm,'<hr>').replace(/\n\n/g,'</p><p>')+'</p>'}
-        function handleDragOver(e){e.preventDefault();e.stopPropagation();document.getElementById('dropOverlay').classList.add('show')}
-        function handleDragLeave(e){e.preventDefault();e.stopPropagation();document.getElementById('dropOverlay').classList.remove('show')}
-        async function handleDrop(e){e.preventDefault();e.stopPropagation();document.getElementById('dropOverlay').classList.remove('show');for(const f of[...e.dataTransfer.files].filter(f=>f.type.startsWith('image/'))){const url=await uploadArticleImageAndGetUrl(f);if(url){insertAtCursor(`![${f.name}](${url})`);trackArticleImage(url)}}}
-        document.addEventListener('paste',async e=>{if(document.activeElement!==document.getElementById('edContent'))return;for(const item of[...e.clipboardData.items]){if(item.type.startsWith('image/')){e.preventDefault();const url=await uploadArticleImageAndGetUrl(item.getAsFile());if(url){insertAtCursor(`![图片](${url})`);trackArticleImage(url)}}}});
-        function insertAtCursor(t){const ta=document.getElementById('edContent'),p=ta.selectionStart;ta.value=ta.value.slice(0,p)+t+ta.value.slice(p);ta.focus();ta.selectionStart=ta.selectionEnd=p+t.length;updatePreview()}
+        // 向编辑器光标处插入内容（图片插入/导入共用）
+        function insertAtCursor(t){const ed=ensureEditor();if(!ed)return;ed.insertText(t);updateEditorInfo()}
 
         // ===== 图片上传 =====
         // tags 参数：可选的初始标签
@@ -1602,7 +1611,7 @@
             }
         }
         function importToEditor(f){if(!f)return;const r=new FileReader();r.onload=()=>{const m=r.result.match(/^---\s*\n([\s\S]*?)\n---\s*\n([\s\S]*)$/);insertAtCursor(m?m[2]:r.result);showToast(`已插入: ${f.name}`,'success')};r.readAsText(f)}
-        function exportMarkdown(){const title=document.getElementById('edTitle').value.trim()||'untitled',excerpt=document.getElementById('edExcerpt').value.trim(),image=document.getElementById('edImage').value.trim(),md=`---\ntitle: ${title}\ndate: ${new Date().toISOString().slice(0,10)}\n${excerpt?`excerpt: ${excerpt}\n`:''}${image?`image: ${image}\n`:''}tags: [${selectedArticleTags.join(', ')}]\nauthor: 博主\n---\n\n${document.getElementById('edContent').value}`,a=document.createElement('a');a.href=URL.createObjectURL(new Blob([md],{type:'text/markdown'}));a.download=`${title.replace(/[^a-zA-Z0-9\u4e00-\u9fff]/g,'-')}.md`;a.click();showToast('已导出','success')}
+        function exportMarkdown(){const title=document.getElementById('edTitle').value.trim()||'untitled',excerpt=document.getElementById('edExcerpt').value.trim(),image=document.getElementById('edImage').value.trim(),md=`---\ntitle: ${title}\ndate: ${new Date().toISOString().slice(0,10)}\n${excerpt?`excerpt: ${excerpt}\n`:''}${image?`image: ${image}\n`:''}tags: [${selectedArticleTags.join(', ')}]\nauthor: 博主\n---\n\n${getEditorContent()}`,a=document.createElement('a');a.href=URL.createObjectURL(new Blob([md],{type:'text/markdown'}));a.download=`${title.replace(/[^a-zA-Z0-9\u4e00-\u9fff]/g,'-')}.md`;a.click();showToast('已导出','success')}
 
         // 编辑器内上传图片并插入（多文件）
         async function uploadAndInsertToEditor(files){
@@ -2421,7 +2430,7 @@
             if(tab==='settings')loadSettings();
             if(tab==='images'){loadData();loadTags()}
             if(tab==='tags'){loadTags();loadData()}
-            if(tab==='write'){if(!editingId)resetEditor();loadArticleTagNames()}
+            if(tab==='write'){ensureEditor();if(!editingId)resetEditor();loadArticleTagNames()}
         }
 
         // ===== 评论管理 =====
