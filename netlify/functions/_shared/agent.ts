@@ -13,6 +13,8 @@ export interface AgentTask {
   progress: string
   postId?: string
   commentId?: string
+  /** 受理评论 id（问答任务完成后原位更新为答案） */
+  ackCommentId?: string
   requestedStatus?: "published" | "draft"
   result?: { articleId: string; title: string; url: string; status: string } | { answer: string }
   error?: string
@@ -202,19 +204,36 @@ export function stripTrigger(content: string, keywords: string[]): string {
 
 // ===================== Agent 评论 =====================
 
-/** 后端直写一条 Agent 评论（受理/完成/失败），不走访客提交接口 */
-export async function writeAgentComment(postId: string, content: string, name: string): Promise<boolean> {
-  if (!postId || !content) return false
+/** 后端直写一条 Agent 评论（受理/完成/失败），不走访客提交接口，返回评论 id */
+export async function writeAgentComment(postId: string, content: string, name: string): Promise<string | null> {
+  if (!postId || !content) return null
   try {
     const store = getBlobStore(COMMENT_STORE, "strong")
     const list = await readComments(postId)
-    list.push({
+    const comment = {
       id: randomUUID(),
       postId,
       name,
       content: String(content).slice(0, 2000),
       createdAt: Date.now(),
-    })
+    }
+    list.push(comment)
+    await store.set(`post:${postId}`, JSON.stringify(list))
+    return comment.id
+  } catch {
+    return null
+  }
+}
+
+/** 原位更新一条 Agent 评论（如「正在回答…」→ 最终答案） */
+export async function updateAgentComment(postId: string, commentId: string, content: string): Promise<boolean> {
+  if (!postId || !commentId || !content) return false
+  try {
+    const store = getBlobStore(COMMENT_STORE, "strong")
+    const list = await readComments(postId)
+    const c = list.find(x => x.id === commentId)
+    if (!c) return false
+    c.content = String(content).slice(0, 2000)
     await store.set(`post:${postId}`, JSON.stringify(list))
     return true
   } catch {

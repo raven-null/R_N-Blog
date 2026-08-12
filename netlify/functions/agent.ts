@@ -162,8 +162,9 @@ export default async (req: Request) => {
       commentId,
       ip,
     })
+    const ackId = await writeAgentComment(postId, `🤖 正在回答你的问题…`, settings.commentName)
+    if (ackId) task.ackCommentId = ackId
     await saveTask(task)
-    await writeAgentComment(postId, `🤖 正在回答你的问题…`, settings.commentName)
     await kickAgentRun(task.id, runKey, url)
     return json(200, { status: "success", message: "已受理", data: task }, req)
   }

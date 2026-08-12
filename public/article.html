@@ -893,59 +893,66 @@
         .comment-list {
             display: flex;
             flex-direction: column;
-            gap: 0;
             margin-bottom: 24px;
         }
 
+        /* 评论项（B 站评论区风格：头像居左，主体居右） */
         .comment-item {
-            padding: 16px 4px;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .comment-item:last-child {
-            border-bottom: none;
-        }
-
-        .comment-item-head {
             display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 8px;
             gap: 12px;
-            flex-wrap: wrap;
+            padding: 16px 0;
         }
 
-        .comment-item-name {
-            font-weight: 600;
-            color: var(--text-primary);
-            display: flex;
-            align-items: center;
-            gap: 8px;
+        .comment-item + .comment-item {
+            border-top: 1px solid var(--border);
         }
 
-        .comment-item-name .avatar {
-            width: 36px;
-            height: 36px;
+        .comment-item-avatar {
+            width: 40px;
+            height: 40px;
             border-radius: 50%;
             background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 55%, #fff));
             color: #fff;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 15px;
+            font-size: 16px;
             font-weight: 700;
             flex-shrink: 0;
             box-shadow: 0 2px 6px color-mix(in srgb, var(--accent) 30%, transparent);
+            margin-top: 2px;
         }
 
-        .comment-item-time {
-            color: var(--text-muted);
-            font-size: 12px;
+        .comment-item-main {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .comment-item-user {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 4px;
+        }
+
+        .comment-item-name {
+            font-size: 13px;
+            color: color-mix(in srgb, var(--accent) 75%, var(--text-muted));
+            font-weight: 500;
+        }
+
+        .comment-item-tag {
+            font-size: 10px;
+            color: var(--accent);
+            border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+            border-radius: 4px;
+            padding: 0 4px;
+            line-height: 1.4;
         }
 
         .comment-item-content {
-            color: var(--text-secondary);
-            line-height: 1.6;
+            color: var(--text-primary);
+            line-height: 1.7;
             font-size: 14px;
             word-break: break-word;
             white-space: pre-wrap;
@@ -954,6 +961,31 @@
         .comment-item-content .mention {
             color: var(--accent);
             font-weight: 600;
+        }
+
+        .comment-item-actions {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-top: 6px;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .comment-reply-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 12px;
+            font-family: inherit;
+            cursor: pointer;
+            padding: 2px 4px;
+            border-radius: 4px;
+            transition: color 0.15s;
+        }
+
+        .comment-reply-btn:hover {
+            color: var(--accent);
         }
 
         /* AI Agent 反馈浮层 */
@@ -1652,7 +1684,6 @@
                     <span class="comment-count" id="comment-count">0</span>
                 </div>
                 <div class="comment-agent-tip">💡 <b>@ai</b> + 问题 让 AI 助手回答本文章相关问题；<b>@管理员</b> + 指令 + 后台密钥 可让 AI 生成并发布新文章</div>
-                <div class="comment-list" id="comment-list"></div>
                 <form class="comment-form" id="comment-form">
                     <div class="comment-form-row">
                         <input type="text" id="comment-name" placeholder="昵称 *" maxlength="32" required>
@@ -1680,6 +1711,7 @@
                         <span class="comment-tip" id="comment-tip"></span>
                     </div>
                 </form>
+                <div class="comment-list" id="comment-list"></div>
             </div>
 
             <!-- 文章导航 -->
@@ -2316,6 +2348,19 @@
                 if (fileInput) fileInput.addEventListener('change', (e) => this.onCommentImageSelect(e));
                 const removeBtn = document.getElementById('comment-image-remove');
                 if (removeBtn) removeBtn.addEventListener('click', () => this.clearCommentImage());
+                // 回复：点击填入 @昵称 到输入框
+                const list = document.getElementById('comment-list');
+                if (list) list.addEventListener('click', (e) => {
+                    const btn = e.target.closest('.comment-reply-btn');
+                    if (!btn) return;
+                    const name = btn.getAttribute('data-name') || '';
+                    const input = document.getElementById('comment-content');
+                    if (input) {
+                        input.value = '@' + name + ' ';
+                        input.focus();
+                        input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                });
             },
 
             // 选择图片 → 本地预览（待提交时再上传）
@@ -2388,19 +2433,25 @@
                         list.innerHTML = '<div class="comment-empty">还没有留言，来抢沙发~</div>';
                         return;
                     }
-                    list.innerHTML = comments.map(c => `
+                    list.innerHTML = comments.map(c => {
+                        const isAgent = /^🤖/.test(String(c.content || ''));
+                        return `
                         <div class="comment-item">
-                            <div class="comment-item-head">
-                                <div class="comment-item-name">
-                                    <span class="avatar">${this.escName(c.name || '客')}</span>
-                                    <span>${this.esc(c.name || '匿名')}</span>
+                            <div class="comment-item-avatar" title="${this.esc(c.name || '')}">${this.escName(c.name || '客')}</div>
+                            <div class="comment-item-main">
+                                <div class="comment-item-user">
+                                    <span class="comment-item-name">${this.esc(c.name || '匿名')}</span>
+                                    ${isAgent ? '<span class="comment-item-tag">AI</span>' : ''}
                                 </div>
-                                <span class="comment-item-time">${this.formatCommentDate(c.createdAt)}</span>
+                                <div class="comment-item-content">${this.renderCommentContent(c.content)}</div>
+                                ${c.image ? `<img class="comment-item-image" src="${this.esc(this.commentImageSrc(c.image))}" alt="评论图片" loading="lazy" onclick="openLightbox(this)" style="cursor:zoom-in">` : ''}
+                                <div class="comment-item-actions">
+                                    <span class="comment-item-time">${this.formatCommentDate(c.createdAt)}</span>
+                                    <button type="button" class="comment-reply-btn" data-name="${this.esc(c.name || '')}">回复</button>
+                                </div>
                             </div>
-                            <div class="comment-item-content">${this.renderCommentContent(c.content)}</div>
-                            ${c.image ? `<img class="comment-item-image" src="${this.esc(this.commentImageSrc(c.image))}" alt="留言图片" loading="lazy" onclick="openLightbox(this)" style="cursor:zoom-in">` : ''}
-                        </div>
-                    `).join('');
+                        </div>`;
+                    }).join('');
                 } catch (e) {
                     console.warn('留言加载失败:', e);
                     list.innerHTML = '<div class="comment-empty">留言功能暂时不可用</div>';
