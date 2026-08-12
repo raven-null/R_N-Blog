@@ -8,8 +8,7 @@ import {
   getTask,
   listTasks,
   deleteTask,
-  checkAgentRateLimit,
-  matchTrigger,
+  detectTriggerType,
   stripTrigger,
   findComment,
   writeAgentComment,
@@ -110,13 +109,10 @@ export default async (req: Request) => {
     const commentId = String(body.commentId || "")
     if (!postId || !commentId) return badRequest("postId / commentId 必填", req)
 
-    // 校验评论真实存在且命中触发词
+    // 校验评论真实存在
     const comment = await findComment(postId, commentId)
     if (!comment) return badRequest("评论不存在", req)
     const commentContent = String(comment.content || "")
-    if (!matchTrigger(commentContent, settings.triggerKeywords)) {
-      return json(200, { status: "ignored", message: "评论未包含触发词" }, req)
-    }
 
     // 未开启时回评说明，避免「没反应」
     if (!settings.enabled) {
@@ -124,23 +120,50 @@ export default async (req: Request) => {
       return json(200, { status: "ignored", message: "AI Agent 未开启" }, req)
     }
 
-    // 限流
-    const limitMsg = await checkAgentRateLimit(settings, ip)
-    if (limitMsg) {
-      await writeAgentComment(postId, `🤖 ${limitMsg}`, settings.commentName)
-      return json(429, { status: "error", message: limitMsg }, req)
+    // 判定触发类型：@管理员 生成文章（需后台密钥） / @ai 文章问答
+    const triggerType = detectTriggerType(commentContent, settings)
+    if (triggerType === "") {
+      return json(200, { status: "ignored", message: "评论未包含触发词" }, req)
     }
 
-    const instruction = stripTrigger(commentContent, settings.triggerKeywords) || commentContent
+    if (triggerType === "article") {
+      // 生成文章需要正确的后台登录密钥
+      const adminKey = String(body.adminKey || "").trim()
+      if (adminKey !== password) {
+        await writeAgentComment(postId, `🔒 生成文章需要正确的后台登录密钥，本次未生成`, settings.commentName)
+        return json(401, { status: "error", message: "后台密钥不正确" }, req)
+      }
+      const instruction = stripTrigger(commentContent, settings.articleTriggers) || commentContent
+      if (instruction.length > settings.maxInstructionLength) {
+        await writeAgentComment(postId, `🤖 指令过长（上限 ${settings.maxInstructionLength} 字）`, settings.commentName)
+        return badRequest(`指令过长（上限 ${settings.maxInstructionLength} 字）`, req)
+      }
+      const task = newTask({
+        source: "comment",
+        type: "article",
+        instruction,
+        postId,
+        commentId,
+        ip,
+      })
+      await saveTask(task)
+      await writeAgentComment(postId, `🤖 已收到任务，正在为你生成文章…`, settings.commentName)
+      await kickAgentRun(task.id, runKey, url)
+      return json(200, { status: "success", message: "已受理", data: task }, req)
+    }
+
+    // triggerType === "qa"：AI 助手回答文章相关问题（无需密钥）
+    const question = stripTrigger(commentContent, settings.qaTriggers) || commentContent
     const task = newTask({
       source: "comment",
-      instruction,
+      type: "qa",
+      instruction: question,
       postId,
       commentId,
       ip,
     })
     await saveTask(task)
-    await writeAgentComment(postId, `🤖 已收到任务，正在为你生成文章…`, settings.commentName)
+    await writeAgentComment(postId, `🤖 正在回答你的问题…`, settings.commentName)
     await kickAgentRun(task.id, runKey, url)
     return json(200, { status: "success", message: "已受理", data: task }, req)
   }

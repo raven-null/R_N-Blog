@@ -7,8 +7,8 @@ import {
   getAgentSettings,
   writeAgentComment,
 } from "./_shared/agent"
-import { createArticle, autoExcerpt } from "./_shared/articles"
-import { resolveLlmConfig, buildWritingSystemPrompt, chatComplete, readAiConfigs } from "./_shared/ai"
+import { createArticle, autoExcerpt, readArticle } from "./_shared/articles"
+import { resolveLlmConfig, resolveChatConfig, buildWritingSystemPrompt, chatComplete, readAiConfigs } from "./_shared/ai"
 
 /**
  * /api/agent-run  (Netlify Background Function)
@@ -50,6 +50,37 @@ async function runTask(task: any): Promise<void> {
   await saveTask(task)
 
   try {
+    // ===== 问答任务：AI 助手回答文章相关问题 =====
+    if (task.type === "qa") {
+      const settings = await getAgentSettings()
+      const config = await resolveChatConfig()
+      if (!config.apiUrl || !config.apiKey || !config.model) {
+        throw new Error("AI 助手未配置：请在「博客设置 → AI 设置」选择模型并填写 API Key")
+      }
+      const article = task.postId ? await readArticle(task.postId) : null
+      const articleText = article ? String(article.content || "").slice(0, 8000) : "（文章内容读取失败）"
+      task.progress = "正在思考…"
+      await saveTask(task)
+      const system = (config.systemPrompt || "你是一个友善的 AI 助手，请用中文简洁准确地回答问题。")
+        + "\n\n请结合下面这篇博客文章内容来回答用户关于该文章的问题；若问题与文章无关，如实说明。"
+      const res = await chatComplete(config, [
+        { role: "system", content: system },
+        { role: "user", content: `文章内容：\n${articleText}\n\n用户问题：${task.instruction}` },
+      ])
+      if (!res.ok) throw new Error(res.error || "回答失败")
+      const answer = (res.text || "（无回复）").slice(0, 2000)
+      task.status = "done"
+      task.finishedAt = Date.now()
+      task.progress = "已回答"
+      task.result = { answer }
+      await saveTask(task)
+      if (task.postId) {
+        await writeAgentComment(task.postId, `🤖 AI：${answer}`, settings.commentName)
+      }
+      return
+    }
+
+    // ===== 文章任务：分段续写生成并发布 =====
     const config = await resolveLlmConfig()
     if (!config.apiUrl || !config.apiKey || !config.model) {
       throw new Error("AI 未配置：请在「博客设置」填写写作 AI 或 AI 助手的 API 信息")

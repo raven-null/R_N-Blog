@@ -967,8 +967,12 @@
                                 <textarea id="setAgSystemPrompt" rows="3" placeholder="Agent 生成文章使用的人设，默认与写作 AI 一致"></textarea>
                             </div>
                             <div class="settings-field">
-                                <label>触发词（逗号分隔）</label>
-                                <input type="text" id="setAgKeywords" placeholder="如：@管理员,@ai,@博主">
+                                <label>生成文章触发词（逗号分隔，需后台密钥）</label>
+                                <input type="text" id="setAgArticleTriggers" placeholder="如：@管理员,@博主">
+                            </div>
+                            <div class="settings-field">
+                                <label>文章问答触发词（逗号分隔，AI 助手回答）</label>
+                                <input type="text" id="setAgQaTriggers" placeholder="如：@ai,@助手">
                             </div>
                             <div class="settings-field">
                                 <label>评论触发生成后</label>
@@ -978,14 +982,6 @@
                                 </select>
                             </div>
                             <div class="settings-field">
-                                <label>单 IP 每日任务上限</label>
-                                <input type="number" id="setAgMaxPerIp" min="1" max="100" placeholder="3">
-                            </div>
-                            <div class="settings-field">
-                                <label>全局每日任务上限</label>
-                                <input type="number" id="setAgDailyLimit" min="1" max="1000" placeholder="20">
-                            </div>
-                            <div class="settings-field">
                                 <label>指令长度上限（字）</label>
                                 <input type="number" id="setAgMaxLen" min="10" max="2000" placeholder="500">
                             </div>
@@ -993,7 +989,7 @@
                                 <label>Agent 评论昵称</label>
                                 <input type="text" id="setAgName" placeholder="🤖 AI Agent">
                             </div>
-                            <div class="settings-tip">后台「写文章 → 🤖 AI Agent」可直接下达指令并生成发布；评论区「@触发词 + 指令」会自动受理并回评，AI 在后台生成文章。生成质量复用「写作 AI / AI 助手」的模型配置。</div>
+                            <div class="settings-tip">后台「写文章 → 🤖 AI Agent」可直接下达指令并生成发布；评论区「生成触发词 + 指令 + 后台密钥」生成文章，「问答触发词 + 问题」由 AI 助手回答。生成质量复用「写作 AI / AI 助手」的模型配置。</div>
                         </div>
                         </div>
 
@@ -1618,18 +1614,22 @@
             list.innerHTML=tasks.map(t=>{
                 const [label,cls]=statusMap[t.status]||[t.status,'pending'];
                 const time=new Date(t.createdAt).toLocaleString('zh-CN',{hour12:false});
-                const result=t.result?`<div class="agent-item-meta">《${escHtml(t.result.title)}》 · ${t.result.status==='published'?'已发布':'草稿'} · <a href="${escHtml(t.result.url)}" target="_blank">查看文章 ↗</a></div>`:'';
+                const result=t.result
+                    ? (t.result.answer
+                        ? `<div class="agent-item-meta">🤖 ${escHtml(t.result.answer.slice(0,80))}</div>`
+                        : `<div class="agent-item-meta">《${escHtml(t.result.title)}》 · ${t.result.status==='published'?'已发布':'草稿'} · <a href="${escHtml(t.result.url)}" target="_blank">查看文章 ↗</a></div>`)
+                    : '';
                 const err=t.error?`<div class="agent-item-error">${escHtml(t.error)}</div>`:'';
                 const actions=`
                     <div class="agent-item-actions">
-                        ${t.result?`<a href="${escHtml(t.result.url)}" target="_blank">打开</a>`:''}
+                        ${(t.result&&t.result.url)?`<a href="${escHtml(t.result.url)}" target="_blank">打开</a>`:''}
                         ${(t.status==='failed'||t.status==='pending')?`<button class="btn btn-ghost" onclick="agentRetry('${t.id}')">重试</button>`:''}
                         <button class="btn btn-ghost" onclick="agentDelete('${t.id}')">删除</button>
                     </div>`;
                 return `<div class="agent-item">
                     <div class="agent-item-head">
                         <span class="agent-item-status ${cls}">${label}</span>
-                        <span class="agent-item-meta" style="margin:0">${t.source==='admin'?'后台':'评论'} · ${time}</span>
+                        <span class="agent-item-meta" style="margin:0">${t.source==='admin'?'后台':'评论'} · ${t.type==='qa'?'问答':'文章'} · ${time}</span>
                     </div>
                     <div class="agent-item-instruction">${escHtml(t.instruction)}</div>
                     ${result}${err}${actions}
@@ -2887,10 +2887,9 @@
             document.getElementById('setAgSharePrompt').checked=ag.shareWritingPrompt!==false;
             document.getElementById('setAgSystemPrompt').value=ag.systemPrompt||'';
             toggleAgentPrompt();
-            document.getElementById('setAgKeywords').value=(ag.triggerKeywords||[]).join(',');
+            document.getElementById('setAgArticleTriggers').value=(ag.articleTriggers||[]).join(',');
+            document.getElementById('setAgQaTriggers').value=(ag.qaTriggers||[]).join(',');
             document.getElementById('setAgPublish').value=ag.publishStrategy||'draft';
-            document.getElementById('setAgMaxPerIp').value=ag.maxTasksPerIpPerDay||'';
-            document.getElementById('setAgDailyLimit').value=ag.dailyGlobalLimit||'';
             document.getElementById('setAgMaxLen').value=ag.maxInstructionLength||'';
             document.getElementById('setAgName').value=ag.commentName||'';
         }
@@ -3113,10 +3112,9 @@
                     enabled:document.getElementById('setAgEnabled').checked,
                     shareWritingPrompt:document.getElementById('setAgSharePrompt').checked,
                     systemPrompt:document.getElementById('setAgSystemPrompt').value.trim(),
-                    triggerKeywords:document.getElementById('setAgKeywords').value.split(',').map(s=>s.trim()).filter(Boolean),
+                    articleTriggers:document.getElementById('setAgArticleTriggers').value.split(',').map(s=>s.trim()).filter(Boolean),
+                    qaTriggers:document.getElementById('setAgQaTriggers').value.split(',').map(s=>s.trim()).filter(Boolean),
                     publishStrategy:document.getElementById('setAgPublish').value,
-                    maxTasksPerIpPerDay:parseInt(document.getElementById('setAgMaxPerIp').value)||3,
-                    dailyGlobalLimit:parseInt(document.getElementById('setAgDailyLimit').value)||20,
                     maxInstructionLength:parseInt(document.getElementById('setAgMaxLen').value)||500,
                     commentName:document.getElementById('setAgName').value.trim(),
                 },

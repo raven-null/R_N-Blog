@@ -673,12 +673,13 @@ export default async (req: Request) => {
         // AI Agent 设置
         agent: {
           enabled: storedAgent.enabled !== false,
-          triggerKeywords: Array.isArray(storedAgent.triggerKeywords) && storedAgent.triggerKeywords.length
-            ? storedAgent.triggerKeywords
-            : agentDefaults.triggerKeywords,
+          articleTriggers: Array.isArray(storedAgent.articleTriggers) && storedAgent.articleTriggers.length
+            ? storedAgent.articleTriggers
+            : agentDefaults.articleTriggers,
+          qaTriggers: Array.isArray(storedAgent.qaTriggers) && storedAgent.qaTriggers.length
+            ? storedAgent.qaTriggers
+            : agentDefaults.qaTriggers,
           publishStrategy: storedAgent.publishStrategy === "published" ? "published" : "draft",
-          maxTasksPerIpPerDay: Number(storedAgent.maxTasksPerIpPerDay) > 0 ? Number(storedAgent.maxTasksPerIpPerDay) : agentDefaults.maxTasksPerIpPerDay,
-          dailyGlobalLimit: Number(storedAgent.dailyGlobalLimit) > 0 ? Number(storedAgent.dailyGlobalLimit) : agentDefaults.dailyGlobalLimit,
           maxInstructionLength: Number(storedAgent.maxInstructionLength) > 0 ? Number(storedAgent.maxInstructionLength) : agentDefaults.maxInstructionLength,
           commentName: String(storedAgent.commentName || agentDefaults.commentName).slice(0, 32),
           shareWritingPrompt: storedAgent.shareWritingPrompt !== false,
@@ -760,10 +761,9 @@ export default async (req: Request) => {
         },
         agent: {
           enabled: agent?.enabled !== false,
-          triggerKeywords: String(agent?.triggerKeywords || "").split(",").map((t: string) => t.trim()).filter(Boolean),
+          articleTriggers: String(agent?.articleTriggers || "").split(",").map((t: string) => t.trim()).filter(Boolean),
+          qaTriggers: String(agent?.qaTriggers || "").split(",").map((t: string) => t.trim()).filter(Boolean),
           publishStrategy: agent?.publishStrategy === "published" ? "published" : "draft",
-          maxTasksPerIpPerDay: Number(agent?.maxTasksPerIpPerDay) > 0 ? Number(agent?.maxTasksPerIpPerDay) : DEFAULT_AGENT_SETTINGS.maxTasksPerIpPerDay,
-          dailyGlobalLimit: Number(agent?.dailyGlobalLimit) > 0 ? Number(agent?.dailyGlobalLimit) : DEFAULT_AGENT_SETTINGS.dailyGlobalLimit,
           maxInstructionLength: Number(agent?.maxInstructionLength) > 0 ? Number(agent?.maxInstructionLength) : DEFAULT_AGENT_SETTINGS.maxInstructionLength,
           commentName: String(agent?.commentName || "").trim().slice(0, 32) || DEFAULT_AGENT_SETTINGS.commentName,
           shareWritingPrompt: agent?.shareWritingPrompt !== false,

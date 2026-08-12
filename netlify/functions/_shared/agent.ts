@@ -7,13 +7,14 @@ const COMMENT_STORE = "newsnow-comments"
 export interface AgentTask {
   id: string
   source: "admin" | "comment"
+  type: "article" | "qa"
   instruction: string
   status: "pending" | "running" | "done" | "failed"
   progress: string
   postId?: string
   commentId?: string
   requestedStatus?: "published" | "draft"
-  result?: { articleId: string; title: string; url: string; status: string }
+  result?: { articleId: string; title: string; url: string; status: string } | { answer: string }
   error?: string
   ip?: string
   createdAt: number
@@ -23,10 +24,11 @@ export interface AgentTask {
 
 export interface AgentSettings {
   enabled: boolean
-  triggerKeywords: string[]
+  /** 生成文章触发词（@管理员 等，需后台密钥） */
+  articleTriggers: string[]
+  /** 文章问答触发词（@ai 等，AI 助手回答） */
+  qaTriggers: string[]
   publishStrategy: "draft" | "published"
-  maxTasksPerIpPerDay: number
-  dailyGlobalLimit: number
   maxInstructionLength: number
   commentName: string
   shareWritingPrompt: boolean
@@ -35,10 +37,9 @@ export interface AgentSettings {
 
 export const DEFAULT_AGENT_SETTINGS: AgentSettings = {
   enabled: true,
-  triggerKeywords: ["@管理员", "@ai", "@博主"],
+  articleTriggers: ["@管理员", "@博主"],
+  qaTriggers: ["@ai", "@助手"],
   publishStrategy: "draft",
-  maxTasksPerIpPerDay: 3,
-  dailyGlobalLimit: 20,
   maxInstructionLength: 500,
   commentName: "🤖 AI Agent",
   shareWritingPrompt: true,
@@ -51,15 +52,17 @@ export async function getAgentSettings(): Promise<AgentSettings> {
     const raw = await store.get("site", { type: "text" })
     const data = raw ? JSON.parse(raw) : {}
     const a = data.agent || {}
-    const kw = typeof a.triggerKeywords === "string"
-      ? a.triggerKeywords.split(",").map((s: string) => s.trim()).filter(Boolean)
-      : Array.isArray(a.triggerKeywords) ? a.triggerKeywords : []
+    const arr = (v: unknown, def: string[]) => {
+      const list = typeof v === "string"
+        ? v.split(",").map((s: string) => s.trim()).filter(Boolean)
+        : Array.isArray(v) ? v.map((s: unknown) => String(s).trim()).filter(Boolean) : []
+      return list.length ? list : def
+    }
     return {
       enabled: a.enabled !== false,
-      triggerKeywords: kw.length ? kw : DEFAULT_AGENT_SETTINGS.triggerKeywords,
+      articleTriggers: arr(a.articleTriggers, DEFAULT_AGENT_SETTINGS.articleTriggers),
+      qaTriggers: arr(a.qaTriggers, DEFAULT_AGENT_SETTINGS.qaTriggers),
       publishStrategy: a.publishStrategy === "published" ? "published" : "draft",
-      maxTasksPerIpPerDay: Number(a.maxTasksPerIpPerDay) > 0 ? Number(a.maxTasksPerIpPerDay) : DEFAULT_AGENT_SETTINGS.maxTasksPerIpPerDay,
-      dailyGlobalLimit: Number(a.dailyGlobalLimit) > 0 ? Number(a.dailyGlobalLimit) : DEFAULT_AGENT_SETTINGS.dailyGlobalLimit,
       maxInstructionLength: Number(a.maxInstructionLength) > 0 ? Number(a.maxInstructionLength) : DEFAULT_AGENT_SETTINGS.maxInstructionLength,
       commentName: String(a.commentName || DEFAULT_AGENT_SETTINGS.commentName).slice(0, 32),
       shareWritingPrompt: a.shareWritingPrompt !== false,
@@ -68,6 +71,13 @@ export async function getAgentSettings(): Promise<AgentSettings> {
   } catch {
     return { ...DEFAULT_AGENT_SETTINGS }
   }
+}
+
+/** 判定评论命中的触发类型：生成文章 / 文章问答 / 无 */
+export function detectTriggerType(content: string, settings: AgentSettings): "article" | "qa" | "" {
+  if (matchTrigger(content, settings.articleTriggers)) return "article"
+  if (matchTrigger(content, settings.qaTriggers)) return "qa"
+  return ""
 }
 
 // 读取后台密码（与 admin.ts / ai.ts 保持一致）
@@ -146,6 +156,7 @@ export async function deleteTask(id: string): Promise<boolean> {
 
 export function newTask(input: {
   source: "admin" | "comment"
+  type?: "article" | "qa"
   instruction: string
   postId?: string
   commentId?: string
@@ -155,6 +166,7 @@ export function newTask(input: {
   return {
     id: randomUUID().slice(0, 8),
     source: input.source,
+    type: input.type === "qa" ? "qa" : "article",
     instruction: String(input.instruction || "").trim().slice(0, 2000),
     status: "pending",
     progress: "等待执行",
@@ -166,24 +178,6 @@ export function newTask(input: {
     startedAt: 0,
     finishedAt: 0,
   }
-}
-
-// ===================== 限流 =====================
-
-export async function checkAgentRateLimit(settings: AgentSettings, ip: string): Promise<string | null> {
-  const tasks = await listTasks()
-  const dayStart = Date.now() - 86400000
-  const today = tasks.filter(t => t.createdAt >= dayStart)
-  if (today.length >= settings.dailyGlobalLimit) {
-    return "今日全局任务已达上限，请明天再试"
-  }
-  if (ip) {
-    const byIp = today.filter(t => t.ip === ip).length
-    if (byIp >= settings.maxTasksPerIpPerDay) {
-      return "今日任务次数已达上限，请明天再试"
-    }
-  }
-  return null
 }
 
 /** 评论内容是否命中触发词 */

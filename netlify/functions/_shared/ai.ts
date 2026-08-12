@@ -54,6 +54,27 @@ export async function resolveLlmConfig(): Promise<LlmConfig> {
   }
 }
 
+/** 解析前台聊天 AI 配置（AI 助手，不叠加写作 AI） */
+export async function resolveChatConfig(): Promise<LlmConfig> {
+  const { chatAi } = await readAiConfigs()
+  const provider = String(chatAi.provider || "").trim()
+  const model = String(chatAi.model || "").trim()
+  const apiKey = String(chatAi.apiKey || "").trim()
+  const storedUrl = String(chatAi.apiUrl || "").trim()
+  const apiUrl = resolveModelApiUrl(provider, model, storedUrl)
+  const maxTokens = Number(chatAi.maxTokens) > 0 ? Number(chatAi.maxTokens) : 2048
+  const computedTemp = typeof chatAi.temperature === "number" && !Number.isNaN(chatAi.temperature) ? chatAi.temperature : 0.7
+  const temperature = resolveTemperature(provider, model, computedTemp)
+  return {
+    apiUrl,
+    apiKey,
+    model,
+    systemPrompt: String(chatAi.systemPrompt || "").trim(),
+    maxTokens: Math.min(16384, Math.max(maxTokens, 256)),
+    temperature,
+  }
+}
+
 /** 拼接写作系统提示词（基础人设 + 关键词约束），baseSystem 可覆盖（Agent 独立人设用） */
 export function buildWritingSystemPrompt(config: LlmConfig, keywords?: string, baseSystem?: string): string {
   let system = String(baseSystem || config.systemPrompt || DEFAULT_WRITING_PROMPT).trim()
