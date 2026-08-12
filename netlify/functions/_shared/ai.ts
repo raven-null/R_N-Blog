@@ -1,5 +1,5 @@
 import { getBlobStore } from "./blob"
-import { resolveModelApiUrl } from "./models"
+import { resolveModelApiUrl, resolveTemperature } from "./models"
 
 export interface LlmConfig {
   apiUrl: string
@@ -40,9 +40,10 @@ export async function resolveLlmConfig(): Promise<LlmConfig> {
   const storedUrl = String(src.apiUrl || chatAi.apiUrl || "").trim()
   const apiUrl = resolveModelApiUrl(provider, model, storedUrl)
   const maxTokens = Number(writingAi.maxTokens) > 0 ? Number(writingAi.maxTokens) : Number(chatAi.maxTokens) > 0 ? Number(chatAi.maxTokens) : 4096
-  const temperature = typeof writingAi.temperature === "number" && !Number.isNaN(writingAi.temperature)
+  const computedTemp = typeof writingAi.temperature === "number" && !Number.isNaN(writingAi.temperature)
     ? writingAi.temperature
     : typeof chatAi.temperature === "number" && !Number.isNaN(chatAi.temperature) ? chatAi.temperature : 0.7
+  const temperature = resolveTemperature(provider, model, computedTemp)
   return {
     apiUrl,
     apiKey,

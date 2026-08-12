@@ -128,7 +128,7 @@ export default async (req: Request) => {
   const words = Number(body.words) > 0 ? Number(body.words) : 800
   const baseMax = Number(writingAi.maxTokens) > 0 ? Number(writingAi.maxTokens) : 4096
   const maxTokens = Math.min(16384, Math.max(baseMax, words * 2 + 1024))
-  const temperature = typeof writingAi.temperature === "number" && !Number.isNaN(writingAi.temperature) ? writingAi.temperature : 0.7
+  const temperature = config.temperature
 
   try {
     const upstream = await fetch(apiUrl, {

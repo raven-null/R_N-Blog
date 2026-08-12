@@ -8,6 +8,8 @@ export interface CatalogModel {
   label: string
   apiUrl: string
   tags?: string[]
+  /** 该模型仅允许的 temperature（如 Kimi K2 只接受 1） */
+  temperature?: number
 }
 
 export interface CatalogProvider {
@@ -45,10 +47,15 @@ export const MODEL_CATALOG: CatalogProvider[] = [
   },
   {
     id: "moonshot",
-    name: "Moonshot Kimi",
+    name: "Kimi（Moonshot）",
     models: [
-      { id: "moonshot-v1-8k", label: "Kimi（8K 上下文）", apiUrl: "https://api.moonshot.cn/v1/chat/completions", tags: ["快速"] },
-      { id: "moonshot-v1-32k", label: "Kimi（32K 上下文）", apiUrl: "https://api.moonshot.cn/v1/chat/completions" },
+      { id: "kimi-k2.6", label: "Kimi K2.6", apiUrl: "https://api.moonshot.cn/v1/chat/completions", tags: ["新一代"], temperature: 1 },
+      { id: "kimi-k3", label: "Kimi K3", apiUrl: "https://api.moonshot.cn/v1/chat/completions", tags: ["最新"], temperature: 1 },
+      { id: "kimi-k2.7-code", label: "Kimi K2.7 Code", apiUrl: "https://api.moonshot.cn/v1/chat/completions", tags: ["代码"], temperature: 1 },
+      { id: "kimi-k2.7-code-highspeed", label: "Kimi K2.7 Code（高速）", apiUrl: "https://api.moonshot.cn/v1/chat/completions", tags: ["代码", "快速"], temperature: 1 },
+      { id: "moonshot-v1-8k", label: "Kimi（8K 上下文）", apiUrl: "https://api.moonshot.cn/v1/chat/completions", tags: ["经典"] },
+      { id: "moonshot-v1-32k", label: "Kimi（32K 上下文）", apiUrl: "https://api.moonshot.cn/v1/chat/completions", tags: ["经典"] },
+      { id: "moonshot-v1-128k", label: "Kimi（128K 上下文）", apiUrl: "https://api.moonshot.cn/v1/chat/completions", tags: ["经典"] },
     ],
   },
   {
@@ -72,4 +79,10 @@ export function findCatalogModel(provider: string, model: string): CatalogModel 
 export function resolveModelApiUrl(provider: string, model: string, fallbackUrl: string): string {
   const found = findCatalogModel(provider, model)
   return (found && found.apiUrl) || String(fallbackUrl || "").trim()
+}
+
+/** 若目录中该模型限定了 temperature（如 K2 只接受 1），返回限定值，否则回退默认 */
+export function resolveTemperature(provider: string, model: string, fallback: number): number {
+  const found = findCatalogModel(provider, model)
+  return found && typeof found.temperature === "number" ? found.temperature : fallback
 }

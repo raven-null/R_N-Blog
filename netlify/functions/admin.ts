@@ -2,7 +2,7 @@ import { randomUUID, createHash } from "node:crypto"
 import { json, badRequest, noContent } from "./_shared/cors"
 import { getBlobStore } from "./_shared/blob"
 import { DEFAULT_AGENT_SETTINGS } from "./_shared/agent"
-import { MODEL_CATALOG, resolveModelApiUrl } from "./_shared/models"
+import { MODEL_CATALOG, resolveModelApiUrl, resolveTemperature } from "./_shared/models"
 
 const ARTICLE_STORE = "blog-articles"
 const IMAGE_STORE = "blog-images"
@@ -649,7 +649,11 @@ export default async (req: Request) => {
           model: storedAi.model || aiDefaults.model,
           systemPrompt: storedAi.systemPrompt || aiDefaults.systemPrompt,
           maxTokens: Number(storedAi.maxTokens) > 0 ? Number(storedAi.maxTokens) : aiDefaults.maxTokens,
-          temperature: typeof storedAi.temperature === "number" && !Number.isNaN(storedAi.temperature) ? storedAi.temperature : aiDefaults.temperature,
+          temperature: resolveTemperature(
+            storedAi.provider || aiDefaults.provider,
+            storedAi.model || aiDefaults.model,
+            typeof storedAi.temperature === "number" && !Number.isNaN(storedAi.temperature) ? storedAi.temperature : aiDefaults.temperature,
+          ),
         },
         // 写作 AI：apiUrl/apiKey/model 留空时不在此处回退（由 /api/ai 后端回退 ai），其余字段用默认值
         writingAi: {
@@ -659,7 +663,11 @@ export default async (req: Request) => {
           systemPrompt: storedWritingAi.systemPrompt || writingAiDefaults.systemPrompt,
           keywords: storedWritingAi.keywords || writingAiDefaults.keywords,
           maxTokens: Number(storedWritingAi.maxTokens) > 0 ? Number(storedWritingAi.maxTokens) : writingAiDefaults.maxTokens,
-          temperature: typeof storedWritingAi.temperature === "number" && !Number.isNaN(storedWritingAi.temperature) ? storedWritingAi.temperature : writingAiDefaults.temperature,
+          temperature: resolveTemperature(
+            storedWritingAi.provider || "",
+            storedWritingAi.model || "",
+            typeof storedWritingAi.temperature === "number" && !Number.isNaN(storedWritingAi.temperature) ? storedWritingAi.temperature : writingAiDefaults.temperature,
+          ),
         },
         navTags: data.navTags && data.navTags.length ? data.navTags : DEFAULT_SETTINGS.navTags,
         // AI Agent 设置
