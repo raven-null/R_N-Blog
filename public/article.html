@@ -844,50 +844,24 @@
 
         /* ===== 留言区 ===== */
         .comment-section {
+            padding: 20px 24px 24px;
+            margin-top: 24px;
+        }
+
+        .dash-panel {
             background: var(--bg-secondary);
             border-radius: 16px;
-            padding: 32px;
-            margin-top: 24px;
             border: 1px solid var(--border);
             box-shadow: 0 4px 20px var(--shadow);
         }
 
-        .comment-header {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-
-        .comment-header h3 {
-            margin: 0;
-            font-size: 20px;
-            color: var(--text-primary);
-        }
-
-        .comment-count {
-            background: color-mix(in srgb, var(--accent) 10%, transparent);
-            color: var(--accent);
-            border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
-            padding: 2px 10px;
-            border-radius: 20px;
-            font-size: 12px;
-        }
-
-        .comment-agent-tip {
-            font-size: 12px;
-            color: var(--text-muted);
-            background: color-mix(in srgb, var(--accent) 6%, transparent);
-            border: 1px dashed color-mix(in srgb, var(--accent) 30%, transparent);
-            border-radius: 8px;
-            padding: 8px 12px;
-            margin-bottom: 16px;
-            line-height: 1.7;
-        }
-
-        .comment-agent-tip b {
-            color: var(--accent);
+        .dash-panel-title {
+            font-size: 18px;
             font-weight: 600;
+            color: var(--text-primary);
+            padding: 20px 24px 12px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 4px;
         }
 
         .comment-list {
@@ -987,12 +961,6 @@
         .comment-reply-btn:hover {
             color: var(--accent);
         }
-
-        /* AI Agent 反馈浮层 */
-        .comment-toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(16px);background:rgba(10,12,16,.92);border:1px solid rgba(79,195,247,.35);color:#fff;padding:11px 20px;border-radius:12px;font-size:13px;line-height:1.5;z-index:9999;opacity:0;pointer-events:none;transition:all .3s;box-shadow:0 10px 30px rgba(0,0,0,.45);max-width:86vw;text-align:center}
-        .comment-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-        .comment-toast.error{border-color:rgba(239,83,80,.5)}
-        .comment-toast a{color:var(--accent);text-decoration:none;font-weight:600}
 
         .comment-item-image {
             margin-top: 10px;
@@ -1678,18 +1646,17 @@
             </div>
 
             <!-- 留言区 -->
-            <div class="comment-section" id="comment-section" style="display:none;">
-                <div class="comment-header">
-                    <h3>评论区</h3>
-                    <span class="comment-count" id="comment-count">0</span>
+            <div class="dash-panel comment-section" id="comment-section" style="display:none;">
+                <div class="dash-panel-title">留言</div>
+                <div class="comment-list" id="comment-list">
+                    <div class="comment-empty">加载留言中...</div>
                 </div>
-                <div class="comment-agent-tip">💡 <b>@ai</b> + 问题 让 AI 助手回答本文章相关问题；<b>@管理员</b> + 指令 + 后台密钥 可让 AI 生成并发布新文章</div>
                 <form class="comment-form" id="comment-form">
                     <div class="comment-form-row">
                         <input type="text" id="comment-name" placeholder="昵称 *" maxlength="32" required>
                     </div>
                     <div class="comment-form-main">
-                        <textarea id="comment-content" placeholder="写下你的评论... *（支持 @ai 提问 / @管理员 生成文章，最长 5000 字）" maxlength="5000" required></textarea>
+                        <textarea id="comment-content" placeholder="写下你的留言... *（支持纯文本，最长 5000 字）" maxlength="5000" required></textarea>
                         <div class="comment-form-side">
                             <label class="comment-upload" title="上传图片（jpg/png/gif/webp，≤2MB）">
                                 <input type="file" id="comment-image" accept="image/jpeg,image/png,image/gif,image/webp" hidden>
@@ -1704,14 +1671,13 @@
                                 <img id="comment-image-thumb" alt="已选图片">
                                 <button type="button" id="comment-image-remove" title="移除图片">&times;</button>
                             </div>
-                            <button type="submit" id="comment-submit">发表评论</button>
+                            <button type="submit" id="comment-submit">发表留言</button>
                         </div>
                     </div>
                     <div class="comment-form-footer">
                         <span class="comment-tip" id="comment-tip"></span>
                     </div>
                 </form>
-                <div class="comment-list" id="comment-list"></div>
             </div>
 
             <!-- 文章导航 -->
@@ -1769,6 +1735,8 @@
                 }
                 // 初始化留言区
                 this.initComments(blobId || postFile);
+                // 供聊天窗口 @ai 问答使用当前文章
+                window.__currentArticleId = blobId || postFile;
                 // 异步加载文章列表，不阻塞文章渲染（资讯模式不加载，避免上下篇导航错乱）
                 if (!isNews) {
                     this.loadAllPosts().then(() => this.renderNavigation());
@@ -2421,14 +2389,12 @@
             // 加载某篇文章的留言
             async loadComments() {
                 const list = document.getElementById('comment-list');
-                const count = document.getElementById('comment-count');
                 if (!list) return;
                 try {
                     const res = await fetch(`${this.apiBase}/api/comments?postId=${encodeURIComponent(this.postId)}`);
                     if (!res.ok) throw new Error('HTTP ' + res.status);
                     const data = await res.json();
                     const comments = (data && Array.isArray(data.comments)) ? data.comments : [];
-                    if (count) count.textContent = comments.length;
                     if (!comments.length) {
                         list.innerHTML = '<div class="comment-empty">还没有留言，来抢沙发~</div>';
                         return;
@@ -2494,103 +2460,12 @@
                     this.clearCommentImage();
                     if (tip) tip.textContent = '✓ 留言成功';
                     await this.loadComments();
-                    // AI Agent：评论区 @触发（@管理员 / @ai 等），后端受理后自动生成并发布文章
-                    if (data && data.comment && data.comment.id && content.includes('@')) {
-                        this.kickAgent(data.comment.id, content);
-                    }
                 } catch (err) {
                     if (tip) tip.textContent = '✗ ' + (err.message || '留言失败，请稍后再试');
                 } finally {
                     submitBtn.disabled = false;
                     submitBtn.textContent = '发表留言';
                 }
-            },
-
-            // AI Agent：提交触发任务。@管理员（生成文章，需后台密钥）/ @ai（文章问答，AI 助手回答）
-            kickAgent(commentId, content) {
-                const isArticle = /@管理员|@博主/.test(content);
-                const isQa = /@ai|@助手/.test(content);
-                if (!isArticle && !isQa) return;
-                let body = { source: 'comment', postId: this.postId, commentId, instruction: content };
-                let ackMsg = '🤖 正在回答你的问题…';
-                if (isArticle) {
-                    const key = prompt('生成文章需要输入后台登录密钥：');
-                    if (key === null || !key.trim()) {
-                        this.showCommentToast('已取消生成（需要后台密钥）');
-                        return;
-                    }
-                    body.adminKey = key.trim();
-                    ackMsg = '🤖 已收到任务，正在为你生成文章…';
-                }
-                try {
-                    fetch(`${this.apiBase}/api/agent`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(body)
-                    }).then(r => r.json().catch(() => ({}))).then(d => {
-                        if (d && d.status === 'success') {
-                            this.showCommentToast(ackMsg);
-                            this.pollAgentDone(0);
-                        } else if (d && d.status === 'error') {
-                            this.showCommentToast('✗ ' + (d.message || '操作失败'), { error: true });
-                        }
-                    }).catch(() => {});
-                    // 稍后刷新评论区，展示 AI 的受理回复
-                    setTimeout(() => this.loadComments(), 2000);
-                } catch (e) {}
-            },
-
-            // 轮询评论，等待 AI 完成（生成文章 / 回答）后弹出提示（最多约 10 分钟）
-            pollAgentDone(attempt) {
-                if (attempt > 150) return;
-                setTimeout(async () => {
-                    try {
-                        const res = await fetch(`${this.apiBase}/api/comments?postId=${encodeURIComponent(this.postId)}`);
-                        const data = await res.json();
-                        const comments = (data && Array.isArray(data.comments)) ? data.comments : [];
-                        const done = comments.find(c => this.isAgentDoneComment(c));
-                        if (done) {
-                            const content = String(done.content || '');
-                            if (/已为你(发布|生成)文章/.test(content)) {
-                                const m = content.match(/《([^》]+)》/);
-                                const title = m ? m[1] : '';
-                                const pathM = content.match(/(\/article\.html\?id=[\w\-]+)/);
-                                const url = pathM ? this.apiBase + pathM[1] : this.apiBase + '/article.html';
-                                this.showCommentToast(`✅ 已完成${title ? '《' + title + '》' : ''}，去看看吧 <a href="${url}" target="_blank">查看文章 ↗</a>`, { html: true });
-                            } else {
-                                this.showCommentToast('✅ AI 已回复你的问题，去看看吧');
-                            }
-                            await this.loadComments();
-                            return;
-                        }
-                        this.pollAgentDone(attempt + 1);
-                    } catch (e) {
-                        this.pollAgentDone(attempt + 1);
-                    }
-                }, 4000);
-            },
-
-            // 判断是否为 AI 的完成/失败回复（文章完成 / 问答回复 / 失败）
-            isAgentDoneComment(c) {
-                const content = String(c.content || '');
-                return /已为你(发布|生成)文章/.test(content) || /🤖 AI：/.test(content) || /很抱歉，任务执行失败/.test(content);
-            },
-
-            // 底部浮层提示
-            showCommentToast(msg, opts) {
-                let el = document.getElementById('comment-toast');
-                if (!el) {
-                    el = document.createElement('div');
-                    el.id = 'comment-toast';
-                    el.className = 'comment-toast';
-                    document.body.appendChild(el);
-                }
-                if (opts && opts.html) el.innerHTML = msg;
-                else el.textContent = msg;
-                el.classList.toggle('error', !!(opts && opts.error));
-                el.classList.add('show');
-                clearTimeout(this._toastTimer);
-                this._toastTimer = setTimeout(() => el.classList.remove('show'), 6000);
             },
 
             // 评论内容渲染：转义后高亮 @提及、文章链接可点击；AI 回答剥离 Markdown 语法

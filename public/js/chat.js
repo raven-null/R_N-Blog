@@ -540,6 +540,14 @@ const AIChat = {
         this.isWaiting = true;
         this.updateSendButton();
 
+        // AI Agent 指令：@ai 文章问答 / @管理员 生成文章（走任务流程，不走普通对话）
+        if (await this.handleAgentCommand(content)) {
+            this.isWaiting = false;
+            this.abortController = null;
+            this.updateSendButton();
+            return;
+        }
+
         // 创建流式消息容器
         const streamEl = this.createStreamingMessage();
         let accumulated = '';
@@ -591,6 +599,80 @@ const AIChat = {
         this.isWaiting = false;
         this.abortController = null;
         this.updateSendButton();
+    },
+
+    // AI Agent 指令：@ai 文章问答 / @管理员 生成文章（需后台密钥）
+    async handleAgentCommand(content) {
+        const isArticle = /@管理员|@博主/.test(content);
+        const isQa = /@ai|@助手/.test(content);
+        if (!isArticle && !isQa) return false;
+
+        let body = { source: 'chat', type: 'article', instruction: content };
+        let progressText = '🤖 已提交任务，正在生成文章…';
+        if (isArticle) {
+            const key = window.prompt('生成文章需要输入后台登录密钥：');
+            if (key === null || !key.trim()) {
+                this.addMessage('assistant', '已取消生成（需要后台密钥）');
+                this.messages.push({ role: 'assistant', content: '已取消生成（需要后台密钥）' });
+                this.saveSessions();
+                return true;
+            }
+            body.adminKey = key.trim();
+        } else {
+            const articleId = window.__currentArticleId || '';
+            if (!articleId) return false; // 无文章上下文：交给普通 AI 对话
+            body.type = 'qa';
+            body.articleId = articleId;
+            progressText = '🤖 正在回答你关于本文章的问题…';
+        }
+
+        const streamEl = this.createStreamingMessage();
+        this.updateStreamingMessage(streamEl, progressText);
+        try {
+            const res = await fetch('/api/agent', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!data || data.status !== 'success' || !data.data) {
+                throw new Error((data && data.message) || '任务提交失败');
+            }
+            const task = data.data;
+            const result = await this.pollAgentTask(task.id, task.pollKey);
+            let finalText;
+            if (result.status === 'failed') {
+                finalText = '🤖 任务失败：' + (result.error || '未知错误');
+            } else if (result.type === 'qa') {
+                finalText = '🤖 AI：' + ((result.result && result.result.answer) || '（无回复）');
+            } else {
+                const r = result.result || {};
+                finalText = `✅ 已完成${r.title ? '《' + r.title + '》' : ''}：${r.url || '/article.html'}`;
+            }
+            this.messages.push({ role: 'assistant', content: finalText });
+            this.saveSessions();
+            this.finalizeAssistantMessage(streamEl, finalText);
+        } catch (err) {
+            streamEl.remove();
+            this.addMessage('error', this.friendlyError(err));
+        }
+        return true;
+    },
+
+    // 轮询 Agent 任务状态（凭 pollKey 公开查询，最多约 6 分钟）
+    async pollAgentTask(taskId, pollKey, attempt = 0) {
+        const MAX_ATTEMPTS = 120;
+        try {
+            const res = await fetch(`/api/agent?task=${encodeURIComponent(taskId)}&key=${encodeURIComponent(pollKey || '')}`);
+            const data = await res.json().catch(() => ({}));
+            if (data && data.status === 'success' && data.data) {
+                const t = data.data;
+                if (t.status === 'done' || t.status === 'failed') return t;
+            }
+        } catch (e) {}
+        if (attempt >= MAX_ATTEMPTS) return { status: 'failed', error: '等待超时，请稍后到后台查看' };
+        await new Promise(r => setTimeout(r, 3000));
+        return this.pollAgentTask(taskId, pollKey, attempt + 1);
     },
 
     // 停止生成

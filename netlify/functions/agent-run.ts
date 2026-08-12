@@ -75,7 +75,7 @@ async function runTask(task: any): Promise<void> {
       task.progress = "已回答"
       task.result = { answer }
       await saveTask(task)
-      if (task.postId) {
+      if (task.postId && task.source === "comment") {
         // 优先原位更新「正在回答…」为最终答案，找不到则追加一条
         const updated = task.ackCommentId
           ? await updateAgentComment(task.postId, task.ackCommentId, `🤖 AI：${answer}`)

@@ -1629,7 +1629,7 @@
                 return `<div class="agent-item">
                     <div class="agent-item-head">
                         <span class="agent-item-status ${cls}">${label}</span>
-                        <span class="agent-item-meta" style="margin:0">${t.source==='admin'?'后台':'评论'} · ${t.type==='qa'?'问答':'文章'} · ${time}</span>
+                        <span class="agent-item-meta" style="margin:0">${t.source==='admin'?'后台':t.source==='chat'?'对话':'评论'} · ${t.type==='qa'?'问答':'文章'} · ${time}</span>
                     </div>
                     <div class="agent-item-instruction">${escHtml(t.instruction)}</div>
                     ${result}${err}${actions}

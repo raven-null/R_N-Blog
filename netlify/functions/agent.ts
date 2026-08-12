@@ -47,13 +47,19 @@ export default async (req: Request) => {
   // ===== 后台：任务查询 / 重试 / 删除 =====
 
   if (method === "GET") {
-    if (!(await requireAdmin())) return json(401, { status: "error", message: "未授权" }, req)
     const taskId = url.searchParams.get("task")
     if (taskId) {
       const task = await getTask(taskId)
       if (!task) return json(404, { status: "error", message: "任务不存在" }, req)
+      // 管理员可查任意任务；公开轮询需任务自带 pollKey 匹配
+      const pollKey = url.searchParams.get("key") || ""
+      const isAdmin = await requireAdmin()
+      if (!isAdmin && !(task.pollKey && pollKey === task.pollKey)) {
+        return json(401, { status: "error", message: "未授权" }, req)
+      }
       return json(200, { status: "success", data: task }, req)
     }
+    if (!(await requireAdmin())) return json(401, { status: "error", message: "未授权" }, req)
     const tasks = await listTasks()
     return json(200, { status: "success", data: tasks }, req)
   }
@@ -81,10 +87,47 @@ export default async (req: Request) => {
     }
 
     // ===== 创建任务 =====
-    const source = body.source === "admin" ? "admin" : body.source === "comment" ? "comment" : ""
-    if (!source) return badRequest("source 必填（admin / comment）", req)
+    const source = body.source === "admin" ? "admin" : body.source === "comment" ? "comment" : body.source === "chat" ? "chat" : ""
+    if (!source) return badRequest("source 必填（admin / comment / chat）", req)
     const settings = await getAgentSettings()
     const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || ""
+
+    // source=chat：AI 对话输入框内发起（@ai 问答 / @管理员 生成文章）
+    if (source === "chat") {
+      const type = body.type === "qa" ? "qa" : "article"
+      const instruction = String(body.instruction || "").trim()
+      if (!instruction) return badRequest("instruction 必填", req)
+      if (type === "article") {
+        const adminKey = String(body.adminKey || "").trim()
+        if (adminKey !== password) return json(401, { status: "error", message: "后台密钥不正确" }, req)
+        if (instruction.length > settings.maxInstructionLength) {
+          return badRequest(`指令过长（上限 ${settings.maxInstructionLength} 字）`, req)
+        }
+        const task = newTask({
+          source: "chat",
+          type: "article",
+          instruction,
+          requestedStatus: body.status === "draft" ? "draft" : "published",
+          ip,
+        })
+        await saveTask(task)
+        await kickAgentRun(task.id, runKey, url)
+        return json(200, { status: "success", data: task }, req)
+      }
+      // qa：需文章上下文
+      const postId = String(body.articleId || body.postId || "").trim()
+      if (!postId) return badRequest("articleId 必填（请在文章页使用 @ai 询问文章问题）", req)
+      const task = newTask({
+        source: "chat",
+        type: "qa",
+        instruction,
+        postId,
+        ip,
+      })
+      await saveTask(task)
+      await kickAgentRun(task.id, runKey, url)
+      return json(200, { status: "success", data: task }, req)
+    }
 
     if (source === "admin") {
       if (!(await requireAdmin())) return json(401, { status: "error", message: "未授权" }, req)

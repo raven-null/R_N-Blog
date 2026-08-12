@@ -6,7 +6,7 @@ const COMMENT_STORE = "newsnow-comments"
 
 export interface AgentTask {
   id: string
-  source: "admin" | "comment"
+  source: "admin" | "comment" | "chat"
   type: "article" | "qa"
   instruction: string
   status: "pending" | "running" | "done" | "failed"
@@ -15,6 +15,8 @@ export interface AgentTask {
   commentId?: string
   /** 受理评论 id（问答任务完成后原位更新为答案） */
   ackCommentId?: string
+  /** 公开轮询密钥（chat 来源用，前端凭 key 查询状态） */
+  pollKey?: string
   requestedStatus?: "published" | "draft"
   result?: { articleId: string; title: string; url: string; status: string } | { answer: string }
   error?: string
@@ -157,7 +159,7 @@ export async function deleteTask(id: string): Promise<boolean> {
 }
 
 export function newTask(input: {
-  source: "admin" | "comment"
+  source: "admin" | "comment" | "chat"
   type?: "article" | "qa"
   instruction: string
   postId?: string
@@ -174,6 +176,7 @@ export function newTask(input: {
     progress: "等待执行",
     postId: input.postId,
     commentId: input.commentId,
+    pollKey: randomUUID().slice(0, 16),
     requestedStatus: input.requestedStatus,
     ip: input.ip,
     createdAt: Date.now(),
