@@ -1,6 +1,7 @@
 import { randomUUID, createHash } from "node:crypto"
 import { json, badRequest, noContent } from "./_shared/cors"
 import { getBlobStore } from "./_shared/blob"
+import { getAdminPassword, checkAuth } from "./_shared/auth"
 import { DEFAULT_AGENT_SETTINGS } from "./_shared/agent"
 import { MODEL_CATALOG, resolveModelApiUrl, resolveTemperature } from "./_shared/models"
 
@@ -32,28 +33,10 @@ interface ArticleMeta {
 
 // ===================== 认证 =====================
 
-// 获取后台密码：环境变量 ADMIN_KEY 优先，其次 Blobs（设置中修改的），默认 1111
-async function getAdminPassword(): Promise<string> {
-  const envPwd = process.env.ADMIN_KEY
-  if (envPwd) return envPwd
-  try {
-    const store = getBlobStore("blog-auth", "strong")
-    const raw = await store.get("password", { type: "text" })
-    if (raw) return raw
-  } catch (e) {}
-  return "1111"
-}
-
 // 设置后台密码
 async function setAdminPassword(password: string): Promise<void> {
   const store = getBlobStore("blog-auth", "strong")
   await store.set("password", password)
-}
-
-async function checkAuth(req: Request): Promise<boolean> {
-  const adminKey = await getAdminPassword()
-  const provided = req.headers.get("x-admin-key") ?? ""
-  return provided === adminKey
 }
 
 function generateToken(key: string): string {

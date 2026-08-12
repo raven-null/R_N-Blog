@@ -1,52 +1,6 @@
 import { json, noContent, badRequest } from "./_shared/cors"
-import { getBlobStore } from "./_shared/blob"
-import { resolveLlmConfig } from "./_shared/ai"
-
-const DEFAULT_WRITING_PROMPT =
-  "你是一名资深的个人博客写作助手。你的写作风格：中文流畅、结构清晰、善用小标题与列表、技术类内容会给出可运行的示例代码。请严格按用户要求输出 Markdown 格式，不要输出与正文无关的客套话。涉及事实时如实说明，不确定的内容标注\"（待核实）\"，不编造数据。"
-
-// 读取后台密码（与 admin.ts 保持一致）
-async function getAdminPassword(): Promise<string> {
-  const envPwd = process.env.ADMIN_KEY
-  if (envPwd) return envPwd
-  try {
-    const store = getBlobStore("blog-auth", "strong")
-    const raw = await store.get("password", { type: "text" })
-    if (raw) return raw
-  } catch (e) {}
-  return "1111"
-}
-
-async function checkAuth(req: Request): Promise<boolean> {
-  const adminKey = await getAdminPassword()
-  const provided = req.headers.get("x-admin-key") ?? ""
-  return provided === adminKey
-}
-
-// 读取博客设置，取写作 AI 与聊天 AI 配置
-async function readAiConfigs(): Promise<{ writingAi: any; chatAi: any }> {
-  const store = getBlobStore("blog-settings", "strong")
-  const raw = await store.get("site", { type: "text" })
-  const data = raw ? JSON.parse(raw) : {}
-  return {
-    writingAi: data.writingAi || {},
-    chatAi: data.ai || {},
-  }
-}
-
-// 拼接系统提示词：写作人设 + 关键词约束 + 要求遵循
-function buildSystemPrompt(writingAi: any, bodyKeywords?: string): string {
-  let system = (writingAi.systemPrompt || DEFAULT_WRITING_PROMPT).trim()
-  system += "\n\n请严格遵循用户的写作要求：主题、字数、风格、格式都要尽量满足。若用户要求生成 N 字的文章，正文应尽量达到该字数，内容要充实完整，不要提前草草结束。"
-  const keywords = String(bodyKeywords || writingAi.keywords || "")
-    .split(",")
-    .map((s: string) => s.trim())
-    .filter(Boolean)
-  if (keywords.length) {
-    system += `\n\n全文请自然融入以下关键词：${keywords.join("、")}，贴合博客选题方向。`
-  }
-  return system
-}
+import { getAdminPassword, checkAuth } from "./_shared/auth"
+import { resolveLlmConfig, buildWritingSystemPrompt, readAiConfigs } from "./_shared/ai"
 
 // 按动作拼接用户消息
 function buildUserMessage(action: string, b: any): string {
@@ -107,7 +61,7 @@ export default async (req: Request) => {
     return badRequest("请求体不是合法 JSON", req)
   }
 
-  const { writingAi, chatAi } = await readAiConfigs()
+  const { writingAi } = await readAiConfigs()
   if (writingAi.enabled === false) {
     return badRequest("写作 AI 已在「博客设置 → 写作 AI」中关闭", req)
   }
@@ -122,7 +76,7 @@ export default async (req: Request) => {
   }
 
   const action = String(body.action || "draft").trim()
-  const system = buildSystemPrompt(writingAi, body.keywords)
+  const system = buildWritingSystemPrompt(config, body.keywords)
   const user = buildUserMessage(action, body)
   // 输出预算：按请求字数适当放大，但不超过配置上限与 16384
   const words = Number(body.words) > 0 ? Number(body.words) : 800

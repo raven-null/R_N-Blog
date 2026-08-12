@@ -1735,8 +1735,7 @@
                 }
                 // 初始化留言区
                 this.initComments(blobId || postFile);
-                // 供聊天窗口 @ai 问答使用当前文章
-                window.__currentArticleId = blobId || postFile;
+                // 供聊天窗口直接提问时结合当前文章内容
                 window.__currentArticleContext = (this.currentPost && this.currentPost.content) || '';
                 // 异步加载文章列表，不阻塞文章渲染（资讯模式不加载，避免上下篇导航错乱）
                 if (!isNews) {

@@ -1,5 +1,8 @@
 import { randomUUID, createHash } from "node:crypto"
 import { getBlobStore, readComments } from "./blob"
+import { getAdminPassword } from "./auth"
+
+export { getAdminPassword }
 
 const TASK_STORE = "blog-agent-tasks"
 const COMMENT_STORE = "newsnow-comments"
@@ -84,18 +87,6 @@ export function detectTriggerType(content: string, settings: AgentSettings): "ar
   if (matchTrigger(content, settings.articleTriggers)) return "article"
   if (matchTrigger(content, settings.qaTriggers)) return "qa"
   return ""
-}
-
-// 读取后台密码（与 admin.ts / ai.ts 保持一致）
-export async function getAdminPassword(): Promise<string> {
-  const envPwd = process.env.ADMIN_KEY
-  if (envPwd) return envPwd
-  try {
-    const store = getBlobStore("blog-auth", "strong")
-    const raw = await store.get("password", { type: "text" })
-    if (raw) return raw
-  } catch (e) {}
-  return "1111"
 }
 
 // agent-run 后台函数调用的安全令牌
