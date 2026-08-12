@@ -2412,12 +2412,29 @@
                     this.clearCommentImage();
                     if (tip) tip.textContent = '✓ 留言成功';
                     await this.loadComments();
+                    // AI Agent：评论区 @触发（@管理员 / @ai 等），后端受理后自动生成并发布文章
+                    if (data && data.comment && data.comment.id && content.includes('@')) {
+                        this.kickAgent(data.comment.id, content);
+                    }
                 } catch (err) {
                     if (tip) tip.textContent = '✗ ' + (err.message || '留言失败，请稍后再试');
                 } finally {
                     submitBtn.disabled = false;
                     submitBtn.textContent = '发表留言';
                 }
+            },
+
+            // AI Agent：提交触发任务（@管理员 等触发词），由后端校验并受理
+            kickAgent(commentId, content) {
+                try {
+                    fetch(`${this.apiBase}/api/agent`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ source: 'comment', postId: this.postId, commentId, instruction: content })
+                    }).catch(() => {});
+                    // 稍后刷新评论区，展示 AI Agent 的受理回复
+                    setTimeout(() => this.loadComments(), 2500);
+                } catch (e) {}
             },
 
             // HTML 转义

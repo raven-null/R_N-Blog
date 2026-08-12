@@ -53,6 +53,16 @@
   status = 200
 
 [[redirects]]
+  from = "/api/agent"
+  to = "/.netlify/functions/agent"
+  status = 200
+
+[[redirects]]
+  from = "/api/agent-run"
+  to = "/.netlify/functions/agent-run"
+  status = 200
+
+[[redirects]]
   from = "/api/admin-image"
   to = "/.netlify/functions/admin-image"
   status = 200

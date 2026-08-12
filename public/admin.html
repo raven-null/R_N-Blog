@@ -299,6 +299,28 @@
         .ai-writer-input .btn{height:52px;flex-shrink:0}
         .ai-writer-hintrow{font-size:11px;color:var(--text-muted);padding-top:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
         @keyframes blink{50%{opacity:0}}
+        /* AI Agent 面板 */
+        .agent-panel{right:0;border-left:1px solid var(--border)}
+        .agent-input{display:flex;flex-direction:column;gap:8px}
+        .agent-input textarea{width:100%;min-height:60px;max-height:140px;padding:9px 12px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:13px;font-family:inherit;resize:none;line-height:1.6}
+        .agent-input textarea:focus{outline:none;border-color:var(--accent)}
+        .agent-input-row{display:flex;gap:8px;align-items:center}
+        .agent-input-row select{flex:1;padding:8px 10px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:12px;cursor:pointer}
+        .agent-input-row .btn{flex-shrink:0}
+        .agent-list{flex:1;min-height:0;overflow-y:auto;margin-top:10px;display:flex;flex-direction:column;gap:8px}
+        .agent-item{background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;font-size:12px;line-height:1.6}
+        .agent-item-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+        .agent-item-status{font-size:11px;font-weight:600;padding:1px 8px;border-radius:10px;flex-shrink:0}
+        .agent-item-status.pending{background:var(--accent-dim);color:var(--accent)}
+        .agent-item-status.running{background:rgba(255,167,38,.15);color:var(--warning)}
+        .agent-item-status.done{background:rgba(102,187,106,.15);color:var(--success)}
+        .agent-item-status.failed{background:rgba(239,83,80,.15);color:var(--danger)}
+        .agent-item-instruction{color:var(--text);word-break:break-word;margin-top:4px}
+        .agent-item-meta{color:var(--text-muted);font-size:11px;margin-top:4px}
+        .agent-item-actions{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
+        .agent-item-actions a{color:var(--accent);text-decoration:none;font-size:11px}
+        .agent-item-actions .btn{padding:2px 8px;font-size:11px}
+        .agent-item-error{color:var(--danger);font-size:11px;margin-top:4px;word-break:break-word}
 
         .toast{position:fixed;bottom:20px;right:20px;padding:10px 20px;border-radius:var(--radius-sm);font-size:12px;z-index:999;display:none;box-shadow:var(--shadow);font-weight:500}
         .toast-success{background:var(--success);color:#000}
@@ -609,6 +631,7 @@
                     <!-- 编辑器附加操作 -->
                     <div class="editor-extras">
                         <button class="btn btn-ghost" onclick="openAiWriter()" title="AI 写作助手">🤖 AI 写作</button>
+                        <button class="btn btn-ghost" onclick="openAgentPanel()" title="AI Agent 自动写作发布">🤖 AI Agent</button>
                         <button class="btn btn-ghost" onclick="openImagePicker()" title="从图库插入图片">🖼 图库</button>
                         <label class="btn btn-ghost" style="cursor:pointer" title="上传图片">⬆ 上传图片<input type="file" accept="image/*" multiple style="display:none" onchange="uploadAndInsertToEditor(this.files);this.value=''"></label>
                         <div class="upload-progress" id="uploadProgress"><div class="spinner"></div><span id="uploadProgressText">上传中...</span></div>
@@ -863,6 +886,42 @@
                             <div class="settings-tip">写作 AI 与前台聊天 AI 分开配置，写文章可换更强的模型与独立的关键词/人设；未填 API 信息时自动复用「AI 助手」配置。</div>
                         </div>
 
+                        <!-- 6.5 AI Agent（自动写作发布） -->
+                        <div class="settings-group">
+                            <h3>AI Agent（自动写作发布）</h3>
+                            <div class="settings-field">
+                                <label><input type="checkbox" id="setAgEnabled"> 启用评论区 @触发（前台「@管理员」可让 AI 自动写文章）</label>
+                            </div>
+                            <div class="settings-field">
+                                <label>触发词（逗号分隔）</label>
+                                <input type="text" id="setAgKeywords" placeholder="如：@管理员,@ai,@博主">
+                            </div>
+                            <div class="settings-field">
+                                <label>评论触发生成后</label>
+                                <select id="setAgPublish">
+                                    <option value="draft">存为草稿（管理员审核后发布）</option>
+                                    <option value="published">直接发布</option>
+                                </select>
+                            </div>
+                            <div class="settings-field">
+                                <label>单 IP 每日任务上限</label>
+                                <input type="number" id="setAgMaxPerIp" min="1" max="100" placeholder="3">
+                            </div>
+                            <div class="settings-field">
+                                <label>全局每日任务上限</label>
+                                <input type="number" id="setAgDailyLimit" min="1" max="1000" placeholder="20">
+                            </div>
+                            <div class="settings-field">
+                                <label>指令长度上限（字）</label>
+                                <input type="number" id="setAgMaxLen" min="10" max="2000" placeholder="500">
+                            </div>
+                            <div class="settings-field">
+                                <label>Agent 评论昵称</label>
+                                <input type="text" id="setAgName" placeholder="🤖 AI Agent">
+                            </div>
+                            <div class="settings-tip">后台「写文章 → 🤖 AI Agent」可直接下达指令并生成发布；评论区「@触发词 + 指令」会自动受理并回评，AI 在后台生成文章。生成质量复用「写作 AI / AI 助手」的模型配置。</div>
+                        </div>
+
                         <!-- 7. 关于信息 -->
                         <div class="settings-group">
                             <h3>关于信息（我的视图底部）</h3>
@@ -951,6 +1010,33 @@
     </div>
     <!-- AI 写作助手折叠后的迷你入口 -->
     <button class="ai-writer-tab" id="aiWriterTab" style="display:none" onclick="aiWriterExpand()">🤖 AI 写作</button>
+
+    <!-- AI Agent 命令面板 -->
+    <div class="image-picker-panel ai-writer-panel agent-panel" id="agentPanel">
+        <div class="image-picker-header">
+            <h3>🤖 AI Agent</h3>
+            <div style="display:flex;gap:4px;align-items:center">
+                <button onclick="loadAgentTasks()" title="刷新任务列表">🔄</button>
+                <button onclick="closeAgentPanel()" title="关闭">&times;</button>
+            </div>
+        </div>
+        <div class="ai-writer-body">
+            <div class="agent-input">
+                <textarea id="agInput" rows="2" placeholder="下达指令，AI 自动写稿并发布。例如：「写一篇 3000 字、面向新手的 Python 教程并发布」" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();agentCreate()}"></textarea>
+                <div class="agent-input-row">
+                    <select id="agStatus" title="生成后的状态">
+                        <option value="published">✅ 生成并发布</option>
+                        <option value="draft">📝 生成存草稿</option>
+                    </select>
+                    <button class="btn btn-primary" id="agSendBtn" onclick="agentCreate()">生成</button>
+                </div>
+            </div>
+            <div class="ai-writer-hintrow" id="agHint">后台 Agent 使用「写作 AI / AI 助手」配置的模型，长文自动续写，生成后置顶展示。</div>
+            <div class="agent-list" id="agentList">
+                <div class="ai-writer-empty">暂无任务，输入指令开始</div>
+            </div>
+        </div>
+    </div>
 
     <div class="rename-modal" id="renameModal">
         <div class="rename-box"><h3>重命名标签</h3><input type="text" id="renameInput" placeholder="新名称" onkeydown="if(event.key==='Enter')confirmRename()"><div class="rename-actions"><button class="btn btn-ghost" onclick="closeRenameModal()">取消</button><button class="btn btn-primary" onclick="confirmRename()">确认</button></div></div>
@@ -1207,6 +1293,7 @@
         let aiWrRaw='';
         function getEditorSelection(){const ed=ensureEditor();return ed?ed.getSelectedText():''}
         async function openAiWriter(){
+            closeAgentPanel();
             document.getElementById('aiWriterTab').style.display='none';
             document.getElementById('aiWriterPanel').classList.add('open');
             setTimeout(()=>document.getElementById('aiWrInput').focus(),50);
@@ -1395,6 +1482,104 @@
             if(!tags.length){showToast('未识别到标签','error');return}
             tags.forEach(t=>addArticleTag(t));
             showToast('已填入标签','success');
+        }
+        // ===== AI Agent 命令面板 =====
+        let agentPollTimer=null;
+        function openAgentPanel(){
+            closeAiWriter();
+            document.getElementById('agentPanel').classList.add('open');
+            setTimeout(()=>document.getElementById('agInput').focus(),50);
+            loadAgentTasks();
+        }
+        function closeAgentPanel(){
+            document.getElementById('agentPanel').classList.remove('open');
+            if(agentPollTimer){clearTimeout(agentPollTimer);agentPollTimer=null}
+        }
+        async function agentCreate(){
+            const input=document.getElementById('agInput');
+            const instruction=input.value.trim();
+            if(!instruction){showToast('请输入指令','error');input.focus();return}
+            const status=document.getElementById('agStatus').value;
+            const btn=document.getElementById('agSendBtn');
+            btn.disabled=true;
+            try{
+                const r=await fetch('/api/agent',{
+                    method:'POST',
+                    headers:{'Content-Type':'application/json','X-Admin-Key':adminKey},
+                    body:JSON.stringify({source:'admin',instruction,status})
+                });
+                const d=await r.json();
+                if(d.status==='success'){
+                    showToast('任务已创建，正在生成…','success');
+                    input.value='';
+                    await loadAgentTasks();
+                }else{
+                    showToast(d.message||'创建失败','error');
+                }
+            }catch(e){
+                showToast('请求失败：'+(e.message||'网络错误'),'error');
+            }finally{btn.disabled=false}
+        }
+        async function loadAgentTasks(){
+            try{
+                const r=await fetch('/api/agent?list=1',{headers:{'X-Admin-Key':adminKey}});
+                const d=await r.json();
+                if(d.status!=='success')return;
+                renderAgentTasks(d.data||[]);
+            }catch(e){}
+        }
+        function renderAgentTasks(tasks){
+            const list=document.getElementById('agentList');
+            if(!list)return;
+            if(!tasks.length){
+                list.innerHTML='<div class="ai-writer-empty">暂无任务，输入指令开始</div>';
+                return;
+            }
+            const statusMap={pending:['等待执行','pending'],running:['生成中','running'],done:['已完成','done'],failed:['失败','failed']};
+            list.innerHTML=tasks.map(t=>{
+                const [label,cls]=statusMap[t.status]||[t.status,'pending'];
+                const time=new Date(t.createdAt).toLocaleString('zh-CN',{hour12:false});
+                const result=t.result?`<div class="agent-item-meta">《${escHtml(t.result.title)}》 · ${t.result.status==='published'?'已发布':'草稿'} · <a href="${escHtml(t.result.url)}" target="_blank">查看文章 ↗</a></div>`:'';
+                const err=t.error?`<div class="agent-item-error">${escHtml(t.error)}</div>`:'';
+                const actions=`
+                    <div class="agent-item-actions">
+                        ${t.result?`<a href="${escHtml(t.result.url)}" target="_blank">打开</a>`:''}
+                        ${(t.status==='failed'||t.status==='pending')?`<button class="btn btn-ghost" onclick="agentRetry('${t.id}')">重试</button>`:''}
+                        <button class="btn btn-ghost" onclick="agentDelete('${t.id}')">删除</button>
+                    </div>`;
+                return `<div class="agent-item">
+                    <div class="agent-item-head">
+                        <span class="agent-item-status ${cls}">${label}</span>
+                        <span class="agent-item-meta" style="margin:0">${t.source==='admin'?'后台':'评论'} · ${time}</span>
+                    </div>
+                    <div class="agent-item-instruction">${escHtml(t.instruction)}</div>
+                    ${result}${err}${actions}
+                </div>`;
+            }).join('');
+            const busy=tasks.some(t=>t.status==='pending'||t.status==='running');
+            if(agentPollTimer)clearTimeout(agentPollTimer);
+            if(busy)agentPollTimer=setTimeout(loadAgentTasks,5000);
+        }
+        function escHtml(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+        async function agentRetry(taskId){
+            const r=await fetch('/api/agent',{
+                method:'POST',
+                headers:{'Content-Type':'application/json','X-Admin-Key':adminKey},
+                body:JSON.stringify({action:'retry',taskId})
+            });
+            const d=await r.json();
+            if(d.status==='success'){showToast('已重新提交','success');loadAgentTasks()}
+            else showToast(d.message||'重试失败','error');
+        }
+        async function agentDelete(taskId){
+            const r=await fetch('/api/agent',{
+                method:'POST',
+                headers:{'Content-Type':'application/json','X-Admin-Key':adminKey},
+                body:JSON.stringify({action:'delete',taskId})
+            });
+            const d=await r.json();
+            if(d.status==='success'){showToast('已删除','success');loadAgentTasks()}
+            else showToast(d.message||'删除失败','error');
         }
         // 代码块复制（编辑器预览与 AI 写作结果共用）
         function copyCode(btn){
@@ -2424,7 +2609,7 @@
             document.querySelectorAll('.sidebar-item').forEach(el=>el.classList.toggle('active',el.dataset.tab===tab));
             document.querySelectorAll('.mobile-tab').forEach(el=>el.classList.toggle('active',el.dataset.tab===tab));
             ['articles','write','comments','images','tags','settings'].forEach(t=>document.getElementById('tab-'+t).style.display=t===tab?'block':'none');
-            if(tab!=='write')closeAiWriter();
+            if(tab!=='write'){closeAiWriter();closeAgentPanel()}
             if(tab==='articles')loadArticles();
             if(tab==='comments')loadComments();
             if(tab==='settings')loadSettings();
@@ -2535,6 +2720,14 @@
             document.getElementById('setWrMaxTokens').value=wr.maxTokens||'';
             const wrTemp=wr.temperature;
             document.getElementById('setWrTemperature').value=(wrTemp===undefined||wrTemp===null||wrTemp==='')?'':wrTemp;
+            const ag=s.agent||{};
+            document.getElementById('setAgEnabled').checked=ag.enabled===true;
+            document.getElementById('setAgKeywords').value=(ag.triggerKeywords||[]).join(',');
+            document.getElementById('setAgPublish').value=ag.publishStrategy||'draft';
+            document.getElementById('setAgMaxPerIp').value=ag.maxTasksPerIpPerDay||'';
+            document.getElementById('setAgDailyLimit').value=ag.dailyGlobalLimit||'';
+            document.getElementById('setAgMaxLen').value=ag.maxInstructionLength||'';
+            document.getElementById('setAgName').value=ag.commentName||'';
         }
         // 头像预览
         function renderSettingsAvatar(src){
@@ -2748,6 +2941,15 @@
                     keywords:document.getElementById('setWrKeywords').value.trim(),
                     maxTokens:parseInt(document.getElementById('setWrMaxTokens').value)||4096,
                     temperature:document.getElementById('setWrTemperature').value!==''?parseFloat(document.getElementById('setWrTemperature').value):0.7,
+                },
+                agent:{
+                    enabled:document.getElementById('setAgEnabled').checked,
+                    triggerKeywords:document.getElementById('setAgKeywords').value.split(',').map(s=>s.trim()).filter(Boolean),
+                    publishStrategy:document.getElementById('setAgPublish').value,
+                    maxTasksPerIpPerDay:parseInt(document.getElementById('setAgMaxPerIp').value)||3,
+                    dailyGlobalLimit:parseInt(document.getElementById('setAgDailyLimit').value)||20,
+                    maxInstructionLength:parseInt(document.getElementById('setAgMaxLen').value)||500,
+                    commentName:document.getElementById('setAgName').value.trim(),
                 },
             };
             const r=await apiFetch('action=settings',{method:'POST',body:JSON.stringify(body)});
