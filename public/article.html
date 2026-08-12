@@ -937,6 +937,12 @@
             font-weight: 600;
         }
 
+        /* AI Agent 反馈浮层 */
+        .comment-toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(16px);background:rgba(10,12,16,.92);border:1px solid rgba(79,195,247,.35);color:#fff;padding:11px 20px;border-radius:12px;font-size:13px;line-height:1.5;z-index:9999;opacity:0;pointer-events:none;transition:all .3s;box-shadow:0 10px 30px rgba(0,0,0,.45);max-width:86vw;text-align:center}
+        .comment-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+        .comment-toast.error{border-color:rgba(239,83,80,.5)}
+        .comment-toast a{color:var(--accent);text-decoration:none;font-weight:600}
+
         .comment-item-image {
             margin-top: 10px;
             max-width: 100%;
@@ -2429,23 +2435,77 @@
                 }
             },
 
-            // AI Agent：提交触发任务（@管理员 等触发词），由后端校验并受理
+            // AI Agent：提交触发任务（@管理员 等触发词），后端受理后自动生成并发布文章
             kickAgent(commentId, content) {
                 try {
                     fetch(`${this.apiBase}/api/agent`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ source: 'comment', postId: this.postId, commentId, instruction: content })
+                    }).then(r => r.json().catch(() => ({}))).then(d => {
+                        if (d && d.status === 'success') {
+                            this.showCommentToast('🤖 已收到任务，正在为你生成文章…');
+                            this.pollAgentDone(0);
+                        }
                     }).catch(() => {});
                     // 稍后刷新评论区，展示 AI Agent 的受理回复
-                    setTimeout(() => this.loadComments(), 2500);
+                    setTimeout(() => this.loadComments(), 2000);
                 } catch (e) {}
             },
 
-            // 评论内容渲染：转义后高亮 @提及（@名字 显示主题色）
+            // 轮询评论，等待 AI Agent 完成回复后弹出提示（最多约 10 分钟）
+            pollAgentDone(attempt) {
+                if (attempt > 150) return;
+                setTimeout(async () => {
+                    try {
+                        const res = await fetch(`${this.apiBase}/api/comments?postId=${encodeURIComponent(this.postId)}`);
+                        const data = await res.json();
+                        const comments = (data && Array.isArray(data.comments)) ? data.comments : [];
+                        const done = comments.find(c => this.isAgentDoneComment(c));
+                        if (done) {
+                            const m = String(done.content || '').match(/《([^》]+)》/);
+                            const title = m ? m[1] : '';
+                            const pathM = String(done.content || '').match(/(\/article\.html\?id=[\w\-]+)/);
+                            const url = pathM ? this.apiBase + pathM[1] : this.apiBase + '/article.html';
+                            this.showCommentToast(`✅ 已完成${title ? '《' + title + '》' : ''}，去看看吧 <a href="${url}" target="_blank">查看文章 ↗</a>`, { html: true });
+                            await this.loadComments();
+                            return;
+                        }
+                        this.pollAgentDone(attempt + 1);
+                    } catch (e) {
+                        this.pollAgentDone(attempt + 1);
+                    }
+                }, 4000);
+            },
+
+            // 判断是否为 AI Agent 的完成/失败回复
+            isAgentDoneComment(c) {
+                const content = String(c.content || '');
+                return /已为你(发布|生成)文章/.test(content) || /很抱歉，任务执行失败/.test(content);
+            },
+
+            // 底部浮层提示
+            showCommentToast(msg, opts) {
+                let el = document.getElementById('comment-toast');
+                if (!el) {
+                    el = document.createElement('div');
+                    el.id = 'comment-toast';
+                    el.className = 'comment-toast';
+                    document.body.appendChild(el);
+                }
+                if (opts && opts.html) el.innerHTML = msg;
+                else el.textContent = msg;
+                el.classList.add('show');
+                clearTimeout(this._toastTimer);
+                this._toastTimer = setTimeout(() => el.classList.remove('show'), 6000);
+            },
+
+            // 评论内容渲染：转义后高亮 @提及、文章链接可点击
             renderCommentContent(str) {
-                const text = this.esc(str);
-                return text.replace(/@([\u4e00-\u9fa5\w\-]{1,20})/g, '<span class="mention">@$1</span>');
+                let text = this.esc(str);
+                text = text.replace(/@([\u4e00-\u9fa5\w\-]{1,20})/g, '<span class="mention">@$1</span>');
+                text = text.replace(/(\/article\.html\?id=[\w\-]+)/g, '<a href="$1" target="_blank" class="mention">$1</a>');
+                return text;
             },
 
             // HTML 转义
