@@ -383,7 +383,14 @@
         .comment-manage-actions{display:flex;justify-content:flex-end;gap:6px}
 
         /* 博客设置（瀑布流布局，列数自适应） */
-        .settings-panel{columns:auto;column-width:340px;column-gap:20px;max-width:100%}
+        .settings-panel{max-width:100%}
+        /* 设置分类导航 */
+        .settings-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;border-bottom:1px solid var(--border);padding-bottom:12px}
+        .settings-tab{padding:7px 18px;border:1px solid var(--border);border-radius:20px;background:transparent;color:var(--text-muted);font-size:13px;cursor:pointer;transition:all .15s;font-family:inherit}
+        .settings-tab:hover{border-color:var(--accent);color:var(--accent)}
+        .settings-tab.active{background:var(--accent);border-color:var(--accent);color:#000;font-weight:600}
+        .settings-section{columns:auto;column-width:340px;column-gap:20px;display:none}
+        .settings-section.active{display:block}
         .settings-group{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:18px;min-width:0;break-inside:avoid;margin-bottom:20px;display:inline-block;width:100%}
         .settings-group h3{font-size:14px;color:var(--accent);margin-bottom:16px;font-weight:600}
         .settings-field{margin-bottom:14px}
@@ -736,7 +743,13 @@
                 <div id="tab-settings" style="display:none">
                     <div class="page-bar"><h2>博客设置</h2><div class="page-bar-actions"><button class="btn btn-ghost" onclick="loadSettings()">重置</button></div></div>
                     <div class="settings-panel">
+                        <div class="settings-tabs">
+                            <button class="settings-tab active" data-stab="front" onclick="switchSettingsTab('front')">前台设置</button>
+                            <button class="settings-tab" data-stab="ai" onclick="switchSettingsTab('ai')">AI 设置</button>
+                            <button class="settings-tab" data-stab="backend" onclick="switchSettingsTab('backend')">后台设置</button>
+                        </div>
 
+                        <div class="settings-section active" data-section="front">
                         <!-- 1. 站点名称与标题 -->
                         <div class="settings-group">
                             <h3>站点名称与标题</h3>
@@ -816,7 +829,9 @@
                             </div>
                             <div class="settings-tip">首页导航栏将显示这些标签用于文章筛选，默认显示「全部」</div>
                         </div>
+                        </div>
 
+                        <div class="settings-section" data-section="ai">
                         <!-- 6. AI 助手 -->
                         <div class="settings-group">
                             <h3>AI 助手（聊天机器人）</h3>
@@ -922,7 +937,9 @@
                             </div>
                             <div class="settings-tip">后台「写文章 → 🤖 AI Agent」可直接下达指令并生成发布；评论区「@触发词 + 指令」会自动受理并回评，AI 在后台生成文章。生成质量复用「写作 AI / AI 助手」的模型配置。</div>
                         </div>
+                        </div>
 
+                        <div class="settings-section active" data-section="front">
                         <!-- 7. 关于信息 -->
                         <div class="settings-group">
                             <h3>关于信息（我的视图底部）</h3>
@@ -939,7 +956,9 @@
                                 <input type="text" id="setAboutUpdated" placeholder="输入更新日期">
                             </div>
                         </div>
+                        </div>
 
+                        <div class="settings-section" data-section="backend">
                         <!-- 8. 后台密码 -->
                         <div class="settings-group">
                             <h3>后台密码</h3>
@@ -959,6 +978,7 @@
                             <div class="settings-actions" style="margin-top:12px">
                                 <button class="btn btn-ghost" onclick="changePassword()">🔑 修改密码</button>
                             </div>
+                        </div>
                         </div>
 
                         <div class="settings-actions">
@@ -2679,6 +2699,11 @@
         }
 
         // ===== 博客设置 =====
+        // 设置分类切换（前台 / AI / 后台）
+        function switchSettingsTab(tab){
+            document.querySelectorAll('.settings-tab').forEach(b=>b.classList.toggle('active',b.dataset.stab===tab));
+            document.querySelectorAll('.settings-section').forEach(s=>s.classList.toggle('active',s.dataset.section===tab));
+        }
         async function loadSettings(){
             const r=await apiFetch('action=settings');
             const s=r.status==='success'&&r.data?r.data:{};
