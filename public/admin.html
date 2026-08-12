@@ -852,6 +852,23 @@
                             </div>
                             <div class="settings-tip">首页导航栏将显示这些标签用于文章筛选，默认显示「全部」</div>
                         </div>
+
+                        <!-- 7. 关于信息 -->
+                        <div class="settings-group">
+                            <h3><span class="settings-title">关于信息（我的视图底部）</span><span class="settings-grip" title="拖动排序">⠿</span><span class="settings-chevron" title="展开/收起">▾</span></h3>
+                            <div class="settings-field">
+                                <label>版本</label>
+                                <input type="text" id="setAboutVersion" placeholder="输入版本号，如 v1.0">
+                            </div>
+                            <div class="settings-field">
+                                <label>技术栈</label>
+                                <input type="text" id="setAboutTech" placeholder="输入技术栈描述">
+                            </div>
+                            <div class="settings-field">
+                                <label>最后更新</label>
+                                <input type="text" id="setAboutUpdated" placeholder="输入更新日期">
+                            </div>
+                        </div>
                         </div>
 
                         <div class="settings-section" data-section="ai">
@@ -993,25 +1010,6 @@
                         </div>
                         </div>
 
-                        <div class="settings-section active" data-section="front">
-                        <!-- 7. 关于信息 -->
-                        <div class="settings-group">
-                            <h3><span class="settings-title">关于信息（我的视图底部）</span><span class="settings-grip" title="拖动排序">⠿</span><span class="settings-chevron" title="展开/收起">▾</span></h3>
-                            <div class="settings-field">
-                                <label>版本</label>
-                                <input type="text" id="setAboutVersion" placeholder="输入版本号，如 v1.0">
-                            </div>
-                            <div class="settings-field">
-                                <label>技术栈</label>
-                                <input type="text" id="setAboutTech" placeholder="输入技术栈描述">
-                            </div>
-                            <div class="settings-field">
-                                <label>最后更新</label>
-                                <input type="text" id="setAboutUpdated" placeholder="输入更新日期">
-                            </div>
-                        </div>
-                        </div>
-
                         <div class="settings-section" data-section="backend">
                         <!-- 8. 后台密码 -->
                         <div class="settings-group">
@@ -1039,8 +1037,6 @@
                             <button class="btn btn-primary" onclick="saveSettings()">💾 保存设置</button>
                         </div>
                     </div>
-                </div>
-            </div>
                 </div>
             </div>
         </div>
