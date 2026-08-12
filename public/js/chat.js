@@ -523,6 +523,11 @@ const AIChat = {
         const lastMsg = this.messages[this.messages.length - 1];
         if (!opts.force && lastMsg && lastMsg.role === 'user' && lastMsg.content === content) return;
 
+        // @管理员/@博主 是生成文章指令，保留原文；其余消息去掉 @ai/@助手 前缀后直接提问
+        const isArticleCmd = /@管理员|@博主/.test(content);
+        const stripped = content.replace(/^\s*@(?:ai|助手)[：:，,、\s]*/i, '');
+        const msgContent = isArticleCmd ? content : (stripped || '请介绍一下这篇文章');
+
         if (typeof text !== 'string' && input) {
             input.value = '';
             input.style.height = 'auto';
@@ -532,16 +537,16 @@ const AIChat = {
         }
 
         this.openWindow();
-        this.addMessage('user', content);
-        this.messages.push({ role: 'user', content });
+        this.addMessage('user', msgContent);
+        this.messages.push({ role: 'user', content: msgContent });
         this.updateSessionName();
         this.saveSessions();
 
         this.isWaiting = true;
         this.updateSendButton();
 
-        // AI Agent 指令：@ai 文章问答 / @管理员 生成文章（走任务流程，不走普通对话）
-        if (await this.handleAgentCommand(content)) {
+        // AI Agent 指令：@管理员 生成文章（走任务流程，不走普通对话）
+        if (await this.handleAgentCommand(msgContent)) {
             this.isWaiting = false;
             this.abortController = null;
             this.updateSendButton();
@@ -601,38 +606,25 @@ const AIChat = {
         this.updateSendButton();
     },
 
-    // AI Agent 指令：@ai 文章问答 / @管理员 生成文章（需后台密钥）
+    // AI Agent 指令：@管理员 / @博主 生成文章（需后台密钥）
     async handleAgentCommand(content) {
-        const isArticle = /@管理员|@博主/.test(content);
-        const isQa = /@ai|@助手/.test(content);
-        if (!isArticle && !isQa) return false;
+        if (!/@管理员|@博主/.test(content)) return false;
 
-        let body = { source: 'chat', type: 'article', instruction: content };
-        let progressText = '🤖 已提交任务，正在生成文章…';
-        if (isArticle) {
-            const key = window.prompt('生成文章需要输入后台登录密钥：');
-            if (key === null || !key.trim()) {
-                this.addMessage('assistant', '已取消生成（需要后台密钥）');
-                this.messages.push({ role: 'assistant', content: '已取消生成（需要后台密钥）' });
-                this.saveSessions();
-                return true;
-            }
-            body.adminKey = key.trim();
-        } else {
-            const articleId = window.__currentArticleId || '';
-            if (!articleId) return false; // 无文章上下文：交给普通 AI 对话
-            body.type = 'qa';
-            body.articleId = articleId;
-            progressText = '🤖 正在回答你关于本文章的问题…';
+        const key = window.prompt('生成文章需要输入后台登录密钥：');
+        if (key === null || !key.trim()) {
+            this.addMessage('assistant', '已取消生成（需要后台密钥）');
+            this.messages.push({ role: 'assistant', content: '已取消生成（需要后台密钥）' });
+            this.saveSessions();
+            return true;
         }
 
         const streamEl = this.createStreamingMessage();
-        this.updateStreamingMessage(streamEl, progressText);
+        this.updateStreamingMessage(streamEl, '🤖 已提交任务，正在生成文章…');
         try {
             const res = await fetch('/api/agent', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body)
+                body: JSON.stringify({ source: 'chat', type: 'article', instruction: content, adminKey: key.trim() })
             });
             const data = await res.json().catch(() => ({}));
             if (!data || data.status !== 'success' || !data.data) {
@@ -643,8 +635,6 @@ const AIChat = {
             let finalText;
             if (result.status === 'failed') {
                 finalText = '🤖 任务失败：' + (result.error || '未知错误');
-            } else if (result.type === 'qa') {
-                finalText = '🤖 AI：' + ((result.result && result.result.answer) || '（无回复）');
             } else {
                 const r = result.result || {};
                 finalText = `✅ 已完成${r.title ? '《' + r.title + '》' : ''}：${r.url || '/article.html'}`;
@@ -760,7 +750,12 @@ const AIChat = {
     buildMessages() {
         const recent = this.messages.slice(-(this.MAX_HISTORY_ROUNDS * 2));
         const history = recent.map(m => ({ role: m.role, content: m.content }));
-        return [{ role: 'system', content: this.systemPrompt }, ...history];
+        // 文章页：注入当前文章内容，直接提问即可结合文章回答
+        const ctx = (window.__currentArticleContext || '').slice(0, 8000);
+        const system = ctx
+            ? `${this.systemPrompt}\n\n用户正在阅读下面这篇博客文章，回答时请结合文章内容；若问题与文章无关，正常回答即可。\n【当前文章内容】\n${ctx}`
+            : this.systemPrompt;
+        return [{ role: 'system', content: system }, ...history];
     },
 
     // 创建流式消息容器
