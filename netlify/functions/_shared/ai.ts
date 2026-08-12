@@ -1,4 +1,5 @@
 import { getBlobStore } from "./blob"
+import { resolveModelApiUrl } from "./models"
 
 export interface LlmConfig {
   apiUrl: string
@@ -23,12 +24,21 @@ export async function readAiConfigs(): Promise<{ writingAi: any; chatAi: any }> 
   }
 }
 
-/** 解析实际使用的 LLM 配置：写作 AI 优先，缺失字段回退聊天 AI */
+/** 解析实际使用的 LLM 配置：写作 AI 优先，缺失字段回退聊天 AI；接口地址优先从模型库解析 */
 export async function resolveLlmConfig(): Promise<LlmConfig> {
   const { writingAi, chatAi } = await readAiConfigs()
-  const apiUrl = String(writingAi.apiUrl || chatAi.apiUrl || "").trim()
-  const apiKey = String(writingAi.apiKey || chatAi.apiKey || "").trim()
-  const model = String(writingAi.model || chatAi.model || "").trim()
+  // 写作 AI 若完全未配置（无 Key / 无接口地址 / 无 厂商+模型）则整体回退聊天配置
+  const wrKey = String(writingAi.apiKey || "").trim()
+  const wrModel = String(writingAi.model || "").trim()
+  const wrUrl = String(writingAi.apiUrl || "").trim()
+  const wrProvider = String(writingAi.provider || "").trim()
+  const writingConfigured = !!(wrKey || wrUrl || (wrProvider && wrModel))
+  const src = writingConfigured ? writingAi : chatAi
+  const provider = String(src.provider || "").trim()
+  const model = String(src.model || chatAi.model || "").trim()
+  const apiKey = String(src.apiKey || chatAi.apiKey || "").trim()
+  const storedUrl = String(src.apiUrl || chatAi.apiUrl || "").trim()
+  const apiUrl = resolveModelApiUrl(provider, model, storedUrl)
   const maxTokens = Number(writingAi.maxTokens) > 0 ? Number(writingAi.maxTokens) : Number(chatAi.maxTokens) > 0 ? Number(chatAi.maxTokens) : 4096
   const temperature = typeof writingAi.temperature === "number" && !Number.isNaN(writingAi.temperature)
     ? writingAi.temperature
@@ -43,9 +53,9 @@ export async function resolveLlmConfig(): Promise<LlmConfig> {
   }
 }
 
-/** 拼接写作系统提示词（人设 + 关键词约束），与 ai.ts 保持一致 */
-export function buildWritingSystemPrompt(config: LlmConfig, keywords?: string): string {
-  let system = (config.systemPrompt || DEFAULT_WRITING_PROMPT).trim()
+/** 拼接写作系统提示词（基础人设 + 关键词约束），baseSystem 可覆盖（Agent 独立人设用） */
+export function buildWritingSystemPrompt(config: LlmConfig, keywords?: string, baseSystem?: string): string {
+  let system = String(baseSystem || config.systemPrompt || DEFAULT_WRITING_PROMPT).trim()
   system += "\n\n请严格遵循用户要求的主题、字数、风格与格式，内容要充实完整，不要提前草草结束。"
   const kw = String(keywords || "").split(",").map((s: string) => s.trim()).filter(Boolean)
   if (kw.length) {

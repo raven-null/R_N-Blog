@@ -407,6 +407,21 @@
         .required-mark{color:var(--danger);font-weight:700;margin-left:2px}
         .settings-field input,.settings-field textarea{width:100%;padding:10px 14px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:13px;font-family:inherit;resize:vertical}
         .settings-field input:focus,.settings-field textarea:focus{outline:none;border-color:var(--accent)}
+        /* 模型选择 / 测试连接 / 高级设置 */
+        .settings-model-row{display:flex;gap:8px}
+        .settings-model-row select{flex:1;min-width:0;padding:10px 12px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:13px;cursor:pointer;font-family:inherit}
+        .settings-model-row select:focus{outline:none;border-color:var(--accent)}
+        .settings-key-row{display:flex;gap:8px}
+        .settings-key-row input{flex:1}
+        .settings-key-row .btn{flex-shrink:0;height:40px}
+        .settings-test-result{font-size:11px;margin-top:6px;min-height:16px}
+        .settings-test-result.ok{color:var(--success)}
+        .settings-test-result.error{color:var(--danger)}
+        .settings-advanced{border-top:1px dashed var(--border);margin-top:4px;padding-top:6px}
+        .settings-advanced-toggle{font-size:12px;color:var(--text-muted);cursor:pointer;display:flex;align-items:center;gap:4px;padding:4px 0;user-select:none}
+        .settings-advanced-toggle:hover{color:var(--accent)}
+        .settings-advanced-toggle span{display:inline-block;transition:transform .2s}
+        .settings-advanced-body{margin-top:10px}
         .settings-actions{display:flex;justify-content:flex-end;padding-top:4px;clear:both;width:100%}
         .settings-actions .btn{padding:10px 32px;font-size:14px}
         /* 开关 */
@@ -847,30 +862,44 @@
                                 <div class="settings-toggle-item"><span>启用 AI 助手</span><label class="switch"><input type="checkbox" id="setAiEnabled" checked><span class="slider"></span></label></div>
                             </div>
                             <div class="settings-field">
-                                <label>API 接口地址</label>
-                                <input type="text" id="setAiApiUrl" placeholder="如：https://open.bigmodel.cn/api/paas/v4/chat/completions">
+                                <label>厂商 / 模型</label>
+                                <div class="settings-model-row">
+                                    <select id="setAiProvider" onchange="fillModelOptions('Ai','')"></select>
+                                    <select id="setAiModel"></select>
+                                </div>
+                            </div>
+                            <div class="settings-field" id="AiCustomRow" style="display:none">
+                                <label>自定义接口地址</label>
+                                <input type="text" id="setAiCustomUrl" placeholder="https://.../chat/completions">
+                                <label style="margin-top:10px">自定义模型名</label>
+                                <input type="text" id="setAiCustomModel" placeholder="模型名称，如 glm-4-flash">
                             </div>
                             <div class="settings-field">
                                 <label>API Key</label>
-                                <input type="password" id="setAiApiKey" placeholder="输入 API Key" autocomplete="off">
+                                <div class="settings-key-row">
+                                    <input type="password" id="setAiApiKey" placeholder="粘贴 API Key 即可使用" autocomplete="off">
+                                    <button type="button" class="btn btn-ghost btn-sm" onclick="testAiConnection('Ai',this)">测试连接</button>
+                                </div>
+                                <div class="settings-test-result" id="AiTestResult"></div>
                             </div>
-                            <div class="settings-field">
-                                <label>模型名称</label>
-                                <input type="text" id="setAiModel" placeholder="如：glm-4-flash">
+                            <div class="settings-advanced">
+                                <div class="settings-advanced-toggle" onclick="toggleAdvanced('Ai')">高级设置 <span>▾</span></div>
+                                <div class="settings-advanced-body" id="AiAdvancedBody" style="display:none">
+                                    <div class="settings-field">
+                                        <label>系统提示词（可选）</label>
+                                        <textarea id="setAiSystemPrompt" rows="3" placeholder="设置 AI 的角色与回复风格"></textarea>
+                                    </div>
+                                    <div class="settings-field">
+                                        <label>最大输出 Token</label>
+                                        <input type="number" id="setAiMaxTokens" min="1" max="8192" placeholder="2048">
+                                    </div>
+                                    <div class="settings-field">
+                                        <label>温度（0 - 2，越大越随机）</label>
+                                        <input type="number" id="setAiTemperature" min="0" max="2" step="0.1" placeholder="0.7">
+                                    </div>
+                                </div>
                             </div>
-                            <div class="settings-field">
-                                <label>系统提示词（可选）</label>
-                                <textarea id="setAiSystemPrompt" rows="3" placeholder="设置 AI 的角色与回复风格"></textarea>
-                            </div>
-                            <div class="settings-field">
-                                <label>最大输出 Token</label>
-                                <input type="number" id="setAiMaxTokens" min="1" max="8192" placeholder="2048">
-                            </div>
-                            <div class="settings-field">
-                                <label>温度（0 - 2，越大越随机）</label>
-                                <input type="number" id="setAiTemperature" min="0" max="2" step="0.1" placeholder="0.7">
-                            </div>
-                            <div class="settings-tip">填写模型信息和 API 接口即可对接任意兼容 OpenAI 格式的大模型；留空则使用内置默认配置。</div>
+                            <div class="settings-tip">选择厂商与模型、粘贴 API Key 即可使用，无需手填接口地址与模型名。</div>
                         </div>
 
                         <!-- 6.5 写作 AI -->
@@ -880,32 +909,46 @@
                                 <div class="settings-toggle-item"><span>启用写作 AI</span><label class="switch"><input type="checkbox" id="setWrEnabled" checked><span class="slider"></span></label></div>
                             </div>
                             <div class="settings-field">
-                                <label>API 接口地址（留空则复用「AI 助手」配置）</label>
-                                <input type="text" id="setWrApiUrl" placeholder="写作用大模型接口，可与聊天不同">
+                                <label>厂商 / 模型（留空则复用「AI 助手」配置）</label>
+                                <div class="settings-model-row">
+                                    <select id="setWrProvider" onchange="fillModelOptions('Wr','')"></select>
+                                    <select id="setWrModel"></select>
+                                </div>
+                            </div>
+                            <div class="settings-field" id="WrCustomRow" style="display:none">
+                                <label>自定义接口地址</label>
+                                <input type="text" id="setWrCustomUrl" placeholder="https://.../chat/completions">
+                                <label style="margin-top:10px">自定义模型名</label>
+                                <input type="text" id="setWrCustomModel" placeholder="模型名称，如 glm-4-flash">
                             </div>
                             <div class="settings-field">
                                 <label>API Key（留空则复用「AI 助手」配置）</label>
-                                <input type="password" id="setWrApiKey" placeholder="输入写作 AI 的 API Key" autocomplete="off">
+                                <div class="settings-key-row">
+                                    <input type="password" id="setWrApiKey" placeholder="粘贴写作 AI 的 API Key" autocomplete="off">
+                                    <button type="button" class="btn btn-ghost btn-sm" onclick="testAiConnection('Wr',this)">测试连接</button>
+                                </div>
+                                <div class="settings-test-result" id="WrTestResult"></div>
                             </div>
-                            <div class="settings-field">
-                                <label>模型名称（留空则复用「AI 助手」配置）</label>
-                                <input type="text" id="setWrModel" placeholder="如：glm-4-flash / deepseek-chat">
-                            </div>
-                            <div class="settings-field">
-                                <label>写作系统提示词（可选）</label>
-                                <textarea id="setWrSystemPrompt" rows="3" placeholder="写作助手人设，默认内置；会与「AI 助手」的提示词完全独立"></textarea>
-                            </div>
-                            <div class="settings-field">
-                                <label>写作关键词（逗号分隔，要求成稿自然融入）</label>
-                                <input type="text" id="setWrKeywords" placeholder="如：技术, AI, Web 开发">
-                            </div>
-                            <div class="settings-field">
-                                <label>最大输出 Token</label>
-                                <input type="number" id="setWrMaxTokens" min="1" max="16384" placeholder="4096">
-                            </div>
-                            <div class="settings-field">
-                                <label>温度（0 - 2，越大越随机）</label>
-                                <input type="number" id="setWrTemperature" min="0" max="2" step="0.1" placeholder="0.7">
+                            <div class="settings-advanced">
+                                <div class="settings-advanced-toggle" onclick="toggleAdvanced('Wr')">高级设置 <span>▾</span></div>
+                                <div class="settings-advanced-body" id="WrAdvancedBody" style="display:none">
+                                    <div class="settings-field">
+                                        <label>写作系统提示词（可选）</label>
+                                        <textarea id="setWrSystemPrompt" rows="3" placeholder="写作助手人设，默认内置；会与「AI 助手」的提示词完全独立"></textarea>
+                                    </div>
+                                    <div class="settings-field">
+                                        <label>写作关键词（逗号分隔，要求成稿自然融入）</label>
+                                        <input type="text" id="setWrKeywords" placeholder="如：技术, AI, Web 开发">
+                                    </div>
+                                    <div class="settings-field">
+                                        <label>最大输出 Token</label>
+                                        <input type="number" id="setWrMaxTokens" min="1" max="16384" placeholder="4096">
+                                    </div>
+                                    <div class="settings-field">
+                                        <label>温度（0 - 2，越大越随机）</label>
+                                        <input type="number" id="setWrTemperature" min="0" max="2" step="0.1" placeholder="0.7">
+                                    </div>
+                                </div>
                             </div>
                             <div class="settings-tip">写作 AI 与前台聊天 AI 分开配置，写文章可换更强的模型与独立的关键词/人设；未填 API 信息时自动复用「AI 助手」配置。</div>
                         </div>
@@ -915,6 +958,13 @@
                             <h3><span class="settings-title">AI Agent（自动写作发布）</span><span class="settings-grip" title="拖动排序">⠿</span><span class="settings-chevron" title="展开/收起">▾</span></h3>
                             <div class="settings-toggle-list" style="margin-bottom:12px">
                                 <div class="settings-toggle-item"><span>启用 AI Agent（评论区 @触发自动写文章）</span><label class="switch"><input type="checkbox" id="setAgEnabled" checked><span class="slider"></span></label></div>
+                            </div>
+                            <div class="settings-field">
+                                <label><input type="checkbox" id="setAgSharePrompt" checked onchange="toggleAgentPrompt()" style="width:auto"> 使用与「写作 AI」相同的提示词</label>
+                            </div>
+                            <div class="settings-field" id="AgPromptRow" style="display:none">
+                                <label>AI Agent 独立系统提示词</label>
+                                <textarea id="setAgSystemPrompt" rows="3" placeholder="Agent 生成文章使用的人设，默认与写作 AI 一致"></textarea>
                             </div>
                             <div class="settings-field">
                                 <label>触发词（逗号分隔）</label>
@@ -2707,6 +2757,86 @@
         }
 
         // ===== 博客设置 =====
+        // ===== AI 模型库选择（厂商 → 模型 → Key） =====
+        let modelCatalog=[];
+        async function loadModelCatalog(){
+            if(modelCatalog.length)return modelCatalog;
+            try{
+                const r=await apiFetch('action=models');
+                if(r.status==='success'&&Array.isArray(r.data))modelCatalog=r.data;
+            }catch(e){}
+            return modelCatalog;
+        }
+        // prefix: 'Ai' / 'Wr'
+        function fillModelOptions(prefix,curModel){
+            const providerSel=document.getElementById('set'+prefix+'Provider');
+            const modelSel=document.getElementById('set'+prefix+'Model');
+            const customRow=document.getElementById(prefix+'CustomRow');
+            const isCustom=providerSel.value==='custom';
+            if(modelSel)modelSel.style.display=isCustom?'none':'';
+            if(customRow)customRow.style.display=isCustom?'':'none';
+            if(!modelSel)return;
+            modelSel.innerHTML='';
+            if(isCustom)return;
+            const p=modelCatalog.find(x=>x.id===providerSel.value);
+            if(p){
+                p.models.forEach(m=>{
+                    const o=document.createElement('option');
+                    o.value=m.id;
+                    o.textContent=(m.label||m.id)+(m.tags&&m.tags.length?'（'+m.tags.join('、')+'）':'');
+                    modelSel.appendChild(o);
+                });
+            }
+            if(curModel)modelSel.value=curModel;
+        }
+        async function renderSettingsModels(prefix,provider,model,customUrl,customModel){
+            const cat=await loadModelCatalog();
+            const providerSel=document.getElementById('set'+prefix+'Provider');
+            providerSel.innerHTML='';
+            cat.forEach(p=>{
+                const o=document.createElement('option');o.value=p.id;o.textContent=p.name;providerSel.appendChild(o);
+            });
+            const co=document.createElement('option');co.value='custom';co.textContent='自定义';providerSel.appendChild(co);
+            providerSel.value=cat.some(p=>p.id===provider)?provider:'custom';
+            if(providerSel.value==='custom'){
+                if(document.getElementById('set'+prefix+'CustomUrl'))document.getElementById('set'+prefix+'CustomUrl').value=customUrl||'';
+                if(document.getElementById('set'+prefix+'CustomModel'))document.getElementById('set'+prefix+'CustomModel').value=customModel||'';
+            }
+            fillModelOptions(prefix,model);
+        }
+        function toggleAdvanced(prefix){
+            const body=document.getElementById(prefix+'AdvancedBody');
+            const adv=body?body.closest('.settings-advanced'):null;
+            const arrow=adv?adv.querySelector('.settings-advanced-toggle span'):null;
+            const show=body.style.display!=='block';
+            body.style.display=show?'block':'none';
+            if(arrow)arrow.style.transform=show?'rotate(180deg)':'';
+        }
+        function toggleAgentPrompt(){
+            const share=document.getElementById('setAgSharePrompt');
+            const row=document.getElementById('AgPromptRow');
+            if(row)row.style.display=share&&share.checked?'none':'';
+        }
+        async function testAiConnection(prefix,btn){
+            const provider=document.getElementById('set'+prefix+'Provider').value;
+            const isCustom=provider==='custom';
+            const model=isCustom?document.getElementById('set'+prefix+'CustomModel').value.trim():document.getElementById('set'+prefix+'Model').value;
+            const customUrl=isCustom?document.getElementById('set'+prefix+'CustomUrl').value.trim():'';
+            const apiKey=document.getElementById('set'+prefix+'ApiKey').value.trim();
+            const resultEl=document.getElementById(prefix+'TestResult');
+            if(!apiKey){resultEl.textContent='请先填写 API Key';resultEl.className='settings-test-result error';return}
+            if(!model){resultEl.textContent='请选择 / 填写模型';resultEl.className='settings-test-result error';return}
+            btn.disabled=true;
+            resultEl.textContent='测试中…';resultEl.className='settings-test-result';
+            try{
+                const r=await apiFetch('action=test-ai',{method:'POST',body:JSON.stringify({provider,model,apiKey,apiUrl:customUrl})});
+                if(r.status==='success'){resultEl.textContent='✓ 连接成功';resultEl.className='settings-test-result ok'}
+                else{resultEl.textContent='✗ '+(r.message||'连接失败');resultEl.className='settings-test-result error'}
+            }catch(e){
+                resultEl.textContent='✗ 请求失败';resultEl.className='settings-test-result error';
+            }finally{btn.disabled=false}
+        }
+
         // 设置分类切换（前台 / AI / 后台）
         function switchSettingsTab(tab){
             document.querySelectorAll('.settings-tab').forEach(b=>b.classList.toggle('active',b.dataset.stab===tab));
@@ -2737,25 +2867,26 @@
             document.getElementById('setAboutUpdated').value=s.about?s.about.updated||'':'';
             const ai=s.ai||{};
             document.getElementById('setAiEnabled').checked=ai.enabled!==false;
-            document.getElementById('setAiApiUrl').value=ai.apiUrl||'';
             document.getElementById('setAiApiKey').value=ai.apiKey||'';
-            document.getElementById('setAiModel').value=ai.model||'';
             document.getElementById('setAiSystemPrompt').value=ai.systemPrompt||'';
             document.getElementById('setAiMaxTokens').value=ai.maxTokens||'';
             const aiTemp=ai.temperature;
             document.getElementById('setAiTemperature').value=(aiTemp===undefined||aiTemp===null||aiTemp==='')?'':aiTemp;
+            renderSettingsModels('Ai',ai.provider,ai.model,ai.apiUrl,ai.model);
             const wr=s.writingAi||{};
             document.getElementById('setWrEnabled').checked=wr.enabled!==false;
-            document.getElementById('setWrApiUrl').value=wr.apiUrl||'';
             document.getElementById('setWrApiKey').value=wr.apiKey||'';
-            document.getElementById('setWrModel').value=wr.model||'';
             document.getElementById('setWrSystemPrompt').value=wr.systemPrompt||'';
             document.getElementById('setWrKeywords').value=wr.keywords||'';
             document.getElementById('setWrMaxTokens').value=wr.maxTokens||'';
             const wrTemp=wr.temperature;
             document.getElementById('setWrTemperature').value=(wrTemp===undefined||wrTemp===null||wrTemp==='')?'':wrTemp;
+            renderSettingsModels('Wr',wr.provider,wr.model,wr.apiUrl,wr.model);
             const ag=s.agent||{};
             document.getElementById('setAgEnabled').checked=ag.enabled!==false;
+            document.getElementById('setAgSharePrompt').checked=ag.shareWritingPrompt!==false;
+            document.getElementById('setAgSystemPrompt').value=ag.systemPrompt||'';
+            toggleAgentPrompt();
             document.getElementById('setAgKeywords').value=(ag.triggerKeywords||[]).join(',');
             document.getElementById('setAgPublish').value=ag.publishStrategy||'draft';
             document.getElementById('setAgMaxPerIp').value=ag.maxTasksPerIpPerDay||'';
@@ -2959,18 +3090,20 @@
                 },
                 ai:{
                     enabled:document.getElementById('setAiEnabled').checked,
-                    apiUrl:document.getElementById('setAiApiUrl').value.trim(),
+                    provider:document.getElementById('setAiProvider').value,
+                    apiUrl:document.getElementById('setAiProvider').value==='custom'?document.getElementById('setAiCustomUrl').value.trim():'',
                     apiKey:document.getElementById('setAiApiKey').value.trim(),
-                    model:document.getElementById('setAiModel').value.trim(),
+                    model:document.getElementById('setAiProvider').value==='custom'?document.getElementById('setAiCustomModel').value.trim():document.getElementById('setAiModel').value,
                     systemPrompt:document.getElementById('setAiSystemPrompt').value.trim(),
                     maxTokens:parseInt(document.getElementById('setAiMaxTokens').value)||2048,
                     temperature:document.getElementById('setAiTemperature').value!==''?parseFloat(document.getElementById('setAiTemperature').value):0.7,
                 },
                 writingAi:{
                     enabled:document.getElementById('setWrEnabled').checked,
-                    apiUrl:document.getElementById('setWrApiUrl').value.trim(),
+                    provider:document.getElementById('setWrProvider').value,
+                    apiUrl:document.getElementById('setWrProvider').value==='custom'?document.getElementById('setWrCustomUrl').value.trim():'',
                     apiKey:document.getElementById('setWrApiKey').value.trim(),
-                    model:document.getElementById('setWrModel').value.trim(),
+                    model:document.getElementById('setWrProvider').value==='custom'?document.getElementById('setWrCustomModel').value.trim():document.getElementById('setWrModel').value,
                     systemPrompt:document.getElementById('setWrSystemPrompt').value.trim(),
                     keywords:document.getElementById('setWrKeywords').value.trim(),
                     maxTokens:parseInt(document.getElementById('setWrMaxTokens').value)||4096,
@@ -2978,6 +3111,8 @@
                 },
                 agent:{
                     enabled:document.getElementById('setAgEnabled').checked,
+                    shareWritingPrompt:document.getElementById('setAgSharePrompt').checked,
+                    systemPrompt:document.getElementById('setAgSystemPrompt').value.trim(),
                     triggerKeywords:document.getElementById('setAgKeywords').value.split(',').map(s=>s.trim()).filter(Boolean),
                     publishStrategy:document.getElementById('setAgPublish').value,
                     maxTasksPerIpPerDay:parseInt(document.getElementById('setAgMaxPerIp').value)||3,

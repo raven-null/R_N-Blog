@@ -29,6 +29,8 @@ export interface AgentSettings {
   dailyGlobalLimit: number
   maxInstructionLength: number
   commentName: string
+  shareWritingPrompt: boolean
+  systemPrompt: string
 }
 
 export const DEFAULT_AGENT_SETTINGS: AgentSettings = {
@@ -39,6 +41,8 @@ export const DEFAULT_AGENT_SETTINGS: AgentSettings = {
   dailyGlobalLimit: 20,
   maxInstructionLength: 500,
   commentName: "🤖 AI Agent",
+  shareWritingPrompt: true,
+  systemPrompt: "",
 }
 
 export async function getAgentSettings(): Promise<AgentSettings> {
@@ -58,6 +62,8 @@ export async function getAgentSettings(): Promise<AgentSettings> {
       dailyGlobalLimit: Number(a.dailyGlobalLimit) > 0 ? Number(a.dailyGlobalLimit) : DEFAULT_AGENT_SETTINGS.dailyGlobalLimit,
       maxInstructionLength: Number(a.maxInstructionLength) > 0 ? Number(a.maxInstructionLength) : DEFAULT_AGENT_SETTINGS.maxInstructionLength,
       commentName: String(a.commentName || DEFAULT_AGENT_SETTINGS.commentName).slice(0, 32),
+      shareWritingPrompt: a.shareWritingPrompt !== false,
+      systemPrompt: String(a.systemPrompt || "").trim(),
     }
   } catch {
     return { ...DEFAULT_AGENT_SETTINGS }

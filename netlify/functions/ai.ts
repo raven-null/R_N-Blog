@@ -1,5 +1,6 @@
 import { json, noContent, badRequest } from "./_shared/cors"
 import { getBlobStore } from "./_shared/blob"
+import { resolveLlmConfig } from "./_shared/ai"
 
 const DEFAULT_WRITING_PROMPT =
   "你是一名资深的个人博客写作助手。你的写作风格：中文流畅、结构清晰、善用小标题与列表、技术类内容会给出可运行的示例代码。请严格按用户要求输出 Markdown 格式，不要输出与正文无关的客套话。涉及事实时如实说明，不确定的内容标注\"（待核实）\"，不编造数据。"
@@ -111,12 +112,13 @@ export default async (req: Request) => {
     return badRequest("写作 AI 已在「博客设置 → 写作 AI」中关闭", req)
   }
 
-  // 写作 AI 优先，缺失字段回退聊天 AI 配置
-  const apiUrl = String(writingAi.apiUrl || chatAi.apiUrl || "").trim()
-  const apiKey = String(writingAi.apiKey || chatAi.apiKey || "").trim()
-  const model = String(writingAi.model || chatAi.model || "").trim()
+  // 写作 AI 优先，缺失字段回退聊天 AI；接口地址优先从内置模型库解析
+  const config = await resolveLlmConfig()
+  const apiUrl = config.apiUrl
+  const apiKey = config.apiKey
+  const model = config.model
   if (!apiUrl || !apiKey || !model) {
-    return badRequest("写作 AI 未配置：请在「博客设置 → 写作 AI」填写 API 地址、Key 与模型", req)
+    return badRequest("写作 AI 未配置：请在「博客设置 → AI 设置」选择模型并填写 API Key", req)
   }
 
   const action = String(body.action || "draft").trim()

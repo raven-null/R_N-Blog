@@ -8,7 +8,7 @@ import {
   writeAgentComment,
 } from "./_shared/agent"
 import { createArticle, autoExcerpt } from "./_shared/articles"
-import { resolveLlmConfig, buildWritingSystemPrompt, chatComplete } from "./_shared/ai"
+import { resolveLlmConfig, buildWritingSystemPrompt, chatComplete, readAiConfigs } from "./_shared/ai"
 
 /**
  * /api/agent-run  (Netlify Background Function)
@@ -59,7 +59,17 @@ async function runTask(task: any): Promise<void> {
     task.progress = "正在撰写文章…"
     await saveTask(task)
 
-    const { title, tags, excerpt, content } = await generateFullArticle(task.instruction, config)
+    // 人设优先级：Agent 独立提示词（未共用时）→ 写作 AI 提示词 → 默认写作人设
+    const { writingAi } = await readAiConfigs()
+    const agentBasePrompt = (!settings.shareWritingPrompt && String(settings.systemPrompt || "").trim())
+      ? String(settings.systemPrompt).trim()
+      : ""
+    const { title, tags, excerpt, content } = await generateFullArticle(
+      task.instruction,
+      config,
+      agentBasePrompt,
+      String(writingAi.keywords || ""),
+    )
 
     task.progress = "正在保存发布…"
     await saveTask(task)
@@ -102,8 +112,10 @@ async function runTask(task: any): Promise<void> {
 async function generateFullArticle(
   instruction: string,
   config: any,
+  baseSystem = "",
+  keywords = "",
 ): Promise<{ title: string; tags: string[]; excerpt: string; content: string }> {
-  const system = buildWritingSystemPrompt(config) +
+  const system = buildWritingSystemPrompt(config, keywords, baseSystem) +
     "\n\n输出要求：直接输出 Markdown 格式的完整文章，标题用 #，小标题用 ## / ###，技术内容给出可运行示例；不要输出 JSON、注释或客套话。"
 
   let content = ""

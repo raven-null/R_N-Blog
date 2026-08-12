@@ -2,6 +2,7 @@ import { randomUUID, createHash } from "node:crypto"
 import { json, badRequest, noContent } from "./_shared/cors"
 import { getBlobStore } from "./_shared/blob"
 import { DEFAULT_AGENT_SETTINGS } from "./_shared/agent"
+import { MODEL_CATALOG, resolveModelApiUrl } from "./_shared/models"
 
 const ARTICLE_STORE = "blog-articles"
 const IMAGE_STORE = "blog-images"
@@ -597,6 +598,7 @@ export default async (req: Request) => {
       about: { version: "", tech: "", updated: "" },
       ai: {
         enabled: true,
+        provider: "zhipu",
         apiUrl: "https://open.bigmodel.cn/api/paas/v4/chat/completions",
         apiKey: "5dc4e465fad643a7b486d85e2f35594f.l105oILErFBpytEq",
         model: "glm-4-flash",
@@ -607,6 +609,7 @@ export default async (req: Request) => {
       // 写作 AI（后台写文章用，与前台聊天 AI 独立配置）
       writingAi: {
         enabled: true,
+        provider: "zhipu",
         apiUrl: "",
         apiKey: "",
         model: "",
@@ -640,6 +643,7 @@ export default async (req: Request) => {
         ai: {
           ...aiDefaults,
           ...storedAi,
+          provider: storedAi.provider || aiDefaults.provider,
           apiUrl: storedAi.apiUrl || aiDefaults.apiUrl,
           apiKey: storedAi.apiKey || aiDefaults.apiKey,
           model: storedAi.model || aiDefaults.model,
@@ -651,6 +655,7 @@ export default async (req: Request) => {
         writingAi: {
           ...writingAiDefaults,
           ...storedWritingAi,
+          provider: storedWritingAi.provider || "",
           systemPrompt: storedWritingAi.systemPrompt || writingAiDefaults.systemPrompt,
           keywords: storedWritingAi.keywords || writingAiDefaults.keywords,
           maxTokens: Number(storedWritingAi.maxTokens) > 0 ? Number(storedWritingAi.maxTokens) : writingAiDefaults.maxTokens,
@@ -668,6 +673,8 @@ export default async (req: Request) => {
           dailyGlobalLimit: Number(storedAgent.dailyGlobalLimit) > 0 ? Number(storedAgent.dailyGlobalLimit) : agentDefaults.dailyGlobalLimit,
           maxInstructionLength: Number(storedAgent.maxInstructionLength) > 0 ? Number(storedAgent.maxInstructionLength) : agentDefaults.maxInstructionLength,
           commentName: String(storedAgent.commentName || agentDefaults.commentName).slice(0, 32),
+          shareWritingPrompt: storedAgent.shareWritingPrompt !== false,
+          systemPrompt: String(storedAgent.systemPrompt || "").trim(),
         },
       }
       return json(200, { status: "success", data: merged }, req)
@@ -724,6 +731,7 @@ export default async (req: Request) => {
         },
         ai: {
           enabled: ai?.enabled !== false,
+          provider: String(ai?.provider || "").trim().slice(0, 40),
           apiUrl: String(ai?.apiUrl || "").trim(),
           apiKey: String(ai?.apiKey || "").trim(),
           model: String(ai?.model || "").trim(),
@@ -733,6 +741,7 @@ export default async (req: Request) => {
         },
         writingAi: {
           enabled: writingAi?.enabled !== false,
+          provider: String(writingAi?.provider || "").trim().slice(0, 40),
           apiUrl: String(writingAi?.apiUrl || "").trim(),
           apiKey: String(writingAi?.apiKey || "").trim(),
           model: String(writingAi?.model || "").trim(),
@@ -749,6 +758,8 @@ export default async (req: Request) => {
           dailyGlobalLimit: Number(agent?.dailyGlobalLimit) > 0 ? Number(agent?.dailyGlobalLimit) : DEFAULT_AGENT_SETTINGS.dailyGlobalLimit,
           maxInstructionLength: Number(agent?.maxInstructionLength) > 0 ? Number(agent?.maxInstructionLength) : DEFAULT_AGENT_SETTINGS.maxInstructionLength,
           commentName: String(agent?.commentName || "").trim().slice(0, 32) || DEFAULT_AGENT_SETTINGS.commentName,
+          shareWritingPrompt: agent?.shareWritingPrompt !== false,
+          systemPrompt: String(agent?.systemPrompt || "").trim(),
         },
       }
       await settingsStore.set("site", JSON.stringify(settings))
@@ -861,6 +872,51 @@ export default async (req: Request) => {
       articleCount,
       imageCount,
     }, req)
+  }
+
+  // ===== 内置模型库（AI 设置下拉用） =====
+
+  if (path === "models") {
+    if (req.method !== "GET") return badRequest("Method Not Allowed", req)
+    return json(200, { status: "success", data: MODEL_CATALOG }, req)
+  }
+
+  // ===== 测试 AI 连接（选模型 + API Key 后验证可用） =====
+
+  if (path === "test-ai") {
+    if (req.method !== "POST") return badRequest("Method Not Allowed", req)
+    if (!(await checkAuth(req))) return json(401, { status: "error", message: "未授权" }, req)
+    const body = await req.json().catch(() => ({}))
+    const provider = String(body.provider || "").trim()
+    const model = String(body.model || "").trim()
+    const apiKey = String(body.apiKey || "").trim()
+    const customUrl = String(body.apiUrl || "").trim()
+    if (!model) return badRequest("model 必填", req)
+    if (!apiKey) return badRequest("apiKey 必填", req)
+    const apiUrl = resolveModelApiUrl(provider, model, customUrl)
+    if (!apiUrl) return badRequest("无法解析接口地址，请填写自定义接口地址", req)
+    try {
+      const res = await fetch(apiUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model,
+          messages: [{ role: "user", content: "ping" }],
+          max_tokens: 8,
+          stream: false,
+        }),
+      })
+      if (!res.ok) {
+        const err = await res.text().catch(() => "")
+        return json(502, { status: "error", message: `接口返回 ${res.status}：${err.slice(0, 200)}` }, req)
+      }
+      return json(200, { status: "success", message: "连接成功" }, req)
+    } catch (err: any) {
+      return json(500, { status: "error", message: `连接失败：${err?.message || err}` }, req)
+    }
   }
 
   // ===== 设置卡片排序（博客设置拖拽排序持久化） =====
