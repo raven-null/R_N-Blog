@@ -364,7 +364,9 @@ const AIChat = {
                 const text = this.selectionBubble.dataset.text || '';
                 const action = btn.dataset.action;
                 const prompt = this.buildSelectionPrompt(text, action);
-                this.sendExternal(prompt);
+                // 会话名用选中的正文，而不是模板开头
+                const nameHint = text.slice(0, 12) + (text.length > 12 ? '…' : '');
+                this.sendExternal(prompt, nameHint);
                 this.hideSelectionBubble();
             });
         });
@@ -502,10 +504,10 @@ const AIChat = {
         }
     },
 
-    // 发送外部消息（划词助手等调用）
-    sendExternal(prompt) {
+    // 发送外部消息（划词助手等调用），nameHint 用于给会话一个有意义的名字
+    sendExternal(prompt, nameHint) {
         this.openWindow();
-        this.sendMessage(prompt, { force: true }).catch(err => console.warn('[AIChat] 发送失败:', err));
+        this.sendMessage(prompt, { force: true, sessionName: nameHint }).catch(err => console.warn('[AIChat] 发送失败:', err));
     },
 
     // 发送消息
@@ -540,6 +542,15 @@ const AIChat = {
         this.addMessage('user', msgContent);
         this.messages.push({ role: 'user', content: msgContent });
         this.updateSessionName();
+        // 外部调用（划词助手）可指定更有意义的会话名
+        if (opts.sessionName) {
+            const session = this.getSession();
+            if (session) {
+                session.name = opts.sessionName;
+                this.saveSessions();
+                this.renderSessionList();
+            }
+        }
         this.saveSessions();
 
         this.isWaiting = true;
@@ -943,7 +954,12 @@ const AIChat = {
         if (!session) return;
         const firstUser = session.messages.find(m => m.role === 'user');
         if (firstUser && (session.name === `会话 ${this.sessions.indexOf(session) + 1}` || !session.name)) {
-            const name = firstUser.content.slice(0, 12) + (firstUser.content.length > 12 ? '…' : '');
+            // 去掉 @ai 前缀与划词助手的固定模板前缀，避免会话名是「请解释以下内容…」这类模板开头
+            let content = firstUser.content
+                .replace(/^\s*@(?:ai|助手)[：:，,、\s]*/i, '')
+                .replace(/^(?:请解释以下内容，尽量简明扼要|请将以下内容翻译成中文|请润色以下内容，使其更通顺自然)\s*[：:]\s*/i, '')
+                .trim();
+            const name = content.slice(0, 12) + (content.length > 12 ? '…' : '');
             session.name = name;
             this.saveSessions();
             this.renderSessionList();
