@@ -144,11 +144,8 @@
         /* ===== 所见即所得编辑器（Toast UI，Obsidian 式） ===== */
         .editor-extras{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
         .editor-extras-hint{margin-left:auto;font-size:11px;color:var(--text-muted)}
-        .editor-container{height:calc(100vh - 470px);min-height:320px;max-height:640px;border-radius:var(--radius-sm);overflow:hidden}
-        .editor-container .toastui-editor-defaultUI{height:100%!important;display:flex;flex-direction:column}
-        .editor-container .toastui-editor-main{flex:1;min-height:0}
-        .editor-container .toastui-editor-ww-container,.editor-container .toastui-editor-md-container{height:100%}
-        .editor-container .toastui-editor-ww-container .toastui-editor{height:100%;overflow-y:auto}
+        /* 编辑器高度由 JS 按视口计算并传给 Toast UI（内部自带滚动），此处只做圆角容器 */
+        .editor-container{border-radius:var(--radius-sm);overflow:hidden}
         /* 暗色主题与站点配色统一 */
         .toastui-editor-dark.toastui-editor-defaultUI{border-color:var(--border)}
         .toastui-editor-dark .toastui-editor-md-container,.toastui-editor-dark .toastui-editor-ww-container{background-color:var(--bg-input)}
@@ -516,7 +513,6 @@
             .write-cover-actions .cover-btn{flex:1;min-width:110px;text-align:center}
             .write-article-images{max-height:none;min-height:60px}
             .editor-extras-hint{display:none}
-            .editor-container{height:60vh;max-height:480px}
             .editor-footer{flex-direction:column;gap:10px}
             .editor-footer-actions{width:100%}
             .editor-footer-actions .btn{flex:1;justify-content:center}
@@ -1337,10 +1333,11 @@
                 if(el)el.innerHTML='<div class="preview-empty" style="height:100%;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:13px">编辑器加载失败，请刷新页面重试</div>';
                 return null;
             }
+            const computeEditorHeight=()=>Math.max(280,Math.min(640,window.innerHeight-470));
             toastEditor=new toastui.Editor({
                 el:document.getElementById('editorContainer'),
-                height:'auto',
-                minHeight:'320px',
+                height:computeEditorHeight(),
+                minHeight:'280px',
                 initialEditType:'wysiwyg',
                 previewStyle:'vertical',
                 theme:'dark',
@@ -1359,6 +1356,10 @@
                         else showToast('图片上传失败','error');
                     }
                 }
+            });
+            // 视口变化时同步编辑器高度，保证内部滚动可用
+            window.addEventListener('resize',()=>{
+                if(toastEditor)toastEditor.setHeight(computeEditorHeight());
             });
             toastEditor.on('change',updateEditorInfo);
             updateEditorInfo();
