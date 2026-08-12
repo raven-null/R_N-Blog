@@ -3206,23 +3206,37 @@
                 order[section.dataset.section]=[...section.querySelectorAll(':scope > .settings-group')].map(settingsCardKey);
             });
             try{localStorage.setItem(settingsOrderKey,JSON.stringify(order))}catch(e){}
-        }
-        function restoreSettingsOrder(){
+            // 同步到服务端，保证任何刷新 / 设备都不变
             try{
-                const raw=localStorage.getItem(settingsOrderKey);
-                if(!raw)return;
-                const order=JSON.parse(raw);
-                document.querySelectorAll('.settings-section').forEach(section=>{
-                    const names=order[section.dataset.section];
-                    if(!Array.isArray(names)||!names.length)return;
-                    const cards=[...section.querySelectorAll(':scope > .settings-group')];
-                    const byName=new Map(cards.map(c=>[settingsCardKey(c),c]));
-                    names.forEach(n=>{
-                        const card=byName.get(n);
-                        if(card){section.appendChild(card);byName.delete(n)}
-                    });
-                });
+                fetch('/api/admin?action=setting-order',{
+                    method:'POST',
+                    headers:{'Content-Type':'application/json','X-Admin-Key':adminKey},
+                    body:JSON.stringify({order})
+                }).catch(()=>{});
             }catch(e){}
+        }
+        async function restoreSettingsOrder(){
+            let order=null;
+            try{order=JSON.parse(localStorage.getItem(settingsOrderKey)||'null')}catch(e){}
+            // 优先使用服务端排序（跨设备一致）
+            try{
+                const r=await fetch('/api/admin?action=setting-order',{headers:{'X-Admin-Key':adminKey}});
+                const d=await r.json();
+                if(d.status==='success'&&d.data&&Object.keys(d.data).length)order=d.data;
+            }catch(e){}
+            if(!order)return;
+            document.querySelectorAll('.settings-section').forEach(section=>{
+                const names=order[section.dataset.section];
+                if(!Array.isArray(names)||!names.length)return;
+                const cards=[...section.querySelectorAll(':scope > .settings-group')];
+                const byName=new Map(cards.map(c=>[settingsCardKey(c),c]));
+                names.forEach(n=>{
+                    const card=byName.get(n);
+                    if(card){section.appendChild(card);byName.delete(n)}
+                });
+            });
+            // 回写本地缓存
+            try{localStorage.setItem(settingsOrderKey,JSON.stringify(order))}catch(e){}
         }
         function initSettingsDrag(){
             document.querySelectorAll('.settings-section').forEach(section=>{

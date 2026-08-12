@@ -863,6 +863,32 @@ export default async (req: Request) => {
     }, req)
   }
 
+  // ===== 设置卡片排序（博客设置拖拽排序持久化） =====
+
+  if (path === "setting-order") {
+    const settingsStore = getBlobStore("blog-settings", "strong")
+    if (req.method === "GET") {
+      const raw = await settingsStore.get("setting-order", { type: "text" })
+      const data = raw ? JSON.parse(raw) : {}
+      return json(200, { status: "success", data }, req)
+    }
+    if (req.method === "POST") {
+      if (!(await checkAuth(req))) return json(401, { status: "error", message: "未授权" }, req)
+      const body = await req.json().catch(() => ({}))
+      const order = body.order
+      if (!order || typeof order !== "object" || Array.isArray(order)) return badRequest("order 必填", req)
+      const clean: Record<string, string[]> = {}
+      for (const key of Object.keys(order)) {
+        if (Array.isArray(order[key])) {
+          clean[key] = order[key].map((s: unknown) => String(s).slice(0, 100)).filter(Boolean).slice(0, 30)
+        }
+      }
+      await settingsStore.set("setting-order", JSON.stringify(clean))
+      return json(200, { status: "success", message: "已保存排序", data: clean }, req)
+    }
+    return badRequest("Method Not Allowed", req)
+  }
+
   return json(404, { status: "error", message: "未知操作" }, req)
 }
 
