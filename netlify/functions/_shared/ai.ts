@@ -48,7 +48,8 @@ export async function resolveLlmConfig(): Promise<LlmConfig> {
     apiUrl,
     apiKey,
     model,
-    systemPrompt: String(writingAi.systemPrompt || chatAi.systemPrompt || "").trim(),
+    // 写作/Agent 的人设只用写作 AI 的提示词，留空则用默认写作人设，不借用聊天 AI 的人设
+    systemPrompt: String(writingAi.systemPrompt || "").trim(),
     maxTokens: Math.min(16384, Math.max(maxTokens, 1024)),
     temperature,
   }
