@@ -1329,7 +1329,7 @@
                 if(el)el.innerHTML='<div class="preview-empty" style="height:100%;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:13px">编辑器加载失败，请刷新页面重试</div>';
                 return null;
             }
-            const computeEditorHeight=()=>Math.max(280,Math.min(640,window.innerHeight-470));
+            const computeEditorHeight=()=>'50vh';
             toastEditor=new toastui.Editor({
                 el:document.getElementById('editorContainer'),
                 height:computeEditorHeight(),
