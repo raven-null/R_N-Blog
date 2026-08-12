@@ -8,7 +8,7 @@ import {
   writeAgentComment,
   updateAgentComment,
 } from "./_shared/agent"
-import { createArticle, autoExcerpt, readArticle } from "./_shared/articles"
+import { createArticle, autoExcerpt, readArticle, randomGalleryImage } from "./_shared/articles"
 import { resolveLlmConfig, resolveChatConfig, buildWritingSystemPrompt, chatComplete, readAiConfigs } from "./_shared/ai"
 
 /**
@@ -95,6 +95,7 @@ async function runTask(task: any): Promise<void> {
     const settings = await getAgentSettings()
 
     task.progress = "正在撰写文章…"
+    task.progressPercent = 15
     await saveTask(task)
 
     // 人设优先级：Agent 独立提示词（未共用时）→ 写作 AI 提示词 → 默认写作人设
@@ -107,9 +108,19 @@ async function runTask(task: any): Promise<void> {
       config,
       agentBasePrompt,
       String(writingAi.keywords || ""),
+      (pct) => {
+        task.progressPercent = Math.round(pct)
+        task.progress = "正在撰写文章…"
+        saveTask(task)
+      },
     )
 
+    task.progress = "正在提取标题与摘要…"
+    task.progressPercent = 85
+    await saveTask(task)
+
     task.progress = "正在保存发布…"
+    task.progressPercent = 92
     await saveTask(task)
 
     const status: "published" | "draft" =
@@ -117,11 +128,14 @@ async function runTask(task: any): Promise<void> {
         ? task.requestedStatus === "draft" ? "draft" : "published"
         : settings.publishStrategy
 
-    const { articleId, url } = await createArticle({ title, tags, excerpt, content, status })
+    // 封面：从图库随机挑一张（无图库则留空）
+    const image = await randomGalleryImage()
+    const { articleId, url } = await createArticle({ title, tags, excerpt, image, content, status })
 
     task.status = "done"
     task.finishedAt = Date.now()
     task.progress = "已完成"
+    task.progressPercent = 100
     task.result = { articleId, title, url, status }
     await saveTask(task)
 
@@ -171,6 +185,7 @@ async function generateFullArticle(
   config: any,
   baseSystem = "",
   keywords = "",
+  onProgress?: (pct: number) => void,
 ): Promise<{ title: string; tags: string[]; excerpt: string; content: string }> {
   const system = buildWritingSystemPrompt(config, keywords, baseSystem) +
     "\n\n输出要求：直接输出 Markdown 格式的完整文章，标题用 #，小标题用 ## / ###，技术内容给出可运行示例；不要输出 JSON、注释或客套话。"
@@ -187,6 +202,7 @@ async function generateFullArticle(
     ])
     if (!res.ok) throw new Error(res.error || "生成失败")
     content += "\n\n" + res.text.trim()
+    if (onProgress) onProgress(15 + Math.min(65, Math.round(((i + 1) / MAX_CHUNKS) * 65)))
     if (res.finishReason !== "length") break
   }
 

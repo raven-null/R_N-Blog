@@ -11,6 +11,8 @@ export interface AgentTask {
   instruction: string
   status: "pending" | "running" | "done" | "failed"
   progress: string
+  /** 进度百分比（0-100，前端进度条用） */
+  progressPercent?: number
   postId?: string
   commentId?: string
   /** 受理评论 id（问答任务完成后原位更新为答案） */
@@ -174,6 +176,7 @@ export function newTask(input: {
     instruction: String(input.instruction || "").trim().slice(0, 2000),
     status: "pending",
     progress: "等待执行",
+    progressPercent: 0,
     postId: input.postId,
     commentId: input.commentId,
     pollKey: randomUUID().slice(0, 16),

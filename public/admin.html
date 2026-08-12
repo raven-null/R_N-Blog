@@ -321,6 +321,10 @@
         .agent-item-actions a{color:var(--accent);text-decoration:none;font-size:11px}
         .agent-item-actions .btn{padding:2px 8px;font-size:11px}
         .agent-item-error{color:var(--danger);font-size:11px;margin-top:4px;word-break:break-word}
+        .agent-progress{margin-top:8px}
+        .agent-progress-bar{height:6px;border-radius:3px;background:rgba(128,128,128,.2);overflow:hidden}
+        .agent-progress-fill{height:100%;border-radius:3px;background:var(--accent);transition:width .5s ease}
+        .agent-progress-text{font-size:11px;color:var(--text-muted);display:block;margin-top:4px}
 
         .toast{position:fixed;bottom:20px;right:20px;padding:10px 20px;border-radius:var(--radius-sm);font-size:12px;z-index:999;display:none;box-shadow:var(--shadow);font-weight:500}
         .toast-success{background:var(--success);color:#000}
@@ -1632,6 +1636,7 @@
                         <span class="agent-item-meta" style="margin:0">${t.source==='admin'?'后台':t.source==='chat'?'对话':'评论'} · ${t.type==='qa'?'问答':'文章'} · ${time}</span>
                     </div>
                     <div class="agent-item-instruction">${escHtml(t.instruction)}</div>
+                    ${(t.status==='pending'||t.status==='running')?`<div class="agent-progress"><div class="agent-progress-bar"><div class="agent-progress-fill" style="width:${t.progressPercent||5}%"></div></div><span class="agent-progress-text">${escHtml(t.progress||'生成中')} ${t.progressPercent||5}%</span></div>`:''}
                     ${result}${err}${actions}
                 </div>`;
             }).join('');

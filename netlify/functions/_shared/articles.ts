@@ -51,6 +51,20 @@ export async function readArticle(id: string): Promise<any | null> {
   } catch { return null }
 }
 
+/** 从图库随机挑一张图片作为封面（无图库时返回空字符串） */
+export async function randomGalleryImage(): Promise<string> {
+  try {
+    const store = getBlobStore("blog-images", "strong")
+    const list = await store.list({ prefix: "" })
+    const keys = list.blobs.map(b => b.key).filter(k => k && k !== "_index")
+    if (!keys.length) return ""
+    const key = keys[Math.floor(Math.random() * keys.length)]
+    return `/api/admin-image?key=${encodeURIComponent(key)}`
+  } catch {
+    return ""
+  }
+}
+
 /** 从正文自动提取摘要（与 admin.ts 逻辑一致） */
 export function autoExcerpt(content: string): string {
   return content

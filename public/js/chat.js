@@ -630,7 +630,7 @@ const AIChat = {
         }
 
         const streamEl = this.createStreamingMessage();
-        this.updateStreamingMessage(streamEl, '🤖 已提交任务，正在生成文章…');
+        this.updateAgentProgress(streamEl, { status: 'pending', progress: '已提交任务，正在排队…', progressPercent: 2 });
         try {
             const res = await fetch('/api/agent', {
                 method: 'POST',
@@ -642,7 +642,7 @@ const AIChat = {
                 throw new Error((data && data.message) || '任务提交失败');
             }
             const task = data.data;
-            const result = await this.pollAgentTask(task.id, task.pollKey);
+            const result = await this.pollAgentTask(task.id, task.pollKey, streamEl);
             let finalText;
             if (result.status === 'failed') {
                 finalText = '🤖 任务失败：' + (result.error || '未知错误');
@@ -660,20 +660,39 @@ const AIChat = {
         return true;
     },
 
-    // 轮询 Agent 任务状态（凭 pollKey 公开查询，最多约 6 分钟）
-    async pollAgentTask(taskId, pollKey, attempt = 0) {
-        const MAX_ATTEMPTS = 120;
+    // 轮询 Agent 任务状态（凭 pollKey 公开查询，最多约 7 分钟），期间更新进度条
+    async pollAgentTask(taskId, pollKey, streamEl, attempt = 0) {
+        const MAX_ATTEMPTS = 140;
         try {
             const res = await fetch(`/api/agent?task=${encodeURIComponent(taskId)}&key=${encodeURIComponent(pollKey || '')}`);
             const data = await res.json().catch(() => ({}));
             if (data && data.status === 'success' && data.data) {
                 const t = data.data;
+                if (streamEl) this.updateAgentProgress(streamEl, t);
                 if (t.status === 'done' || t.status === 'failed') return t;
             }
         } catch (e) {}
         if (attempt >= MAX_ATTEMPTS) return { status: 'failed', error: '等待超时，请稍后到后台查看' };
         await new Promise(r => setTimeout(r, 3000));
-        return this.pollAgentTask(taskId, pollKey, attempt + 1);
+        return this.pollAgentTask(taskId, pollKey, streamEl, attempt + 1);
+    },
+
+    // 渲染 AI Agent 生成进度条
+    updateAgentProgress(el, task) {
+        const contentEl = el.querySelector('.chat-message-content');
+        if (!contentEl) return;
+        const status = task.status || 'pending';
+        const pct = task.progressPercent != null ? task.progressPercent
+            : (status === 'done' || status === 'failed') ? 100 : status === 'pending' ? 2 : 30;
+        const label = task.progress || (status === 'done' ? '已完成' : status === 'failed' ? '失败' : '生成中…');
+        contentEl.classList.remove('chat-streaming-content');
+        contentEl.innerHTML = `
+            <div class="agent-progress-wrap">
+                <div class="agent-progress-bar"><div class="agent-progress-fill" style="width:${Math.min(100, Math.max(0, pct))}%"></div></div>
+                <div class="agent-progress-label">${this.escapeHtml(label)} ${Math.round(pct)}%</div>
+                ${status === 'failed' && task.error ? `<div class="agent-progress-err">${this.escapeHtml(String(task.error).slice(0, 200))}</div>` : ''}
+            </div>`;
+        this.scrollToBottom(true);
     },
 
     // 停止生成
