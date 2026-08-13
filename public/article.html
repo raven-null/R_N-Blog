@@ -646,12 +646,6 @@
             color: #10b981;
         }
 
-        .copy-btn-quote {
-            position: absolute;
-            top: 8px;
-            right: 8px;
-        }
-
         .article-content img {
             max-width: 100%;
             height: auto;
@@ -2608,26 +2602,6 @@
             const code = codeBlock.querySelector('code');
             if (!code) return;
             copyToClipboard(code.textContent).then(() => {
-                const span = btn.querySelector('span');
-                if (span) span.textContent = '已复制';
-                btn.classList.add('copied');
-                setTimeout(() => {
-                    if (span) span.textContent = '复制';
-                    btn.classList.remove('copied');
-                }, 2000);
-            });
-        }
-
-        // 复制引用块内容
-        function copyQuote(btn) {
-            const blockquote = btn.closest('.quote-block');
-            if (!blockquote) return;
-            // 获取引用内容，排除按钮文字
-            const clone = blockquote.cloneNode(true);
-            const btnInClone = clone.querySelector('.copy-btn-quote');
-            if (btnInClone) btnInClone.remove();
-            const text = clone.textContent.trim();
-            copyToClipboard(text).then(() => {
                 const span = btn.querySelector('span');
                 if (span) span.textContent = '已复制';
                 btn.classList.add('copied');
