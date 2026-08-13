@@ -625,9 +625,9 @@
                     </div>
                     <!-- 文章设置区 -->
                     <div class="write-settings">
-                        <input type="text" id="edTitle" class="write-title-input" placeholder="请输入文章标题 *" maxlength="100">
+                        <input type="text" id="edTitle" class="write-title-input" placeholder="请输入文章标题 *" maxlength="100" autocomplete="off">
                         <div class="write-settings-row">
-                            <input type="text" id="edExcerpt" placeholder="文章摘要（选填，不填自动提取正文前150字）" maxlength="200">
+                            <input type="text" id="edExcerpt" placeholder="文章摘要（选填，不填自动提取正文前150字）" maxlength="200" autocomplete="off">
                             <div class="tag-picker-wrap" style="flex:1;min-width:200px">
                                 <div class="tag-picker-input" id="tagPickerInput" onclick="focusTagPicker()">
                                     <input type="text" id="tagPickerText" placeholder="添加标签，回车确认..." oninput="filterTagDropdown()" onkeydown="tagPickerKeydown(event)" onfocus="openTagDropdown()" autocomplete="off">
