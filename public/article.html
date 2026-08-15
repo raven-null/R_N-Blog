@@ -276,6 +276,16 @@
             font-size: 12px;
         }
 
+        /* 无目录空状态（短文） */
+        .toc-empty {
+            list-style: none;
+            padding: 32px 12px;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
         /* 目录折叠按钮 */
         .toc-collapse-btn {
             width: 24px;
@@ -2013,11 +2023,22 @@
                 // 获取所有标题元素
                 const headings = content.querySelectorAll('h1, h2, h3, h4, h5, h6');
 
-                // 没有标题则隐藏目录
+                // 短文无标题：保留侧边栏与顶部控制按钮（返回/首页/主题/AI），目录区显示空状态
                 if (headings.length === 0) {
-                    tocSidebar.style.display = 'none';
+                    tocSidebar.style.display = 'flex';
+                    tocList.innerHTML = '<li class="toc-empty">本文暂无目录</li>';
+                    const collapseBtn = document.getElementById('tocCollapseBtn');
+                    const searchInput = document.getElementById('tocSearchInput');
+                    if (collapseBtn) collapseBtn.style.display = 'none';
+                    if (searchInput) searchInput.style.display = 'none';
                     return;
                 }
+
+                // 有标题：恢复目录搜索与折叠控件（防止二次渲染时残留隐藏状态）
+                const collapseBtn = document.getElementById('tocCollapseBtn');
+                const searchInput = document.getElementById('tocSearchInput');
+                if (collapseBtn) collapseBtn.style.display = '';
+                if (searchInput) searchInput.style.display = '';
 
                 tocSidebar.style.display = 'flex';
                 tocList.innerHTML = '';

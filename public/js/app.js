@@ -209,11 +209,13 @@ const BlogApp = {
         const readTime = Math.max(1, Math.round(wordCount / 300));
 
         return `
-            <div class="card" onclick="BlogApp.openPost('${post.filename}', '${post.id || ''}')">
+            <div class="card" onclick="BlogApp.openPost('${this.escAttr(post.filename)}', '${this.escAttr(post.id || '')}')">
                 ${post.image ? `
                     <div class="card-img">
-                        <img src="${post.image}" alt="${post.title}" class="img-placeholder" loading="lazy"
-                             onerror="this.style.display='none';this.parentElement.style.background='linear-gradient(145deg, ${gradientColors[0]}, ${gradientColors[1]})';">
+                        <img src="${this.escAttr(post.image)}" alt="${this.esc(post.title)}" class="img-placeholder" loading="lazy" decoding="async"
+                             referrerpolicy="no-referrer"
+                             data-g1="${gradientColors[0]}" data-g2="${gradientColors[1]}" data-icon="${this.getCardIcon(post.tags || [])}"
+                             onerror="BlogApp.handleCoverError(this)">
                     </div>
                 ` : `
                     <div class="card-img" style="height: ${this.getRandomHeight()}px; background: linear-gradient(145deg, ${gradientColors[0]}, ${gradientColors[1]});">
@@ -651,6 +653,34 @@ const BlogApp = {
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;');
+    },
+
+    // HTML 属性转义（额外转义单引号，用于 onclick 等单引号属性）
+    escAttr(str) {
+        return this.esc(str).replace(/'/g, '&#39;');
+    },
+
+    // 封面加载失败兜底：先重试默认封面，仍失败则退化为标签渐变底 + 图标
+    handleCoverError(img) {
+        try {
+            if (!img) return;
+            if (!img.dataset.retried) {
+                img.dataset.retried = '1';
+                img.src = 'images/Default/web-logo.webp';
+                return;
+            }
+            img.style.display = 'none';
+            const parent = img.parentElement;
+            if (parent) {
+                parent.style.background = `linear-gradient(145deg, ${img.dataset.g1 || '#151515'}, ${img.dataset.g2 || '#222222'})`;
+                if (!parent.querySelector('.big-text')) {
+                    const icon = document.createElement('div');
+                    icon.className = 'big-text';
+                    icon.textContent = img.dataset.icon || '□';
+                    parent.appendChild(icon);
+                }
+            }
+        } catch (e) { /* 兜底异常忽略 */ }
     },
 
     // 获取博客设置（由 index.html 的 loadBlogSettings 填充）
