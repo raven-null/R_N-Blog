@@ -7,7 +7,9 @@ import { MODEL_CATALOG, resolveModelApiUrl, resolveTemperature } from "./_shared
 
 const ARTICLE_STORE = "blog-articles"
 const IMAGE_STORE = "blog-images"
+const DOCUMENT_STORE = "blog-documents"
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024 // 10MB
+const MAX_DOCUMENT_BYTES = 20 * 1024 * 1024 // 20MB
 
 const ALLOWED_MIME: Record<string, string> = {
   "image/jpeg": "jpg",
@@ -265,15 +267,23 @@ export default async (req: Request) => {
         const tags = tagIndex[blob.key] || []
         // 按标签筛选
         if (tag && !tags.includes(tag)) continue
-        // 跳过已删除（空内容）的 blob，并顺带清理
-        const raw = await store.get(blob.key, { type: "text" })
-        if (!raw || raw.length < 10) {
+        // 空内容（<10 字符）视为已删除：有 size 字段直接用 size 判断，
+        // 本地开发（size 缺失）才回退读内容——避免列表接口逐张拉全量。
+        let empty = false
+        if (typeof blob.size === "number") {
+          empty = blob.size < 10
+        } else {
+          const raw = await store.get(blob.key, { type: "text" })
+          empty = !raw || raw.length < 10
+        }
+        if (empty) {
           try { await store.delete(blob.key) } catch {}
           continue
         }
         images.push({
           key: blob.key,
           url: `/api/admin-image?key=${blob.key}`,
+          thumb: `/api/admin-image?key=${blob.key}&thumb=1`,
           tags,
         })
       }
@@ -392,6 +402,139 @@ export default async (req: Request) => {
       const tagIndex = await getImageTagIndex()
       delete tagIndex[key]
       await saveImageTagIndex(tagIndex)
+      return json(200, { status: "success", message: "已删除" }, req)
+    }
+  }
+
+  // ===== 文档管理（资料库文档：工作站上传的 Markdown / PDF / 文本等） =====
+
+  if (path === "documents") {
+    const store = getBlobStore(DOCUMENT_STORE, "strong")
+
+    interface DocumentMeta {
+      id: string
+      name: string
+      mime: string
+      size: number
+      tags: string[]
+      createdAt: string
+      updatedAt: string
+    }
+
+    async function getDocumentIndex(): Promise<DocumentMeta[]> {
+      const raw = await store.get("index", { type: "text" })
+      if (!raw) return []
+      try { return JSON.parse(raw) } catch { return [] }
+    }
+    async function saveDocumentIndex(index: DocumentMeta[]) {
+      await store.set("index", JSON.stringify(index))
+    }
+
+    // GET（公开）: 无 id = 索引列表；带 id = 单篇完整内容（data 为 base64）
+    if (req.method === "GET") {
+      const id = url.searchParams.get("id")
+      if (id) {
+        const raw = await store.get(id, { type: "text" })
+        if (!raw) return json(404, { status: "error", message: "文档不存在" }, req)
+        return json(200, { status: "success", data: JSON.parse(raw) }, req)
+      }
+      const index = await getDocumentIndex()
+      return json(200, { status: "success", data: index }, req)
+    }
+
+    // 以下写操作需要认证
+    if (!(await checkAuth(req))) {
+      return json(401, { status: "error", message: "未授权" }, req)
+    }
+
+    // POST: 上传/更新文档（base64 + name + mime）
+    if (req.method === "POST") {
+      const body = await req.json().catch(() => ({}))
+      const { id, name, data, mime, tags } = body
+      if (!name) return badRequest("name 必填", req)
+      if (!data) return badRequest("data（base64）必填", req)
+
+      const buf = Buffer.from(data, "base64")
+      if (buf.length === 0) return badRequest("文档内容为空", req)
+      if (buf.length > MAX_DOCUMENT_BYTES) return badRequest("文档过大（限 20MB）", req)
+
+      const now = new Date().toISOString().slice(0, 10)
+      const docId = id || randomUUID().slice(0, 8)
+      const safeName = String(name).replace(/[\\/:*?"<>|]/g, "_").slice(0, 200)
+      const mimeStr = String(mime || "application/octet-stream")
+      const tagsArr = Array.isArray(tags)
+        ? tags.map((t: unknown) => String(t).trim()).filter(Boolean)
+        : String(tags || "").split(",").map((t: string) => t.trim()).filter(Boolean)
+
+      const docData = {
+        id: docId,
+        name: safeName,
+        mime: mimeStr,
+        size: buf.length,
+        tags: tagsArr,
+        createdAt: now,
+        updatedAt: now,
+        data: data,
+      }
+      await store.set(docId, JSON.stringify(docData))
+
+      // 更新索引
+      const index = await getDocumentIndex()
+      const existing = index.findIndex((d) => d.id === docId)
+      const meta: DocumentMeta = {
+        id: docId,
+        name: safeName,
+        mime: mimeStr,
+        size: buf.length,
+        tags: tagsArr,
+        createdAt: existing >= 0 ? index[existing].createdAt : now,
+        updatedAt: now,
+      }
+      if (existing >= 0) index.splice(existing, 1)
+      index.unshift(meta)
+      await saveDocumentIndex(index)
+
+      return json(200, { status: "success", data: meta }, req)
+    }
+
+    // PATCH: 更新元数据（重命名 / 改标签）
+    if (req.method === "PATCH") {
+      const body = await req.json().catch(() => ({}))
+      const { id, name, tags } = body
+      if (!id) return badRequest("id 必填", req)
+      const raw = await store.get(id, { type: "text" })
+      if (!raw) return json(404, { status: "error", message: "文档不存在" }, req)
+      const doc = JSON.parse(raw)
+      if (name !== undefined) doc.name = String(name).replace(/[\\/:*?"<>|]/g, "_").slice(0, 200)
+      if (tags !== undefined) doc.tags = Array.isArray(tags) ? tags.map((t: unknown) => String(t).trim()).filter(Boolean) : []
+      doc.updatedAt = new Date().toISOString().slice(0, 10)
+      await store.set(id, JSON.stringify(doc))
+
+      const index = await getDocumentIndex()
+      const idx = index.findIndex((d) => d.id === id)
+      if (idx >= 0) {
+        index[idx] = {
+          id: doc.id,
+          name: doc.name,
+          mime: doc.mime,
+          size: doc.size,
+          tags: doc.tags,
+          createdAt: index[idx].createdAt,
+          updatedAt: doc.updatedAt,
+        }
+        await saveDocumentIndex(index)
+      }
+      return json(200, { status: "success", data: index.find((d) => d.id === id) ?? index[idx] }, req)
+    }
+
+    // DELETE: 删除文档
+    if (req.method === "DELETE") {
+      const id = url.searchParams.get("id")
+      if (!id) return badRequest("id 必填", req)
+      await store.delete(id)
+      const index = await getDocumentIndex()
+      const next = index.filter((d) => d.id !== id)
+      await saveDocumentIndex(next)
       return json(200, { status: "success", message: "已删除" }, req)
     }
   }
