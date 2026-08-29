@@ -12,8 +12,12 @@ export default async (req: Request) => {
   if (req.method === "OPTIONS") return noContent(req)
   if (req.method !== "GET") return badRequest("Method Not Allowed", req)
 
-  const params = new URL(req.url).searchParams
-  const key = params.get("key")
+  const url = new URL(req.url)
+  // 支持两种路由：/api/image?key=xxx（旧）与 /images/c/xxx.png（缓存友好）
+  const pathMatch = url.pathname.match(/^\/images\/c\/([^/]+)$/)
+  const key = pathMatch
+    ? decodeURIComponent(pathMatch[1])
+    : url.searchParams.get("key")
   if (!key) return badRequest("key 必填", req)
 
   try {
@@ -26,7 +30,7 @@ export default async (req: Request) => {
       jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png",
       gif: "image/gif", webp: "image/webp", svg: "image/svg+xml",
     }
-    const mime = params.get("mime") || mimeMap[ext] || "image/png"
+    const mime = url.searchParams.get("mime") || mimeMap[ext] || "image/png"
     const buf = Buffer.from(raw as string, "base64")
     return new Response(buf, {
       status: 200,
@@ -40,3 +44,5 @@ export default async (req: Request) => {
     return json(500, { status: "error", message: err?.message || "读取图片失败" }, req)
   }
 }
+
+export const config = { path: ["/api/image", "/images/c/:key"] }

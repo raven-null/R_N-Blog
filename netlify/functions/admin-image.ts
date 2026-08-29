@@ -6,7 +6,16 @@ const THUMB_MAX = 420 // 缩略图最长边（px）
 
 export default async (req: Request) => {
   const url = new URL(req.url)
-  const key = url.searchParams.get("key")
+
+  // 支持两种路由：/api/admin-image?key=xxx（旧）与 /images/g/xxx.webp、/images/g-thumb/xxx.webp（缓存友好）
+  const pathMatch = url.pathname.match(/^\/images\/(g|g-thumb)\/([^/]+)$/)
+  const key = pathMatch
+    ? decodeURIComponent(pathMatch[2])
+    : url.searchParams.get("key")
+  const wantThumb = pathMatch
+    ? pathMatch[1] === "g-thumb"
+    : url.searchParams.get("thumb") === "1"
+
   if (!key) return new Response("key required", { status: 400 })
 
   // 从 key 推断 mime
@@ -20,8 +29,8 @@ export default async (req: Request) => {
   const store = getBlobStore(IMAGE_STORE, "strong")
 
   // 缩略图请求：优先读缓存 store，未命中实时生成并落盘（仅位图；svg 直接原图）。
-  const wantThumb = url.searchParams.get("thumb") === "1" && ext !== "svg"
-  if (wantThumb) {
+  const wantThumbFinal = wantThumb && ext !== "svg"
+  if (wantThumbFinal) {
     try {
       const thumbStore = getBlobStore(THUMB_STORE, "strong")
       const cached = await thumbStore.get(key, { type: "text" })
@@ -43,7 +52,7 @@ export default async (req: Request) => {
 
   let buf = Buffer.from(raw, "base64")
 
-  if (wantThumb) {
+  if (wantThumbFinal) {
     try {
       const sharp = (await import("sharp")).default
       const thumbBuf = await sharp(buf)
@@ -72,4 +81,4 @@ export default async (req: Request) => {
   })
 }
 
-export const config = { path: "/api/admin-image" }
+export const config = { path: ["/api/admin-image", "/images/g/:key", "/images/g-thumb/:key"] }

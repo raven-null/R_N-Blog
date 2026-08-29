@@ -82,29 +82,6 @@
   to = "/.netlify/functions/avatar-image"
   status = 200
 
-# ===== 图片缓存友好 URL =====
-# 动态接口无静态扩展名 → Cloudflare 免费版不缓存，每张图都回源。
-# 这里把图片映射成 .webp/.png 结尾的路径，Cloudflare 默认缓存规则即可命中（免费）。
-[[redirects]]
-  from = "/images/g/*"
-  to = "/.netlify/functions/admin-image?key=:splat"
-  status = 200
-
-[[redirects]]
-  from = "/images/g-thumb/*"
-  to = "/.netlify/functions/admin-image?key=:splat&thumb=1"
-  status = 200
-
-[[redirects]]
-  from = "/images/a/*"
-  to = "/.netlify/functions/article-image?key=:splat"
-  status = 200
-
-[[redirects]]
-  from = "/images/c/*"
-  to = "/.netlify/functions/image?key=:splat"
-  status = 200
-
 # ===== 静态资源长缓存 =====
 # Netlify 默认给静态文件 must-revalidate，导致每次访问都要回源验证（慢）。
 # 改为 immutable：文件名带版本号（?v=）或内容变更时更新 URL，缓存 7 天绝对安全。

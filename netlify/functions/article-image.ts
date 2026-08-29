@@ -27,7 +27,12 @@ export default async (req: Request) => {
   const params = new URL(req.url).searchParams
 
   if (req.method === "GET") {
-    const key = params.get("key")
+    // 支持两种路由：/api/article-image?key=xxx（旧）与 /images/a/xxx.webp（缓存友好）
+    const url = new URL(req.url)
+    const pathMatch = url.pathname.match(/^\/images\/a\/([^/]+)$/)
+    const key = pathMatch
+      ? decodeURIComponent(pathMatch[1])
+      : params.get("key")
     if (!key) return badRequest("key 必填", req)
     try {
       const store = getBlobStore(IMAGE_STORE, "strong")
@@ -144,4 +149,4 @@ export default async (req: Request) => {
   return badRequest("Method Not Allowed", req)
 }
 
-export const config = { path: "/api/article-image" }
+export const config = { path: ["/api/article-image", "/images/a/:key"] }
