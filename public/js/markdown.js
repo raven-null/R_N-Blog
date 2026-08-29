@@ -102,8 +102,17 @@ const MarkdownParser = {
                 const titleAttr = title ? ` title="${title}"` : '';
                 const altText = text || '';
                 const captionHtml = altText ? `<figcaption class="img-caption">${altText}</figcaption>` : '';
+                // 旧动态接口 URL → 缓存友好 URL（.webp 结尾，CDN 可缓存）
+                let src = href;
+                if (src.startsWith('/api/article-image?key=')) {
+                    src = '/images/a/' + src.slice('/api/article-image?key='.length).split('&')[0];
+                } else if (src.startsWith('/api/admin-image?key=')) {
+                    const isThumb = src.includes('&thumb=1');
+                    const key = src.slice('/api/admin-image?key='.length).split('&')[0];
+                    src = (isThumb ? '/images/g-thumb/' : '/images/g/') + key;
+                }
                 const onerror = "this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22100%22%3E%3Crect fill=%22%23222%22 width=%22200%22 height=%22100%22/%3E%3Ctext fill=%22%23666%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 font-size=%2214%22%3E图片加载失败%3C/text%3E%3C/svg%3E'";
-                return `<figure class="img-figure"><img src="${href}" alt="${altText}"${titleAttr} loading="lazy" decoding="async" onerror="${onerror}" onclick="openLightbox(this)" style="cursor:zoom-in">${captionHtml}</figure>`;
+                return `<figure class="img-figure"><img src="${src}" alt="${altText}"${titleAttr} loading="lazy" decoding="async" onerror="${onerror}" onclick="openLightbox(this)" style="cursor:zoom-in">${captionHtml}</figure>`;
             };
 
             // 代码块：添加复制按钮
@@ -256,7 +265,16 @@ const MarkdownParser = {
         const noInlineCode = noCodeBlocks.replace(/`[^`]*`/g, '');
         const imageRegex = /!\[([^\]]*)\]\(([^)]+)\)/;
         const match = noInlineCode.match(imageRegex);
-        return match ? match[2] : null;
+        if (!match) return null;
+        let src = match[2];
+        // 旧动态接口 URL → 缓存友好 URL
+        if (src.startsWith('/api/article-image?key=')) {
+            src = '/images/a/' + src.slice('/api/article-image?key='.length).split('&')[0];
+        } else if (src.startsWith('/api/admin-image?key=')) {
+            const key = src.slice('/api/admin-image?key='.length).split('&')[0];
+            src = '/images/g/' + key;
+        }
+        return src;
     }
 };
 

@@ -1,5 +1,5 @@
 import { randomUUID, createHash } from "node:crypto"
-import { json, badRequest, noContent } from "./_shared/cors"
+import { json, badRequest, noContent, corsHeaders } from "./_shared/cors"
 import { getBlobStore } from "./_shared/blob"
 import { getAdminPassword, checkAuth } from "./_shared/auth"
 import { DEFAULT_AGENT_SETTINGS } from "./_shared/agent"
@@ -260,34 +260,33 @@ export default async (req: Request) => {
     if (req.method === "GET") {
       const tag = url.searchParams.get("tag")
       const tagIndex = await getImageTagIndex()
-      const list = await store.list({ prefix: "" })
+      // 用最终一致性 list（Netlify Blobs 的 list 在强一致性下极慢），
+      // 且不要逐张读取内容——list 返回的条目在生产环境没有 size 字段，
+      // 之前会回退到逐张 store.get（440 张图 → 14 秒+）。
+      const list = await getBlobStore(IMAGE_STORE).list({ prefix: "" })
       const images = []
       for (const blob of list.blobs) {
         if (blob.key === "_index") continue
         const tags = tagIndex[blob.key] || []
         // 按标签筛选
         if (tag && !tags.includes(tag)) continue
-        // 空内容（<10 字符）视为已删除：有 size 字段直接用 size 判断，
-        // 本地开发（size 缺失）才回退读内容——避免列表接口逐张拉全量。
-        let empty = false
-        if (typeof blob.size === "number") {
-          empty = blob.size < 10
-        } else {
-          const raw = await store.get(blob.key, { type: "text" })
-          empty = !raw || raw.length < 10
-        }
-        if (empty) {
-          try { await store.delete(blob.key) } catch {}
-          continue
-        }
         images.push({
           key: blob.key,
-          url: `/api/admin-image?key=${blob.key}`,
-          thumb: `/api/admin-image?key=${blob.key}&thumb=1`,
+          // 缓存友好 URL：.webp 结尾 → Cloudflare 免费版默认缓存
+          url: `/images/g/${blob.key}`,
+          thumb: `/images/g-thumb/${blob.key}`,
           tags,
         })
       }
-      return json(200, { status: "success", data: images }, req)
+      // 图库列表 5 分钟内不变（增删由管理端触发），允许 CDN 缓存
+      return new Response(JSON.stringify({ status: "success", data: images }), {
+        status: 200,
+        headers: {
+          ...corsHeaders(req),
+          "Content-Type": "application/json; charset=utf-8",
+          "Cache-Control": "public, max-age=300",
+        },
+      })
     }
 
     // PATCH: 更新图片标签

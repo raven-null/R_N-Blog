@@ -47,15 +47,18 @@ export default async (req: Request) => {
     const id = randomUUID()
     try {
       const store = getBlobStore(IMAGE_STORE)
-      await store.set(id, buf.toString("base64"))
+      // key 带扩展名：/images/c/xxx.webp 缓存友好 URL 下可按扩展名推断 mime
+      const ext = ALLOWED_MIME[mime] || "png"
+      await store.set(`${id}.${ext}`, buf.toString("base64"))
     } catch (err: any) {
       return json(500, { status: "error", message: err?.message || "上传失败" }, req)
     }
 
+    const ext = ALLOWED_MIME[mime] || "png"
     return json(200, {
       status: "success",
-      url: `/api/image?key=${id}&mime=${encodeURIComponent(mime)}`,
-      key: id,
+      url: `/images/c/${id}.${ext}`,
+      key: `${id}.${ext}`,
     }, req)
   }
 

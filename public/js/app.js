@@ -444,7 +444,7 @@ const BlogApp = {
             window.__galleryImages = images;
             grid.innerHTML = images.map((img, i) => `
                 <figure class="gallery-item">
-                    <img src="${img.url}" alt="图片 ${i + 1}" loading="lazy"
+                    <img src="${img.thumb || img.url}" alt="图片 ${i + 1}" loading="lazy"
                          onclick="openGalleryLightbox('${img.url}', ${i})">
                 </figure>
             `).join('');
@@ -456,6 +456,27 @@ const BlogApp = {
         }
     },
 
+    // 图片 URL 归一化：旧的动态接口 URL → 新的缓存友好 URL（.webp 结尾，CDN 可缓存）
+    normalizeImageUrl(u) {
+        if (!u) return u;
+        if (u.startsWith('/api/admin-image?key=')) {
+            // 兼容旧格式（含 &thumb=1）
+            const isThumb = u.includes('&thumb=1');
+            const key = u.slice('/api/admin-image?key='.length).split('&')[0];
+            return (isThumb ? '/images/g-thumb/' : '/images/g/') + key;
+        }
+        if (u.startsWith('/api/article-image?key=')) {
+            return '/images/a/' + u.slice('/api/article-image?key='.length).split('&')[0];
+        }
+        if (u.startsWith('/api/image?key=')) {
+            const rest = u.slice('/api/image?key='.length);
+            const key = rest.split('&')[0];
+            const mime = (rest.match(/mime=image\/(\w+)/) || [])[1];
+            return '/images/c/' + key + (key.includes('.') ? '' : (mime ? '.' + mime : '.png'));
+        }
+        return u;
+    },
+
     // 加载图库图片（从 Blobs API 获取所有图片）
     async loadGalleryImages() {
         if (this.galleryImages) return this.galleryImages;
@@ -465,7 +486,8 @@ const BlogApp = {
             if (data.status === 'success' && Array.isArray(data.data)) {
                 this.galleryImages = data.data.map(img => ({
                     key: img.key,
-                    url: img.url,
+                    url: this.normalizeImageUrl(img.url),
+                    thumb: img.thumb ? this.normalizeImageUrl(img.thumb) : '',
                     tags: img.tags || [],
                 }));
             } else {
@@ -512,7 +534,7 @@ const BlogApp = {
         }
         grid.innerHTML = filtered.map((img, i) => `
             <figure class="gallery-item">
-                <img src="${img.url}" alt="图片 ${i + 1}" loading="lazy"
+                <img src="${img.thumb || img.url}" alt="图片 ${i + 1}" loading="lazy"
                      onclick="openGalleryLightbox('${img.url}', ${i})">
             </figure>
         `).join('');
@@ -883,12 +905,13 @@ const BlogApp = {
         return String(name || '客').charAt(0).toUpperCase();
     },
 
-    // 留言图片 URL：相对路径（/api/image?key=...）补全为后端完整地址
+    // 留言图片 URL：旧动态接口 → 新缓存友好 URL；相对路径补全
     commentImageSrc(url) {
         if (!url) return '';
         if (/^https?:\/\//.test(url)) return url;
-        if (url.startsWith('/api/')) return this.config.apiBase + url;
-        return url;
+        const normalized = this.normalizeImageUrl(url);
+        if (normalized.startsWith('/api/')) return this.config.apiBase + normalized;
+        return normalized;
     },
 
     // 格式化留言时间

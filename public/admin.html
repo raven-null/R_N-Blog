@@ -1895,9 +1895,19 @@
         function trackArticleImage(url){
             if(!url)return;
             let key='';
+            let type='gallery';
             try{
                 const u=new URL(url,window.location.href);
-                key=decodeURIComponent(u.searchParams.get('key')||'');
+                // 新缓存友好格式：/images/a/xxx.webp、/images/g/xxx.webp、/images/g-thumb/xxx.webp
+                const m=u.pathname.match(/^\/images\/(a|g|g-thumb)\/([^/]+)$/);
+                if(m){
+                    type=m[1]==='a'?'article':'gallery';
+                    key=decodeURIComponent(m[2]);
+                }else{
+                    // 旧格式：/api/article-image?key=...、/api/admin-image?key=...
+                    key=decodeURIComponent(u.searchParams.get('key')||'');
+                    type=u.pathname.includes('/api/article-image')?'article':'gallery';
+                }
             }catch(e){}
             if(!key){
                 // 可能是完整 URL，尝试从末尾提取
@@ -1905,8 +1915,6 @@
                 if(m)key=decodeURIComponent(m[1]);
             }
             if(!key)return;
-            // 判断图片类型：文章图片（article-image）或图库图片（admin-image）
-            const type=url.includes('/api/article-image')?'article':'gallery';
             // 去重（同 key 同类型）
             if(!articleImages.some(i=>i.key===key&&i.type===type)){
                 articleImages.push({key,url,type});

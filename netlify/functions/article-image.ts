@@ -118,7 +118,7 @@ export default async (req: Request) => {
 
     return json(200, {
       status: "success",
-      url: `/api/article-image?key=${encodeURIComponent(finalKey)}`,
+      url: `/images/a/${finalKey}`,
       key: finalKey,
       converted: !isSvg,
     }, req)

@@ -1693,7 +1693,7 @@
 
     <!-- JavaScript -->
     <script src="js/theme.js?v=3.13.6"></script>
-    <script src="js/markdown.js?v=3.13.6"></script>
+    <script src="js/markdown.js?v=3.14.0"></script>
     <script src="js/chat.js?v=3.16.1"></script>
     <script src="js/reader.js?v=3.13.6"></script>
     <script src="js/animations.js?v=3.13.6"></script>
@@ -2526,12 +2526,19 @@
                 return String(name || '客').charAt(0).toUpperCase();
             },
 
-            // 留言图片 URL：相对路径（/api/image?key=...）补全为后端完整地址
+            // 留言图片 URL：旧动态接口 → 新缓存友好 URL；相对路径补全
             commentImageSrc(url) {
                 if (!url) return '';
                 if (/^https?:\/\//.test(url)) return url;
-                if (url.startsWith('/api/')) return this.apiBase + url;
-                return url;
+                let u = url;
+                if (u.startsWith('/api/image?key=')) {
+                    const rest = u.slice('/api/image?key='.length);
+                    const key = rest.split('&')[0];
+                    const mime = (rest.match(/mime=image\/(\w+)/) || [])[1];
+                    u = '/images/c/' + key + (key.includes('.') ? '' : (mime ? '.' + mime : '.png'));
+                }
+                if (u.startsWith('/api/')) return this.apiBase + u;
+                return u;
             },
 
             // 格式化留言时间

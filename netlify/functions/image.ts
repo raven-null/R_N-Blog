@@ -20,13 +20,19 @@ export default async (req: Request) => {
     const store = getBlobStore(IMAGE_STORE)
     const raw = await store.get(key)
     if (!raw) return json(404, { status: "error", message: "图片不存在" }, req)
-    const mime = params.get("mime") || "image/png"
+    // mime 优先取参数（兼容旧 URL），否则按 key 扩展名推断（新缓存友好 URL 无 mime 参数）
+    const ext = key.split(".").pop()?.toLowerCase() || ""
+    const mimeMap: Record<string, string> = {
+      jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png",
+      gif: "image/gif", webp: "image/webp", svg: "image/svg+xml",
+    }
+    const mime = params.get("mime") || mimeMap[ext] || "image/png"
     const buf = Buffer.from(raw as string, "base64")
     return new Response(buf, {
       status: 200,
       headers: {
         "Content-Type": mime,
-        "Cache-Control": "public, max-age=86400",
+        "Cache-Control": "public, max-age=31536000",
         "Access-Control-Allow-Origin": "*",
       },
     })
