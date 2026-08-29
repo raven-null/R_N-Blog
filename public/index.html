@@ -279,13 +279,70 @@
         window.__galleryImages = [];
         window.__galleryIndex = 0;
         let __galleryTimer = null;
+        const __galleryPreload = new Map(); // src -> Image（预加载缓存）
+
+        // 预加载原图到浏览器缓存，切换时秒显
+        function preloadGalleryImage(src) {
+            if (!src || __galleryPreload.has(src)) return;
+            const im = new Image();
+            im.src = src;
+            __galleryPreload.set(src, im);
+        }
+        // 预加载当前图相邻 ±1、±2 的原图（连续切换不再等待）
+        function preloadGalleryNeighbors() {
+            const images = window.__galleryImages;
+            if (!images.length) return;
+            const total = images.length;
+            const c = window.__galleryIndex;
+            for (let d = 1; d <= 2; d++) {
+                const p = images[(c + d) % total];
+                const n = images[(c - d + total) % total];
+                preloadGalleryImage((p && (p.url || p)) || '');
+                preloadGalleryImage((n && (n.url || n)) || '');
+            }
+        }
+        // 原图是否已加载完成
+        function galleryImageReady(src) {
+            const im = __galleryPreload.get(src);
+            return !!(im && im.complete && im.naturalWidth > 0);
+        }
+        // 获取灯箱当前项（兼容纯字符串与对象两种数据格式）
+        function galleryItemAt(i) {
+            const it = window.__galleryImages[i];
+            return (it && typeof it === 'object') ? it : { url: it, thumb: '' };
+        }
+        // 显示图片：原图已就绪直接用原图，否则先显示缩略图（已缓存，秒显），原图就绪后自动替换
+        function showGalleryImage(swap, item, targetIdx) {
+            const full = (item && (item.url || item)) || '';
+            const thumb = (item && item.thumb) || '';
+            if (!full) return;
+            if (galleryImageReady(full)) {
+                swap(full);
+                return;
+            }
+            if (thumb && thumb !== full) {
+                swap(thumb);
+            } else {
+                swap(full);
+            }
+            if (full) {
+                preloadGalleryImage(full);
+                const im = __galleryPreload.get(full);
+                if (im) im.onload = () => swap(full);
+            }
+        }
 
         function openGalleryLightbox(src, index) {
             const lb = document.getElementById('galleryLightbox');
             const img = document.getElementById('galleryLightboxImg');
             if (!lb || !img) return;
             window.__galleryIndex = index || 0;
-            img.src = src;
+            const item = galleryItemAt(window.__galleryIndex);
+            const targetIdx = window.__galleryIndex;
+            // 先显示缩略图秒开，原图就绪自动替换（不阻塞打开）
+            showGalleryImage((s) => { if (window.__galleryIndex === targetIdx) img.src = s; }, item, targetIdx);
+            // 预加载相邻图片，为切换做准备
+            preloadGalleryNeighbors();
             updateGalleryLightbox();
             stopGallerySlideshow();
             lb.style.display = 'flex';
@@ -302,18 +359,24 @@
             const images = window.__galleryImages;
             if (!images.length) return;
             const total = images.length;
-            window.__galleryIndex = (window.__galleryIndex + dir + total) % total;
+            const target = (window.__galleryIndex + dir + total) % total;
             const img = document.getElementById('galleryLightboxImg');
-            const src = images[window.__galleryIndex].url || images[window.__galleryIndex];
+            const item = galleryItemAt(target);
+            window.__galleryIndex = target;
+            // 预加载新位置的相邻图（为下一次切换做准备）
+            preloadGalleryNeighbors();
+            const swap = (s) => {
+                if (window.__galleryIndex !== target) return; // 已切走，丢弃过期结果
+                img.src = s;
+                updateGalleryLightbox();
+            };
             if (typeof anime !== 'undefined') {
                 anime.animate(img, { opacity: [1, 0], duration: 120, ease: 'in(2)', onComplete: () => {
-                    img.src = src;
-                    updateGalleryLightbox();
+                    showGalleryImage(swap, item, target);
                     anime.animate(img, { opacity: [0, 1], scale: [0.96, 1], duration: 220, ease: 'out(2)' });
                 } });
             } else {
-                img.src = src;
-                updateGalleryLightbox();
+                showGalleryImage(swap, item, target);
             }
         }
 
@@ -321,8 +384,9 @@
             const el = document.getElementById('galleryLightboxCounter');
             if (el) el.textContent = (window.__galleryIndex + 1) + ' / ' + window.__galleryImages.length;
             const dl = document.getElementById('galleryLightboxDownload');
-            const img = document.getElementById('galleryLightboxImg');
-            if (dl && img) dl.href = img.src;
+            const item = galleryItemAt(window.__galleryIndex);
+            // 下载按钮始终指向原图（而非缩略图）
+            if (dl) dl.href = (item && (item.url || item)) || '';
         }
 
         function toggleGallerySlideshow() {
