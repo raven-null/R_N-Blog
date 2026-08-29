@@ -1898,8 +1898,8 @@
             let type='gallery';
             try{
                 const u=new URL(url,window.location.href);
-                // 新缓存友好格式：/images/a/xxx.webp、/images/g/xxx.webp、/images/g-thumb/xxx.webp
-                const m=u.pathname.match(/^\/images\/(a|g|g-thumb)\/([^/]+)$/);
+                // 新缓存友好格式：/images/a/xxx.webp、/images/g/xxx.webp、/images/t/xxx.webp（缩略图）
+                const m=u.pathname.match(/^\/images\/(a|g|g-thumb|t)\/([^/]+)$/);
                 if(m){
                     type=m[1]==='a'?'article':'gallery';
                     key=decodeURIComponent(m[2]);

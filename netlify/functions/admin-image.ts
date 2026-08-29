@@ -2,18 +2,25 @@ import { getBlobStore } from "./_shared/blob"
 
 const IMAGE_STORE = "blog-images"
 const THUMB_STORE = "blog-image-thumbs"
-const THUMB_MAX = 420 // 缩略图最长边（px）
+// 缩略图最长边：1080px 在常见高分屏（2x DPR）下图库网格（每列约 300-600px）依然清晰
+const THUMB_MAX = 1080
+const THUMB_QUALITY = 80
+// 缩略图缓存 key 带尺寸后缀：调整尺寸后旧缓存不冲突
+const THUMB_VERSION = "@v1080"
 
 export default async (req: Request) => {
   const url = new URL(req.url)
 
-  // 支持两种路由：/api/admin-image?key=xxx（旧）与 /images/g/xxx.webp、/images/g-thumb/xxx.webp（缓存友好）
-  const pathMatch = url.pathname.match(/^\/images\/(g|g-thumb)\/([^/]+)$/)
+  // 支持多种路由：
+  //   /api/admin-image?key=xxx&thumb=1（旧）
+  //   /images/g/xxx.webp（原图）、/images/g-thumb/xxx.webp（旧缩略图路径）
+  //   /images/t/xxx.webp（新缩略图路径，更高分辨率）
+  const pathMatch = url.pathname.match(/^\/images\/(g|g-thumb|t)\/([^/]+)$/)
   const key = pathMatch
     ? decodeURIComponent(pathMatch[2])
     : url.searchParams.get("key")
   const wantThumb = pathMatch
-    ? pathMatch[1] === "g-thumb"
+    ? pathMatch[1] === "g-thumb" || pathMatch[1] === "t"
     : url.searchParams.get("thumb") === "1"
 
   if (!key) return new Response("key required", { status: 400 })
@@ -33,7 +40,7 @@ export default async (req: Request) => {
   if (wantThumbFinal) {
     try {
       const thumbStore = getBlobStore(THUMB_STORE, "strong")
-      const cached = await thumbStore.get(key, { type: "text" })
+      const cached = await thumbStore.get(key + THUMB_VERSION, { type: "text" })
       if (cached) {
         return new Response(Buffer.from(cached, "base64"), {
           headers: {
@@ -57,11 +64,11 @@ export default async (req: Request) => {
       const sharp = (await import("sharp")).default
       const thumbBuf = await sharp(buf)
         .resize({ width: THUMB_MAX, height: THUMB_MAX, fit: "inside", withoutEnlargement: true })
-        .webp({ quality: 72 })
+        .webp({ quality: THUMB_QUALITY })
         .toBuffer()
       buf = Buffer.from(thumbBuf)
       const thumbStore = getBlobStore(THUMB_STORE)
-      await thumbStore.set(key, buf.toString("base64"))
+      await thumbStore.set(key + THUMB_VERSION, buf.toString("base64"))
       return new Response(buf, {
         headers: {
           "Content-Type": "image/webp",
@@ -81,4 +88,4 @@ export default async (req: Request) => {
   })
 }
 
-export const config = { path: ["/api/admin-image", "/images/g/:key", "/images/g-thumb/:key"] }
+export const config = { path: ["/api/admin-image", "/images/g/:key", "/images/g-thumb/:key", "/images/t/:key"] }

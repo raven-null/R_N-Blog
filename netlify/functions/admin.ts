@@ -274,7 +274,7 @@ export default async (req: Request) => {
           key: blob.key,
           // 缓存友好 URL：.webp 结尾 → Cloudflare 免费版默认缓存
           url: `/images/g/${blob.key}`,
-          thumb: `/images/g-thumb/${blob.key}`,
+          thumb: `/images/t/${blob.key}`,
           tags,
         })
       }

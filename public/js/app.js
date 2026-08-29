@@ -463,7 +463,11 @@ const BlogApp = {
             // 兼容旧格式（含 &thumb=1）
             const isThumb = u.includes('&thumb=1');
             const key = u.slice('/api/admin-image?key='.length).split('&')[0];
-            return (isThumb ? '/images/g-thumb/' : '/images/g/') + key;
+            return (isThumb ? '/images/t/' : '/images/g/') + key;
+        }
+        if (u.startsWith('/images/g-thumb/')) {
+            // 旧缩略图路径 → 新高清缩略图路径
+            return '/images/t/' + u.slice('/images/g-thumb/'.length);
         }
         if (u.startsWith('/api/article-image?key=')) {
             return '/images/a/' + u.slice('/api/article-image?key='.length).split('&')[0];
