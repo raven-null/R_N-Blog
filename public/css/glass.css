@@ -104,9 +104,8 @@ body:not(.home-layout) .article-layout,
     border-color: var(--glass-border);
 }
 
-/* —— 下拉面板（搜索 / 标签 / 图库分类） —— */
+/* —— 下拉面板（搜索 / 图库分类） —— */
 .search-dropdown,
-.tags-dropdown,
 .gallery-tag-float-panel {
     background: var(--glass-bg) !important;
     backdrop-filter: var(--glass-blur) !important;
@@ -115,12 +114,22 @@ body:not(.home-layout) .article-layout,
     box-shadow: var(--glass-shadow);
 }
 
-.search-dropdown::before,
-.tags-dropdown::before {
-    background: rgba(30, 30, 34, 0.75) !important;
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
+/* 全部标签面板：保持不透明实底，避免透明导致看不清标签 */
+.tags-dropdown {
+    background: var(--bg-secondary) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    border: 1px solid var(--border) !important;
+    box-shadow: 0 12px 40px var(--shadow);
 }
+
+.tags-dropdown::before {
+    background: var(--bg-secondary) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+.search-dropdown::before {
 
 /* —— 文章卡片（瀑布流） —— */
 .card {
