@@ -32,16 +32,18 @@ const BlogApp = {
         console.log('[BlogApp] 渲染完成');
         this.setupEventListeners();
         this.handleRoute();
+        this.startAutoRefresh();
     },
 
     // 加载所有文章（仅从 Blobs 后台加载）
-    async loadPosts() {
+    // force=true 时跳过 sessionStorage 缓存，强制从服务器重新拉取
+    async loadPosts(force = false) {
         try {
             console.log('[loadPosts] 开始加载文章');
-            const CACHE_KEY = 'blog-posts-data-v15';
-            const CACHE_TTL = 60 * 1000; // 缓存有效期 60 秒
+            const CACHE_KEY = 'blog-posts-data-v16';
+            const CACHE_TTL = 15 * 1000; // 缓存有效期 15 秒（缩短，保证改动后尽快可见）
             const cachedRaw = sessionStorage.getItem(CACHE_KEY);
-            if (cachedRaw) {
+            if (!force && cachedRaw) {
                 try {
                     const cached = JSON.parse(cachedRaw);
                     // 检查缓存是否过期（存有时间戳）
@@ -59,6 +61,7 @@ const BlogApp = {
             sessionStorage.removeItem('blog-posts-data-v12');
             sessionStorage.removeItem('blog-posts-data-v13');
             sessionStorage.removeItem('blog-posts-data-v14');
+            sessionStorage.removeItem('blog-posts-data-v15');
 
             this.posts = [];
 
@@ -102,7 +105,7 @@ const BlogApp = {
     // 加载 Blobs 后台文章
     async loadBlobPosts() {
         try {
-            const res = await fetch('/api/admin?action=articles');
+            const res = await fetch('/api/admin?action=articles', { cache: 'no-store' });
             const data = await res.json();
             if (data.status !== 'success' || !Array.isArray(data.data)) return [];
             return data.data
@@ -120,6 +123,64 @@ const BlogApp = {
                     content: '', // 列表不加载正文
                 }));
         } catch { return []; }
+    },
+
+    // ===== 文章实时刷新机制 =====
+    // 服务器索引指纹（null = 尚未初始化）
+    _lastFingerprint: null,
+    _pollTimer: null,
+    _bc: null,
+
+    // 生成文章索引指纹（id + 日期 + 标题，任一变化即视为改动）
+    _articlesFingerprint(index) {
+        return index
+            .filter(a => a.status === 'published')
+            .map(a => `${a.id}|${a.date}|${a.update || ''}|${a.title}`)
+            .join('§');
+    },
+
+    // 静默检查：与服务器索引比对，有变化才重新加载并渲染
+    async refreshIfChanged() {
+        try {
+            const res = await fetch('/api/admin?action=articles', { cache: 'no-store' });
+            const data = await res.json();
+            if (data.status !== 'success' || !Array.isArray(data.data)) return;
+            const fp = this._articlesFingerprint(data.data);
+            // 首次调用只记录指纹，不做无谓刷新
+            if (this._lastFingerprint === null) {
+                this._lastFingerprint = fp;
+                return;
+            }
+            if (fp !== this._lastFingerprint) {
+                console.log('[BlogApp] 检测到文章变化，自动刷新');
+                this._lastFingerprint = fp;
+                await this.loadPosts(true);
+                this.render();
+            }
+        } catch (e) { /* 静默失败，下次轮询再试 */ }
+    },
+
+    // 启动实时刷新：30 秒轮询 + 标签页可见时立即检查 + 后台广播即时通知
+    startAutoRefresh() {
+        // 轮询（页面可见时生效，避免后台标签页空转）
+        this._pollTimer = setInterval(() => {
+            if (document.visibilityState === 'visible') this.refreshIfChanged();
+        }, 30 * 1000);
+
+        // 从其他标签页切回首页时立即检查
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') this.refreshIfChanged();
+        });
+
+        // 同浏览器后台修改后即时广播通知（后台 admin.html 保存/删除后触发）
+        if (typeof BroadcastChannel !== 'undefined') {
+            this._bc = new BroadcastChannel('blog-articles');
+            this._bc.onmessage = (e) => {
+                if (e.data && e.data.type === 'articles-changed') {
+                    this.refreshIfChanged();
+                }
+            };
+        }
     },
 
     // 默认封面图片（用于无图文章的默认封面）

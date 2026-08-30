@@ -95,10 +95,11 @@ export default async (req: Request) => {
       if (id) {
         const raw = await store.get(id, { type: "text" })
         if (!raw) return json(404, { status: "error", message: "文章不存在" }, req)
-        return json(200, { status: "success", data: JSON.parse(raw) }, req)
+        return json(200, { status: "success", data: JSON.parse(raw) }, req, { "Cache-Control": "no-store" })
       }
       const index = await getArticleIndex(store)
-      return json(200, { status: "success", data: index }, req)
+      // 禁用缓存：确保后台增删改后，前端轮询/刷新能立即拿到最新列表
+      return json(200, { status: "success", data: index }, req, { "Cache-Control": "no-store" })
     }
 
     // 以下写操作需要认证

@@ -1236,7 +1236,7 @@
             if(!confirmed)return;
             try{
                 const r=await apiFetch('action=articles',{method:'PATCH',body:JSON.stringify({id,status})});
-                if(r.status==='success'){showToast(r.message||(action+'成功'),'success');loadArticles()}
+                if(r.status==='success'){showToast(r.message||(action+'成功'),'success');loadArticles();notifyArticlesChanged()}
                 else showToast(r.message||(action+'失败'),'error');
             }catch{showToast(action+'失败','error')}
         }
@@ -1256,7 +1256,7 @@
             const ids=articleListOrderedIds();
             try{
                 const r=await apiFetch('action=articles&reorder=1',{method:'POST',body:JSON.stringify({ids})});
-                if(r.status==='success')showToast('排序已保存','success');
+                if(r.status==='success'){showToast('排序已保存','success');notifyArticlesChanged()}
                 else showToast(r.message||'排序保存失败','error');
             }catch{showToast('排序保存失败','error')}
         }
@@ -1295,7 +1295,11 @@
             document.querySelectorAll('#articleList tr.dragging,#articleList tr.drag-over').forEach(r=>r.classList.remove('dragging','drag-over'));
             dragArticleRow=null;
         });
-        async function deleteArticle(id,title){const confirmed=await showConfirm(`确定删除「${title}」？删除后不可恢复！`,'删除文章','删除');if(!confirmed)return;const r=await apiFetch(`action=articles&id=${id}`,{method:'DELETE'});if(r.status==='success'){showToast('已删除','success');loadArticles()}else showToast(r.message||'删除失败','error')}
+        // 文章增删改后通知首页（同浏览器标签页）即时刷新
+        function notifyArticlesChanged(){
+            try{const bc=new BroadcastChannel('blog-articles');bc.postMessage({type:'articles-changed'});bc.close()}catch(e){}
+        }
+        async function deleteArticle(id,title){const confirmed=await showConfirm(`确定删除「${title}」？删除后不可恢复！`,'删除文章','删除');if(!confirmed)return;const r=await apiFetch(`action=articles&id=${id}`,{method:'DELETE'});if(r.status==='success'){showToast('已删除','success');loadArticles();notifyArticlesChanged()}else showToast(r.message||'删除失败','error')}
         function editArticle(id){editingId=id;switchTab('write');document.getElementById('writeTitle').textContent='编辑文章';loadArticleForEdit(id)}
         async function loadArticleForEdit(id){const r=await apiFetch(`action=articles&id=${id}`);if(r.status==='success'){const d=r.data;document.getElementById('edTitle').value=d.title||'';document.getElementById('edExcerpt').value=d.excerpt||'';document.getElementById('edImage').value=d.image||'';renderCoverPreview();selectedArticleTags=[...(d.tags||[])];renderTagPickerChips();document.getElementById('edStatus').value=d.status||'published';setEditorContent(d.content||'')}}
         function importAndEdit(f){if(!f)return;const r=new FileReader();r.onload=()=>{const raw=r.result,m=raw.match(/^---\s*\n([\s\S]*?)\n---\s*\n([\s\S]*)$/);let title=f.name.replace(/\.md$/),excerpt='',tags=[],content=raw,image='';if(m){const fm=m[1],t=fm.match(/title:\s*(.+)/);if(t)title=t[1].trim();const tg=fm.match(/tags:\s*\[([^\]]+)\]/);if(tg)tags=tg[1].split(',').map(s=>s.trim());const ex=fm.match(/excerpt:\s*(.+)/);if(ex)excerpt=ex[1].trim();const im=fm.match(/image:\s*(.+)/);if(im)image=im[1].trim();content=m[2]}editingId=null;switchTab('write');document.getElementById('writeTitle').textContent='导入文章';document.getElementById('edTitle').value=title;document.getElementById('edExcerpt').value=excerpt;document.getElementById('edImage').value=image;renderCoverPreview();selectedArticleTags=tags;renderTagPickerChips();setEditorContent(content);showToast(`已导入: ${f.name}`,'success')};r.readAsText(f)}
@@ -1319,7 +1323,7 @@
                     return;
                 }
             }
-            const body={title,excerpt,tags,content,status,image};if(editingId)body.id=editingId;const r=await apiFetch('action=articles',{method:'POST',body:JSON.stringify(body)});if(r.status==='success'){showToast('保存成功','success');resetEditor();switchTab('articles')}else showToast(r.message||'保存失败','error')}
+            const body={title,excerpt,tags,content,status,image};if(editingId)body.id=editingId;const r=await apiFetch('action=articles',{method:'POST',body:JSON.stringify(body)});if(r.status==='success'){showToast('保存成功','success');resetEditor();switchTab('articles');notifyArticlesChanged()}else showToast(r.message||'保存失败','error')}
         // ===== 所见即所得编辑器（Toast UI，Obsidian 式） =====
         let toastEditor=null;
         function ensureEditor(){

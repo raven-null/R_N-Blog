@@ -29,12 +29,13 @@ export function corsHeaders(req?: Request): Record<string, string> {
 }
 
 /** v2 函数（Web Request/Response）统一 JSON 响应 */
-export function json(status: number, body: any, req?: Request): Response {
+export function json(status: number, body: any, req?: Request, extraHeaders?: Record<string, string>): Response {
   return new Response(JSON.stringify(body), {
     status,
     headers: {
       ...corsHeaders(req),
       "Content-Type": "application/json; charset=utf-8",
+      ...extraHeaders,
     },
   })
 }
