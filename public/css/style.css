@@ -584,6 +584,33 @@ body.home-layout {
     transform: scale(1.03);
 }
 
+/* R18 锁定占位卡片（未验证密钥时不加载任何图片内容） */
+.gallery-item-locked {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 180px;
+    cursor: pointer;
+}
+
+.gallery-lock-badge {
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    color: var(--text-muted);
+    padding: 10px 18px;
+    border: 1px dashed var(--border);
+    border-radius: 10px;
+    background: var(--bg-card);
+    user-select: none;
+    transition: color 0.25s, border-color 0.25s;
+}
+
+.gallery-item-locked:hover .gallery-lock-badge {
+    color: var(--accent);
+    border-color: var(--accent);
+}
+
 /* 图库灯箱 */
 .gallery-lightbox {
     position: fixed;

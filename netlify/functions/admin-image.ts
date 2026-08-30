@@ -8,7 +8,7 @@ const THUMB_MAX = 1080
 const THUMB_QUALITY = 80
 // 缩略图缓存 key 带尺寸后缀：调整尺寸后旧缓存不冲突
 const THUMB_VERSION = "@v1080"
-// R18 标签（大小写不敏感）：该标签下的图片仅管理员可访问
+// R18 标签（大小写不敏感）：该标签下的图片原图仅管理员可访问
 const R18_TAG = "r18"
 
 // 判断图片是否被归类为 R18（读取图片标签索引）
@@ -51,17 +51,6 @@ export default async (req: Request) => {
 
   if (!key) return new Response("key required", { status: 400 })
 
-  // R18 图片：仅管理员可访问，否则一律 403（不泄露图片是否存在）
-  const r18 = await isR18Image(key)
-  if (r18 && !(await isAdmin(req))) {
-    return new Response("Forbidden", {
-      status: 403,
-      headers: { "Cache-Control": "private, no-store" },
-    })
-  }
-  // R18 图片响应不做 CDN 缓存，避免绕过权限校验
-  const cacheControl = r18 ? "private, no-store" : "public, max-age=31536000"
-
   // 从 key 推断 mime
   const ext = key.split(".").pop()?.toLowerCase() || "png"
   const mimeMap: Record<string, string> = {
@@ -74,6 +63,18 @@ export default async (req: Request) => {
 
   // 缩略图请求：优先读缓存 store，未命中实时生成并落盘（仅位图；svg 直接原图）。
   const wantThumbFinal = wantThumb && ext !== "svg"
+
+  // R18 图片：缩略图与原图均仅管理员可访问（前台 R18 分类下显示锁定占位，验证密钥后才加载）
+  const r18 = await isR18Image(key)
+  if (r18 && !(await isAdmin(req))) {
+    return new Response("Forbidden", {
+      status: 403,
+      headers: { "Cache-Control": "private, no-store" },
+    })
+  }
+  // R18 图片响应不做 CDN 缓存，避免绕过权限校验
+  const cacheControl = r18 ? "private, no-store" : "public, max-age=31536000"
+
   if (wantThumbFinal) {
     try {
       const thumbStore = getBlobStore(THUMB_STORE, "strong")

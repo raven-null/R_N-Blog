@@ -260,12 +260,11 @@ export default async (req: Request) => {
 
     if (req.method === "GET") {
       const tag = url.searchParams.get("tag")
-      // 管理员（有效 X-Admin-Key）可见全部图片；普通访客隐藏 R18 图片
-      const isAdmin = await checkAuth(req)
       const tagIndex = await getImageTagIndex()
       // 用最终一致性 list（Netlify Blobs 的 list 在强一致性下极慢），
       // 且不要逐张读取内容——list 返回的条目在生产环境没有 size 字段，
       // 之前会回退到逐张 store.get（440 张图 → 14 秒+）。
+      // 列表对所有人可见（R18 缩略图前台公开展示，原图访问才需要管理员密钥）
       const list = await getBlobStore(IMAGE_STORE).list({ prefix: "" })
       const images = []
       for (const blob of list.blobs) {
@@ -273,8 +272,6 @@ export default async (req: Request) => {
         const tags = tagIndex[blob.key] || []
         // 按标签筛选
         if (tag && !tags.includes(tag)) continue
-        // 非管理员隐藏 R18 图片（大小写不敏感）
-        if (!isAdmin && tags.some(t => String(t).toLowerCase() === "r18")) continue
         images.push({
           key: blob.key,
           // 缓存友好 URL：.webp 结尾 → Cloudflare 免费版默认缓存
@@ -283,14 +280,13 @@ export default async (req: Request) => {
           tags,
         })
       }
-      // 图库列表 5 分钟内不变（增删由管理端触发），允许 CDN 缓存；
-      // 管理员响应含 R18 图片，不做缓存（且前端管理员请求带 &admin=1 区分 URL）
+      // 图库列表 5 分钟内不变（增删由管理端触发），允许 CDN 缓存
       return new Response(JSON.stringify({ status: "success", data: images }), {
         status: 200,
         headers: {
           ...corsHeaders(req),
           "Content-Type": "application/json; charset=utf-8",
-          "Cache-Control": isAdmin ? "private, no-store" : "public, max-age=300",
+          "Cache-Control": "public, max-age=300",
         },
       })
     }

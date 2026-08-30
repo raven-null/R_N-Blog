@@ -337,6 +337,12 @@
             const lb = document.getElementById('galleryLightbox');
             const img = document.getElementById('galleryLightboxImg');
             if (!lb || !img) return;
+            // R18 图片：原图需管理员密钥，未验证时先弹窗输入
+            const first = galleryItemAt(index || 0);
+            if (first && typeof first === 'object' && BlogApp.isR18Image(first) && !((first.url || '').includes('adminKey='))) {
+                BlogApp.requestR18Key().then(ok => { if (ok) openGalleryLightbox(src, index); });
+                return;
+            }
             window.__galleryIndex = index || 0;
             const item = galleryItemAt(window.__galleryIndex);
             const targetIdx = window.__galleryIndex;
@@ -356,13 +362,24 @@
             });
         }
 
-        function galleryLightboxNav(dir) {
+        function galleryLightboxNav(dir, depth) {
             const images = window.__galleryImages;
             if (!images.length) return;
             const total = images.length;
             const target = (window.__galleryIndex + dir + total) % total;
             const img = document.getElementById('galleryLightboxImg');
             const item = galleryItemAt(target);
+            // R18 图片未验证密钥：手动切换时弹窗验证；自动播放时跳过（深度保护防全 R18 死循环）
+            if (item && typeof item === 'object' && BlogApp.isR18Image(item) && !((item.url || '').includes('adminKey='))) {
+                if (__galleryTimer) {
+                    depth = depth || 0;
+                    if (depth >= total) return; // 全部 R18 未解锁，停止轮播
+                    window.__galleryIndex = target;
+                    return galleryLightboxNav(dir, depth + 1);
+                }
+                BlogApp.requestR18Key().then(ok => { if (ok) galleryLightboxNav(dir); });
+                return;
+            }
             window.__galleryIndex = target;
             // 预加载新位置的相邻图（为下一次切换做准备）
             preloadGalleryNeighbors();

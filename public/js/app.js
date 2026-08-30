@@ -538,23 +538,21 @@ const BlogApp = {
     },
 
     // 加载图库图片（从 Blobs API 获取所有图片）
-    // 管理员（localStorage 有 admin_key）可获取含 R18 的完整列表，图片 URL 附加密钥参数才能加载；
-    // 普通访客由后端过滤 R18，且图片接口无权限直接 403
+    // R18 图片：元数据公开（用于「R18」分类下渲染锁定占位卡片），图片内容（缩略图/原图）均需密钥；
+    // 已有密钥（后台登录 / 本次会话验证过）时 URL 附加参数直接加载，否则点击时弹窗验证
     async loadGalleryImages() {
         if (this.galleryImages) return this.galleryImages;
         try {
-            const adminKey = this.getAdminKey();
-            const res = await fetch('/api/admin?action=images' + (adminKey ? '&admin=1' : ''), {
-                headers: adminKey ? { 'X-Admin-Key': adminKey } : {}
-            });
+            const res = await fetch('/api/admin?action=images');
             const data = await res.json();
             if (data.status === 'success' && Array.isArray(data.data)) {
+                const vk = this.galleryViewKey();
                 this.galleryImages = data.data.map(img => {
                     let url = this.normalizeImageUrl(img.url);
                     let thumb = img.thumb ? this.normalizeImageUrl(img.thumb) : '';
-                    // R18 图片的 <img> 无法带 header，只能在 URL 上附加密钥
-                    if (adminKey && this.isR18Image(img)) {
-                        const q = 'adminKey=' + encodeURIComponent(adminKey);
+                    // 已有密钥：R18 图片 URL 附加密钥参数（<img> 无法带 header）
+                    if (vk && this.isR18Image(img)) {
+                        const q = 'adminKey=' + encodeURIComponent(vk);
                         url = url + (url.includes('?') ? '&' : '?') + q;
                         if (thumb) thumb = thumb + (thumb.includes('?') ? '&' : '?') + q;
                     }
@@ -569,14 +567,61 @@ const BlogApp = {
         return this.galleryImages;
     },
 
-    // 读取本地管理员密钥（后台登录后写入 localStorage）
+    // 读取本地管理员密钥（后台登录后写入 localStorage；前台验证通过后存 sessionStorage）
     getAdminKey() {
         try { return localStorage.getItem('admin_key') || ''; } catch (e) { return ''; }
+    },
+
+    // 当前可用的图库查看密钥（后台密钥 或 本次会话验证过的密钥）
+    galleryViewKey() {
+        const adminKey = this.getAdminKey();
+        if (adminKey) return adminKey;
+        try { return sessionStorage.getItem('gallery_view_key') || ''; } catch (e) { return ''; }
     },
 
     // 判断图片是否归类为 R18（大小写不敏感）
     isR18Image(img) {
         return !!(img && (img.tags || []).some(t => String(t).toLowerCase() === 'r18'));
+    },
+
+    // 给图库中所有 R18 图片的 URL 附加密钥参数（验证通过后调用）
+    applyR18Keys(key) {
+        const q = 'adminKey=' + encodeURIComponent(key);
+        (this.galleryImages || []).forEach(img => {
+            if (!this.isR18Image(img)) return;
+            if (img.url && !img.url.includes('adminKey=')) img.url += (img.url.includes('?') ? '&' : '?') + q;
+            if (img.thumb && !img.thumb.includes('adminKey=')) img.thumb += (img.thumb.includes('?') ? '&' : '?') + q;
+        });
+    },
+
+    // 点击 R18 图片时的密钥验证弹窗：输入管理员密钥，验证通过后本会话内可直接查看
+    async requestR18Key() {
+        // 已有密钥（后台登录 或 本会话验证过）→ 直接附加并放行
+        const existing = this.galleryViewKey();
+        if (existing) {
+            this.applyR18Keys(existing);
+            return true;
+        }
+        const key = window.prompt('该图片为 R18 内容，请输入管理员密钥后查看：');
+        if (!key || !key.trim()) return false;
+        // 用密钥请求一张 R18 原图验证（X-Admin-Key 头）
+        const target = (this.galleryImages || []).find(img => this.isR18Image(img));
+        if (!target) return false;
+        try {
+            const res = await fetch(target.url, { headers: { 'X-Admin-Key': key.trim() } });
+            if (!res.ok) {
+                alert('密钥错误，无法查看 R18 图片');
+                return false;
+            }
+        } catch {
+            alert('验证失败，请重试');
+            return false;
+        }
+        sessionStorage.setItem('gallery_view_key', key.trim());
+        this.applyR18Keys(key.trim());
+        // 刷新网格，使后续点击的图片 URL 已带密钥
+        this.renderGalleryByTag();
+        return true;
     },
 
     // 当前图库筛选标签（'all' 表示全部）
@@ -603,7 +648,7 @@ const BlogApp = {
         if (!grid) return;
         // 始终基于完整图库数据（this.galleryImages）筛选
         const allImages = (this.galleryImages && this.galleryImages.length) ? this.galleryImages : [];
-        // 「全部」视图始终不显示 R18 图片（R18 仅通过单独分类查看）
+        // 「全部」视图不显示 R18；R18 仅在对应分类标签下可见（未验证时显示锁定占位卡片）
         const filtered = this.galleryTag === 'all'
             ? allImages.filter(img => !this.isR18Image(img))
             : allImages.filter(img => (img.tags || []).includes(this.galleryTag));
@@ -613,12 +658,19 @@ const BlogApp = {
             grid.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:40px;">该分类暂无图片</p>';
             return;
         }
-        grid.innerHTML = filtered.map((img, i) => `
-            <figure class="gallery-item">
+        grid.innerHTML = filtered.map((img, i) => {
+            // R18 且未验证密钥：显示锁定占位卡片（不加载任何图片内容）
+            if (this.isR18Image(img) && !(img.url || '').includes('adminKey=')) {
+                return `<figure class="gallery-item gallery-item-locked" title="R18 内容，点击输入管理员密钥查看"
+                     onclick="openGalleryLightbox('${img.url}', ${i})">
+                    <div class="gallery-lock-badge">🔒 R18</div>
+                </figure>`;
+            }
+            return `<figure class="gallery-item">
                 <img src="${img.thumb || img.url}" alt="图片 ${i + 1}" loading="lazy"
                      onclick="openGalleryLightbox('${img.url}', ${i})">
-            </figure>
-        `).join('');
+            </figure>`;
+        }).join('');
     },
 
     // 切换图库分类面板
