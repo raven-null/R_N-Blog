@@ -267,7 +267,6 @@ body:not(.home-layout) .article-layout,
 
 /* —— 文章页 —— */
 .toc-sidebar-inner,
-.toc-header,
 .back-button,
 .sidebar-action-btn,
 .reader-toolbar,
@@ -277,6 +276,16 @@ body:not(.home-layout) .article-layout,
     -webkit-backdrop-filter: var(--glass-blur) !important;
     border: 1px solid var(--glass-border) !important;
     box-shadow: var(--glass-shadow);
+}
+
+/* 目录头部 sticky 区：保持不透明实底，避免玻璃透明导致标题浮空 */
+.toc-header {
+    background: var(--bg-secondary) !important;
+    border-bottom: 1px solid var(--border) !important;
+    border-left: none !important;
+    border-right: none !important;
+    border-top: none !important;
+    box-shadow: none !important;
 }
 
 .reader-toolbar {
