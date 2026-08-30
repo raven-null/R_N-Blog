@@ -113,6 +113,12 @@ const MarkdownParser = {
                 } else if (src.startsWith('/images/g-thumb/')) {
                     src = '/images/t/' + src.slice('/images/g-thumb/'.length);
                 }
+                // 图库图片（可能归类 R18）：管理员浏览时附加密钥参数才能加载，普通访客由后端 403
+                if (src.startsWith('/images/g/') || src.startsWith('/images/t/')) {
+                    let ak = '';
+                    try { ak = localStorage.getItem('admin_key') || ''; } catch (e) {}
+                    if (ak) src += (src.includes('?') ? '&' : '?') + 'adminKey=' + encodeURIComponent(ak);
+                }
                 const onerror = "this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22100%22%3E%3Crect fill=%22%23222%22 width=%22200%22 height=%22100%22/%3E%3Ctext fill=%22%23666%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 font-size=%2214%22%3E图片加载失败%3C/text%3E%3C/svg%3E'";
                 return `<figure class="img-figure"><img src="${src}" alt="${altText}"${titleAttr} loading="lazy" decoding="async" onerror="${onerror}" onclick="openLightbox(this)" style="cursor:zoom-in">${captionHtml}</figure>`;
             };

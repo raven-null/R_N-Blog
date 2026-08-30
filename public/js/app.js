@@ -502,15 +502,10 @@ const BlogApp = {
         grid.dataset.rendered = '1';
         try {
             const images = await this.loadGalleryImages();
-            window.__galleryImages = images;
-            grid.innerHTML = images.map((img, i) => `
-                <figure class="gallery-item">
-                    <img src="${img.thumb || img.url}" alt="图片 ${i + 1}" loading="lazy"
-                         onclick="openGalleryLightbox('${img.url}', ${i})">
-                </figure>
-            `).join('');
-            // 加载图库分类标签
+            // 「全部」视图：按 renderGalleryByTag 过滤（不显示 R18）
             this.galleryTag = 'all';
+            this.renderGalleryByTag();
+            // 加载图库分类标签（从完整数据提取，管理员可见 R18 分类）
             this.renderGalleryTags();
         } catch (e) {
             grid.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:40px;">图库加载失败</p>';
@@ -543,18 +538,28 @@ const BlogApp = {
     },
 
     // 加载图库图片（从 Blobs API 获取所有图片）
+    // 管理员（localStorage 有 admin_key）可获取含 R18 的完整列表，图片 URL 附加密钥参数才能加载；
+    // 普通访客由后端过滤 R18，且图片接口无权限直接 403
     async loadGalleryImages() {
         if (this.galleryImages) return this.galleryImages;
         try {
-            const res = await fetch('/api/admin?action=images');
+            const adminKey = this.getAdminKey();
+            const res = await fetch('/api/admin?action=images' + (adminKey ? '&admin=1' : ''), {
+                headers: adminKey ? { 'X-Admin-Key': adminKey } : {}
+            });
             const data = await res.json();
             if (data.status === 'success' && Array.isArray(data.data)) {
-                this.galleryImages = data.data.map(img => ({
-                    key: img.key,
-                    url: this.normalizeImageUrl(img.url),
-                    thumb: img.thumb ? this.normalizeImageUrl(img.thumb) : '',
-                    tags: img.tags || [],
-                }));
+                this.galleryImages = data.data.map(img => {
+                    let url = this.normalizeImageUrl(img.url);
+                    let thumb = img.thumb ? this.normalizeImageUrl(img.thumb) : '';
+                    // R18 图片的 <img> 无法带 header，只能在 URL 上附加密钥
+                    if (adminKey && this.isR18Image(img)) {
+                        const q = 'adminKey=' + encodeURIComponent(adminKey);
+                        url = url + (url.includes('?') ? '&' : '?') + q;
+                        if (thumb) thumb = thumb + (thumb.includes('?') ? '&' : '?') + q;
+                    }
+                    return { key: img.key, url, thumb, tags: img.tags || [] };
+                });
             } else {
                 this.galleryImages = [];
             }
@@ -562,6 +567,16 @@ const BlogApp = {
             this.galleryImages = [];
         }
         return this.galleryImages;
+    },
+
+    // 读取本地管理员密钥（后台登录后写入 localStorage）
+    getAdminKey() {
+        try { return localStorage.getItem('admin_key') || ''; } catch (e) { return ''; }
+    },
+
+    // 判断图片是否归类为 R18（大小写不敏感）
+    isR18Image(img) {
+        return !!(img && (img.tags || []).some(t => String(t).toLowerCase() === 'r18'));
     },
 
     // 当前图库筛选标签（'all' 表示全部）
@@ -588,8 +603,9 @@ const BlogApp = {
         if (!grid) return;
         // 始终基于完整图库数据（this.galleryImages）筛选
         const allImages = (this.galleryImages && this.galleryImages.length) ? this.galleryImages : [];
+        // 「全部」视图始终不显示 R18 图片（R18 仅通过单独分类查看）
         const filtered = this.galleryTag === 'all'
-            ? allImages
+            ? allImages.filter(img => !this.isR18Image(img))
             : allImages.filter(img => (img.tags || []).includes(this.galleryTag));
         // window.__galleryImages 设为当前筛选结果（灯箱在筛选结果内导航）
         window.__galleryImages = filtered;
@@ -617,9 +633,10 @@ const BlogApp = {
         const list = document.getElementById('galleryTagFloatList');
         if (!list) return;
         try {
-            // 从图片数据提取所有标签（后端分类）
+            // 从完整图库数据提取所有标签（后端分类）；
+            // 注意不能用 window.__galleryImages（「全部」视图已过滤 R18，会导致管理员看不到 R18 分类）
             const allTags = new Set();
-            const images = window.__galleryImages || [];
+            const images = this.galleryImages || [];
             images.forEach(img => (img.tags || []).forEach(t => allTags.add(t)));
             const tags = [...allTags];
             list.innerHTML = `

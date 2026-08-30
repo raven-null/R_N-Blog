@@ -1172,7 +1172,9 @@
         function doLogin(){const k=document.getElementById('adminKeyInput').value.trim();if(!k)return;adminKey=k;localStorage.setItem('admin_key',k);apiFetch('action=login',{method:'POST',body:JSON.stringify({key:k})}).then(r=>{if(r.status==='success')showAdmin();else{document.getElementById('loginError').style.display='block';document.getElementById('loginError').textContent=r.message||'密钥错误'}}).catch(()=>{document.getElementById('loginError').style.display='block';document.getElementById('loginError').textContent='连接失败'})}
         function doLogout(){adminKey='';localStorage.removeItem('admin_key');location.reload()}
         function showAdmin(){document.getElementById('loginPage').style.display='none';document.getElementById('adminApp').style.display='block';document.getElementById('sidebar').classList.add('collapsed');loadArticles()}
-        async function apiFetch(p,o={}){const r=await fetch(`/api/admin?${p}`,{...o,headers:{'Content-Type':'application/json','X-Admin-Key':adminKey,...(o.headers||{})}});return r.json()}
+        async function apiFetch(p,o={}){if(p.startsWith('action=images')&&(!o.method||o.method==='GET'))p+='&_='+Date.now();const r=await fetch(`/api/admin?${p}`,{...o,headers:{'Content-Type':'application/json','X-Admin-Key':adminKey,...(o.headers||{})}});return r.json()}
+        // 图片显示 URL：附加管理员密钥参数（<img> 无法带 header，R18 图片需密钥参数才能加载）
+        function displayUrl(u){if(!u||!adminKey)return u;return u+(u.includes('?')?'&':'?')+'adminKey='+encodeURIComponent(adminKey)}
         function toggleSidebar(){document.getElementById('sidebar').classList.toggle('collapsed')}
 
         // ===== 文章 =====
@@ -1938,7 +1940,7 @@
             }
             list.innerHTML=articleImages.map(img=>`
                 <div class="write-article-img-item" title="${esc(img.key)}">
-                    <img src="${img.url}" loading="lazy">
+                    <img src="${displayUrl(img.url)}" loading="lazy">
                     <button class="del" onclick="deleteArticleImage('${escAttr(img.key)}')" title="删除图片">&times;</button>
                 </div>
             `).join('');
@@ -2147,7 +2149,7 @@
         function classifyCardHtml(img, showCheckbox=false){
             const checked = selectedImageKeys.has(img.key) ? 'checked' : '';
             const checkbox = (showCheckbox && batchMode) ? `<input type="checkbox" class="img-checkbox" ${checked} style="position:absolute;top:4px;left:4px;z-index:2">` : '';
-            return `<div class="classify-card${selectedImageKeys.has(img.key) && batchMode ? ' selected' : ''}" draggable="true" data-key="${escAttr(img.key)}">${checkbox}<img src="${img.url}" loading="lazy"><div class="cc-bottom"><span class="cc-name" title="${escAttr(img.key)}">${esc(img.key)}</span><button class="cc-del" title="删除">&times;</button></div></div>`;
+            return `<div class="classify-card${selectedImageKeys.has(img.key) && batchMode ? ' selected' : ''}" draggable="true" data-key="${escAttr(img.key)}">${checkbox}<img src="${displayUrl(img.url)}" loading="lazy"><div class="cc-bottom"><span class="cc-name" title="${escAttr(img.key)}">${esc(img.key)}</span><button class="cc-del" title="删除">&times;</button></div></div>`;
         }
 
         // HTML 属性转义（用于 data-key）
@@ -2490,10 +2492,10 @@
             const img=allImageData.find(i=>i.key===key);
             if(!img)return;
             const lb=document.getElementById('adminLightbox');
-            document.getElementById('adminLbImg').src=img.url;
+            document.getElementById('adminLbImg').src=displayUrl(img.url);
             document.getElementById('adminLbName').textContent=`${key} · ${(img.tags||[]).join(', ')||'未分类'}`;
             document.getElementById('adminLbCounter').textContent=`${lightboxIndex+1} / ${lightboxKeys.length}`;
-            document.getElementById('adminLbDownload').href=img.url;
+            document.getElementById('adminLbDownload').href=displayUrl(img.url);
             document.getElementById('adminLbDownload').download=key;
         }
 
@@ -2576,7 +2578,7 @@
             renderImagePicker();
         }
         function closeImagePicker(){document.getElementById('imagePickerPanel').classList.remove('open');window.__coverMode=false;window.__avatarMode=false;window.__faviconMode=false}
-        function renderImagePicker(){const l=document.getElementById('imagePickerList');if(!cachedImages.length){l.innerHTML='<div class="empty" style="padding:32px">暂无图片</div>';return}l.innerHTML=cachedImages.map(img=>`<div class="image-picker-item" data-key="${escAttr(img.key)}"><img src="${img.url}" loading="lazy" onclick="onPickerImageClick(this)"><span class="name" onclick="onPickerImageClick(this.previousElementSibling)">${esc(img.key)}</span><button class="picker-del" onclick="event.stopPropagation();deletePickerImage('${escAttr(img.key)}')" title="删除图片">&times;</button></div>`).join('')}
+        function renderImagePicker(){const l=document.getElementById('imagePickerList');if(!cachedImages.length){l.innerHTML='<div class="empty" style="padding:32px">暂无图片</div>';return}l.innerHTML=cachedImages.map(img=>`<div class="image-picker-item" data-key="${escAttr(img.key)}"><img src="${displayUrl(img.url)}" loading="lazy" onclick="onPickerImageClick(this)"><span class="name" onclick="onPickerImageClick(this.previousElementSibling)">${esc(img.key)}</span><button class="picker-del" onclick="event.stopPropagation();deletePickerImage('${escAttr(img.key)}')" title="删除图片">&times;</button></div>`).join('')}
         // 图片点击：favicon/封面/头像模式设置，否则插入正文
         function onPickerImageClick(imgEl){
             const item=imgEl.closest('.image-picker-item');
