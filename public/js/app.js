@@ -554,7 +554,8 @@ const BlogApp = {
     async loadGalleryImages() {
         if (this.galleryImages) return this.galleryImages;
         try {
-            const res = await fetch('/api/admin?action=images');
+            // 带时间戳绕过 CDN/浏览器缓存：图片标签变更后前台立即可见（否则列表接口 max-age=300 会拿旧数据）
+            const res = await fetch('/api/admin?action=images&_=' + Date.now());
             const data = await res.json();
             if (data.status === 'success' && Array.isArray(data.data)) {
                 const vk = this.galleryViewKey();
