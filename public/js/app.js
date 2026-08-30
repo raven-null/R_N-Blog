@@ -33,6 +33,17 @@ const BlogApp = {
         this.setupEventListeners();
         this.handleRoute();
         this.startAutoRefresh();
+        // 后台退出登录联动：admin_key / gallery_key 被清除时，前台图库 R18 恢复锁定
+        window.addEventListener('storage', (e) => {
+            if ((e.key === 'admin_key' || e.key === 'gallery_key') && !e.newValue) {
+                if (this.galleryImages) {
+                    this.galleryImages = null;
+                    const grid = document.getElementById('galleryGrid');
+                    if (grid) grid.dataset.rendered = '';
+                    this.renderGallery();
+                }
+            }
+        });
     },
 
     // 加载所有文章（仅从 Blobs 后台加载）
@@ -572,11 +583,13 @@ const BlogApp = {
         try { return localStorage.getItem('admin_key') || ''; } catch (e) { return ''; }
     },
 
-    // 当前可用的图库查看密钥（后台密钥 或 本次会话验证过的密钥）
+    // 当前可用的图库查看密钥：后台登录密钥（admin_key）优先，其次前台验证过的密钥（gallery_key）
     galleryViewKey() {
-        const adminKey = this.getAdminKey();
-        if (adminKey) return adminKey;
-        try { return sessionStorage.getItem('gallery_view_key') || ''; } catch (e) { return ''; }
+        try {
+            const adminKey = localStorage.getItem('admin_key');
+            if (adminKey) return adminKey;
+            return localStorage.getItem('gallery_key') || '';
+        } catch (e) { return ''; }
     },
 
     // 判断图片是否归类为 R18（大小写不敏感）
@@ -617,7 +630,8 @@ const BlogApp = {
             alert('验证失败，请重试');
             return false;
         }
-        sessionStorage.setItem('gallery_view_key', key.trim());
+        // 验证通过：存入 localStorage gallery_key（后台退出时会一并清除，实现权限联动失效）
+        localStorage.setItem('gallery_key', key.trim());
         this.applyR18Keys(key.trim());
         // 刷新网格，使后续点击的图片 URL 已带密钥
         this.renderGalleryByTag();

@@ -2,7 +2,6 @@ import { randomUUID, createHash } from "node:crypto"
 import { json, badRequest, noContent, corsHeaders } from "./_shared/cors"
 import { getBlobStore } from "./_shared/blob"
 import { getAdminPassword, checkAuth } from "./_shared/auth"
-import { DEFAULT_AGENT_SETTINGS } from "./_shared/agent"
 import { MODEL_CATALOG, resolveModelApiUrl, resolveTemperature } from "./_shared/models"
 
 const ARTICLE_STORE = "blog-articles"
@@ -733,20 +732,6 @@ export default async (req: Request) => {
         maxTokens: 2048,
         temperature: 0.7,
       },
-      // 写作 AI（后台写文章用，与前台聊天 AI 独立配置）
-      writingAi: {
-        enabled: true,
-        provider: "zhipu",
-        apiUrl: "",
-        apiKey: "",
-        model: "",
-        systemPrompt: "",
-        keywords: "",
-        maxTokens: 4096,
-        temperature: 0.7,
-      },
-      // AI Agent（自动写作发布：后台指令 + 评论区 @管理员 触发）
-      agent: { ...DEFAULT_AGENT_SETTINGS },
     }
 
     // GET: 读取设置（公开，首页需要）
@@ -755,10 +740,6 @@ export default async (req: Request) => {
       const data = raw ? JSON.parse(raw) : {}
       const storedAi = data.ai || {}
       const aiDefaults = DEFAULT_SETTINGS.ai
-      const storedWritingAi = data.writingAi || {}
-      const writingAiDefaults = DEFAULT_SETTINGS.writingAi
-      const storedAgent = data.agent || {}
-      const agentDefaults = DEFAULT_AGENT_SETTINGS
       // 合并默认值，确保关键字段有值
       const merged = {
         ...DEFAULT_SETTINGS,
@@ -782,36 +763,7 @@ export default async (req: Request) => {
             typeof storedAi.temperature === "number" && !Number.isNaN(storedAi.temperature) ? storedAi.temperature : aiDefaults.temperature,
           ),
         },
-        // 写作 AI：apiUrl/apiKey/model 留空时不在此处回退（由 /api/ai 后端回退 ai），其余字段用默认值
-        writingAi: {
-          ...writingAiDefaults,
-          ...storedWritingAi,
-          provider: storedWritingAi.provider || "",
-          systemPrompt: storedWritingAi.systemPrompt || writingAiDefaults.systemPrompt,
-          keywords: storedWritingAi.keywords || writingAiDefaults.keywords,
-          maxTokens: Number(storedWritingAi.maxTokens) > 0 ? Number(storedWritingAi.maxTokens) : writingAiDefaults.maxTokens,
-          temperature: resolveTemperature(
-            storedWritingAi.provider || "",
-            storedWritingAi.model || "",
-            typeof storedWritingAi.temperature === "number" && !Number.isNaN(storedWritingAi.temperature) ? storedWritingAi.temperature : writingAiDefaults.temperature,
-          ),
-        },
         navTags: data.navTags && data.navTags.length ? data.navTags : DEFAULT_SETTINGS.navTags,
-        // AI Agent 设置
-        agent: {
-          enabled: storedAgent.enabled !== false,
-          articleTriggers: Array.isArray(storedAgent.articleTriggers) && storedAgent.articleTriggers.length
-            ? storedAgent.articleTriggers
-            : agentDefaults.articleTriggers,
-          qaTriggers: Array.isArray(storedAgent.qaTriggers) && storedAgent.qaTriggers.length
-            ? storedAgent.qaTriggers
-            : agentDefaults.qaTriggers,
-          publishStrategy: storedAgent.publishStrategy === "published" ? "published" : "draft",
-          maxInstructionLength: Number(storedAgent.maxInstructionLength) > 0 ? Number(storedAgent.maxInstructionLength) : agentDefaults.maxInstructionLength,
-          commentName: String(storedAgent.commentName || agentDefaults.commentName).slice(0, 32),
-          shareWritingPrompt: storedAgent.shareWritingPrompt !== false,
-          systemPrompt: String(storedAgent.systemPrompt || "").trim(),
-        },
       }
       return json(200, { status: "success", data: merged }, req)
     }
@@ -822,7 +774,7 @@ export default async (req: Request) => {
     }
     if (req.method === "POST") {
       const body = await req.json().catch(() => ({}))
-      const { siteTitle, favicon, siteName, avatar, authorName, bio, views, stats, navTags, about, ai, writingAi, agent } = body
+      const { siteTitle, favicon, siteName, avatar, authorName, bio, views, stats, navTags, about, ai } = body
 
       // 修改密码操作
       if (body.oldPassword !== undefined || body.newPassword !== undefined) {
@@ -874,27 +826,6 @@ export default async (req: Request) => {
           systemPrompt: String(ai?.systemPrompt || "").trim(),
           maxTokens: Number(ai?.maxTokens) > 0 ? Number(ai?.maxTokens) : 2048,
           temperature: typeof ai?.temperature === "number" && !Number.isNaN(ai.temperature) ? ai.temperature : 0.7,
-        },
-        writingAi: {
-          enabled: writingAi?.enabled !== false,
-          provider: String(writingAi?.provider || "").trim().slice(0, 40),
-          apiUrl: String(writingAi?.apiUrl || "").trim(),
-          apiKey: String(writingAi?.apiKey || "").trim(),
-          model: String(writingAi?.model || "").trim(),
-          systemPrompt: String(writingAi?.systemPrompt || "").trim(),
-          keywords: String(writingAi?.keywords || "").trim(),
-          maxTokens: Number(writingAi?.maxTokens) > 0 ? Number(writingAi?.maxTokens) : 4096,
-          temperature: typeof writingAi?.temperature === "number" && !Number.isNaN(writingAi.temperature) ? writingAi.temperature : 0.7,
-        },
-        agent: {
-          enabled: agent?.enabled !== false,
-          articleTriggers: String(agent?.articleTriggers || "").split(",").map((t: string) => t.trim()).filter(Boolean),
-          qaTriggers: String(agent?.qaTriggers || "").split(",").map((t: string) => t.trim()).filter(Boolean),
-          publishStrategy: agent?.publishStrategy === "published" ? "published" : "draft",
-          maxInstructionLength: Number(agent?.maxInstructionLength) > 0 ? Number(agent?.maxInstructionLength) : DEFAULT_AGENT_SETTINGS.maxInstructionLength,
-          commentName: String(agent?.commentName || "").trim().slice(0, 32) || DEFAULT_AGENT_SETTINGS.commentName,
-          shareWritingPrompt: agent?.shareWritingPrompt !== false,
-          systemPrompt: String(agent?.systemPrompt || "").trim(),
         },
       }
       await settingsStore.set("site", JSON.stringify(settings))

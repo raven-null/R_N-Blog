@@ -525,10 +525,9 @@ const AIChat = {
         const lastMsg = this.messages[this.messages.length - 1];
         if (!opts.force && lastMsg && lastMsg.role === 'user' && lastMsg.content === content) return;
 
-        // @管理员/@博主 是生成文章指令，保留原文；其余消息去掉 @ai/@助手 前缀后直接提问
-        const isArticleCmd = /@管理员|@博主/.test(content);
+        // 去掉 @ai/@助手 前缀后直接提问
         const stripped = content.replace(/^\s*@(?:ai|助手)[：:，,、\s]*/i, '');
-        const msgContent = isArticleCmd ? content : (stripped || '请介绍一下这篇文章');
+        const msgContent = stripped || '请介绍一下这篇文章';
 
         if (typeof text !== 'string' && input) {
             input.value = '';
@@ -555,14 +554,6 @@ const AIChat = {
 
         this.isWaiting = true;
         this.updateSendButton();
-
-        // AI Agent 指令：@管理员 生成文章（走任务流程，不走普通对话）
-        if (await this.handleAgentCommand(msgContent)) {
-            this.isWaiting = false;
-            this.abortController = null;
-            this.updateSendButton();
-            return;
-        }
 
         // 创建流式消息容器
         const streamEl = this.createStreamingMessage();
@@ -615,84 +606,6 @@ const AIChat = {
         this.isWaiting = false;
         this.abortController = null;
         this.updateSendButton();
-    },
-
-    // AI Agent 指令：@管理员 / @博主 生成文章（需后台密钥）
-    async handleAgentCommand(content) {
-        if (!/@管理员|@博主/.test(content)) return false;
-
-        const key = window.prompt('生成文章需要输入后台登录密钥：');
-        if (key === null || !key.trim()) {
-            this.addMessage('assistant', '已取消生成（需要后台密钥）');
-            this.messages.push({ role: 'assistant', content: '已取消生成（需要后台密钥）' });
-            this.saveSessions();
-            return true;
-        }
-
-        const streamEl = this.createStreamingMessage();
-        this.updateAgentProgress(streamEl, { status: 'pending', progress: '已提交任务，正在排队…', progressPercent: 2 });
-        try {
-            const res = await fetch('/api/agent', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ source: 'chat', type: 'article', instruction: content, adminKey: key.trim() })
-            });
-            const data = await res.json().catch(() => ({}));
-            if (!data || data.status !== 'success' || !data.data) {
-                throw new Error((data && data.message) || '任务提交失败');
-            }
-            const task = data.data;
-            const result = await this.pollAgentTask(task.id, task.pollKey, streamEl);
-            let finalText;
-            if (result.status === 'failed') {
-                finalText = '🤖 任务失败：' + (result.error || '未知错误');
-            } else {
-                const r = result.result || {};
-                finalText = `✅ 已完成${r.title ? '《' + r.title + '》' : ''}：${r.url || '/article.html'}`;
-            }
-            this.messages.push({ role: 'assistant', content: finalText });
-            this.saveSessions();
-            this.finalizeAssistantMessage(streamEl, finalText);
-        } catch (err) {
-            streamEl.remove();
-            this.addMessage('error', this.friendlyError(err));
-        }
-        return true;
-    },
-
-    // 轮询 Agent 任务状态（凭 pollKey 公开查询，最多约 7 分钟），期间更新进度条
-    async pollAgentTask(taskId, pollKey, streamEl, attempt = 0) {
-        const MAX_ATTEMPTS = 140;
-        try {
-            const res = await fetch(`/api/agent?task=${encodeURIComponent(taskId)}&key=${encodeURIComponent(pollKey || '')}`);
-            const data = await res.json().catch(() => ({}));
-            if (data && data.status === 'success' && data.data) {
-                const t = data.data;
-                if (streamEl) this.updateAgentProgress(streamEl, t);
-                if (t.status === 'done' || t.status === 'failed') return t;
-            }
-        } catch (e) {}
-        if (attempt >= MAX_ATTEMPTS) return { status: 'failed', error: '等待超时，请稍后到后台查看' };
-        await new Promise(r => setTimeout(r, 3000));
-        return this.pollAgentTask(taskId, pollKey, streamEl, attempt + 1);
-    },
-
-    // 渲染 AI Agent 生成进度条
-    updateAgentProgress(el, task) {
-        const contentEl = el.querySelector('.chat-message-content');
-        if (!contentEl) return;
-        const status = task.status || 'pending';
-        const pct = task.progressPercent != null ? task.progressPercent
-            : (status === 'done' || status === 'failed') ? 100 : status === 'pending' ? 2 : 30;
-        const label = task.progress || (status === 'done' ? '已完成' : status === 'failed' ? '失败' : '生成中…');
-        contentEl.classList.remove('chat-streaming-content');
-        contentEl.innerHTML = `
-            <div class="agent-progress-wrap">
-                <div class="agent-progress-bar"><div class="agent-progress-fill" style="width:${Math.min(100, Math.max(0, pct))}%"></div></div>
-                <div class="agent-progress-label">${this.escapeHtml(label)} ${Math.round(pct)}%</div>
-                ${status === 'failed' && task.error ? `<div class="agent-progress-err">${this.escapeHtml(String(task.error).slice(0, 200))}</div>` : ''}
-            </div>`;
-        this.scrollToBottom(true);
     },
 
     // 停止生成

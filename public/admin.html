@@ -187,29 +187,6 @@
         .toastui-editor-dark .toastui-editor-popup .toastui-editor-table-cell{background:var(--bg-hover);border-color:var(--border)}
         .toastui-editor-dark .toastui-editor-tooltip{background:#1a1a1a;border:1px solid var(--border);color:var(--text)}
         .toastui-editor-dark .toastui-editor-tooltip .arrow{background:#1a1a1a;border-color:var(--border)}
-        /* AI 写作结果样式（与渲染库输出统一） */
-        .ai-writer-result h1,.ai-writer-result h2,.ai-writer-result h3{color:var(--accent);margin:18px 0 8px;font-weight:600}
-        .ai-writer-result h1{font-size:22px;border-bottom:1px solid var(--border);padding-bottom:6px}
-        .ai-writer-result h2{font-size:18px}.ai-writer-result h3{font-size:15px}
-        .ai-writer-result p{margin-bottom:10px}
-        .ai-writer-result code{background:var(--bg);padding:2px 5px;border-radius:3px;font-size:12px;font-family:'JetBrains Mono',monospace}
-        .ai-writer-result pre{background:var(--bg);padding:12px;border-radius:var(--radius-sm);overflow-x:auto;margin-bottom:12px;border:1px solid var(--border)}
-        .ai-writer-result pre code{padding:0;background:none}
-        .ai-writer-result blockquote{border-left:3px solid var(--accent);padding:6px 12px;color:var(--text-muted);margin-bottom:10px;background:var(--accent-dim);border-radius:0 var(--radius-sm) var(--radius-sm) 0}
-        .ai-writer-result ul,.ai-writer-result ol{padding-left:22px;margin-bottom:10px}
-        .ai-writer-result a{color:var(--accent)}
-        .ai-writer-result img{max-width:100%;border-radius:var(--radius-sm);margin:8px 0}
-        .ai-writer-result table{width:100%;border-collapse:collapse;margin-bottom:12px}
-        .ai-writer-result th,.ai-writer-result td{border:1px solid var(--border);padding:8px 10px;text-align:left}
-        .ai-writer-result th{background:var(--bg-input);font-weight:600;font-size:12px}
-        .ai-writer-result hr{border:none;border-top:1px solid var(--border);margin:16px 0}
-        .ai-writer-result .code-block{margin:14px 0;border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;background:var(--bg)}
-        .ai-writer-result .code-header{display:flex;align-items:center;justify-content:space-between;padding:6px 12px;background:var(--bg-input);border-bottom:1px solid var(--border)}
-        .ai-writer-result .code-lang{font-size:11px;color:var(--text-muted);font-family:'JetBrains Mono',monospace}
-        .ai-writer-result .code-block pre{margin:0;border:none;border-radius:0;background:var(--bg)}
-        .ai-writer-result .copy-btn{background:transparent;border:1px solid var(--border);border-radius:4px;color:var(--text-muted);font-size:11px;padding:2px 8px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;transition:all .15s}
-        .ai-writer-result .copy-btn:hover{border-color:var(--accent);color:var(--accent)}
-        .ai-writer-result .copy-btn svg{width:12px;height:12px}
         .editor-footer{display:flex;margin-top:12px;align-items:center;justify-content:space-between}
         .editor-info{font-size:11px;color:var(--text-muted)}
         .editor-footer-actions{display:flex;gap:8px}
@@ -277,51 +254,6 @@
         .image-picker-item .name{font-size:11px;color:var(--text-muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
         .image-picker-item .picker-del{background:rgba(0,0,0,.6);border:none;color:var(--danger);cursor:pointer;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;opacity:0;transition:opacity .1s;flex-shrink:0}
         .image-picker-item:hover .picker-del{opacity:1}
-
-        /* AI 写作助手侧栏 */
-        .ai-writer-panel{top:52px;height:calc(100vh - 52px);width:380px;flex-direction:column}
-        .ai-writer-tab{position:fixed;top:64px;right:0;z-index:101;padding:10px 12px;background:var(--bg-card);border:1px solid var(--border);border-left:none;border-radius:10px 0 0 10px;color:var(--accent);cursor:pointer;font-size:12px;font-family:inherit;box-shadow:var(--shadow);transition:all .15s}
-        .ai-writer-tab:hover{background:var(--bg-hover)}
-        .ai-writer-body{flex:1;display:flex;flex-direction:column;min-height:0;padding:12px 14px}
-        .ai-writer-status{padding:8px 10px;border-radius:var(--radius-sm);font-size:12px;margin-bottom:10px;background:var(--accent-dim);color:var(--accent)}
-        .ai-writer-status.error{background:rgba(239,83,80,.12);color:var(--danger)}
-        .ai-writer-result{flex:1;min-height:0;overflow-y:auto;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px;font-size:14px;line-height:1.8;word-break:break-word;color:var(--text)}
-        .ai-writer-result.streaming::after{content:'▍';animation:blink 1s steps(2) infinite;color:var(--accent)}
-        .ai-writer-empty{color:var(--text-muted);font-size:12px;text-align:center;padding:24px 0}
-        .ai-writer-insert{display:flex;flex-wrap:wrap;gap:6px;padding-top:10px}
-        .ai-writer-insert .btn{flex-shrink:0}
-        .ai-writer-input{display:flex;align-items:flex-end;gap:8px;padding-top:10px}
-        .ai-writer-input textarea{flex:1;min-height:52px;max-height:120px;padding:9px 12px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:13px;font-family:inherit;resize:none;line-height:1.6}
-        .ai-writer-input textarea:focus{outline:none;border-color:var(--accent)}
-        .ai-writer-input .btn{height:52px;flex-shrink:0}
-        .ai-writer-hintrow{font-size:11px;color:var(--text-muted);padding-top:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-        @keyframes blink{50%{opacity:0}}
-        /* AI Agent 面板 */
-        .agent-panel{right:0;border-left:1px solid var(--border)}
-        .agent-input{display:flex;flex-direction:column;gap:8px}
-        .agent-input textarea{width:100%;min-height:60px;max-height:140px;padding:9px 12px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:13px;font-family:inherit;resize:none;line-height:1.6}
-        .agent-input textarea:focus{outline:none;border-color:var(--accent)}
-        .agent-input-row{display:flex;gap:8px;align-items:center}
-        .agent-input-row select{flex:1;padding:8px 10px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:12px;cursor:pointer}
-        .agent-input-row .btn{flex-shrink:0}
-        .agent-list{flex:1;min-height:0;overflow-y:auto;margin-top:10px;display:flex;flex-direction:column;gap:8px}
-        .agent-item{background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;font-size:12px;line-height:1.6}
-        .agent-item-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-        .agent-item-status{font-size:11px;font-weight:600;padding:1px 8px;border-radius:10px;flex-shrink:0}
-        .agent-item-status.pending{background:var(--accent-dim);color:var(--accent)}
-        .agent-item-status.running{background:rgba(255,167,38,.15);color:var(--warning)}
-        .agent-item-status.done{background:rgba(102,187,106,.15);color:var(--success)}
-        .agent-item-status.failed{background:rgba(239,83,80,.15);color:var(--danger)}
-        .agent-item-instruction{color:var(--text);word-break:break-word;margin-top:4px}
-        .agent-item-meta{color:var(--text-muted);font-size:11px;margin-top:4px}
-        .agent-item-actions{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
-        .agent-item-actions a{color:var(--accent);text-decoration:none;font-size:11px}
-        .agent-item-actions .btn{padding:2px 8px;font-size:11px}
-        .agent-item-error{color:var(--danger);font-size:11px;margin-top:4px;word-break:break-word}
-        .agent-progress{margin-top:8px}
-        .agent-progress-bar{height:6px;border-radius:3px;background:rgba(128,128,128,.2);overflow:hidden}
-        .agent-progress-fill{height:100%;border-radius:3px;background:var(--accent);transition:width .5s ease}
-        .agent-progress-text{font-size:11px;color:var(--text-muted);display:block;margin-top:4px}
 
         .toast{position:fixed;bottom:20px;right:20px;padding:10px 20px;border-radius:var(--radius-sm);font-size:12px;z-index:999;display:none;box-shadow:var(--shadow);font-weight:500}
         .toast-success{background:var(--success);color:#000}
@@ -539,8 +471,6 @@
             #uploadLogModal .rename-box{width:90%!important;max-width:440px}
             /* 图片选择面板全屏 */
             .image-picker-panel{width:100%}
-            .ai-writer-panel{top:0;height:100vh}
-            .ai-writer-tab{top:auto;bottom:20px;right:12px;border:1px solid var(--border);border-radius:20px;padding:8px 14px}
             /* 编辑器 */
             .write-settings-row{flex-direction:column;align-items:stretch}
             .write-settings-row>input{min-width:0}
@@ -662,8 +592,6 @@
                     </div>
                     <!-- 编辑器附加操作 -->
                     <div class="editor-extras">
-                        <button class="btn btn-ghost" onclick="openAiWriter()" title="AI 写作助手">🤖 AI 写作</button>
-                        <button class="btn btn-ghost" onclick="openAgentPanel()" title="AI Agent 自动写作发布">🤖 AI Agent</button>
                         <button class="btn btn-ghost" onclick="openImagePicker()" title="从图库插入图片">🖼 图库</button>
                         <label class="btn btn-ghost" style="cursor:pointer" title="上传图片">⬆ 上传图片<input type="file" accept="image/*" multiple style="display:none" onchange="uploadAndInsertToEditor(this.files);this.value=''"></label>
                         <div class="upload-progress" id="uploadProgress"><div class="spinner"></div><span id="uploadProgressText">上传中...</span></div>
@@ -919,96 +847,6 @@
                             </div>
                             <div class="settings-tip">选择厂商与模型、粘贴 API Key 即可使用，无需手填接口地址与模型名。</div>
                         </div>
-
-                        <!-- 6.5 写作 AI -->
-                        <div class="settings-group">
-                            <h3><span class="settings-title">写作 AI（后台写文章助手）</span><span class="settings-grip" title="拖动排序">⠿</span><span class="settings-chevron" title="展开/收起">▾</span></h3>
-                            <div class="settings-toggle-list" style="margin-bottom:12px">
-                                <div class="settings-toggle-item"><span>启用写作 AI</span><label class="switch"><input type="checkbox" id="setWrEnabled" checked><span class="slider"></span></label></div>
-                            </div>
-                            <div class="settings-field">
-                                <label>厂商 / 模型（留空则复用「AI 助手」配置）</label>
-                                <div class="settings-model-row">
-                                    <select id="setWrProvider" onchange="fillModelOptions('Wr','')"></select>
-                                    <select id="setWrModel"></select>
-                                </div>
-                            </div>
-                            <div class="settings-field" id="WrCustomRow" style="display:none">
-                                <label>自定义接口地址</label>
-                                <input type="text" id="setWrCustomUrl" placeholder="https://.../chat/completions">
-                                <label style="margin-top:10px">自定义模型名</label>
-                                <input type="text" id="setWrCustomModel" placeholder="模型名称，如 glm-4-flash">
-                            </div>
-                            <div class="settings-field">
-                                <label>API Key（留空则复用「AI 助手」配置）</label>
-                                <div class="settings-key-row">
-                                    <input type="password" id="setWrApiKey" placeholder="粘贴写作 AI 的 API Key" autocomplete="off">
-                                    <button type="button" class="btn btn-ghost btn-sm" onclick="testAiConnection('Wr',this)">测试连接</button>
-                                </div>
-                                <div class="settings-test-result" id="WrTestResult"></div>
-                            </div>
-                            <div class="settings-advanced">
-                                <div class="settings-advanced-toggle" onclick="toggleAdvanced('Wr')">高级设置 <span>▾</span></div>
-                                <div class="settings-advanced-body" id="WrAdvancedBody" style="display:none">
-                                    <div class="settings-field">
-                                        <label>写作系统提示词（可选）</label>
-                                        <textarea id="setWrSystemPrompt" rows="3" placeholder="写作助手人设，默认内置；会与「AI 助手」的提示词完全独立"></textarea>
-                                    </div>
-                                    <div class="settings-field">
-                                        <label>写作关键词（逗号分隔，要求成稿自然融入）</label>
-                                        <input type="text" id="setWrKeywords" placeholder="如：技术, AI, Web 开发">
-                                    </div>
-                                    <div class="settings-field">
-                                        <label>最大输出 Token</label>
-                                        <input type="number" id="setWrMaxTokens" min="1" max="16384" placeholder="4096">
-                                    </div>
-                                    <div class="settings-field">
-                                        <label>温度（0 - 2，越大越随机）</label>
-                                        <input type="number" id="setWrTemperature" min="0" max="2" step="0.1" placeholder="0.7">
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="settings-tip">写作 AI 与前台聊天 AI 分开配置，写文章可换更强的模型与独立的关键词/人设；未填 API 信息时自动复用「AI 助手」配置。</div>
-                        </div>
-
-                        <!-- 6.5 AI Agent（自动写作发布） -->
-                        <div class="settings-group">
-                            <h3><span class="settings-title">AI Agent（自动写作发布）</span><span class="settings-grip" title="拖动排序">⠿</span><span class="settings-chevron" title="展开/收起">▾</span></h3>
-                            <div class="settings-toggle-list" style="margin-bottom:12px">
-                                <div class="settings-toggle-item"><span>启用 AI Agent（评论区 @触发自动写文章）</span><label class="switch"><input type="checkbox" id="setAgEnabled" checked><span class="slider"></span></label></div>
-                            </div>
-                            <div class="settings-field">
-                                <label><input type="checkbox" id="setAgSharePrompt" checked onchange="toggleAgentPrompt()" style="width:auto"> 使用与「写作 AI」相同的提示词</label>
-                            </div>
-                            <div class="settings-field" id="AgPromptRow" style="display:none">
-                                <label>AI Agent 独立系统提示词</label>
-                                <textarea id="setAgSystemPrompt" rows="3" placeholder="Agent 生成文章使用的人设，默认与写作 AI 一致"></textarea>
-                            </div>
-                            <div class="settings-field">
-                                <label>生成文章触发词（逗号分隔，需后台密钥）</label>
-                                <input type="text" id="setAgArticleTriggers" placeholder="如：@管理员,@博主">
-                            </div>
-                            <div class="settings-field">
-                                <label>文章问答触发词（逗号分隔，AI 助手回答）</label>
-                                <input type="text" id="setAgQaTriggers" placeholder="如：@ai,@助手">
-                            </div>
-                            <div class="settings-field">
-                                <label>评论触发生成后</label>
-                                <select id="setAgPublish">
-                                    <option value="draft">存为草稿（管理员审核后发布）</option>
-                                    <option value="published">直接发布</option>
-                                </select>
-                            </div>
-                            <div class="settings-field">
-                                <label>指令长度上限（字）</label>
-                                <input type="number" id="setAgMaxLen" min="10" max="2000" placeholder="500">
-                            </div>
-                            <div class="settings-field">
-                                <label>Agent 评论昵称</label>
-                                <input type="text" id="setAgName" placeholder="🤖 AI Agent">
-                            </div>
-                            <div class="settings-tip">后台「写文章 → 🤖 AI Agent」可直接下达指令并生成发布；评论区「生成触发词 + 指令 + 后台密钥」生成文章，「问答触发词 + 问题」由 AI 助手回答。生成质量复用「写作 AI / AI 助手」的模型配置。</div>
-                        </div>
                         </div>
 
                         <div class="settings-section" data-section="backend">
@@ -1051,63 +889,6 @@
         <div class="image-picker-header"><h3>选择图片插入</h3><button onclick="closeImagePicker()">&times;</button></div>
         <div class="image-picker-upload"><label>📤 上传新图片<input type="file" accept="image/*" multiple onchange="uploadAndInsert(this.files)" style="display:none"></label></div>
         <div class="image-picker-list" id="imagePickerList"></div>
-    </div>
-
-    <!-- AI 写作助手侧栏 -->
-    <div class="image-picker-panel ai-writer-panel" id="aiWriterPanel">
-        <div class="image-picker-header">
-            <h3>🤖 AI 写作助手</h3>
-            <div style="display:flex;gap:4px;align-items:center">
-                <button onclick="aiWriterCollapse()" title="折叠（不中断生成）">»</button>
-                <button onclick="closeAiWriter()" title="关闭（不中断生成）">&times;</button>
-            </div>
-        </div>
-        <div class="ai-writer-body">
-            <div class="ai-writer-status" id="aiWrStatus" style="display:none"></div>
-            <div class="ai-writer-result" id="aiWrResult"><div class="ai-writer-empty">直接说出你的写作要求，例如：「写一篇 3000 字的从零开始学 Python 的教程」。要求会自动带当前标题与正文作为上下文。</div></div>
-            <div class="ai-writer-insert">
-                <button class="btn btn-ghost btn-sm" onclick="aiInsertTitle()" id="aiWrFillTitleBtn" style="display:none">填入标题</button>
-                <button class="btn btn-ghost btn-sm" onclick="aiInsertContent()" id="aiWrInsertBtn" style="display:none">插入正文</button>
-                <button class="btn btn-ghost btn-sm" onclick="aiReplaceSelection()" id="aiWrReplaceBtn" style="display:none">替换选中</button>
-                <button class="btn btn-ghost btn-sm" onclick="aiInsertExcerpt()" id="aiWrExcerptBtn" style="display:none">填入摘要</button>
-                <button class="btn btn-ghost btn-sm" onclick="aiInsertTags()" id="aiWrTagsBtn" style="display:none">填入标签</button>
-            </div>
-            <div class="ai-writer-input">
-                <textarea id="aiWrInput" rows="2" placeholder="说出你的写作要求，回车发送（Shift+Enter 换行）" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();aiSend()}"></textarea>
-                <button class="btn btn-primary" id="aiWrSendBtn" onclick="aiSend()">发送</button>
-                <button class="btn btn-ghost" id="aiWrStopBtn" style="display:none" onclick="aiStop()">⏹ 停止</button>
-            </div>
-            <div class="ai-writer-hintrow" id="aiWrKwHint"></div>
-        </div>
-    </div>
-    <!-- AI 写作助手折叠后的迷你入口 -->
-    <button class="ai-writer-tab" id="aiWriterTab" style="display:none" onclick="aiWriterExpand()">🤖 AI 写作</button>
-
-    <!-- AI Agent 命令面板 -->
-    <div class="image-picker-panel ai-writer-panel agent-panel" id="agentPanel">
-        <div class="image-picker-header">
-            <h3>🤖 AI Agent</h3>
-            <div style="display:flex;gap:4px;align-items:center">
-                <button onclick="loadAgentTasks()" title="刷新任务列表">🔄</button>
-                <button onclick="closeAgentPanel()" title="关闭">&times;</button>
-            </div>
-        </div>
-        <div class="ai-writer-body">
-            <div class="agent-input">
-                <textarea id="agInput" rows="2" placeholder="下达指令，AI 自动写稿并发布。例如：「写一篇 3000 字、面向新手的 Python 教程并发布」" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();agentCreate()}"></textarea>
-                <div class="agent-input-row">
-                    <select id="agStatus" title="生成后的状态">
-                        <option value="published">✅ 生成并发布</option>
-                        <option value="draft">📝 生成存草稿</option>
-                    </select>
-                    <button class="btn btn-primary" id="agSendBtn" onclick="agentCreate()">生成</button>
-                </div>
-            </div>
-            <div class="ai-writer-hintrow" id="agHint">后台 Agent 使用「写作 AI / AI 助手」配置的模型，长文自动续写，生成后置顶展示。</div>
-            <div class="agent-list" id="agentList">
-                <div class="ai-writer-empty">暂无任务，输入指令开始</div>
-            </div>
-        </div>
     </div>
 
     <div class="rename-modal" id="renameModal">
@@ -1170,7 +951,7 @@
         let articleImages=[]; // 文中图片列表 {key, url}
 
         function doLogin(){const k=document.getElementById('adminKeyInput').value.trim();if(!k)return;adminKey=k;localStorage.setItem('admin_key',k);apiFetch('action=login',{method:'POST',body:JSON.stringify({key:k})}).then(r=>{if(r.status==='success')showAdmin();else{document.getElementById('loginError').style.display='block';document.getElementById('loginError').textContent=r.message||'密钥错误'}}).catch(()=>{document.getElementById('loginError').style.display='block';document.getElementById('loginError').textContent='连接失败'})}
-        function doLogout(){adminKey='';localStorage.removeItem('admin_key');location.reload()}
+        function doLogout(){adminKey='';localStorage.removeItem('admin_key');localStorage.removeItem('gallery_key');location.reload()}
         function showAdmin(){document.getElementById('loginPage').style.display='none';document.getElementById('adminApp').style.display='block';document.getElementById('sidebar').classList.add('collapsed');loadArticles()}
         async function apiFetch(p,o={}){if(p.startsWith('action=images')&&(!o.method||o.method==='GET'))p+='&_='+Date.now();const r=await fetch(`/api/admin?${p}`,{...o,headers:{'Content-Type':'application/json','X-Admin-Key':adminKey,...(o.headers||{})}});return r.json()}
         // 图片显示 URL：附加管理员密钥参数（<img> 无法带 header，R18 图片需密钥参数才能加载）
@@ -1371,328 +1152,6 @@
         function getEditorContent(){const ed=ensureEditor();return ed?ed.getMarkdown():''}
         function setEditorContent(md){const ed=ensureEditor();if(!ed)return;ed.setMarkdown(md||'');scanArticleImagesFromContent(md||'');updateEditorInfo()}
         function updateEditorInfo(){const el=document.getElementById('editorInfo');if(el&&toastEditor)el.textContent=toastEditor.getMarkdown().length+' 字'}
-        // ===== AI 写作助手 =====
-        let aiWrController=null;
-        let aiWrRaw='';
-        function getEditorSelection(){const ed=ensureEditor();return ed?ed.getSelectedText():''}
-        async function openAiWriter(){
-            closeAgentPanel();
-            document.getElementById('aiWriterTab').style.display='none';
-            document.getElementById('aiWriterPanel').classList.add('open');
-            setTimeout(()=>document.getElementById('aiWrInput').focus(),50);
-            try{
-                const r=await apiFetch('action=settings');
-                if(r.status==='success'&&r.data&&r.data.writingAi){
-                    const kw=(r.data.writingAi.keywords||'').trim();
-                    document.getElementById('aiWrKwHint').textContent=kw?('已配置写作关键词：'+kw):'';
-                }
-            }catch(e){}
-        }
-        // 折叠：仅隐藏面板，不中断 AI 生成
-        function aiWriterCollapse(){
-            document.getElementById('aiWriterPanel').classList.remove('open');
-            document.getElementById('aiWriterTab').style.display='block';
-        }
-        function aiWriterExpand(){
-            document.getElementById('aiWriterTab').style.display='none';
-            document.getElementById('aiWriterPanel').classList.add('open');
-            setTimeout(()=>document.getElementById('aiWrInput').focus(),50);
-        }
-        // 关闭：仅隐藏面板与迷你入口，不中断 AI 生成
-        function closeAiWriter(){
-            document.getElementById('aiWriterPanel').classList.remove('open');
-            document.getElementById('aiWriterTab').style.display='none';
-        }
-        // 单次流式请求：返回是否以 [DONE] 正常结束（被平台超时中断时返回 false）
-        async function aiStreamOnce(body,panel,status,onDelta){
-            const res=await fetch('/api/ai',{
-                method:'POST',
-                headers:{'Content-Type':'application/json','X-Admin-Key':adminKey},
-                body:JSON.stringify(body),
-                signal:aiWrController.signal
-            });
-            if(!res.ok){
-                const err=await res.json().catch(()=>({}));
-                status.textContent=err.message||('请求失败（'+res.status+'）');
-                status.classList.add('error');status.style.display='block';
-                return 'error';
-            }
-            const reader=res.body.getReader();
-            const decoder=new TextDecoder('utf-8');
-            let buffer='';
-            let completed=false;
-            panel.classList.add('streaming');
-            while(true){
-                const {done,value}=await reader.read();
-                if(done)break;
-                buffer+=decoder.decode(value,{stream:true});
-                const lines=buffer.split('\n');
-                buffer=lines.pop();
-                for(const line of lines){
-                    const trimmed=line.trim();
-                    if(!trimmed.startsWith('data:'))continue;
-                    const data=trimmed.substring(5).trim();
-                    if(data==='[DONE]'){completed=true;continue}
-                    try{
-                        const j=JSON.parse(data);
-                        const delta=j.choices&&j.choices[0]&&j.choices[0].delta&&j.choices[0].delta.content;
-                        if(delta)onDelta(delta);
-                    }catch(e){}
-                }
-            }
-            panel.classList.remove('streaming');
-            return completed;
-        }
-        async function aiSend(){
-            const input=document.getElementById('aiWrInput');
-            const prompt=input.value.trim();
-            if(!prompt){showToast('请输入写作要求','error');input.focus();return}
-            if(aiWrController){showToast('正在生成中，请先停止或等待','error');return}
-            const selection=getEditorSelection();
-            const title=document.getElementById('edTitle').value.trim();
-            const content=getEditorContent();
-            const panel=document.getElementById('aiWrResult');
-            const status=document.getElementById('aiWrStatus');
-            panel.innerHTML='';panel.classList.remove('streaming');panel.classList.remove('markdown');
-            status.style.display='none';status.className='ai-writer-status';
-            document.getElementById('aiWrStopBtn').style.display='inline-flex';
-            document.getElementById('aiWrSendBtn').style.display='none';
-            ['aiWrFillTitleBtn','aiWrReplaceBtn','aiWrInsertBtn','aiWrExcerptBtn','aiWrTagsBtn'].forEach(id=>document.getElementById(id).style.display='none');
-            aiWrController=new AbortController();
-            aiWrRaw='';
-            let body={action:'custom',prompt,title,content,selection};
-            const MAX_CONTINUATIONS=4;
-            let continuations=0;
-            let aborted=false;
-            try{
-                while(true){
-                    if(continuations>0){
-                        status.textContent='生成较长，正在自动续写（第 '+continuations+' 次）...';
-                        status.style.display='block';
-                        body={action:'custom',prompt:'继续写，接着上文继续完成整篇文章，保持标题层级、风格与 Markdown 格式一致，不要重复已写内容，直接输出后续内容。',title,content:aiWrRaw};
-                    }
-                    const result=await aiStreamOnce(body,panel,status,delta=>{
-                        aiWrRaw+=delta;
-                        renderAiWrResult(panel,aiWrRaw);
-                    });
-                    if(result==='error')break;
-                    if(result===true){status.style.display='none';break}   // 正常完成
-                    // 未收到 [DONE]：被平台超时中断 → 自动续写
-                    if(aiWrController&&aiWrRaw.trim()){
-                        continuations++;
-                        if(continuations>MAX_CONTINUATIONS){
-                            status.textContent='已达自动续写上限，可输入「继续写」接着生成';
-                            status.style.display='block';
-                            break;
-                        }
-                        continue;
-                    }
-                    break;
-                }
-                aiWrShowInsertButtons();
-            }catch(e){
-                if(e.name==='AbortError'){
-                    aborted=true;
-                    status.textContent='已停止生成';
-                    status.style.display='block';
-                    if(aiWrRaw.trim())aiWrShowInsertButtons();
-                }else{
-                    status.textContent='调用失败：'+(e.message||'网络错误');
-                    status.classList.add('error');status.style.display='block';
-                }
-            }finally{
-                aiWrController=null;
-                document.getElementById('aiWrStopBtn').style.display='none';
-                document.getElementById('aiWrSendBtn').style.display='inline-block';
-                input.focus();
-            }
-        }
-        function aiStop(){if(aiWrController)aiWrController.abort()}
-        function renderAiWrResult(el,text){
-            el.classList.add('markdown');
-            el.style.whiteSpace='normal';
-            if(typeof MarkdownParser!=='undefined'&&typeof marked!=='undefined'){
-                el.innerHTML=MarkdownParser.parseMarkdown(text);
-            }else{
-                el.textContent=text;
-            }
-        }
-        function aiWrShowInsertButtons(){
-            const show=id=>{const b=document.getElementById(id);if(b)b.style.display='inline-flex'};
-            show('aiWrFillTitleBtn');
-            show('aiWrInsertBtn');
-            show('aiWrReplaceBtn');
-            if(/标签[：:]/.test(aiWrRaw)){show('aiWrExcerptBtn');show('aiWrTagsBtn')}
-        }
-        function aiInsertTitle(){
-            const first=aiWrRaw.split('\n').map(s=>s.trim().replace(/\*\*/g,'')).filter(Boolean)[0]||'';
-            if(!first){showToast('暂无结果','error');return}
-            document.getElementById('edTitle').value=first.replace(/^\s*\d+[\.、)．]\s*/,'').replace(/^[-*]\s*/,'').replace(/^#+\s*/,'');
-            showToast('已填入标题','success');
-        }
-        function aiInsertContent(){
-            const ed=ensureEditor();
-            const text=aiWrRaw;
-            if(!text.trim()){showToast('暂无结果','error');return}
-            const cur=ed.getMarkdown();
-            ed.setMarkdown(cur?cur.trimEnd()+'\n\n'+text:text);
-            updateEditorInfo();
-            showToast('已插入正文','success');
-        }
-        function aiReplaceSelection(){
-            const ed=ensureEditor();
-            const text=aiWrRaw;
-            if(!text.trim()){showToast('暂无结果','error');return}
-            ed.insertText(text);
-            updateEditorInfo();
-            showToast('已替换选中文字','success');
-        }
-        function aiWrParseTags(){
-            const text=aiWrRaw;
-            const m=text.match(/标签[：:]\s*([^\n]+)/);
-            if(!m)return [];
-            return m[1].split(/[,、，\s]+/).map(s=>s.trim().replace(/\*\*/g,'').replace(/^[-*]\s*/,'')).filter(Boolean).slice(0,5);
-        }
-        function aiInsertExcerpt(){
-            const text=aiWrRaw;
-            const idx=text.search(/标签[：:]/);
-            const excerpt=(idx>=0?text.slice(0,idx):text).trim().replace(/^#+\s*/,'').slice(0,200);
-            document.getElementById('edExcerpt').value=excerpt;
-            showToast('已填入摘要','success');
-        }
-        function aiInsertTags(){
-            const tags=aiWrParseTags();
-            if(!tags.length){showToast('未识别到标签','error');return}
-            tags.forEach(t=>addArticleTag(t));
-            showToast('已填入标签','success');
-        }
-        // ===== AI Agent 命令面板 =====
-        let agentPollTimer=null;
-        function openAgentPanel(){
-            closeAiWriter();
-            document.getElementById('agentPanel').classList.add('open');
-            setTimeout(()=>document.getElementById('agInput').focus(),50);
-            loadAgentTasks();
-        }
-        function closeAgentPanel(){
-            document.getElementById('agentPanel').classList.remove('open');
-            if(agentPollTimer){clearTimeout(agentPollTimer);agentPollTimer=null}
-        }
-        async function agentCreate(){
-            const input=document.getElementById('agInput');
-            const instruction=input.value.trim();
-            if(!instruction){showToast('请输入指令','error');input.focus();return}
-            const status=document.getElementById('agStatus').value;
-            const btn=document.getElementById('agSendBtn');
-            btn.disabled=true;
-            try{
-                const r=await fetch('/api/agent',{
-                    method:'POST',
-                    headers:{'Content-Type':'application/json','X-Admin-Key':adminKey},
-                    body:JSON.stringify({source:'admin',instruction,status})
-                });
-                const d=await r.json();
-                if(d.status==='success'){
-                    showToast('任务已创建，正在生成…','success');
-                    input.value='';
-                    await loadAgentTasks();
-                }else{
-                    showToast(d.message||'创建失败','error');
-                }
-            }catch(e){
-                showToast('请求失败：'+(e.message||'网络错误'),'error');
-            }finally{btn.disabled=false}
-        }
-        async function loadAgentTasks(){
-            try{
-                const r=await fetch('/api/agent?list=1',{headers:{'X-Admin-Key':adminKey}});
-                const d=await r.json();
-                if(d.status!=='success')return;
-                renderAgentTasks(d.data||[]);
-            }catch(e){}
-        }
-        function renderAgentTasks(tasks){
-            const list=document.getElementById('agentList');
-            if(!list)return;
-            if(!tasks.length){
-                list.innerHTML='<div class="ai-writer-empty">暂无任务，输入指令开始</div>';
-                return;
-            }
-            const statusMap={pending:['等待执行','pending'],running:['生成中','running'],done:['已完成','done'],failed:['失败','failed']};
-            list.innerHTML=tasks.map(t=>{
-                const [label,cls]=statusMap[t.status]||[t.status,'pending'];
-                const time=new Date(t.createdAt).toLocaleString('zh-CN',{hour12:false});
-                const result=t.result
-                    ? (t.result.answer
-                        ? `<div class="agent-item-meta">🤖 ${escHtml(t.result.answer.slice(0,80))}</div>`
-                        : `<div class="agent-item-meta">《${escHtml(t.result.title)}》 · ${t.result.status==='published'?'已发布':'草稿'} · <a href="${escHtml(t.result.url)}" target="_blank">查看文章 ↗</a></div>`)
-                    : '';
-                const err=t.error?`<div class="agent-item-error">${escHtml(t.error)}</div>`:'';
-                const actions=`
-                    <div class="agent-item-actions">
-                        ${(t.result&&t.result.url)?`<a href="${escHtml(t.result.url)}" target="_blank">打开</a>`:''}
-                        ${(t.status==='failed'||t.status==='pending')?`<button class="btn btn-ghost" onclick="agentRetry('${t.id}')">重试</button>`:''}
-                        <button class="btn btn-ghost" onclick="agentDelete('${t.id}')">删除</button>
-                    </div>`;
-                return `<div class="agent-item">
-                    <div class="agent-item-head">
-                        <span class="agent-item-status ${cls}">${label}</span>
-                        <span class="agent-item-meta" style="margin:0">${t.source==='admin'?'后台':t.source==='chat'?'对话':'评论'} · ${t.type==='qa'?'问答':'文章'} · ${time}</span>
-                    </div>
-                    <div class="agent-item-instruction">${escHtml(t.instruction)}</div>
-                    ${(t.status==='pending'||t.status==='running')?`<div class="agent-progress"><div class="agent-progress-bar"><div class="agent-progress-fill" style="width:${t.progressPercent||5}%"></div></div><span class="agent-progress-text">${escHtml(t.progress||'生成中')} ${t.progressPercent||5}%</span></div>`:''}
-                    ${result}${err}${actions}
-                </div>`;
-            }).join('');
-            const busy=tasks.some(t=>t.status==='pending'||t.status==='running');
-            if(agentPollTimer)clearTimeout(agentPollTimer);
-            if(busy)agentPollTimer=setTimeout(loadAgentTasks,5000);
-        }
-        function escHtml(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
-        async function agentRetry(taskId){
-            const r=await fetch('/api/agent',{
-                method:'POST',
-                headers:{'Content-Type':'application/json','X-Admin-Key':adminKey},
-                body:JSON.stringify({action:'retry',taskId})
-            });
-            const d=await r.json();
-            if(d.status==='success'){showToast('已重新提交','success');loadAgentTasks()}
-            else showToast(d.message||'重试失败','error');
-        }
-        async function agentDelete(taskId){
-            const r=await fetch('/api/agent',{
-                method:'POST',
-                headers:{'Content-Type':'application/json','X-Admin-Key':adminKey},
-                body:JSON.stringify({action:'delete',taskId})
-            });
-            const d=await r.json();
-            if(d.status==='success'){showToast('已删除','success');loadAgentTasks()}
-            else showToast(d.message||'删除失败','error');
-        }
-        // 代码块复制（编辑器预览与 AI 写作结果共用）
-        function copyCode(btn){
-            const block=btn.closest('.code-block');
-            const code=block?block.querySelector('pre code'):null;
-            if(!code)return;
-            const text=code.innerText||code.textContent||'';
-            const done=()=>{
-                const span=btn.querySelector('span');
-                const old=span?span.textContent:'';
-                if(span){span.textContent='已复制';setTimeout(()=>{span.textContent=old},1500)}
-            };
-            if(navigator.clipboard&&navigator.clipboard.writeText){
-                navigator.clipboard.writeText(text).then(done).catch(()=>fallbackCopy(text,done));
-            }else{
-                fallbackCopy(text,done);
-            }
-        }
-        function fallbackCopy(text,done){
-            const ta=document.createElement('textarea');
-            ta.value=text;document.body.appendChild(ta);ta.select();
-            try{document.execCommand('copy')}catch(e){}
-            ta.remove();
-            if(done)done();
-        }
         // 向编辑器光标处插入内容（图片插入/导入共用）
         function insertAtCursor(t){const ed=ensureEditor();if(!ed)return;ed.insertText(t);updateEditorInfo()}
 
@@ -2700,7 +2159,6 @@
             document.querySelectorAll('.sidebar-item').forEach(el=>el.classList.toggle('active',el.dataset.tab===tab));
             document.querySelectorAll('.mobile-tab').forEach(el=>el.classList.toggle('active',el.dataset.tab===tab));
             ['articles','write','comments','images','tags','settings'].forEach(t=>document.getElementById('tab-'+t).style.display=t===tab?'block':'none');
-            if(tab!=='write'){closeAiWriter();closeAgentPanel()}
             if(tab==='articles')loadArticles();
             if(tab==='comments')loadComments();
             if(tab==='settings')loadSettings();
@@ -2824,11 +2282,6 @@
             body.style.display=show?'block':'none';
             if(arrow)arrow.style.transform=show?'rotate(180deg)':'';
         }
-        function toggleAgentPrompt(){
-            const share=document.getElementById('setAgSharePrompt');
-            const row=document.getElementById('AgPromptRow');
-            if(row)row.style.display=share&&share.checked?'none':'';
-        }
         async function testAiConnection(prefix,btn){
             const provider=document.getElementById('set'+prefix+'Provider').value;
             const isCustom=provider==='custom';
@@ -2885,25 +2338,6 @@
             const aiTemp=ai.temperature;
             document.getElementById('setAiTemperature').value=(aiTemp===undefined||aiTemp===null||aiTemp==='')?'':aiTemp;
             renderSettingsModels('Ai',ai.provider,ai.model,ai.apiUrl,ai.model);
-            const wr=s.writingAi||{};
-            document.getElementById('setWrEnabled').checked=wr.enabled!==false;
-            document.getElementById('setWrApiKey').value=wr.apiKey||'';
-            document.getElementById('setWrSystemPrompt').value=wr.systemPrompt||'';
-            document.getElementById('setWrKeywords').value=wr.keywords||'';
-            document.getElementById('setWrMaxTokens').value=wr.maxTokens||'';
-            const wrTemp=wr.temperature;
-            document.getElementById('setWrTemperature').value=(wrTemp===undefined||wrTemp===null||wrTemp==='')?'':wrTemp;
-            renderSettingsModels('Wr',wr.provider,wr.model,wr.apiUrl,wr.model);
-            const ag=s.agent||{};
-            document.getElementById('setAgEnabled').checked=ag.enabled!==false;
-            document.getElementById('setAgSharePrompt').checked=ag.shareWritingPrompt!==false;
-            document.getElementById('setAgSystemPrompt').value=ag.systemPrompt||'';
-            toggleAgentPrompt();
-            document.getElementById('setAgArticleTriggers').value=(ag.articleTriggers||[]).join(',');
-            document.getElementById('setAgQaTriggers').value=(ag.qaTriggers||[]).join(',');
-            document.getElementById('setAgPublish').value=ag.publishStrategy||'draft';
-            document.getElementById('setAgMaxLen').value=ag.maxInstructionLength||'';
-            document.getElementById('setAgName').value=ag.commentName||'';
         }
         // 头像预览
         function renderSettingsAvatar(src){
@@ -3108,27 +2542,6 @@
                     systemPrompt:document.getElementById('setAiSystemPrompt').value.trim(),
                     maxTokens:parseInt(document.getElementById('setAiMaxTokens').value)||2048,
                     temperature:document.getElementById('setAiTemperature').value!==''?parseFloat(document.getElementById('setAiTemperature').value):0.7,
-                },
-                writingAi:{
-                    enabled:document.getElementById('setWrEnabled').checked,
-                    provider:document.getElementById('setWrProvider').value,
-                    apiUrl:document.getElementById('setWrProvider').value==='custom'?document.getElementById('setWrCustomUrl').value.trim():'',
-                    apiKey:document.getElementById('setWrApiKey').value.trim(),
-                    model:document.getElementById('setWrProvider').value==='custom'?document.getElementById('setWrCustomModel').value.trim():document.getElementById('setWrModel').value,
-                    systemPrompt:document.getElementById('setWrSystemPrompt').value.trim(),
-                    keywords:document.getElementById('setWrKeywords').value.trim(),
-                    maxTokens:parseInt(document.getElementById('setWrMaxTokens').value)||4096,
-                    temperature:document.getElementById('setWrTemperature').value!==''?parseFloat(document.getElementById('setWrTemperature').value):0.7,
-                },
-                agent:{
-                    enabled:document.getElementById('setAgEnabled').checked,
-                    shareWritingPrompt:document.getElementById('setAgSharePrompt').checked,
-                    systemPrompt:document.getElementById('setAgSystemPrompt').value.trim(),
-                    articleTriggers:document.getElementById('setAgArticleTriggers').value.split(',').map(s=>s.trim()).filter(Boolean),
-                    qaTriggers:document.getElementById('setAgQaTriggers').value.split(',').map(s=>s.trim()).filter(Boolean),
-                    publishStrategy:document.getElementById('setAgPublish').value,
-                    maxInstructionLength:parseInt(document.getElementById('setAgMaxLen').value)||500,
-                    commentName:document.getElementById('setAgName').value.trim(),
                 },
             };
             const r=await apiFetch('action=settings',{method:'POST',body:JSON.stringify(body)});
