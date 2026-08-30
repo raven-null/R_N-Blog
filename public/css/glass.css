@@ -249,11 +249,9 @@ body:not(.home-layout) .article-layout,
     box-shadow: var(--glass-shadow);
 }
 
-/* —— 页脚 —— */
+/* —— 页脚（完全透明，融入背景） —— */
 .footer {
-    background: rgba(255, 255, 255, 0.04);
-    backdrop-filter: blur(14px) saturate(150%);
-    -webkit-backdrop-filter: blur(14px) saturate(150%);
+    background: transparent !important;
     border-top: 1px solid var(--glass-border);
 }
 
