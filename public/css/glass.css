@@ -278,9 +278,9 @@ body:not(.home-layout) .article-layout,
     box-shadow: var(--glass-shadow);
 }
 
-/* 目录头部 sticky 区：保持不透明实底，避免玻璃透明导致标题浮空 */
+/* 目录头部 sticky 区：完全透明，融入玻璃侧栏背景 */
 .toc-header {
-    background: var(--bg-secondary) !important;
+    background: transparent !important;
     border-bottom: 1px solid var(--border) !important;
     border-left: none !important;
     border-right: none !important;
