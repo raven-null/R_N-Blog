@@ -691,9 +691,11 @@
         }
 
         .article-content table {
-            /* 表格盒子始终贴着容器宽度，超出部分被裁剪隐藏，可左右拖拽查看，不显示滚动条 */
+            /* 表格按内容自然宽度平铺（文字不折行），超出容器时拖拽查看，不显示滚动条 */
             display: block;
-            width: 100%;
+            width: max-content;
+            min-width: 100%;
+            max-width: 100%;
             border-collapse: collapse;
             margin: 16px 0;
             overflow-x: auto;
@@ -716,6 +718,8 @@
             padding: 12px;
             border: 1px solid var(--border);
             text-align: left;
+            /* 文字优先平铺不折行；需要手动换行时可在单元格内用 <br> */
+            white-space: nowrap;
         }
 
         .article-content th {
