@@ -688,10 +688,9 @@
         }
 
         .article-content table {
-            /* 超出内容宽度时表格自身可横向滑动，但不显示滚动条 */
+            /* 表格盒子始终贴着容器宽度，超出部分被裁剪隐藏，可左右拖拽查看，不显示滚动条 */
             display: block;
-            width: max-content;
-            min-width: 100%;
+            width: 100%;
             border-collapse: collapse;
             margin: 16px 0;
             overflow-x: auto;
