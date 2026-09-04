@@ -61,6 +61,10 @@ check("2) Admin 创建 → 200 rev=0", r.status === 200 && r.data?.rev === 0 && 
 r = await call("GET", `/api/excalidraw?id=${ID}`)
 check("3) 公开读取 → meta 公开字段正确", r.status === 200 && r.data?.meta?.editable === 1 && r.data?.meta?.hasKey === false && r.data?.meta?.rev === 0 && r.data?.scene?.elements?.[0]?.id === "a", JSON.stringify(r.data?.meta))
 
+// 3b. metaOnly 轻量读取（轮询用）：含 meta 不含 scene
+r = await call("GET", `/api/excalidraw?id=${ID}&metaOnly=1`)
+check("3b) metaOnly → 有 meta 无 scene", r.status === 200 && r.data?.meta?.rev === 0 && !("scene" in (r.data || {})), JSON.stringify(r.data))
+
 // 4. 匿名更新（无口令可编辑）
 r = await call("PUT", `/api/excalidraw?id=${ID}`, { scene: sceneB, baseRev: 0 })
 check("4) 匿名更新 → 200 rev=1", r.status === 200 && r.data?.rev === 1, JSON.stringify(r.data))
@@ -126,6 +130,54 @@ check("18) 清除口令 → hasKey=false", r.status === 200 && r.data?.meta?.has
 // 17. 非法 id
 r = await call("GET", `/api/excalidraw?id=非法!!`)
 check("19) 非法 id → 400", r.status === 400, JSON.stringify(r.data))
+
+// 18. history（Admin）：快照 revs + 当前 rev（当前最新版无快照，可回滚 0..2）
+r = await call("GET", `/api/excalidraw?action=history&id=${ID}`, undefined, true)
+const revs = (r.data?.revs || []) as number[]
+check("20) history 列出快照 [2,1,0] current=3", r.status === 200 && revs.join(",") === "2,1,0" && r.data?.current === 3, JSON.stringify(r.data))
+
+// 19. 匿名 history → 401
+r = await call("GET", `/api/excalidraw?action=history&id=${ID}`)
+check("21) 匿名 history → 401", r.status === 401, JSON.stringify(r.data))
+
+// 20. delete（Admin）→ 全部清理，GET 404
+r = await call("POST", `/api/excalidraw?action=delete&id=${ID}`, undefined, true)
+check("22) delete → removed>=4", r.status === 200 && (r.data?.removed || 0) >= 4, JSON.stringify(r.data))
+r = await call("GET", `/api/excalidraw?id=${ID}`)
+check("23) 删除后 GET → 404", r.status === 404, JSON.stringify(r.data))
+
+// ===== 压缩场景往返（大场景优化） =====
+import { gzipSync } from "node:zlib"
+const ID2 = "m1-big"
+const bigElems: any[] = []
+for (let i = 0; i < 2000; i++) {
+  bigElems.push({ type: "text", id: `t${i}`, text: `元素 ${i} `.repeat(15), x: i * 3, y: i, fontSize: 16 })
+}
+const bigScene = { type: "excalidraw", version: 2, elements: bigElems, files: {} }
+const bigRaw = JSON.stringify(bigScene)
+const bigGz = gzipSync(Buffer.from(bigRaw, "utf8")).toString("base64")
+check("24) 压缩显著减小体积（<1/3）", bigGz.length < bigRaw.length / 3, `${bigGz.length} vs ${bigRaw.length}`)
+
+r = await call("PUT", `/api/excalidraw?id=${ID2}`, { scene: bigGz, compressed: 1 }, true)
+check("25) 压缩创建 → 200 rev=0", r.status === 200 && r.data?.rev === 0, JSON.stringify(r.data))
+
+r = await call("GET", `/api/excalidraw?id=${ID2}`)
+check("26) 压缩读回 2000 元素", r.status === 200 && r.data?.scene?.elements?.length === 2000, JSON.stringify(r.data?.scene?.elements?.length))
+
+const sceneFile = join(process.cwd(), `.local-data/excalidraw/notes/${ID2}/scene`)
+const stored = existsSync(sceneFile) ? readFileSync(sceneFile, "utf-8") : ""
+check("27) 落盘为 g1: 压缩格式", stored.startsWith("g1:"), stored.slice(0, 4))
+
+r = await call("PUT", `/api/excalidraw?id=${ID2}`, { scene: bigGz, compressed: 1, baseRev: 0 })
+check("28) 压缩更新 → 200 rev=1", r.status === 200 && r.data?.rev === 1, JSON.stringify(r.data))
+
+r = await call("POST", `/api/excalidraw?action=rollback&id=${ID2}&rev=0`, undefined, true)
+check("29) 回滚 rev0 → 200", r.status === 200, JSON.stringify(r.data))
+r = await call("GET", `/api/excalidraw?id=${ID2}`)
+check("30) 回滚后仍 2000 元素", r.status === 200 && r.data?.scene?.elements?.length === 2000, "")
+
+r = await call("POST", `/api/excalidraw?action=delete&id=${ID2}`, undefined, true)
+check("31) 清理 m1-big", r.status === 200, JSON.stringify(r.data))
 
 console.log(failed === 0 ? "\n🎉 M1 全部通过" : `\n❌ ${failed} 项失败`)
 process.exit(failed === 0 ? 0 : 1)

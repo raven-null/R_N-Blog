@@ -1,12 +1,16 @@
 import { createHash } from "node:crypto"
+import { gunzipSync } from "node:zlib"
 import { json, badRequest, noContent } from "./_shared/cors"
 import { getBlobStore } from "./_shared/blob"
 import { checkAuth } from "./_shared/auth"
 
 const STORE = "excalidraw"
 const ID_RE = /^[A-Za-z0-9_-]{1,64}$/
-const MAX_SCENE_CHARS = 8 * 1024 * 1024 // 场景文本上限 8MB
+const MAX_SCENE_CHARS = 8 * 1024 * 1024 // 未压缩场景文本上限 8MB
+const MAX_COMPRESSED_CHARS = 16 * 1024 * 1024 // 压缩（gzip+base64）传输上限 16MB
+const MAX_UNZIPPED_BYTES = 50 * 1024 * 1024 // 解压上限（防 zip bomb）
 const MAX_REV = 50 // 每篇笔记保留的快照数
+const GZ_PREFIX = "g1:" // scene 存储文本的 gzip 标记
 
 const metaKey = (id: string) => `notes/${id}/meta`
 const sceneKey = (id: string) => `notes/${id}/scene`
@@ -32,6 +36,16 @@ function publicMeta(m: NoteMeta) {
     updatedAt: m.updatedAt,
     rev: m.rev,
   }
+}
+
+/** 解码存储文本：g1: 前缀为 gzip+base64（透明解压），否则为普通 JSON 文本 */
+function decodeScene(raw: string): any {
+  if (raw.startsWith(GZ_PREFIX)) {
+    const unz = gunzipSync(Buffer.from(raw.slice(GZ_PREFIX.length), "base64"))
+    if (unz.length > MAX_UNZIPPED_BYTES) throw new Error("场景解压后过大")
+    return JSON.parse(unz.toString("utf8"))
+  }
+  return JSON.parse(raw)
 }
 
 async function readMeta(store: ReturnType<typeof getBlobStore>, id: string): Promise<NoteMeta | null> {
@@ -160,6 +174,38 @@ export default async (req: Request) => {
     }
   }
 
+  if (action === "history") {
+    if (!isAdmin) return json(401, { status: "error", message: "未授权" }, req)
+    if (!ID_RE.test(id)) return badRequest("id 非法", req)
+    try {
+      const store = getBlobStore(STORE)
+      const list = await store.list({ prefix: revPrefix(id) })
+      const revs = list.blobs
+        .map(b => Number(b.key.slice(revPrefix(id).length)))
+        .filter(n => Number.isFinite(n))
+        .sort((a, b) => b - a)
+      const meta = await readMeta(store, id)
+      return json(200, { status: "success", id, revs, current: meta?.rev ?? 0 }, req)
+    } catch (err: any) {
+      return json(500, { status: "error", message: err?.message || "读取历史失败" }, req)
+    }
+  }
+
+  if (action === "delete") {
+    if (!isAdmin) return json(401, { status: "error", message: "未授权" }, req)
+    if (!ID_RE.test(id)) return badRequest("id 非法", req)
+    try {
+      const store = getBlobStore(STORE)
+      const list = await store.list({ prefix: `notes/${id}/` })
+      for (const item of list.blobs) {
+        await store.delete(item.key)
+      }
+      return json(200, { status: "success", id, removed: list.blobs.length }, req)
+    } catch (err: any) {
+      return json(500, { status: "error", message: err?.message || "删除失败" }, req)
+    }
+  }
+
   // ===================== 公开读写 =====================
 
   if (!ID_RE.test(id)) return badRequest("id 非法（1-64 位字母 / 数字 / - / _）", req)
@@ -168,12 +214,22 @@ export default async (req: Request) => {
     const store = getBlobStore(STORE)
 
     if (req.method === "GET") {
+      const meta = await readMeta(store, id)
+      // 轻量轮询端点：只返回 meta（rev/editable/hasKey），前端据此检测远端更新
+      if (url.searchParams.get("metaOnly") === "1") {
+        if (!meta) return json(404, { status: "error", message: "笔记不存在" }, req)
+        return json(
+          200,
+          { status: "success", id, meta: publicMeta(meta) },
+          req,
+          { "Cache-Control": "no-store" },
+        )
+      }
       const raw = await store.get(sceneKey(id), { type: "text" })
       if (!raw) return json(404, { status: "error", message: "笔记不存在" }, req)
-      const meta = await readMeta(store, id)
       return json(
         200,
-        { status: "success", id, scene: JSON.parse(raw), meta: meta ? publicMeta(meta) : null },
+        { status: "success", id, scene: decodeScene(raw), meta: meta ? publicMeta(meta) : null },
         req,
         { "Cache-Control": "no-store" },
       )
@@ -186,10 +242,30 @@ export default async (req: Request) => {
       } catch {
         return badRequest("请求体不是合法 JSON", req)
       }
-      const scene = body?.scene
-      if (!scene || typeof scene !== "object") return badRequest("scene 必填（对象）", req)
-      const text = JSON.stringify(scene)
-      if (text.length > MAX_SCENE_CHARS) return badRequest("场景过大（超过 8MB）", req)
+
+      // 场景支持两种形态：普通 JSON 对象；或 gzip 压缩的 base64（compressed: 1，大场景传输）
+      let text: string
+      if (body.compressed === 1 || body.compressed === true) {
+        const raw = typeof body.scene === "string" ? body.scene : ""
+        if (!raw) return badRequest("scene 必填（压缩 base64 文本）", req)
+        try {
+          const gzBuf = Buffer.from(raw, "base64")
+          if (gzBuf.length > MAX_COMPRESSED_CHARS) return badRequest("压缩场景过大（超过 16MB）", req)
+          const unz = gunzipSync(gzBuf)
+          if (unz.length > MAX_UNZIPPED_BYTES) return badRequest("场景解压后过大", req)
+          const parsed = JSON.parse(unz.toString("utf8"))
+          if (!parsed || typeof parsed !== "object") return badRequest("scene 非法", req)
+          text = GZ_PREFIX + gzBuf.toString("base64")
+        } catch {
+          return badRequest("压缩场景解码失败", req)
+        }
+      } else {
+        const scene = body?.scene
+        if (!scene || typeof scene !== "object") return badRequest("scene 必填（对象）", req)
+        const t = JSON.stringify(scene)
+        if (t.length > MAX_SCENE_CHARS) return badRequest("场景过大（超过 8MB，大场景请用压缩传输）", req)
+        text = t
+      }
 
       const existing = await readMeta(store, id)
 

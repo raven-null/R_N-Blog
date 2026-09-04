@@ -608,6 +608,7 @@
             <button class="mobile-tab" data-tab="comments" onclick="switchTab('comments')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span>评论</span></button>
             <button class="mobile-tab" data-tab="images" onclick="switchTab('images')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><span>图片</span></button>
             <button class="mobile-tab" data-tab="tags" onclick="switchTab('tags')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg><span>标签</span></button>
+            <button class="mobile-tab" data-tab="excalidraw" onclick="switchTab('excalidraw')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><path d="M7 12h10M12 7v10"/><path d="M9.5 9.5l5 5M14.5 9.5l-5 5"/></svg><span>白板</span></button>
             <button class="mobile-tab" data-tab="settings" onclick="switchTab('settings')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span>设置</span></button>
         </nav>
         <div class="admin-body">
@@ -619,6 +620,7 @@
                     <div class="sidebar-item" onclick="switchTab('comments')" data-tab="comments"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span>评论管理</span></div>
                     <div class="sidebar-item" onclick="switchTab('images')" data-tab="images"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><span>图片管理</span></div>
                     <div class="sidebar-item" onclick="switchTab('tags')" data-tab="tags"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg><span>标签管理</span></div>
+                    <div class="sidebar-item" onclick="switchTab('excalidraw')" data-tab="excalidraw"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><path d="M7 12h10M12 7v10"/><path d="M9.5 9.5l5 5M14.5 9.5l-5 5"/></svg><span>白板管理</span></div>
                     <div class="sidebar-item" onclick="switchTab('settings')" data-tab="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span>博客设置</span></div>
                 </div>
             </div>
@@ -751,6 +753,32 @@
                     <div class="page-bar"><h2>评论管理</h2><div class="page-bar-actions"><button class="btn btn-ghost" onclick="loadComments()">刷新</button></div></div>
                     <div class="comment-manage-stats" id="commentStats"></div>
                     <div class="comment-manage-list" id="commentManageList"></div>
+                </div>
+
+                <!-- 白板管理 -->
+                <div id="tab-excalidraw" style="display:none">
+                    <style>
+                        .exc-mgmt-tip{color:var(--text-muted);font-size:12px;padding:0 20px 10px}
+                        .exc-mgmt-list{padding:0 20px 20px}
+                        .exc-card{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:10px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+                        .exc-card .exc-title{font-weight:600;font-size:14px;word-break:break-all}
+                        .exc-card .exc-id{font-family:Consolas,monospace;color:var(--accent);font-size:12px;word-break:break-all}
+                        .exc-meta{color:var(--text-muted);font-size:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;flex:1;min-width:200px}
+                        .exc-badge{font-size:11px;padding:1px 7px;border-radius:8px;background:var(--bg-tertiary);border:1px solid var(--border)}
+                        .exc-badge.on{color:#10b981;border-color:rgba(16,185,129,.4)}
+                        .exc-badge.off{color:#f59e0b;border-color:rgba(245,158,11,.4)}
+                        .exc-ops{display:flex;gap:6px;flex-wrap:wrap}
+                        .exc-btn{font-size:12px;padding:3px 9px;border-radius:6px;border:1px solid var(--border);background:var(--bg-tertiary);color:var(--text-secondary);cursor:pointer;text-decoration:none;display:inline-block}
+                        .exc-btn:hover{border-color:var(--accent);color:var(--accent)}
+                        .exc-btn.danger:hover{border-color:#ef4444;color:#ef4444}
+                        .exc-empty{color:var(--text-muted);text-align:center;padding:40px 0}
+                    </style>
+                    <div class="page-bar"><h2>白板管理</h2><div class="page-bar-actions">
+                        <a class="btn btn-ghost" href="/excalidraw.html?edit=1" target="_blank">➕ 新建白板</a>
+                        <button class="btn btn-ghost" onclick="loadExcalidrawNotes()">刷新</button>
+                    </div></div>
+                    <div class="exc-mgmt-tip">白板可公开只读分享；编辑需口令或开放编辑；「改名 / 只读开关 / 口令 / 回滚 / 删除」在此管理（对应 /api/excalidraw 的 Admin 端点）。</div>
+                    <div class="exc-mgmt-list" id="excalidrawNoteList"></div>
                 </div>
 
                 <!-- 博客设置 -->
@@ -2429,13 +2457,96 @@
         function switchTab(tab){
             document.querySelectorAll('.sidebar-item').forEach(el=>el.classList.toggle('active',el.dataset.tab===tab));
             document.querySelectorAll('.mobile-tab').forEach(el=>el.classList.toggle('active',el.dataset.tab===tab));
-            ['articles','write','comments','images','tags','settings'].forEach(t=>document.getElementById('tab-'+t).style.display=t===tab?'block':'none');
+            ['articles','write','comments','images','tags','excalidraw','settings'].forEach(t=>document.getElementById('tab-'+t).style.display=t===tab?'block':'none');
             if(tab==='articles')loadArticles();
             if(tab==='comments')loadComments();
             if(tab==='settings')loadSettings();
             if(tab==='images'){loadData();loadTags()}
             if(tab==='tags'){loadTags();loadData()}
+            if(tab==='excalidraw')loadExcalidrawNotes();
             if(tab==='write'){ensureEditor();if(!editingId)resetEditor();loadArticleTagNames()}
+        }
+
+        // ===== 白板管理 =====
+        async function excApi(q, opts){
+            const r=await fetch(`/api/excalidraw?${q}`,{...opts,headers:{'Content-Type':'application/json','X-Admin-Key':adminKey,...((opts&&opts.headers)||{})}});
+            return r.json();
+        }
+        function escHtml(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+        async function loadExcalidrawNotes(){
+            const list=document.getElementById('excalidrawNoteList');
+            if(!list)return;
+            list.innerHTML='<div class="exc-empty">加载中…</div>';
+            try{
+                const d=await excApi('action=list');
+                if(d.status!=='success'){list.innerHTML='<div class="exc-empty">加载失败：'+(escHtml(d.message)||'')+'</div>';return}
+                const notes=d.data||[];
+                if(!notes.length){
+                    list.innerHTML='<div class="exc-empty">还没有白板笔记。去 <a href="/excalidraw.html?edit=1" target="_blank">新建一个</a>（需管理员登录）</div>';
+                    return;
+                }
+                list.innerHTML=notes.map(n=>{
+                    const editBadge=n.editable===1?'<span class="exc-badge on">公开可编辑</span>':'<span class="exc-badge off">只读</span>';
+                    const lockBadge=n.hasKey?'<span class="exc-badge">🔒 口令保护</span>':'';
+                    const updated=(n.updatedAt||'').slice(0,16).replace('T',' ');
+                    return `<div class="exc-card">
+                        <div style="min-width:150px">
+                            <div class="exc-title">${escHtml(n.title||'(未命名)')}</div>
+                            <div class="exc-id">${escHtml(n.id)}</div>
+                        </div>
+                        <div class="exc-meta">${editBadge}${lockBadge}<span>rev ${n.rev}</span><span>更新 ${updated}</span></div>
+                        <div class="exc-ops">
+                            <a class="exc-btn" href="/excalidraw.html?note=${encodeURIComponent(n.id)}" target="_blank">🔗 打开</a>
+                            <a class="exc-btn" href="/excalidraw.html?note=${encodeURIComponent(n.id)}&edit=1" target="_blank">✏️ 编辑</a>
+                            <button class="exc-btn" onclick="excRename('${n.id}')">改名</button>
+                            <button class="exc-btn" onclick="excToggleEdit('${n.id}',${n.editable})">${n.editable===1?'设为只读':'开放编辑'}</button>
+                            <button class="exc-btn" onclick="excSetKey('${n.id}')">${n.hasKey?'重设口令':'设口令'}</button>
+                            <button class="exc-btn" onclick="excRollback('${n.id}')">⏪ 回滚</button>
+                            <button class="exc-btn danger" onclick="excDelete('${n.id}')">🗑 删除</button>
+                        </div>
+                    </div>`;
+                }).join('');
+            }catch(e){
+                list.innerHTML='<div class="exc-empty">加载出错：'+escHtml(e.message)+'</div>';
+            }
+        }
+        async function excRename(id){
+            const cur=await excApi('action=list').then(d=>((d.data||[]).find(n=>n.id===id)||{}).title||'');
+            const t=prompt('设置标题（留空并确定 = 清除标题）：',cur);
+            if(t===null)return;
+            const d=await excApi(`action=meta&id=${encodeURIComponent(id)}`,{method:'POST',body:JSON.stringify({title:t.trim()})});
+            alert(d.status==='success'?'已保存':(d.message||'操作失败'));
+            if(d.status==='success')loadExcalidrawNotes();
+        }
+        async function excToggleEdit(id,cur){
+            const d=await excApi(`action=meta&id=${encodeURIComponent(id)}`,{method:'POST',body:JSON.stringify({editable:cur===1?0:1})});
+            alert(d.status==='success'?'已更新':(d.message||'操作失败'));
+            if(d.status==='success')loadExcalidrawNotes();
+        }
+        async function excSetKey(id){
+            const t=prompt('设置编辑口令（至少 4 位；留空并确定 = 清除口令）：','');
+            if(t===null)return;
+            const d=await excApi(`action=meta&id=${encodeURIComponent(id)}`,{method:'POST',body:JSON.stringify({editKey:t.trim()})});
+            alert(d.status==='success'?'已更新':(d.message||'操作失败'));
+            if(d.status==='success')loadExcalidrawNotes();
+        }
+        async function excRollback(id){
+            const h=await excApi(`action=history&id=${encodeURIComponent(id)}`);
+            if(h.status!=='success'){alert(h.message||'读取历史失败');return}
+            const revs=[...(h.revs||[])].reverse();
+            const rev=prompt(`「${id}」可用快照版本：${revs.length?revs.join(', '):'（无）'}；当前 rev ${h.current}\n输入要恢复的 rev 数字（0 = 初始版）：`);
+            if(rev===null)return;
+            const n=Number(rev);
+            if(!Number.isInteger(n)||n<0){alert('rev 非法');return}
+            const d=await excApi(`action=rollback&id=${encodeURIComponent(id)}&rev=${n}`,{method:'POST'});
+            alert(d.status==='success'?`已回滚到 rev ${n}`:(d.message||'回滚失败'));
+            if(d.status==='success')loadExcalidrawNotes();
+        }
+        async function excDelete(id){
+            if(!confirm(`确定删除白板「${id}」？场景与全部历史快照将一并删除，不可恢复！`))return;
+            const d=await excApi(`action=delete&id=${encodeURIComponent(id)}`,{method:'POST'});
+            alert(d.status==='success'?`已删除（${d.removed} 个数据项）`:(d.message||'删除失败'));
+            if(d.status==='success')loadExcalidrawNotes();
         }
 
         // ===== 评论管理 =====

@@ -80,6 +80,24 @@ function blobToBase64(blob: Blob): Promise<string> {
   })
 }
 
+/** 文本 gzip 压缩 → base64（大场景传输用）；浏览器不支持或失败返回 null */
+async function gzipEncode(text: string): Promise<string | null> {
+  try {
+    if (typeof CompressionStream === "undefined") return null
+    const stream = new Blob([text]).stream().pipeThrough(new CompressionStream("gzip"))
+    const buf = await new Response(stream).arrayBuffer()
+    const u8 = new Uint8Array(buf)
+    let bin = ""
+    const CHUNK = 0x8000
+    for (let i = 0; i < u8.length; i += CHUNK) {
+      bin += String.fromCharCode(...u8.subarray(i, i + CHUNK))
+    }
+    return btoa(bin)
+  } catch {
+    return null
+  }
+}
+
 function NoteApp({ note, mode }: { note: string; mode: "edit" | "view" }) {
   const apiRef = useRef<any>(null)
   const loadedRev = useRef<number | null>(null)
@@ -93,39 +111,52 @@ function NoteApp({ note, mode }: { note: string; mode: "edit" | "view" }) {
   const [title, setTitle] = useState(note || "未命名白板")
   const isAdmin = !!getAdminKey()
 
-  const load = async () => {
+  // silent=true：不闪 loading（轮询刷新用），已有画布时用 updateScene 增量替换
+  const load = async (silent = false) => {
     if (!note) {
       setLoading(false)
       setNotFound(true)
       return
     }
-    setLoading(true)
+    if (!silent) setLoading(true)
     try {
       const res = await apiFetch(`/api/excalidraw?id=${encodeURIComponent(note)}`)
       if (res.status === 404) {
         setNotFound(true)
-        setLoading(false)
+        if (!silent) setLoading(false)
         return
       }
       const data = await res.json()
       if (!res.ok || data.status !== "success") {
-        setMsg(data.message || `载入失败 ${res.status}`)
-        setLoading(false)
+        if (!silent) {
+          setMsg(data.message || `载入失败 ${res.status}`)
+          setLoading(false)
+        }
         return
       }
-      setScene(data.scene as SceneData)
+      const sc = data.scene as SceneData
+      const api = apiRef.current
+      if (api) {
+        // 已有实例：增量替换元素与文件（不重置视图），避免整页闪烁
+        api.updateScene({ elements: sc.elements || [], files: sc.files || undefined })
+      }
+      setScene(sc)
       setMeta(data.meta as NoteMeta)
       loadedRev.current = data.meta?.rev ?? null
       setTitle(data.meta?.title || note)
-      setLoading(false)
-      setMsg(
-        data.meta?.editable === 1
-          ? `已载入（rev ${data.meta?.rev ?? 0}）`
-          : "已载入（当前只读：作者未开放编辑）",
-      )
+      if (!silent) {
+        setLoading(false)
+        setMsg(
+          data.meta?.editable === 1
+            ? `已载入（rev ${data.meta?.rev ?? 0}）`
+            : "已载入（当前只读：作者未开放编辑）",
+        )
+      }
     } catch (e: any) {
-      setMsg("载入出错：" + (e?.message || e))
-      setLoading(false)
+      if (!silent) {
+        setMsg("载入出错：" + (e?.message || e))
+        setLoading(false)
+      }
     }
   }
 
@@ -134,6 +165,33 @@ function NoteApp({ note, mode }: { note: string; mode: "edit" | "view" }) {
   useEffect(() => {
     document.title = mode === "edit" ? `编辑：${title}` : title
   }, [title, mode])
+
+  // L1.5 协作感知：轻量轮询 meta.rev 检测他人更新
+  // view 模式自动静默刷新；edit 模式提示（避免覆盖未保存改动）
+  useEffect(() => {
+    if (!note) return
+    const timer = window.setInterval(async () => {
+      try {
+        const res = await apiFetch(`/api/excalidraw?id=${encodeURIComponent(note)}&metaOnly=1`)
+        if (!res.ok) return
+        const d = await res.json()
+        if (d.status !== "success" || !d.meta) return
+        const remoteRev = d.meta.rev as number
+        const localRev = loadedRev.current
+        if (localRev === null || remoteRev === localRev) return
+        if (mode === "view") {
+          setMsg(`已自动更新到 rev ${remoteRev}`)
+          await load(true)
+        } else {
+          setMsg(`🔔 检测到他人更新（rev ${remoteRev}，你当前 rev ${localRev}）：可刷新页面查看；如需提交你的改动请先保存（将提示覆盖确认）`)
+        }
+      } catch {
+        // 轮询失败静默（网络抖动/离线）
+      }
+    }, mode === "view" ? 20000 : 30000)
+    return () => window.clearInterval(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [note, mode])
 
   const save = async (force = false): Promise<boolean> => {
     const api = apiRef.current
@@ -151,9 +209,19 @@ function NoteApp({ note, mode }: { note: string; mode: "edit" | "view" }) {
       files: api.getFiles(),
       appState: { viewBackgroundColor: appState.viewBackgroundColor },
     }
-    const body: any = {
-      scene: scenePayload,
-      baseRev: loadedRev.current ?? 0,
+    // 大场景（>400KB）自动 gzip 压缩传输，服务端透明解压存储
+    const sceneText = JSON.stringify(scenePayload)
+    const body: any = { baseRev: loadedRev.current ?? 0 }
+    if (sceneText.length > 400 * 1024) {
+      const gz = await gzipEncode(sceneText)
+      if (gz) {
+        body.scene = gz
+        body.compressed = 1
+      } else {
+        body.scene = scenePayload
+      }
+    } else {
+      body.scene = scenePayload
     }
     if (meta?.hasKey && !isAdmin) body.editKey = editKey
     if (force) body.force = 1
