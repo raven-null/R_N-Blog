@@ -504,13 +504,13 @@
         .vditor-wrap .vditor-toolbar [data-type="outline"]{display:none!important}
         .vditor{border:1px solid var(--glass-border)!important;border-radius:var(--radius)!important;background:var(--editor-bg,rgba(26,26,26,0.8))!important;box-shadow:var(--glass-shadow)!important}
         .vditor-toolbar{
-            background:var(--glass-bg)!important;
+            background:var(--editor-bg,rgba(26,26,26,0.85))!important;
             backdrop-filter:blur(12px) saturate(150%);-webkit-backdrop-filter:blur(12px) saturate(150%);
             border-bottom:1px solid var(--glass-border)!important;
         }
-        .vditor-toolbar__item{color:var(--editor-text,#fff)!important;opacity:.78;transition:all 0.2s ease}
-        .vditor-toolbar__item--current{color:var(--accent)!important;opacity:1}
-        .vditor-toolbar__item:hover{color:var(--accent)!important;opacity:1;transform:translateY(-1px)}
+        .vditor-toolbar__item{color:var(--editor-text,#fff)!important;transition:all 0.2s ease}
+        .vditor-toolbar__item--current{color:var(--accent)!important}
+        .vditor-toolbar__item:hover{color:var(--accent)!important;transform:translateY(-1px)}
         .vditor-content{background:var(--editor-bg,rgba(26,26,26,0.5))!important}
         .vditor-ir,.vditor-wysiwyg,.vditor-sv{color:var(--editor-text,#fff)!important}
         .vditor-ir *,.vditor-wysiwyg *,.vditor-sv *{color:var(--editor-text,#fff)!important}
