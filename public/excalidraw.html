@@ -14,8 +14,10 @@
       --glass-hi: rgba(255, 255, 255, 0.08);
       --glass-blur: blur(24px) saturate(180%);
     }
-    html, body { margin: 0; padding: 0; height: 100%; background: #0b0b0e; color: #eee; }
+    html, body { margin: 0; padding: 0; height: 100%; background: #0b0b0e; color: #eee; overflow: hidden; }
     * { box-sizing: border-box; }
+    /* 全屏应用布局：header 固定，画布占满剩余空间，页面本身不滚动 */
+    body { display: flex; flex-direction: column; }
     /* 环境光斑背景 */
     body::before {
       content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none;
@@ -27,7 +29,7 @@
     }
     /* 液态玻璃顶栏 */
     .site-header {
-      position: relative; z-index: 2;
+      position: relative; z-index: 2; flex: none;
       display: flex; align-items: center; gap: 12px;
       padding: 9px 18px; background: rgba(16, 16, 19, 0.58);
       backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
@@ -53,7 +55,7 @@
       overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 40vw;
     }
     .site-header .spacer { flex: 1; }
-    #excalidraw-root { position: relative; z-index: 1; height: calc(100dvh - 45px); }
+    #excalidraw-root { position: relative; z-index: 1; flex: 1; min-height: 0; }
     /* 空态（无参数用法说明） */
     .empty-tip {
       height: 100%; display: flex; flex-direction: column;
