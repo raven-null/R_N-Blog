@@ -544,70 +544,82 @@
         }
 
         /* ===== 写文章极简模式 ===== */
+        #tab-write{height:calc(100vh - 52px);overflow-y:auto;display:flex;flex-direction:column;padding:0}
         .write-header{
-            padding:16px 20px;margin-bottom:16px;
+            padding:10px 16px;
             background:var(--glass-bg);
             backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);
-            border:1px solid var(--glass-border);
-            border-radius:var(--radius);
-            box-shadow:var(--glass-shadow);
+            border-bottom:1px solid var(--glass-border);
             transition:all 0.3s var(--spring-soft);
+            position:sticky;top:0;z-index:10;
         }
-        .write-header:hover{border-color:rgba(255,255,255,0.2)}
-        .write-toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
-        .write-toolbar-right{display:flex;gap:8px;align-items:center}
+        .write-toolbar{display:flex;justify-content:space-between;align-items:center}
+        .write-toolbar-right{display:flex;gap:6px;align-items:center}
         .write-title-input{
-            width:100%;padding:12px 0;
-            background:transparent;border:none;border-top:1px solid var(--glass-border);
-            color:var(--text);font-size:28px;font-weight:700;outline:none;
-            margin-top:12px;padding-top:16px;
+            width:100%;padding:8px 0;
+            background:transparent;border:none;border-top:1px solid rgba(255,255,255,0.08);
+            color:var(--text);font-size:22px;font-weight:600;outline:none;
+            margin-top:8px;padding-top:10px;
             transition:all 0.3s var(--spring-soft);
         }
         .write-title-input:focus{border-top-color:var(--accent)}
-        .write-title-input::placeholder{color:rgba(255,255,255,0.35);font-weight:400}
-        .vditor-wrap{flex:1;min-height:60vh}
-        .write-footer{
-            display:flex;justify-content:space-between;align-items:center;
-            padding:12px 16px;margin-top:16px;
-            background:var(--glass-bg);
-            backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);
-            border:1px solid var(--glass-border);
-            border-radius:var(--radius);
-            box-shadow:var(--glass-shadow);
-        }
-        .write-word-count{font-size:12px;color:rgba(255,255,255,0.6)}
-        .write-save-hint{font-size:12px;color:var(--success)}
+        .write-title-input::placeholder{color:rgba(255,255,255,0.3);font-weight:400}
 
-        /* Vditor 暗色主题适配 + 液态玻璃 */
-        .vditor{
-            border:1px solid var(--glass-border)!important;
-            border-radius:var(--radius)!important;
-            background:rgba(17,17,17,0.6)!important;
-            backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);
-            box-shadow:var(--glass-shadow);
-            overflow:hidden;
+        /* 编辑器主题切换 */
+        .theme-switcher{display:flex;gap:4px;align-items:center;margin-left:8px}
+        .theme-dot{
+            width:18px;height:18px;border-radius:50%;cursor:pointer;
+            border:2px solid transparent;transition:all 0.2s var(--spring);
         }
-        .vditor--dark{--panel-background-color:rgba(17,17,17,0.7);--textarea-background-color:rgba(26,26,26,0.8)}
+        .theme-dot:hover{transform:scale(1.15)}
+        .theme-dot.active{border-color:var(--accent);box-shadow:0 0 8px rgba(79,195,247,0.4)}
+        .theme-dot[data-theme="dark"]{background:#080808}
+        .theme-dot[data-theme="light"]{background:#f5f5f5}
+        .theme-dot[data-theme="sepia"]{background:#f4ecd8}
+        .theme-dot[data-theme="green"]{background:#c7edcc}
+        .theme-dot[data-theme="blue"]{background:#dce8f5}
+
+        /* 编辑器主题样式 */
+        .vditor-theme-dark{--editor-bg:rgba(26,26,26,0.8);--editor-text:#fff;--editor-pre-bg:rgba(8,8,8,0.6)}
+        .vditor-theme-light{--editor-bg:rgba(255,255,255,0.95);--editor-text:#1a1a1a;--editor-pre-bg:#f0f0f0}
+        .vditor-theme-sepia{--editor-bg:rgba(244,236,216,0.95);--editor-text:#3e332a;--editor-pre-bg:rgba(210,195,170,0.5)}
+        .vditor-theme-green{--editor-bg:rgba(199,237,204,0.9);--editor-text:#1a3a1a;--editor-pre-bg:rgba(170,210,175,0.5)}
+        .vditor-theme-blue{--editor-bg:rgba(220,232,245,0.9);--editor-text:#1a2a3a;--editor-pre-bg:rgba(190,205,225,0.5)}
+
+        .vditor-wrap{flex:1;min-height:0}
+        .vditor{border:none!important;border-radius:0!important;background:var(--editor-bg,rgba(26,26,26,0.8))!important;box-shadow:none!important;height:100%!important}
         .vditor-toolbar{
-            background:var(--glass-bg)!important;
-            backdrop-filter:blur(12px) saturate(150%);-webkit-backdrop-filter:blur(12px) saturate(150%);
-            border-bottom:1px solid var(--glass-border)!important;
+            background:rgba(255,255,255,0.03)!important;
+            backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+            border-bottom:1px solid rgba(255,255,255,0.08)!important;
+            padding:4px 8px!important;
         }
-        .vditor-toolbar__item{color:rgba(255,255,255,0.7)!important;transition:all 0.2s ease}
+        .vditor-toolbar__item{color:rgba(255,255,255,0.6)!important;transition:all 0.2s ease}
         .vditor-toolbar__item--current{color:var(--accent)!important}
         .vditor-toolbar__item:hover{color:var(--accent)!important;transform:translateY(-1px)}
-        .vditor-content{background:rgba(26,26,26,0.5)!important}
-        .vditor-ir,.vditor-wysiwyg,.vditor-sv{color:#fff!important}
-        .vditor-ir *,.vditor-wysiwyg *,.vditor-sv *{color:#fff!important}
-        .vditor-ir pre,.vditor-wysiwyg pre,.vditor-sv pre{background:rgba(8,8,8,0.6)!important;color:#fff!important}
-        .vditor-ir code,.vditor-wysiwyg code{color:#fff!important}
-        .vditor-ir p,.vditor-wysiwyg p,.vditor-ir li,.vditor-wysiwyg li,.vditor-ir h1,.vditor-ir h2,.vditor-ir h3,.vditor-ir h4,.vditor-ir h5,.vditor-ir h6,.vditor-wysiwyg h1,.vditor-wysiwyg h2,.vditor-wysiwyg h3,.vditor-wysiwyg h4,.vditor-wysiwyg h5,.vditor-wysiwyg h6{color:#fff!important}
-        .vditor-ir blockquote,.vditor-wysiwyg blockquote{color:#fff!important}
+        .vditor-content{background:var(--editor-bg,rgba(26,26,26,0.5))!important}
+        .vditor-ir,.vditor-wysiwyg,.vditor-sv{color:var(--editor-text,#fff)!important}
+        .vditor-ir *,.vditor-wysiwyg *,.vditor-sv *{color:var(--editor-text,#fff)!important}
+        .vditor-ir pre,.vditor-wysiwyg pre,.vditor-sv pre{background:var(--editor-pre-bg,rgba(8,8,8,0.6))!important;color:var(--editor-text,#fff)!important}
+        .vditor-ir code,.vditor-wysiwyg code{color:var(--editor-text,#fff)!important}
+        .vditor-ir p,.vditor-wysiwyg p,.vditor-ir li,.vditor-wysiwyg li,.vditor-ir h1,.vditor-ir h2,.vditor-ir h3,.vditor-ir h4,.vditor-ir h5,.vditor-ir h6,.vditor-wysiwyg h1,.vditor-wysiwyg h2,.vditor-wysiwyg h3,.vditor-wysiwyg h4,.vditor-wysiwyg h5,.vditor-wysiwyg h6{color:var(--editor-text,#fff)!important}
+        .vditor-ir blockquote,.vditor-wysiwyg blockquote{color:var(--editor-text,#fff)!important}
         .vditor-ir a,.vditor-wysiwyg a{color:var(--accent)!important}
-        .vditor-ir table,.vditor-wysiwyg table{color:#fff!important}
-        .vditor-ir th,.vditor-ir td,.vditor-wysiwyg th,.vditor-wysiwyg td{color:#fff!important;border-color:rgba(255,255,255,0.15)!important}
-        .vditor-ir th,.vditor-wysiwyg th{background:rgba(255,255,255,0.08)!important}
-        .vditor-wysiwyg[contenteditable="true"]{color:#fff!important}
+        .vditor-ir table,.vditor-wysiwyg table{color:var(--editor-text,#fff)!important}
+        .vditor-ir th,.vditor-ir td,.vditor-wysiwyg th,.vditor-wysiwyg td{color:var(--editor-text,#fff)!important;border-color:rgba(128,128,128,0.2)!important}
+        .vditor-ir th,.vditor-wysiwyg th{background:rgba(128,128,128,0.1)!important}
+        .vditor-wysiwyg[contenteditable="true"]{color:var(--editor-text,#fff)!important}
+
+        .write-footer{
+            display:flex;justify-content:space-between;align-items:center;
+            padding:8px 16px;
+            background:var(--glass-bg);
+            backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);
+            border-top:1px solid var(--glass-border);
+            position:sticky;bottom:0;
+        }
+        .write-word-count{font-size:11px;color:rgba(255,255,255,0.6)}
+        .write-save-hint{font-size:11px;color:var(--success)}
 
         /* ===== 发布弹窗 ===== */
         .publish-modal{display:none;position:fixed;inset:0;z-index:1000}
@@ -712,14 +724,21 @@
                 </div>
 
                 <!-- 写文章（极简沉浸式） -->
-                <div id="tab-write" style="display:none">
+                <div id="tab-write">
                     <!-- 头部区域（工具栏 + 标题） -->
                     <div class="write-header">
                         <div class="write-toolbar">
                             <button class="btn btn-ghost" onclick="switchTab('articles')">← 返回</button>
                             <div class="write-toolbar-right">
+                                <div class="theme-switcher">
+                                    <div class="theme-dot active" data-theme="dark" title="黑色" onclick="switchEditorTheme('dark')"></div>
+                                    <div class="theme-dot" data-theme="light" title="白色" onclick="switchEditorTheme('light')"></div>
+                                    <div class="theme-dot" data-theme="sepia" title="羊皮纸" onclick="switchEditorTheme('sepia')"></div>
+                                    <div class="theme-dot" data-theme="green" title="护眼绿" onclick="switchEditorTheme('green')"></div>
+                                    <div class="theme-dot" data-theme="blue" title="淡蓝" onclick="switchEditorTheme('blue')"></div>
+                                </div>
                                 <label class="btn btn-ghost" style="cursor:pointer">📄 导入<input type="file" accept=".md,.markdown" onchange="importAndEdit(this.files[0])" style="display:none"></label>
-                                <button class="btn btn-ghost" onclick="exportMarkdown()">💾 导出 MD</button>
+                                <button class="btn btn-ghost" onclick="exportMarkdown()">💾 导出</button>
                                 <button class="btn btn-primary" onclick="openPublishModal()">发布 ▾</button>
                             </div>
                         </div>
@@ -1399,6 +1418,7 @@
                 },
                 cache:{enable:true},
                 after:()=>{
+                    switchEditorTheme(currentEditorTheme);
                     updateEditorInfo();
                 }
             });
@@ -1424,6 +1444,31 @@
             if(!ed)return;
             ed.insertValue(t);
             updateEditorInfo();
+        }
+
+        // ===== 编辑器主题切换 =====
+        const editorThemes={
+            dark:{bg:'rgba(26,26,26,0.8)',text:'#fff',preBg:'rgba(8,8,8,0.6)'},
+            light:{bg:'rgba(255,255,255,0.95)',text:'#1a1a1a',preBg:'#f0f0f0'},
+            sepia:{bg:'rgba(244,236,216,0.95)',text:'#3e332a',preBg:'rgba(210,195,170,0.5)'},
+            green:{bg:'rgba(199,237,204,0.9)',text:'#1a3a1a',preBg:'rgba(170,210,175,0.5)'},
+            blue:{bg:'rgba(220,232,245,0.9)',text:'#1a2a3a',preBg:'rgba(190,205,225,0.5)'}
+        };
+        let currentEditorTheme=localStorage.getItem('editor_theme')||'dark';
+        function switchEditorTheme(theme){
+            currentEditorTheme=theme;
+            localStorage.setItem('editor_theme',theme);
+            const vditorEl=document.getElementById('vditor');
+            if(vditorEl){
+                vditorEl.className='vditor-wrap vditor-theme-'+theme;
+                const t=editorThemes[theme];
+                vditorEl.style.setProperty('--editor-bg',t.bg);
+                vditorEl.style.setProperty('--editor-text',t.text);
+                vditorEl.style.setProperty('--editor-pre-bg',t.preBg);
+            }
+            document.querySelectorAll('.theme-dot').forEach(d=>{
+                d.classList.toggle('active',d.dataset.theme===theme);
+            });
         }
 
         // ===== 发布弹窗 =====
