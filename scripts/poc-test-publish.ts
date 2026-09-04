@@ -113,5 +113,22 @@ if (existsSync(idx2File)) {
 }
 console.log("11) 白板文章测试数据已清理 ✅")
 
+// ===== 卡片笔记（type=card） =====
+r = await call(adminFn, "POST", `/api/admin?action=articles`, {
+  title: "PoC 卡片冒烟（测试后清理）",
+  content: "这是一张 **卡片**，验证 type=card 链路。",
+  status: "published",
+  tags: ["测试", "poc"],
+  type: "card",
+}, true)
+check("12) 创建 type=card", r.status === 200 && r.data?.status === "success" && r.data?.data?.id, JSON.stringify(r.data))
+const cardId = r.data?.data?.id || ""
+r = await call(adminFn, "GET", `/api/admin?action=articles&id=${cardId}`)
+check("13) card 类型与内容正确", r.data?.data?.type === "card" && String(r.data?.data?.content || "").includes("卡片"), JSON.stringify({ type: r.data?.data?.type }))
+r = await call(adminFn, "GET", `/api/admin?action=articles`)
+check("14) 列表含 card 条目", Array.isArray(r.data?.data) && r.data.data.some((a: any) => a.id === cardId && a.type === "card"), "")
+r = await call(adminFn, "DELETE", `/api/admin?action=articles&id=${cardId}`, undefined, true)
+check("15) DELETE 删除 card", r.status === 200 && r.data?.status === "success", JSON.stringify(r.data))
+
 console.log(failed === 0 ? "\n🎉 M3 发布链路冒烟通过" : `\n❌ ${failed} 项失败`)
 process.exit(failed === 0 ? 0 : 1)

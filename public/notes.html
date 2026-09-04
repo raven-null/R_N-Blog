@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>卡片笔记 - 我的博客</title>
+  <link rel="icon" id="siteFavicon" href="images/Default/web-logo.webp" type="image/webp" />
+  <link rel="stylesheet" href="css/style.css?v=3.16.3" />
+  <link rel="stylesheet" href="css/glass.css?v=1.0.4" />
+  <script src="js/theme.js?v=3.13.6"></script>
+  <style>
+    /* ===== 卡片流页面（液态玻璃） ===== */
+    html, body { height: auto; min-height: 100%; }
+    body { overflow-y: auto; }
+    .notes-top {
+      position: sticky; top: 0; z-index: 20;
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+      padding: 10px 18px;
+      background: rgba(16, 16, 19, 0.6);
+      backdrop-filter: blur(24px) saturate(180%); -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+    }
+    .notes-top .title { color: #fff; font-weight: 700; font-size: 16px; display: inline-flex; align-items: center; gap: 8px; }
+    .notes-top .title svg { width: 17px; height: 17px; color: #9aa0ff; }
+    .notes-top .spacer { flex: 1; }
+    .nav-pill {
+      display: inline-flex; align-items: center; gap: 6px; text-decoration: none;
+      color: #e8e8ea; padding: 5px 13px; border-radius: 999px; font-size: 13px;
+      background: linear-gradient(145deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.035));
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      transition: transform 0.25s var(--spring, cubic-bezier(0.34, 1.56, 0.64, 1)), background 0.2s ease, border-color 0.2s ease;
+    }
+    .nav-pill:hover { background: linear-gradient(145deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.07)); border-color: rgba(255, 255, 255, 0.26); }
+    .nav-pill:active { transform: scale(0.95); }
+    .nav-pill svg { width: 14px; height: 14px; }
+    .notes-wrap { max-width: 1200px; margin: 0 auto; padding: 22px 20px 60px; position: relative; z-index: 1; }
+    /* 标签筛选 */
+    .note-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 22px; }
+    .note-tag {
+      padding: 5px 14px; border-radius: 999px; cursor: pointer; font-size: 13px;
+      color: #d6d9e2; border: 1px solid rgba(255, 255, 255, 0.14);
+      background: linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
+      transition: transform 0.25s var(--spring, cubic-bezier(0.34, 1.56, 0.64, 1)), border-color 0.2s, background 0.2s, color 0.2s;
+      user-select: none;
+    }
+    .note-tag:hover { border-color: rgba(255, 255, 255, 0.32); }
+    .note-tag.active {
+      color: #0b0b10; font-weight: 600;
+      background: linear-gradient(180deg, #fff, #d9d9e3);
+      border-color: rgba(255, 255, 255, 0.6);
+    }
+    .note-tag .cnt { opacity: 0.55; font-size: 11px; margin-left: 4px; }
+    /* 瀑布流 */
+    .notes-masonry { column-count: 3; column-gap: 16px; }
+    @media (max-width: 1024px) { .notes-masonry { column-count: 2; } }
+    @media (max-width: 640px) { .notes-masonry { column-count: 1; } }
+    .note-card {
+      break-inside: avoid; margin-bottom: 16px; padding: 18px 20px;
+      border-radius: 20px;
+      background: linear-gradient(145deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.035));
+      backdrop-filter: blur(24px) saturate(180%); -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: 0 10px 34px -14px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.09);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+      transition: transform 0.25s var(--spring, cubic-bezier(0.34, 1.56, 0.64, 1)), box-shadow 0.25s ease, border-color 0.2s ease;
+      animation: note-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+    .note-card:hover { transform: translateY(-3px); border-color: rgba(255, 255, 255, 0.26); box-shadow: 0 18px 46px -16px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.12); }
+    @keyframes note-in { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+    .note-card .nc-body { font-size: 14px; line-height: 1.85; color: #e6e8ee; word-break: break-word; }
+    .note-card .nc-body code { background: rgba(255, 255, 255, 0.12); padding: 1px 6px; border-radius: 6px; font-size: 12.5px; }
+    .note-card .nc-body a { color: #8ab4ff; }
+    .note-card .nc-foot { display: flex; align-items: center; gap: 8px; margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255, 255, 255, 0.08); font-size: 11.5px; color: rgba(255, 255, 255, 0.4); flex-wrap: wrap; }
+    .note-card .nc-foot .tag { padding: 1px 8px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, 0.14); color: rgba(255, 255, 255, 0.6); }
+    .note-card .nc-date { margin-left: auto; }
+    .notes-empty { text-align: center; padding: 90px 20px; color: rgba(255, 255, 255, 0.4); font-size: 14px; }
+    .notes-loading { text-align: center; padding: 90px 20px; }
+  </style>
+</head>
+<body>
+  <!-- 卡片笔记归档：type=card 的文章以玻璃卡片流展示，标签筛选 -->
+  <header class="notes-top">
+    <a class="nav-pill" href="/">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m3 10.5 9-7.5 9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>
+      博客
+    </a>
+    <span class="title">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M8 12h8M12 8v8"/></svg>
+      卡片笔记
+    </span>
+    <span class="spacer"></span>
+    <span id="themeMount"></span>
+  </header>
+
+  <main class="notes-wrap">
+    <div class="note-tags" id="noteTags"></div>
+    <div id="notesLoading" class="notes-loading"><span class="loading-spinner"></span></div>
+    <div class="notes-masonry" id="notesMasonry"></div>
+    <div id="notesEmpty" class="notes-empty" style="display:none"></div>
+  </main>
+
+  <script>
+    (function () {
+      'use strict';
+      if (window.ThemeManager && ThemeManager.createThemeToggle) {
+        ThemeManager.createThemeToggle(document.getElementById('themeMount'));
+      }
+
+      var all = [];
+      var activeTag = new URLSearchParams(location.search).get('tag') || '';
+      var masonry = document.getElementById('notesMasonry');
+      var emptyEl = document.getElementById('notesEmpty');
+
+      function esc(s) {
+        return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      }
+      // 轻量 Markdown：行内代码 / 粗体 / 链接 / 换行
+      function miniMd(s) {
+        return esc(s)
+          .replace(/`([^`]+)`/g, '<code>$1</code>')
+          .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+          .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+          .replace(/\n/g, '<br>');
+      }
+      function fmt(d) {
+        return String(d || '').slice(0, 10);
+      }
+
+      function renderTags() {
+        var box = document.getElementById('noteTags');
+        var counts = {};
+        all.forEach(function (c) { (c.tags || []).forEach(function (t) { counts[t] = (counts[t] || 0) + 1; }); });
+        var names = Object.keys(counts).sort();
+        var html = '<button class="note-tag' + (activeTag ? '' : ' active') + '" data-t="__all__">全部<span class="cnt">' + all.length + '</span></button>';
+        names.forEach(function (t) {
+          html += '<button class="note-tag' + (t === activeTag ? ' active' : '') + '" data-t="' + esc(t) + '">' + esc(t) + '<span class="cnt">' + counts[t] + '</span></button>';
+        });
+        box.innerHTML = html;
+        box.querySelectorAll('.note-tag').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            activeTag = btn.dataset.t === '__all__' ? '' : btn.dataset.t;
+            renderTags();
+            renderCards();
+            history.replaceState(null, '', activeTag ? '?tag=' + encodeURIComponent(activeTag) : location.pathname);
+          });
+        });
+      }
+
+      function renderCards() {
+        var list = activeTag ? all.filter(function (c) { return (c.tags || []).includes(activeTag); }) : all;
+        if (!list.length) {
+          masonry.style.display = 'none';
+          emptyEl.style.display = '';
+          emptyEl.textContent = activeTag ? '这个标签下还没有卡片笔记' : '还没有卡片笔记';
+          return;
+        }
+        masonry.style.display = '';
+        emptyEl.style.display = 'none';
+        masonry.innerHTML = list.map(function (c, i) {
+          var tags = (c.tags || []).map(function (t) { return '<span class="tag">' + esc(t) + '</span>'; }).join('');
+          return '<div class="note-card" style="animation-delay:' + Math.min(i * 40, 400) + 'ms">' +
+            '<div class="nc-body">' + miniMd(c.content || '') + '</div>' +
+            '<div class="nc-foot">' + tags + '<span class="nc-date">' + fmt(c.date) + '</span></div>' +
+            '</div>';
+        }).join('');
+      }
+
+      fetch('/api/admin?action=articles', { cache: 'no-store' })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          document.getElementById('notesLoading').style.display = 'none';
+          if (!d || d.status !== 'success' || !Array.isArray(d.data)) {
+            emptyEl.style.display = '';
+            emptyEl.textContent = '卡片加载失败';
+            return;
+          }
+          all = d.data
+            .filter(function (a) { return a.status === 'published' && a.type === 'card'; })
+            .sort(function (a, b) { return String(b.date).localeCompare(String(a.date)); });
+          renderTags();
+          renderCards();
+        })
+        .catch(function () {
+          document.getElementById('notesLoading').style.display = 'none';
+          emptyEl.style.display = '';
+          emptyEl.textContent = '卡片加载失败';
+        });
+    })();
+  </script>
+</body>
+</html>
