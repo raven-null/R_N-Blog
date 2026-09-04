@@ -601,8 +601,17 @@
         .vditor-toolbar__item--current{color:var(--accent)!important}
         .vditor-toolbar__item:hover{color:var(--accent)!important;transform:translateY(-1px)}
         .vditor-content{background:rgba(26,26,26,0.5)!important}
-        .vditor-ir,.vditor-wysiwyg,.vditor-sv{color:var(--text)!important}
-        .vditor-ir pre,.vditor-wysiwyg pre,.vditor-sv pre{background:rgba(8,8,8,0.6)!important}
+        .vditor-ir,.vditor-wysiwyg,.vditor-sv{color:#fff!important}
+        .vditor-ir *,.vditor-wysiwyg *,.vditor-sv *{color:#fff!important}
+        .vditor-ir pre,.vditor-wysiwyg pre,.vditor-sv pre{background:rgba(8,8,8,0.6)!important;color:#fff!important}
+        .vditor-ir code,.vditor-wysiwyg code{color:#fff!important}
+        .vditor-ir p,.vditor-wysiwyg p,.vditor-ir li,.vditor-wysiwyg li,.vditor-ir h1,.vditor-ir h2,.vditor-ir h3,.vditor-ir h4,.vditor-ir h5,.vditor-ir h6,.vditor-wysiwyg h1,.vditor-wysiwyg h2,.vditor-wysiwyg h3,.vditor-wysiwyg h4,.vditor-wysiwyg h5,.vditor-wysiwyg h6{color:#fff!important}
+        .vditor-ir blockquote,.vditor-wysiwyg blockquote{color:#fff!important}
+        .vditor-ir a,.vditor-wysiwyg a{color:var(--accent)!important}
+        .vditor-ir table,.vditor-wysiwyg table{color:#fff!important}
+        .vditor-ir th,.vditor-ir td,.vditor-wysiwyg th,.vditor-wysiwyg td{color:#fff!important;border-color:rgba(255,255,255,0.15)!important}
+        .vditor-ir th,.vditor-wysiwyg th{background:rgba(255,255,255,0.08)!important}
+        .vditor-wysiwyg[contenteditable="true"]{color:#fff!important}
 
         /* ===== 发布弹窗 ===== */
         .publish-modal{display:none;position:fixed;inset:0;z-index:1000}
