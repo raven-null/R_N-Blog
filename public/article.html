@@ -625,6 +625,14 @@
             background: var(--bg-tertiary);
             overflow-x: auto;
             border: none;
+            /* 隐藏滚动条，按住可左右拖动查看超长行 */
+            scrollbar-width: none;
+            -webkit-overflow-scrolling: touch;
+            cursor: grab;
+        }
+
+        .article-content pre::-webkit-scrollbar {
+            display: none;
         }
 
         .article-content pre code {
@@ -708,7 +716,8 @@
             display: none;
         }
 
-        .article-content table.dragging {
+        .article-content table.dragging,
+        .article-content pre.dragging {
             cursor: grabbing;
             user-select: none;
         }
@@ -2843,44 +2852,47 @@
         window.addEventListener('resize', checkMobileView);
         checkMobileView();
 
-        // 文章表格拖拽滑动：超出部分可按住左右拖动查看，不显示滚动条
+        // 文章内容横向拖动：表格/代码块等超出部分可按住左右拖动查看，不显示滚动条
         (function () {
-            var table = null;
+            var scroller = null;
             var startX = 0;
             var startScroll = 0;
             var moved = false;
 
             document.addEventListener('mousedown', function (e) {
-                var t = e.target && e.target.closest ? e.target.closest('.article-content table') : null;
-                // 只有表格确实超出容器宽度时才启用拖拽
+                // 命中所有可横向滚动的内容块（后续如需支持更多元素，加进选择器即可）
+                var t = e.target && e.target.closest
+                    ? e.target.closest('.article-content table, .article-content pre')
+                    : null;
+                // 只有确实超出容器宽度时才启用拖拽
                 if (!t || t.scrollWidth <= t.clientWidth + 1) return;
-                table = t;
+                scroller = t;
                 startX = e.clientX;
                 startScroll = t.scrollLeft;
                 moved = false;
             });
 
             document.addEventListener('mousemove', function (e) {
-                if (!table) return;
+                if (!scroller) return;
                 var dx = e.clientX - startX;
                 if (!moved) {
                     if (Math.abs(dx) < 5) return; // 小于阈值视为点击，不进入拖拽
                     moved = true;
-                    table.classList.add('dragging');
+                    scroller.classList.add('dragging');
                     if (window.getSelection) window.getSelection().removeAllRanges();
                 }
-                table.scrollLeft = startScroll - dx;
+                scroller.scrollLeft = startScroll - dx;
             });
 
             function endDrag() {
-                if (table) table.classList.remove('dragging');
-                table = null;
+                if (scroller) scroller.classList.remove('dragging');
+                scroller = null;
             }
 
             document.addEventListener('mouseup', endDrag);
             document.addEventListener('mouseleave', endDrag);
 
-            // 拖拽结束后阻止误触表格内的链接
+            // 拖拽结束后阻止误触块内的链接
             document.addEventListener('click', function (e) {
                 if (moved) {
                     e.preventDefault();
