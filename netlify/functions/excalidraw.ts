@@ -217,7 +217,7 @@ export default async (req: Request) => {
       const meta = await readMeta(store, id)
       // 轻量轮询端点：只返回 meta（rev/editable/hasKey），前端据此检测远端更新
       if (url.searchParams.get("metaOnly") === "1") {
-        if (!meta) return json(404, { status: "error", message: "笔记不存在" }, req)
+        if (!meta) return json(200, { status: "error", code: "not_found", message: "笔记不存在" }, req)
         return json(
           200,
           { status: "success", id, meta: publicMeta(meta) },
@@ -226,7 +226,8 @@ export default async (req: Request) => {
         )
       }
       const raw = await store.get(sceneKey(id), { type: "text" })
-      if (!raw) return json(404, { status: "error", message: "笔记不存在" }, req)
+      // 笔记不存在返回 200 + code，避免浏览器把 4xx 记为 console 错误（前端按 code 判断）
+      if (!raw) return json(200, { status: "error", code: "not_found", message: "笔记不存在" }, req)
       return json(
         200,
         { status: "success", id, scene: decodeScene(raw), meta: meta ? publicMeta(meta) : null },

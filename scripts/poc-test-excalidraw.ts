@@ -144,7 +144,7 @@ check("21) 匿名 history → 401", r.status === 401, JSON.stringify(r.data))
 r = await call("POST", `/api/excalidraw?action=delete&id=${ID}`, undefined, true)
 check("22) delete → removed>=4", r.status === 200 && (r.data?.removed || 0) >= 4, JSON.stringify(r.data))
 r = await call("GET", `/api/excalidraw?id=${ID}`)
-check("23) 删除后 GET → 404", r.status === 404, JSON.stringify(r.data))
+check("23) 删除后 GET → 200 code=not_found", r.status === 200 && r.data?.code === "not_found", JSON.stringify(r.data))
 
 // ===== 压缩场景往返（大场景优化） =====
 import { gzipSync } from "node:zlib"

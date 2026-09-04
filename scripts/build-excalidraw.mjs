@@ -14,7 +14,7 @@ import { fileURLToPath } from "node:url"
 const root = join(dirname(fileURLToPath(import.meta.url)), "..")
 const esbuildBin = join(root, "node_modules/esbuild/bin/esbuild")
 const entry = join(root, "scripts/excalidraw/editor.tsx")
-const outfile = join(root, "public/js/vendor/excalidraw/excalidraw-editor.v3.js")
+const outfile = join(root, "public/js/vendor/excalidraw/excalidraw-editor.v4.js")
 
 execFileSync(
   process.execPath,
@@ -32,4 +32,4 @@ execFileSync(
   { stdio: "inherit" },
 )
 
-console.log(`\n✅ bundle 已生成：public/js/vendor/excalidraw/excalidraw-editor.v3.js`) // eslint-disable-line no-console
+console.log(`\n✅ bundle 已生成：public/js/vendor/excalidraw/excalidraw-editor.v4.js`) // eslint-disable-line no-console

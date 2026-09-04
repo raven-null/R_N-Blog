@@ -2086,7 +2086,7 @@
                 if (window.ExcalidrawMount) { window.ExcalidrawMount(); return; }
                 if (document.querySelector('script[data-excalidraw-bundle]')) return;
                 const s = document.createElement('script');
-                s.src = '/js/vendor/excalidraw/excalidraw-editor.v3.js';
+                s.src = '/js/vendor/excalidraw/excalidraw-editor.v4.js';
                 s.dataset.excalidrawBundle = '1';
                 s.onload = () => { if (window.ExcalidrawMount) window.ExcalidrawMount(); };
                 s.onerror = () => {

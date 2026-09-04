@@ -121,7 +121,9 @@ function NoteApp({ note, mode }: { note: string; mode: "edit" | "view" }) {
     if (!silent) setLoading(true)
     try {
       const res = await apiFetch(`/api/excalidraw?id=${encodeURIComponent(note)}`)
-      if (res.status === 404) {
+      const data = await res.json().catch(() => ({}))
+      const notFound = res.status === 404 || data?.code === "not_found"
+      if (notFound) {
         setNotFound(true)
         if (!silent) {
           setLoading(false)
@@ -132,7 +134,6 @@ function NoteApp({ note, mode }: { note: string; mode: "edit" | "view" }) {
         }
         return
       }
-      const data = await res.json()
       if (!res.ok || data.status !== "success") {
         if (!silent) {
           setMsg(data.message || `载入失败 ${res.status}`)
