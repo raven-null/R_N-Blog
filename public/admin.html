@@ -544,26 +544,27 @@
         }
 
         /* ===== 写文章极简模式 ===== */
-        #tab-write{height:calc(100vh - 52px);overflow-y:auto;display:flex;flex-direction:column;padding:0}
         .write-header{
-            padding:10px 16px;
+            padding:16px 20px;margin-bottom:16px;
             background:var(--glass-bg);
             backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);
-            border-bottom:1px solid var(--glass-border);
+            border:1px solid var(--glass-border);
+            border-radius:var(--radius);
+            box-shadow:var(--glass-shadow);
             transition:all 0.3s var(--spring-soft);
-            position:sticky;top:0;z-index:10;
         }
-        .write-toolbar{display:flex;justify-content:space-between;align-items:center}
-        .write-toolbar-right{display:flex;gap:6px;align-items:center}
+        .write-header:hover{border-color:rgba(255,255,255,0.2)}
+        .write-toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+        .write-toolbar-right{display:flex;gap:8px;align-items:center}
         .write-title-input{
-            width:100%;padding:8px 0;
-            background:transparent;border:none;border-top:1px solid rgba(255,255,255,0.08);
-            color:var(--text);font-size:22px;font-weight:600;outline:none;
-            margin-top:8px;padding-top:10px;
+            width:100%;padding:12px 0;
+            background:transparent;border:none;border-top:1px solid var(--glass-border);
+            color:var(--text);font-size:28px;font-weight:700;outline:none;
+            margin-top:12px;padding-top:16px;
             transition:all 0.3s var(--spring-soft);
         }
         .write-title-input:focus{border-top-color:var(--accent)}
-        .write-title-input::placeholder{color:rgba(255,255,255,0.3);font-weight:400}
+        .write-title-input::placeholder{color:rgba(255,255,255,0.35);font-weight:400}
 
         /* 编辑器主题切换 */
         .theme-switcher{display:flex;gap:4px;align-items:center;margin-left:8px}
@@ -586,15 +587,14 @@
         .vditor-theme-green{--editor-bg:rgba(199,237,204,0.9);--editor-text:#1a3a1a;--editor-pre-bg:rgba(170,210,175,0.5)}
         .vditor-theme-blue{--editor-bg:rgba(220,232,245,0.9);--editor-text:#1a2a3a;--editor-pre-bg:rgba(190,205,225,0.5)}
 
-        .vditor-wrap{flex:1;min-height:0}
-        .vditor{border:none!important;border-radius:0!important;background:var(--editor-bg,rgba(26,26,26,0.8))!important;box-shadow:none!important;height:100%!important}
+        .vditor-wrap{flex:1;min-height:60vh}
+        .vditor{border:1px solid var(--glass-border)!important;border-radius:var(--radius)!important;background:var(--editor-bg,rgba(26,26,26,0.8))!important;box-shadow:var(--glass-shadow)!important}
         .vditor-toolbar{
-            background:rgba(255,255,255,0.03)!important;
-            backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
-            border-bottom:1px solid rgba(255,255,255,0.08)!important;
-            padding:4px 8px!important;
+            background:var(--glass-bg)!important;
+            backdrop-filter:blur(12px) saturate(150%);-webkit-backdrop-filter:blur(12px) saturate(150%);
+            border-bottom:1px solid var(--glass-border)!important;
         }
-        .vditor-toolbar__item{color:rgba(255,255,255,0.6)!important;transition:all 0.2s ease}
+        .vditor-toolbar__item{color:rgba(255,255,255,0.7)!important;transition:all 0.2s ease}
         .vditor-toolbar__item--current{color:var(--accent)!important}
         .vditor-toolbar__item:hover{color:var(--accent)!important;transform:translateY(-1px)}
         .vditor-content{background:var(--editor-bg,rgba(26,26,26,0.5))!important}
@@ -612,14 +612,15 @@
 
         .write-footer{
             display:flex;justify-content:space-between;align-items:center;
-            padding:8px 16px;
+            padding:12px 16px;margin-top:16px;
             background:var(--glass-bg);
             backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);
-            border-top:1px solid var(--glass-border);
-            position:sticky;bottom:0;
+            border:1px solid var(--glass-border);
+            border-radius:var(--radius);
+            box-shadow:var(--glass-shadow);
         }
-        .write-word-count{font-size:11px;color:rgba(255,255,255,0.6)}
-        .write-save-hint{font-size:11px;color:var(--success)}
+        .write-word-count{font-size:12px;color:rgba(255,255,255,0.6)}
+        .write-save-hint{font-size:12px;color:var(--success)}
 
         /* ===== 发布弹窗 ===== */
         .publish-modal{display:none;position:fixed;inset:0;z-index:1000}
@@ -724,7 +725,7 @@
                 </div>
 
                 <!-- 写文章（极简沉浸式） -->
-                <div id="tab-write">
+                <div id="tab-write" style="display:none">
                     <!-- 头部区域（工具栏 + 标题） -->
                     <div class="write-header">
                         <div class="write-toolbar">
