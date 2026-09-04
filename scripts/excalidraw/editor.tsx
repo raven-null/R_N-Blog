@@ -15,6 +15,26 @@ import React, { useEffect, useRef, useState } from "react"
 import { createRoot } from "react-dom/client"
 import { Excalidraw, exportToBlob } from "@excalidraw/excalidraw"
 
+// ===== 消除 unload 类 console violation =====
+// Excalidraw 库内部会注册 beforeunload 监听（离开确认等），本场景为手动保存，
+// 该监听无用途；Chrome 新版会对其打印 "Permissions policy violation:
+// unload is not allowed in this document"。
+// 在模块顶层过滤这两个事件类型：本 bundle 动态加载，页面其它脚本均已先执行
+// （含 chat.js 的 beforeunload），故只影响 Excalidraw 内部的注册。
+{
+  const origAdd: any = window.addEventListener.bind(window)
+  const origRemove: any = window.removeEventListener.bind(window)
+  const blocked = (type: unknown) => type === "beforeunload" || type === "unload"
+  window.addEventListener = ((type: any, listener: any, options?: any) => {
+    if (blocked(type)) return
+    return origAdd(type, listener, options)
+  }) as any
+  window.removeEventListener = ((type: any, listener: any, options?: any) => {
+    if (blocked(type)) return
+    return origRemove(type, listener, options)
+  }) as any
+}
+
 // 场景 JSON 自后端原样透传（结构由 Excalidraw 运行时解释），类型从宽
 interface SceneData {
   type?: string
