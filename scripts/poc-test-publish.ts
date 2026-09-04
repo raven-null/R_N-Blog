@@ -85,5 +85,33 @@ if (imgKey && existsSync(join(LOCAL, "article-images", imgKey))) {
 }
 console.log("7) 测试数据已清理 ✅")
 
+// ===== 白板文章（type=whiteboard + boardId） =====
+const boardId2 = "wb-poc-publish"
+r = await call(adminFn, "POST", `/api/admin?action=articles`, {
+  title: "PoC 白板文章冒烟（测试后清理）",
+  content: "",
+  image: imgUrl,
+  status: "draft",
+  tags: [],
+  type: "whiteboard",
+  boardId: boardId2,
+}, true)
+check("8) 创建 type=whiteboard 草稿", r.status === 200 && r.data?.status === "success" && r.data?.data?.id, JSON.stringify(r.data))
+const wbArticleId = r.data?.data?.id || ""
+
+// 读回验证 type/boardId/content
+r = await call(adminFn, "GET", `/api/admin?action=articles&id=${wbArticleId}`)
+check("9) type=whiteboard 且 boardId 正确", r.data?.data?.type === "whiteboard" && r.data?.data?.boardId === boardId2, JSON.stringify({ type: r.data?.data?.type, boardId: r.data?.data?.boardId }))
+check("10) 正文为空", !r.data?.data?.content, "")
+
+// 清理白板文章
+if (existsSync(join(artStore, wbArticleId))) rmSync(join(artStore, wbArticleId))
+const idx2File = join(artStore, "index")
+if (existsSync(idx2File)) {
+  const idx2 = JSON.parse(readFileSync(idx2File, "utf-8")).filter((a: any) => a.id !== wbArticleId)
+  writeFileSync(idx2File, JSON.stringify(idx2), "utf-8")
+}
+console.log("11) 白板文章测试数据已清理 ✅")
+
 console.log(failed === 0 ? "\n🎉 M3 发布链路冒烟通过" : `\n❌ ${failed} 项失败`)
 process.exit(failed === 0 ? 0 : 1)

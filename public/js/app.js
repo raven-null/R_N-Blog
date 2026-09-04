@@ -131,6 +131,7 @@ const BlogApp = {
                     excerpt: a.excerpt || '',
                     image: a.image || this.getRandomBgImage(a.id),
                     wordCount: a.wordCount || 0,
+                    type: a.type || 'article',
                     content: '', // 列表不加载正文
                 }));
         } catch { return []; }
@@ -276,9 +277,15 @@ const BlogApp = {
         const avatarImg = this.getAuthorAvatar(post.author);
         const authorName = this.getAuthorName(post.author);
 
-        // 预计阅读时长（按每 300 字约 1 分钟估算）
+        // 内容形态徽标（白板/卡片）
+        const typeBadge = post.type === 'whiteboard'
+            ? '<span class="card-type-badge">白板</span>'
+            : (post.type === 'card' ? '<span class="card-type-badge">卡片</span>' : '');
+
+        // 预计阅读时长（按每 300 字约 1 分钟估算）；白板文章以交互形态替代
         const wordCount = post.wordCount || 0;
         const readTime = Math.max(1, Math.round(wordCount / 300));
+        const readingLabel = post.type === 'whiteboard' ? '交互白板' : `${readTime} 分钟`;
 
         return `
             <div class="card" onclick="BlogApp.openPost('${this.escAttr(post.filename)}', '${this.escAttr(post.id || '')}')">
@@ -300,13 +307,14 @@ const BlogApp = {
                         <span class="card-username">${authorName}</span>
                     </div>
                     <div class="card-tag">
+                        ${typeBadge}
                         ${(post.tags || []).map(tag => `<span>${tag}</span>`).join(' ')}
                     </div>
                     <div class="card-title">${post.title}</div>
                     <div class="card-desc">${post.excerpt}</div>
                     <div class="card-meta">
                         <span class="card-date">${dateFormatted}</span>
-                        <span class="card-reading">${readTime} 分钟</span>
+                        <span class="card-reading">${readingLabel}</span>
                     </div>
                 </div>
             </div>

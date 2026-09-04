@@ -30,6 +30,8 @@ interface ArticleMeta {
   image: string
   wordCount: number
   status: "published" | "draft"
+  type?: "article" | "whiteboard" | "card" // 内容形态（缺省 article）
+  boardId?: string // type=whiteboard 时关联的 Excalidraw 笔记 id
 }
 
 // ===================== 认证 =====================
@@ -130,7 +132,13 @@ export default async (req: Request) => {
 
       const articleId = id || randomUUID().slice(0, 8)
       const now = new Date().toISOString().slice(0, 10)
-      const wordCount = (content || "").length
+
+      // 内容形态：article（默认）/ whiteboard（纯白板）/ card（卡片笔记，预留）
+      const validTypes = ["article", "whiteboard", "card"]
+      const type = validTypes.includes(body.type) ? body.type : "article"
+      const boardId = type === "whiteboard" && typeof body.boardId === "string"
+        ? body.boardId.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 64)
+        : ""
 
       const tagsArr = Array.isArray(tags) ? tags : (tags || "").split(",").map((t: string) => t.trim()).filter(Boolean)
 
@@ -138,6 +146,7 @@ export default async (req: Request) => {
       const autoExcerpt = content
         ? content.replace(/#+\s+/g, "").replace(/\*\*(.*?)\*\*/g, "$1").replace(/\*(.*?)\*/g, "$1").replace(/\[([^\]]+)\]\([^)]+\)/g, "$1").replace(/!\[([^\]]*)\]\([^)]+\)/g, "").replace(/`([^`]+)`/g, "$1").replace(/\n/g, " ").trim().slice(0, 150)
         : ""
+      const wordCount = (content || "").length
 
       // 生成文件名
       const filename = staticFile || `${articleId}.md`
@@ -153,6 +162,8 @@ export default async (req: Request) => {
         content,
         wordCount,
         status: status || "published",
+        type,
+        boardId,
         createdAt: now,
         updatedAt: now,
       }
@@ -186,6 +197,8 @@ export default async (req: Request) => {
         image: image || "",
         wordCount,
         status: status || "published",
+        type: type as ArticleMeta["type"],
+        boardId,
       }
 
       if (existing >= 0) {

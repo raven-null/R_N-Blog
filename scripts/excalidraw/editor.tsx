@@ -57,6 +57,18 @@ const UI_CSS = `
 .exc-input:focus{border-color:rgba(255,255,255,.38);background:rgba(255,255,255,.11)}
 .exc-input::placeholder{color:rgba(255,255,255,.32)}
 .exc-canvas{flex:1;min-height:0;position:relative;background:#f5f5f7}
+.exc-mask{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(8,8,12,.45);backdrop-filter:blur(8px) saturate(140%);-webkit-backdrop-filter:blur(8px) saturate(140%)}
+.exc-modal{display:flex;flex-direction:column;gap:10px;padding:22px;border-radius:24px;min-width:min(430px,92vw);background:linear-gradient(145deg,rgba(34,34,42,.94),rgba(22,22,28,.9));backdrop-filter:blur(28px) saturate(180%);-webkit-backdrop-filter:blur(28px) saturate(180%);border:1px solid rgba(255,255,255,.13);box-shadow:0 28px 80px -20px rgba(0,0,0,.75),inset 0 1px 0 rgba(255,255,255,.1);animation:exc-modal-in .3s cubic-bezier(.22,1,.36,1)}
+.exc-modal .t{font-size:16px;font-weight:700;color:#fff}
+.exc-modal .sub{font-size:12px;color:rgba(255,255,255,.42);margin-bottom:2px}
+.exc-pick{display:flex;gap:12px;align-items:flex-start;padding:13px 15px;border-radius:16px;cursor:pointer;background:linear-gradient(145deg,rgba(255,255,255,.07),rgba(255,255,255,.03));border:1px solid rgba(255,255,255,.11);color:#e8e8ea;text-align:left;transition:transform .25s cubic-bezier(.34,1.56,.64,1),border-color .2s ease,background .2s ease,box-shadow .2s ease;font-family:inherit}
+.exc-pick:hover{border-color:rgba(255,255,255,.32);background:linear-gradient(145deg,rgba(255,255,255,.13),rgba(255,255,255,.05));box-shadow:0 8px 24px -10px rgba(0,0,0,.5)}
+.exc-pick:active{transform:scale(.98)}
+.exc-pick>svg{width:21px;height:21px;flex:none;margin-top:2px;color:#9aa0ff}
+.exc-pick .pt{display:block;font-size:14px;font-weight:600;color:#fff;margin-bottom:3px}
+.exc-pick .pd{display:block;font-size:12px;color:rgba(255,255,255,.45);line-height:1.6}
+.exc-modal-row{display:flex;justify-content:flex-end;gap:8px;margin-top:2px}
+@keyframes exc-modal-in{from{opacity:0;transform:scale(.96) translateY(8px)}to{opacity:1;transform:none}}
 .exc-msg{display:flex;align-items:center;gap:8px;margin:8px 14px 10px;padding:7px 14px;border-radius:14px;font-size:12.5px;line-height:1.5;color:#d4d7e2;background:linear-gradient(145deg,rgba(30,30,36,.72),rgba(24,24,30,.6));backdrop-filter:blur(20px) saturate(160%);-webkit-backdrop-filter:blur(20px) saturate(160%);border:1px solid rgba(255,255,255,.1);box-shadow:inset 0 1px 0 rgba(255,255,255,.07);animation:exc-msg-in .35s cubic-bezier(.22,1,.36,1)}
 .exc-msg .dot{width:6px;height:6px;border-radius:50%;flex:none;background:#5ac8fa;box-shadow:0 0 10px rgba(90,200,250,.9)}
 .exc-ph{height:100%;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse 60% 50% at 30% 20%,rgba(90,120,255,.10),transparent 60%),radial-gradient(ellipse 50% 40% at 80% 75%,rgba(0,210,190,.06),transparent 60%),#101014}
@@ -94,6 +106,7 @@ const ICONS = {
   eye: <><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" /><circle cx="12" cy="12" r="2.8" /></>,
   lock: <><rect x="5" y="11" width="14" height="9" rx="2.5" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></>,
   alert: <><path d="M12 3 2.5 20h19Z" /><path d="M12 10v4.5" /><circle cx="12" cy="17.5" r=".4" fill="currentColor" /></>,
+  board: <><rect x="3" y="4" width="18" height="16" rx="2.5" /><path d="M8 12h8M12 8v8" /></>,
 }
 
 // ===== 工具函数 =====
@@ -174,6 +187,7 @@ function NoteApp({ note, mode }: { note: string; mode: "edit" | "view" }) {
   const [msg, setMsg] = useState("")
   const [editKey, setEditKey] = useState("")
   const [saving, setSaving] = useState(false)
+  const [pubOpen, setPubOpen] = useState(false)
   const [title, setTitle] = useState(note || "未命名白板")
   const isAdmin = !!getAdminKey()
 
@@ -372,15 +386,16 @@ function NoteApp({ note, mode }: { note: string; mode: "edit" | "view" }) {
     }
   }
 
-  // 「发布为博文」：截图上传 → 组装含内嵌白板的 Markdown → 以 draft 草稿入库
-  const publishToBlog = async () => {
+  // 「发布为博文」：导出截图 → 上传 → 按形态创建 draft 草稿
+  // kind: article（截图+内嵌白板+链接的普通文章）/ whiteboard（整页白板文章）
+  const publishToBlog = async (kind: "article" | "whiteboard") => {
     const api = apiRef.current
     if (!api) return
     try {
-      // 1) 确保场景已保存（文章内嵌 fence 引用同一 note id，且发布依赖当前画布）
+      // 1) 确保场景已保存（文章内嵌/白板引用同一 note id，且发布依赖当前画布）
       const saved = await save(false)
       if (!saved) return
-      // 2) 导出 PNG 并上传到文章图床（自动转 webp）
+      // 2) 导出 PNG 并上传到文章图床（自动转 webp，兼作封面/列表缩略图）
       const blob = await exportToBlob({
         elements: api.getSceneElements(),
         appState: { ...api.getAppState(), exportBackground: true },
@@ -401,31 +416,44 @@ function NoteApp({ note, mode }: { note: string; mode: "edit" | "view" }) {
       // 3) 标题（默认取笔记标题）
       const fallbackTitle = meta?.title || `白板：${note}`
       const title = (window.prompt("文章标题：", fallbackTitle) || "").trim() || fallbackTitle
-      // 4) 组装 Markdown：截图兜底 + 内嵌交互白板 + 原文链接
-      const content = [
-        "",
-        `![白板截图（点击图片可放大，下方为可交互白板）](${up.url})`,
-        "",
-        "```excalidraw",
-        note,
-        "```",
-        "",
-        `[在 Excalidraw 中查看 / 编辑此白板](/excalidraw.html?note=${encodeURIComponent(note)})`,
-        "",
-      ].join("\n")
-      // 5) 创建 draft 草稿（进后台文章列表，作者完善后发布）
+
+      let payload: any
+      if (kind === "whiteboard") {
+        // 纯白板文章：内容即白板（boardId），正文留空
+        payload = { title, content: "", image: up.url, status: "draft", tags: [], type: "whiteboard", boardId: note }
+      } else {
+        // 普通文章：截图兜底 + 内嵌交互白板 + 原文链接三层
+        const content = [
+          "",
+          `![白板截图（点击图片可放大，下方为可交互白板）](${up.url})`,
+          "",
+          "```excalidraw",
+          note,
+          "```",
+          "",
+          `[在 Excalidraw 中查看 / 编辑此白板](/excalidraw.html?note=${encodeURIComponent(note)})`,
+          "",
+        ].join("\n")
+        payload = { title, content, image: up.url, status: "draft", tags: [] }
+      }
+
+      // 4) 创建 draft 草稿（进后台文章列表，作者完善后发布）
       setMsg("创建草稿…")
       const artRes = await apiFetch("/api/admin?action=articles", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, content, image: up.url, status: "draft", tags: [] }),
+        body: JSON.stringify(payload),
       })
       const art = await artRes.json().catch(() => ({}))
       if (!artRes.ok || art.status !== "success") {
         setMsg("创建草稿失败：" + (art.message || artRes.status))
         return
       }
-      setMsg(`草稿已创建（id: ${art.data?.id}），去后台完善并发布：/admin.html → 文章管理`)
+      setMsg(
+        kind === "whiteboard"
+          ? `白板文章草稿已创建（id: ${art.data?.id}）：阅读页将整页展示白板、无目录。后台文章管理可预览发布`
+          : `草稿已创建（id: ${art.data?.id}），去后台完善并发布：/admin.html → 文章管理`,
+      )
     } catch (e: any) {
       setMsg("发布出错：" + (e?.message || e))
     }
@@ -492,7 +520,7 @@ function NoteApp({ note, mode }: { note: string; mode: "edit" | "view" }) {
             PNG
           </button>
           {isAdmin && (
-            <button className="exc-btn" onClick={publishToBlog} disabled={saving} title="导出截图并生成一篇含交互白板的草稿文章">
+            <button className="exc-btn" onClick={() => setPubOpen(true)} disabled={saving} title="选择文章形态，生成草稿进入后台文章管理">
               <Ic p={ICONS.send} />
               发布为博文
             </button>
@@ -531,6 +559,31 @@ function NoteApp({ note, mode }: { note: string; mode: "edit" | "view" }) {
         <div className="exc-msg">
           <span className="dot" />
           <span>{msg}</span>
+        </div>
+      )}
+      {pubOpen && (
+        <div className="exc-mask" onClick={() => setPubOpen(false)}>
+          <div className="exc-modal" onClick={e => e.stopPropagation()}>
+            <div className="t">发布为博文</div>
+            <div className="sub">选择文章的呈现形态，草稿将进入后台文章管理</div>
+            <button className="exc-pick" onClick={() => { setPubOpen(false); publishToBlog("article") }}>
+              <Ic p={ICONS.doc} />
+              <span>
+                <span className="pt">普通文章</span>
+                <span className="pd">正文截图 + 可交互白板 + 原文链接，之后可在后台继续写 Markdown 正文</span>
+              </span>
+            </button>
+            <button className="exc-pick" onClick={() => { setPubOpen(false); publishToBlog("whiteboard") }}>
+              <Ic p={ICONS.board} />
+              <span>
+                <span className="pt">纯白板文章</span>
+                <span className="pd">阅读页整页展示白板（无目录侧栏），封面自动取白板截图</span>
+              </span>
+            </button>
+            <div className="exc-modal-row">
+              <button className="exc-btn" onClick={() => setPubOpen(false)}>取消</button>
+            </div>
+          </div>
         </div>
       )}
     </div>

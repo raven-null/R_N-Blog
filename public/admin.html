@@ -2501,6 +2501,7 @@
                             <button class="exc-btn" onclick="excRename('${n.id}')">改名</button>
                             <button class="exc-btn" onclick="excToggleEdit('${n.id}',${n.editable})">${n.editable===1?'设为只读':'开放编辑'}</button>
                             <button class="exc-btn" onclick="excSetKey('${n.id}')">${n.hasKey?'重设口令':'设口令'}</button>
+                            <button class="exc-btn" onclick="excPublish('${n.id}')" title="创建 type=whiteboard 的草稿文章（整页白板、无目录）">发布文章</button>
                             <button class="exc-btn" onclick="excRollback('${n.id}')">回滚</button>
                             <button class="exc-btn danger" onclick="excDelete('${n.id}')">删除</button>
                         </div>
@@ -2541,6 +2542,17 @@
             const d=await excApi(`action=rollback&id=${encodeURIComponent(id)}&rev=${n}`,{method:'POST'});
             alert(d.status==='success'?`已回滚到 rev ${n}`:(d.message||'回滚失败'));
             if(d.status==='success')loadExcalidrawNotes();
+        }
+        // 发布为纯白板文章草稿（无封面；想要自动封面前往编辑器「发布为博文 → 纯白板文章」）
+        async function excPublish(id){
+            const t=prompt(`将白板「${id}」发布为纯白板文章草稿。文章标题：`,'白板：'+id);
+            if(t===null)return;
+            const title=(t||'').trim()||('白板：'+id);
+            try{
+                const r=await fetch('/api/admin?action=articles',{method:'POST',headers:{'Content-Type':'application/json','X-Admin-Key':adminKey},body:JSON.stringify({title,content:'',status:'draft',type:'whiteboard',boardId:id,tags:[]})});
+                const d=await r.json();
+                alert(d.status==='success'?`白板文章草稿已创建（id: ${d.data&&d.data.id}），去文章管理发布`:(d.message||'创建失败'));
+            }catch(e){alert('创建失败：'+e.message)}
         }
         async function excDelete(id){
             if(!confirm(`确定删除白板「${id}」？场景与全部历史快照将一并删除，不可恢复！`))return;
