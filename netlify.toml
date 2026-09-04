@@ -6,6 +6,13 @@
   directory = "netlify/functions"
   node_bundler = "esbuild"
 
+# ===== 页面路由 =====
+# Excalidraw 白板页：/excalidraw（无后缀）→ /excalidraw.html
+[[redirects]]
+  from = "/excalidraw"
+  to = "/excalidraw.html"
+  status = 200
+
 # ===== API 路由 → Netlify Functions =====
 [[redirects]]
   from = "/api/news"
