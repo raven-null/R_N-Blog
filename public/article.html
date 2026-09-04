@@ -2085,6 +2085,12 @@
             loadExcalidrawBundle() {
                 if (window.ExcalidrawMount) { window.ExcalidrawMount(); return; }
                 if (document.querySelector('script[data-excalidraw-bundle]')) return;
+                // 样式独立文件（Excalidraw 0.18 Vite 产物）：先注入 CSS 再注入 JS
+                const css = document.createElement('link');
+                css.rel = 'stylesheet';
+                css.href = '/js/vendor/excalidraw/excalidraw-editor.v5.css';
+                css.dataset.excalidrawBundle = '1';
+                document.head.appendChild(css);
                 const s = document.createElement('script');
                 s.src = '/js/vendor/excalidraw/excalidraw-editor.v5.js';
                 s.dataset.excalidrawBundle = '1';
