@@ -1,6 +1,6 @@
 import { getStore } from "@netlify/blobs"
 import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync, unlinkSync } from "node:fs"
-import { join } from "node:path"
+import { dirname, join } from "node:path"
 import type { NewsCache } from "./types"
 
 const NEWS_STORE = "newsnow-news"
@@ -17,25 +17,46 @@ interface KVStore {
   list(opts: { prefix: string }): Promise<{ blobs: { key: string }[] }>
 }
 
+/** 本地回退目录实现：key 支持 "/" 嵌套（如 notes/abc/scene），自动建父目录 */
 function localStore(name: string): KVStore {
   const dir = join(LOCAL_DIR, name)
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
+
+  const fileOf = (key: string) => {
+    // 防目录穿越：key 只允许字母数字与 / - _ .（含前缀），与生产 Blobs key 规则一致
+    if (!/^[A-Za-z0-9_./-]+$/.test(key)) throw new Error(`非法的 Blobs key: ${key}`)
+    return join(dir, ...key.split("/"))
+  }
+
+  // 递归收集相对 key（含子目录）
+  const walk = (baseDir: string, prefix = ""): string[] => {
+    const out: string[] = []
+    for (const entry of readdirSync(baseDir, { withFileTypes: true })) {
+      const rel = prefix ? `${prefix}/${entry.name}` : entry.name
+      if (entry.isDirectory()) out.push(...walk(join(baseDir, entry.name), rel))
+      else out.push(rel)
+    }
+    return out
+  }
+
   return {
     async get(key, opts) {
-      const file = join(dir, key)
+      const file = fileOf(key)
       if (!existsSync(file)) return null
       return readFileSync(file, "utf-8")
     },
     async set(key, value) {
-      writeFileSync(join(dir, key), value, "utf-8")
+      const file = fileOf(key)
+      mkdirSync(dirname(file), { recursive: true })
+      writeFileSync(file, value, "utf-8")
     },
     async delete(key) {
-      const file = join(dir, key)
+      const file = fileOf(key)
       if (existsSync(file)) unlinkSync(file)
     },
     async list({ prefix }) {
       if (!existsSync(dir)) return { blobs: [] }
-      const blobs = readdirSync(dir)
+      const blobs = walk(dir)
         .filter(f => f.startsWith(prefix))
         .map(f => ({ key: f }))
       return { blobs }

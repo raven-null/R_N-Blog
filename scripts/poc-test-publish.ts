@@ -1,0 +1,89 @@
+/**
+ * M3 发布链路冒烟：模拟「发布为博文」的后端两步
+ *   POST /api/article-image（截图入库）→ POST /api/admin?action=articles（draft 草稿）
+ * 运行：esbuild bundle 后 node 执行（见 poc-test-excalidraw.ts 头注释）
+ */
+import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs"
+import { join } from "node:path"
+import articleImageFn from "../netlify/functions/article-image"
+import adminFn from "../netlify/functions/admin"
+
+const ADMIN_KEY = process.env.ADMIN_KEY || "1111"
+const LOCAL = join(process.cwd(), ".local-data")
+
+async function call(fn: (req: Request) => Promise<Response>, method: string, url: string, body?: unknown, admin = false) {
+  const init: RequestInit = {
+    method,
+    headers: {
+      "Content-Type": "application/json",
+      ...(admin ? { "x-admin-key": ADMIN_KEY } : {}),
+    },
+    ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+  }
+  const res = await fn(new Request(`http://localhost${url}`, init))
+  const data = await res.json().catch(() => null)
+  return { status: res.status, data }
+}
+
+let failed = 0
+function check(name: string, cond: boolean, extra = "") {
+  if (cond) console.log(`  ✅ ${name}`)
+  else { failed++; console.log(`  ❌ ${name} ${extra}`) }
+}
+
+console.log("== M3 发布链路冒烟 ==")
+
+// 1. 上传截图（1x1 红点 PNG）→ 文章图床自动转 webp
+const tinyPng = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
+let r = await call(articleImageFn, "POST", "/api/article-image", { data: tinyPng, mime: "image/png", name: "poc-publish.png" })
+check("1) 截图上传 → /images/a/*.webp", r.status === 200 && r.data?.status === "success" && /^\/images\/a\/.+\.webp$/.test(r.data?.url || ""), JSON.stringify(r.data))
+const imgUrl = r.data?.url || ""
+
+// 2. 创建 draft 草稿（正文含 ```excalidraw fence + 截图 + 原文链接）
+const noteId = "wb-poc-publish"
+const content = [
+  "",
+  `![白板截图](${imgUrl})`,
+  "",
+  "```excalidraw",
+  noteId,
+  "```",
+  "",
+  `[在 Excalidraw 中查看 / 编辑此白板](/excalidraw.html?note=${noteId})`,
+  "",
+].join("\n")
+
+r = await call(adminFn, "POST", `/api/admin?action=articles`, {
+  title: "PoC 发布冒烟（测试后清理）",
+  content,
+  image: imgUrl,
+  status: "draft",
+  tags: [],
+}, true)
+check("2) 创建 draft 草稿", r.status === 200 && r.data?.status === "success" && !!r.data?.data?.id, JSON.stringify(r.data))
+const articleId = r.data?.data?.id || ""
+
+// 3. 读回验证内容完整（截图 + fence + 链接）
+r = await call(adminFn, "GET", `/api/admin?action=articles&id=${articleId}`)
+const body = r.data?.data?.content || ""
+check("3) 草稿内容含截图 URL", body.includes(imgUrl), "")
+check("4) 草稿内容含 excalidraw fence", body.includes("```excalidraw") && body.includes(noteId), "")
+check("5) 草稿内容含原文链接", body.includes(`/excalidraw.html?note=${noteId}`), "")
+check("6) 状态为 draft", r.data?.data?.status === "draft", JSON.stringify(r.data?.data?.status))
+
+// 4. 清理测试数据（本地 .local-data 文件操作）
+const artStore = join(LOCAL, "blog-articles")
+if (existsSync(join(artStore, articleId))) rmSync(join(artStore, articleId))
+const idxFile = join(artStore, "index")
+if (existsSync(idxFile)) {
+  const idx = JSON.parse(readFileSync(idxFile, "utf-8")).filter((a: any) => a.id !== articleId)
+  writeFileSync(idxFile, JSON.stringify(idx), "utf-8")
+}
+const imgKey = (imgUrl || "").split("/").pop() || ""
+if (imgKey && existsSync(join(LOCAL, "article-images", imgKey))) {
+  rmSync(join(LOCAL, "article-images", imgKey))
+}
+console.log("7) 测试数据已清理 ✅")
+
+console.log(failed === 0 ? "\n🎉 M3 发布链路冒烟通过" : `\n❌ ${failed} 项失败`)
+process.exit(failed === 0 ? 0 : 1)

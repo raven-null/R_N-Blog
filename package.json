@@ -11,9 +11,11 @@
     "dev": "netlify dev",
     "build": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
+    "build:excalidraw": "node scripts/build-excalidraw.mjs",
     "scrape": "tsx scripts/scrape-local.ts"
   },
   "dependencies": {
+    "@excalidraw/excalidraw": "^0.18.1",
     "@netlify/blobs": "^8.1.0",
     "@netlify/functions": "^3.1.0",
     "cheerio": "^1.2.0",
@@ -21,11 +23,16 @@
     "fast-xml-parser": "^5.4.1",
     "md5": "^2.3.0",
     "ofetch": "^1.5.1",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
     "sharp": "^0.33.5"
   },
   "devDependencies": {
     "@types/md5": "^2.3.6",
     "@types/node": "^22.0.0",
+    "@types/react": "^18.3.31",
+    "@types/react-dom": "^18.0.0",
+    "esbuild": "^0.28.2",
     "netlify-cli": "^18.0.0",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"

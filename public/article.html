@@ -684,6 +684,27 @@
             border: 1px solid var(--border);
         }
 
+        /* Excalidraw 内嵌白板（```excalidraw fence 渲染后的容器） */
+        .article-content .excalidraw-embed {
+            height: 70vh;
+            min-height: 420px;
+            max-height: 900px;
+            margin: 20px 0;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            background: #fff;
+            position: relative;
+        }
+        .article-content .excalidraw-error {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg-tertiary);
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
         .article-content .img-figure img {
             display: block;
             margin: 0 auto;
@@ -2007,8 +2028,9 @@
                 if (sections.length > 0) {
                     const appendNext = () => {
                         if (sections.length === 0) {
-                            // 全部渲染完成后：高亮剩余代码块 + 生成完整目录
+                            // 全部渲染完成后：高亮剩余代码块 + 挂载 Excalidraw 内嵌 + 生成完整目录
                             this.highlightRemainingBlocks(content);
+                            this.mountExcalidrawEmbeds(content);
                             requestAnimationFrame(() => this.generateTableOfContents());
                             return;
                         }
@@ -2026,9 +2048,53 @@
                         setTimeout(appendNext, 0);
                     }
                 } else {
-                    // 短文无增量渲染，直接生成目录
+                    // 短文无增量渲染：挂载 Excalidraw 内嵌，直接生成目录
+                    this.mountExcalidrawEmbeds(content);
                     requestAnimationFrame(() => this.generateTableOfContents());
                 }
+            },
+
+            // Excalidraw 内嵌：把 ```excalidraw 代码块替换为交互白板容器，按需懒加载 bundle
+            mountExcalidrawEmbeds(container) {
+                let found = 0;
+                container.querySelectorAll('.code-block code.language-excalidraw').forEach(code => {
+                    const id = (code.textContent || '').trim();
+                    const block = code.closest('.code-block');
+                    if (!/^[A-Za-z0-9_-]{1,64}$/.test(id)) {
+                        if (block) {
+                            const err = document.createElement('div');
+                            err.className = 'excalidraw-embed excalidraw-error';
+                            err.textContent = '⚠ 白板 ID 无效：' + (id || '（空）');
+                            block.replaceWith(err);
+                        }
+                        return;
+                    }
+                    const div = document.createElement('div');
+                    div.className = 'excalidraw-embed';
+                    div.dataset.excalidraw = '';
+                    div.dataset.note = id;
+                    div.dataset.mode = 'view';
+                    div.textContent = '白板加载中…';
+                    if (block) block.replaceWith(div);
+                    found++;
+                });
+                if (found) this.loadExcalidrawBundle();
+            },
+
+            // 懒加载 Excalidraw bundle：已加载则直接重扫容器；加载中则等待 onload
+            loadExcalidrawBundle() {
+                if (window.ExcalidrawMount) { window.ExcalidrawMount(); return; }
+                if (document.querySelector('script[data-excalidraw-bundle]')) return;
+                const s = document.createElement('script');
+                s.src = '/js/vendor/excalidraw/excalidraw-editor.v1.js';
+                s.dataset.excalidrawBundle = '1';
+                s.onload = () => { if (window.ExcalidrawMount) window.ExcalidrawMount(); };
+                s.onerror = () => {
+                    document.querySelectorAll('.article-content .excalidraw-embed[data-excalidraw]').forEach(el => {
+                        el.textContent = '⚠ 白板组件加载失败，请刷新重试';
+                    });
+                };
+                document.head.appendChild(s);
             },
 
             // 高亮视口内可见的代码块（首屏立即 + 滚动时按需）

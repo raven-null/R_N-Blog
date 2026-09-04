@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Excalidraw 白板</title>
+  <style>
+    html, body { margin: 0; padding: 0; height: 100%; background: #121212; color: #eee; }
+    * { box-sizing: border-box; }
+    .site-header {
+      display: flex; align-items: center; gap: 14px;
+      padding: 8px 16px; background: #1a1a1a;
+      border-bottom: 1px solid #2a2a2a; font-size: 14px;
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    .site-header a { color: #8ab4f8; text-decoration: none; }
+    .site-header a:hover { text-decoration: underline; }
+    .site-header .spacer { flex: 1; }
+    .site-header .hint { color: #777; font-size: 12px; }
+    #excalidraw-root { height: calc(100dvh - 41px); }
+    .empty-tip {
+      height: 100%; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 8px;
+      font-family: system-ui, sans-serif; color: #aaa;
+    }
+    .empty-tip code { background: #222; padding: 2px 6px; border-radius: 4px; color: #8ab4f8; }
+  </style>
+</head>
+<body>
+  <!--
+    Excalidraw 笔记页（M1）
+    用法：
+      /excalidraw.html?note=demo            只读分享（默认）
+      /excalidraw.html?note=demo&edit=1     编辑（口令/管理员）
+      /excalidraw.html?edit=1               新建（自动生成 ID，需管理员登录）
+  -->
+  <header class="site-header">
+    <a href="/">🏠 博客</a>
+    <span id="noteTitle">Excalidraw 白板</span>
+    <span class="spacer"></span>
+    <a id="editLink" href="#" style="display:none">✏️ 编辑</a>
+    <a id="viewLink" href="#" style="display:none">👁 只读视图</a>
+  </header>
+  <main id="excalidraw-root"></main>
+
+  <script>
+    (function () {
+      var qs = new URLSearchParams(location.search);
+      var note = (qs.get('note') || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 64);
+      var edit = qs.get('edit') === '1' || qs.get('edit') === 'true';
+      var root = document.getElementById('excalidraw-root');
+      var titleEl = document.getElementById('noteTitle');
+      var editLink = document.getElementById('editLink');
+      var viewLink = document.getElementById('viewLink');
+      var path = location.pathname;
+
+      if (note) {
+        root.setAttribute('data-excalidraw', '');
+        root.dataset.note = note;
+        root.dataset.mode = edit ? 'edit' : 'view';
+        titleEl.textContent = '白板：' + note;
+        document.title = (edit ? '编辑 ' : '') + note + ' - Excalidraw';
+        if (!edit) { editLink.style.display = ''; editLink.href = path + '?note=' + note + '&edit=1'; }
+        else { viewLink.style.display = ''; viewLink.href = path + '?note=' + note; }
+      } else if (edit) {
+        // 新建：自动生成 ID（保存时需管理员）
+        root.setAttribute('data-excalidraw', '');
+        root.dataset.note = 'wb-' + Math.random().toString(36).slice(2, 10);
+        root.dataset.mode = 'edit';
+        titleEl.textContent = '新建白板';
+        document.title = '新建白板 - Excalidraw';
+      } else {
+        root.innerHTML =
+          '<div class="empty-tip">' +
+          '<div style="font-size:20px">📄 用法</div>' +
+          '<div>/excalidraw.html?note=笔记ID —— 打开已有白板（只读）</div>' +
+          '<div>/excalidraw.html?note=笔记ID&edit=1 —— 编辑（作者开放或输入口令）</div>' +
+          '<div>/excalidraw.html?edit=1 —— 新建（需管理员）</div>' +
+          '</div>';
+      }
+    })();
+  </script>
+  <script src="/js/vendor/excalidraw/excalidraw-editor.v1.js"></script>
+</body>
+</html>
