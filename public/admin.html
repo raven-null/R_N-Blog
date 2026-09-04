@@ -774,7 +774,7 @@
                         .exc-empty{color:var(--text-muted);text-align:center;padding:40px 0}
                     </style>
                     <div class="page-bar"><h2>白板管理</h2><div class="page-bar-actions">
-                        <a class="btn btn-ghost" href="/excalidraw.html?edit=1" target="_blank">➕ 新建白板</a>
+                        <a class="btn btn-ghost" href="/excalidraw.html?edit=1" target="_blank">新建白板</a>
                         <button class="btn btn-ghost" onclick="loadExcalidrawNotes()">刷新</button>
                     </div></div>
                     <div class="exc-mgmt-tip">白板可公开只读分享；编辑需口令或开放编辑；「改名 / 只读开关 / 口令 / 回滚 / 删除」在此管理（对应 /api/excalidraw 的 Admin 端点）。</div>
@@ -2487,7 +2487,7 @@
                 }
                 list.innerHTML=notes.map(n=>{
                     const editBadge=n.editable===1?'<span class="exc-badge on">公开可编辑</span>':'<span class="exc-badge off">只读</span>';
-                    const lockBadge=n.hasKey?'<span class="exc-badge">🔒 口令保护</span>':'';
+                    const lockBadge=n.hasKey?'<span class="exc-badge">口令保护</span>':'';
                     const updated=(n.updatedAt||'').slice(0,16).replace('T',' ');
                     return `<div class="exc-card">
                         <div style="min-width:150px">
@@ -2496,13 +2496,13 @@
                         </div>
                         <div class="exc-meta">${editBadge}${lockBadge}<span>rev ${n.rev}</span><span>更新 ${updated}</span></div>
                         <div class="exc-ops">
-                            <a class="exc-btn" href="/excalidraw.html?note=${encodeURIComponent(n.id)}" target="_blank">🔗 打开</a>
-                            <a class="exc-btn" href="/excalidraw.html?note=${encodeURIComponent(n.id)}&edit=1" target="_blank">✏️ 编辑</a>
+                            <a class="exc-btn" href="/excalidraw.html?note=${encodeURIComponent(n.id)}" target="_blank">打开</a>
+                            <a class="exc-btn" href="/excalidraw.html?note=${encodeURIComponent(n.id)}&edit=1" target="_blank">编辑</a>
                             <button class="exc-btn" onclick="excRename('${n.id}')">改名</button>
                             <button class="exc-btn" onclick="excToggleEdit('${n.id}',${n.editable})">${n.editable===1?'设为只读':'开放编辑'}</button>
                             <button class="exc-btn" onclick="excSetKey('${n.id}')">${n.hasKey?'重设口令':'设口令'}</button>
-                            <button class="exc-btn" onclick="excRollback('${n.id}')">⏪ 回滚</button>
-                            <button class="exc-btn danger" onclick="excDelete('${n.id}')">🗑 删除</button>
+                            <button class="exc-btn" onclick="excRollback('${n.id}')">回滚</button>
+                            <button class="exc-btn danger" onclick="excDelete('${n.id}')">删除</button>
                         </div>
                     </div>`;
                 }).join('');

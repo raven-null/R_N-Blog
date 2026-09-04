@@ -1,5 +1,5 @@
 /**
- * Excalidraw 笔记前端（M1：单 bundle 双模式）
+ * Excalidraw 笔记前端（单 bundle 双模式）
  *
  * 由 scripts/build-excalidraw.mjs 打成静态 IIFE bundle（public/js/vendor/excalidraw/）。
  *
@@ -10,6 +10,8 @@
  *
  * 交互：Ctrl/Cmd+S 保存；口令保护笔记需在顶栏输入编辑口令；管理员（localStorage
  * admin_key）自动带 X-Admin-Key，免口令；409 冲突时确认后强制覆盖（旧版进快照）。
+ *
+ * UI：液态玻璃（与博客 glass.css 同款变量）+ 内联 SVG 图标，不使用 emoji。
  */
 import React, { useEffect, useRef, useState } from "react"
 import { createRoot } from "react-dom/client"
@@ -34,6 +36,67 @@ import { Excalidraw, exportToBlob } from "@excalidraw/excalidraw"
     return origRemove(type, listener, options)
   }) as any
 }
+
+// ===== 液态玻璃 UI 样式（幂等注入一次） =====
+const UI_CSS = `
+.exc-shell{display:flex;flex-direction:column;height:100%;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;color:#eee}
+.exc-bar{display:flex;align-items:center;gap:10px;padding:8px 14px;flex-wrap:wrap;background:rgba(16,16,19,.62);backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%);border-bottom:1px solid rgba(255,255,255,.1);box-shadow:inset 0 1px 0 rgba(255,255,255,.07);font-size:13px;color:#e8e8ea;position:relative;z-index:6}
+.exc-bar-title{display:inline-flex;align-items:center;gap:7px;font-weight:600;color:#fff;min-width:0}
+.exc-bar-title svg{width:15px;height:15px;flex:none;color:#9aa0ff}
+.exc-bar-title span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:34vw}
+.exc-bar-id{color:rgba(255,255,255,.38);font-size:12px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.exc-bar-spacer{flex:1}
+.exc-btn{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:999px;cursor:pointer;font-size:13px;color:#e8e8ea;background:linear-gradient(145deg,rgba(255,255,255,.10),rgba(255,255,255,.04));border:1px solid rgba(255,255,255,.14);box-shadow:inset 0 1px 0 rgba(255,255,255,.10),0 2px 10px -3px rgba(0,0,0,.5);transition:transform .25s cubic-bezier(.34,1.56,.64,1),background .2s ease,border-color .2s ease,box-shadow .2s ease,opacity .2s ease;white-space:nowrap;user-select:none;text-decoration:none}
+.exc-btn:hover{background:linear-gradient(145deg,rgba(255,255,255,.17),rgba(255,255,255,.07));border-color:rgba(255,255,255,.26)}
+.exc-btn:active{transform:scale(.95)}
+.exc-btn:disabled{opacity:.45;cursor:default;transform:none}
+.exc-btn svg{width:14px;height:14px;flex:none}
+.exc-btn-primary{color:#0b0b10;background:linear-gradient(180deg,#fff,#d9d9e3);border-color:rgba(255,255,255,.55);box-shadow:inset 0 1px 0 #fff,0 4px 16px -6px rgba(255,255,255,.35)}
+.exc-btn-primary:hover{background:linear-gradient(180deg,#fff,#e8e8f0);border-color:#fff}
+.exc-input{padding:5px 13px;border-radius:999px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.13);color:#fff;font-size:13px;outline:none;box-shadow:inset 0 1px 0 rgba(255,255,255,.06);transition:border-color .2s ease,background .2s ease;width:118px}
+.exc-input:focus{border-color:rgba(255,255,255,.38);background:rgba(255,255,255,.11)}
+.exc-input::placeholder{color:rgba(255,255,255,.32)}
+.exc-canvas{flex:1;min-height:0;position:relative;background:#f5f5f7}
+.exc-msg{display:flex;align-items:center;gap:8px;margin:8px 14px 10px;padding:7px 14px;border-radius:14px;font-size:12.5px;line-height:1.5;color:#d4d7e2;background:linear-gradient(145deg,rgba(30,30,36,.72),rgba(24,24,30,.6));backdrop-filter:blur(20px) saturate(160%);-webkit-backdrop-filter:blur(20px) saturate(160%);border:1px solid rgba(255,255,255,.1);box-shadow:inset 0 1px 0 rgba(255,255,255,.07);animation:exc-msg-in .35s cubic-bezier(.22,1,.36,1)}
+.exc-msg .dot{width:6px;height:6px;border-radius:50%;flex:none;background:#5ac8fa;box-shadow:0 0 10px rgba(90,200,250,.9)}
+.exc-ph{height:100%;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse 60% 50% at 30% 20%,rgba(90,120,255,.10),transparent 60%),radial-gradient(ellipse 50% 40% at 80% 75%,rgba(0,210,190,.06),transparent 60%),#101014}
+.exc-ph-card{display:flex;flex-direction:column;align-items:center;gap:10px;padding:38px 46px;border-radius:26px;text-align:center;background:linear-gradient(145deg,rgba(255,255,255,.08),rgba(255,255,255,.03));backdrop-filter:blur(26px) saturate(180%);-webkit-backdrop-filter:blur(26px) saturate(180%);border:1px solid rgba(255,255,255,.12);box-shadow:0 20px 60px -16px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.09)}
+.exc-ph-card>svg{width:36px;height:36px;color:rgba(255,255,255,.4)}
+.exc-ph-title{font-size:17px;color:#fff;font-weight:600}
+.exc-ph-sub{font-size:13px;color:rgba(255,255,255,.45);line-height:1.8;max-width:400px}
+.exc-spinner{width:22px;height:22px;border-radius:50%;border:2px solid rgba(255,255,255,.14);border-top-color:rgba(255,255,255,.75);animation:exc-spin .8s linear infinite}
+@keyframes exc-spin{to{transform:rotate(360deg)}}
+@keyframes exc-msg-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.exc-btn{transition:none}.exc-msg{animation:none}}
+`
+function ensureUiStyles() {
+  if (document.getElementById("excalidraw-ui-css")) return
+  const st = document.createElement("style")
+  st.id = "excalidraw-ui-css"
+  st.textContent = UI_CSS
+  document.head.appendChild(st)
+}
+
+// ===== 内联 SVG 图标（stroke 风格，无 emoji） =====
+type IconPath = React.ReactNode
+const Ic = ({ p, ...rest }: { p: IconPath } & React.SVGProps<SVGSVGElement>) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...rest}>
+    {p}
+  </svg>
+)
+const ICONS = {
+  pencil: <><path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z" /></>,
+  save: <><path d="M12 4v11" /><path d="m7 11 5 5 5-5" /><path d="M4 20h16" /></>,
+  image: <><rect x="3" y="4" width="18" height="16" rx="2.5" /><circle cx="9" cy="10" r="1.6" /><path d="m21 15.5-4.5-4.5L6 21.5" /></>,
+  send: <><path d="M22 2 11 13" /><path d="M22 2 15 22l-4-9-9-4Z" /></>,
+  doc: <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" /><path d="M14 2v6h6" /></>,
+  home: <><path d="m3 10.5 9-7.5 9 7.5" /><path d="M5 9.5V21h14V9.5" /></>,
+  eye: <><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" /><circle cx="12" cy="12" r="2.8" /></>,
+  lock: <><rect x="5" y="11" width="14" height="9" rx="2.5" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></>,
+  alert: <><path d="M12 3 2.5 20h19Z" /><path d="M12 10v4.5" /><circle cx="12" cy="17.5" r=".4" fill="currentColor" /></>,
+}
+
+// ===== 工具函数 =====
 
 // 场景 JSON 自后端原样透传（结构由 Excalidraw 运行时解释），类型从宽
 interface SceneData {
@@ -68,23 +131,6 @@ async function apiFetch(input: string, init?: RequestInit): Promise<Response> {
       ...(ak ? { "x-admin-key": ak } : {}),
     },
   })
-}
-
-const btn: React.CSSProperties = {
-  padding: "4px 10px",
-  background: "#2f6fed",
-  color: "#fff",
-  border: "none",
-  borderRadius: 4,
-  cursor: "pointer",
-  fontSize: 13,
-  whiteSpace: "nowrap",
-}
-const btnGhost: React.CSSProperties = {
-  ...btn,
-  background: "transparent",
-  border: "1px solid #555",
-  color: "#ccc",
 }
 
 /** Blob → base64（去 dataURL 前缀） */
@@ -142,8 +188,8 @@ function NoteApp({ note, mode }: { note: string; mode: "edit" | "view" }) {
     try {
       const res = await apiFetch(`/api/excalidraw?id=${encodeURIComponent(note)}`)
       const data = await res.json().catch(() => ({}))
-      const notFound = res.status === 404 || data?.code === "not_found"
-      if (notFound) {
+      const isMissing = res.status === 404 || data?.code === "not_found"
+      if (isMissing) {
         setNotFound(true)
         if (!silent) {
           setLoading(false)
@@ -193,6 +239,13 @@ function NoteApp({ note, mode }: { note: string; mode: "edit" | "view" }) {
     document.title = mode === "edit" ? `编辑：${title}` : title
   }, [title, mode])
 
+  // view 模式的消息条自动淡出（不干扰阅读）
+  useEffect(() => {
+    if (mode !== "view" || !msg) return
+    const t = window.setTimeout(() => setMsg(""), 4000)
+    return () => window.clearTimeout(t)
+  }, [msg, mode])
+
   // L1.5 协作感知：轻量轮询 meta.rev 检测他人更新
   // view 模式自动静默刷新；edit 模式提示（避免覆盖未保存改动）
   useEffect(() => {
@@ -210,7 +263,7 @@ function NoteApp({ note, mode }: { note: string; mode: "edit" | "view" }) {
           setMsg(`已自动更新到 rev ${remoteRev}`)
           await load(true)
         } else {
-          setMsg(`🔔 检测到他人更新（rev ${remoteRev}，你当前 rev ${localRev}）：可刷新页面查看；如需提交你的改动请先保存（将提示覆盖确认）`)
+          setMsg(`检测到他人更新（rev ${remoteRev}，你当前 rev ${localRev}）：可刷新页面查看；如需提交你的改动请先保存（将提示覆盖确认）`)
         }
       } catch {
         // 轮询失败静默（网络抖动/离线）
@@ -289,7 +342,7 @@ function NoteApp({ note, mode }: { note: string; mode: "edit" | "view" }) {
       loadedRev.current = data.rev ?? loadedRev.current
       setMeta(m => (m ? { ...m, rev: data.rev ?? m.rev } : m))
       if (data.created) setNotFound(false) // 创建成功：退出"新笔记"状态
-      setMsg(`✅ 已保存 rev ${data.rev}（${new Date().toLocaleTimeString()}）`)
+      setMsg(`已保存 rev ${data.rev}（${new Date().toLocaleTimeString()}）`)
       return true
     } catch (e: any) {
       setMsg("保存出错：" + (e?.message || e))
@@ -372,9 +425,7 @@ function NoteApp({ note, mode }: { note: string; mode: "edit" | "view" }) {
         setMsg("创建草稿失败：" + (art.message || artRes.status))
         return
       }
-      setMsg(
-        `✅ 草稿已创建（id: ${art.data?.id}），去后台完善并发布：/admin.html → 文章管理`,
-      )
+      setMsg(`草稿已创建（id: ${art.data?.id}），去后台完善并发布：/admin.html → 文章管理`)
     } catch (e: any) {
       setMsg("发布出错：" + (e?.message || e))
     }
@@ -394,15 +445,20 @@ function NoteApp({ note, mode }: { note: string; mode: "edit" | "view" }) {
   })
 
   if (loading) {
-    return <div style={{ ...placeholder, color: "#999" }}>加载中…</div>
+    return (
+      <div className="exc-ph">
+        <div className="exc-spinner" />
+      </div>
+    )
   }
   // 仅 view 模式对不存在的笔记显示占位；edit 模式继续渲染空画布（保存时创建）
   if (notFound && mode === "view") {
     return (
-      <div style={placeholder}>
-        <div style={{ fontSize: 18, marginBottom: 8 }}>📄 白板不存在</div>
-        <div style={{ color: "#999", fontSize: 13 }}>
-          链接可能已失效，或笔记尚未创建。
+      <div className="exc-ph">
+        <div className="exc-ph-card">
+          <Ic p={ICONS.doc} />
+          <div className="exc-ph-title">白板不存在</div>
+          <div className="exc-ph-sub">链接可能已失效，或笔记尚未创建。</div>
         </div>
       </div>
     )
@@ -413,45 +469,41 @@ function NoteApp({ note, mode }: { note: string; mode: "edit" | "view" }) {
     : { elements: [] }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+    <div className="exc-shell">
       {mode === "edit" && (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            padding: "6px 10px",
-            background: "#171717",
-            color: "#ddd",
-            fontSize: 13,
-            borderBottom: "1px solid #2c2c2c",
-            flexWrap: "wrap",
-          }}
-        >
-          <strong style={{ color: "#fff" }}>✏️ {title}</strong>
-          <span style={{ color: "#888", fontSize: 12 }}>id: {note}</span>
-          <span style={{ flex: 1 }} />
+        <div className="exc-bar">
+          <span className="exc-bar-title">
+            <Ic p={ICONS.pencil} />
+            <span>{title}</span>
+          </span>
+          <span className="exc-bar-id">id: {note}</span>
+          <span className="exc-bar-spacer" />
           {meta?.hasKey && !isAdmin && (
             <input
+              className="exc-input"
               value={editKey}
               onChange={e => setEditKey(e.target.value)}
               type="password"
               placeholder="编辑口令"
-              style={{ padding: "4px 8px", width: 110, background: "#242424", color: "#fff", border: "1px solid #444", borderRadius: 4, fontSize: 13 }}
             />
           )}
-          <button onClick={exportPng} style={btnGhost}>🖼 PNG</button>
+          <button className="exc-btn" onClick={exportPng} title="导出当前画布为 PNG 图片">
+            <Ic p={ICONS.image} />
+            PNG
+          </button>
           {isAdmin && (
-            <button onClick={publishToBlog} disabled={saving} style={btnGhost} title="导出截图并生成一篇含交互白板的草稿文章">
-              📝 发布为博文
+            <button className="exc-btn" onClick={publishToBlog} disabled={saving} title="导出截图并生成一篇含交互白板的草稿文章">
+              <Ic p={ICONS.send} />
+              发布为博文
             </button>
           )}
-          <button onClick={() => save(false)} disabled={saving} style={btn}>
-            {saving ? "保存中…" : "💾 保存（Ctrl+S）"}
+          <button className="exc-btn exc-btn-primary" onClick={() => save(false)} disabled={saving} title="保存到服务器（Ctrl+S）">
+            <Ic p={ICONS.save} />
+            {saving ? "保存中…" : "保存（Ctrl+S）"}
           </button>
         </div>
       )}
-      <div style={{ flex: 1, minHeight: 0 }}>
+      <div className="exc-canvas">
         <Excalidraw
           key={note + mode}
           excalidrawAPI={api => { apiRef.current = api }}
@@ -475,29 +527,19 @@ function NoteApp({ note, mode }: { note: string; mode: "edit" | "view" }) {
           }
         />
       </div>
-      {mode === "edit" && msg && (
-        <div style={{ padding: "4px 10px", fontSize: 12, color: "#8ab4f8", background: "#101010", borderTop: "1px solid #222" }}>
-          {msg}
+      {msg && (
+        <div className="exc-msg">
+          <span className="dot" />
+          <span>{msg}</span>
         </div>
       )}
     </div>
   )
 }
 
-const placeholder: React.CSSProperties = {
-  height: "100%",
-  display: "flex",
-  flexDirection: "column",
-  alignItems: "center",
-  justifyContent: "center",
-  gap: 4,
-  background: "#121212",
-  color: "#ccc",
-  fontFamily: "system-ui, sans-serif",
-}
-
 /** 扫描并挂载所有 [data-excalidraw] 容器 */
 function mountAll() {
+  ensureUiStyles()
   document.querySelectorAll<HTMLElement>("[data-excalidraw]").forEach(el => {
     if (el.dataset.mounted) return
     el.dataset.mounted = "1"

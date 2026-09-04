@@ -2064,7 +2064,7 @@
                         if (block) {
                             const err = document.createElement('div');
                             err.className = 'excalidraw-embed excalidraw-error';
-                            err.textContent = '⚠ 白板 ID 无效：' + (id || '（空）');
+                            err.textContent = '白板 ID 无效：' + (id || '（空）');
                             block.replaceWith(err);
                         }
                         return;
@@ -2088,16 +2088,16 @@
                 // 样式独立文件（Excalidraw 0.18 Vite 产物）：先注入 CSS 再注入 JS
                 const css = document.createElement('link');
                 css.rel = 'stylesheet';
-                css.href = '/js/vendor/excalidraw/excalidraw-editor.v5.css';
+                css.href = '/js/vendor/excalidraw/excalidraw-editor.v6.css';
                 css.dataset.excalidrawBundle = '1';
                 document.head.appendChild(css);
                 const s = document.createElement('script');
-                s.src = '/js/vendor/excalidraw/excalidraw-editor.v5.js';
+                s.src = '/js/vendor/excalidraw/excalidraw-editor.v6.js';
                 s.dataset.excalidrawBundle = '1';
                 s.onload = () => { if (window.ExcalidrawMount) window.ExcalidrawMount(); };
                 s.onerror = () => {
                     document.querySelectorAll('.article-content .excalidraw-embed[data-excalidraw]').forEach(el => {
-                        el.textContent = '⚠ 白板组件加载失败，请刷新重试';
+                        el.textContent = '白板组件加载失败，请刷新重试';
                     });
                 };
                 document.head.appendChild(s);
