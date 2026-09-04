@@ -692,9 +692,15 @@ const BlogApp = {
         document.querySelectorAll('.gallery-tag-item').forEach(el => {
             el.classList.toggle('active', el.dataset.tag === this.galleryTag);
         });
-        // 更新悬浮按钮图标为当前标签首字
+        // 更新悬浮按钮图标为当前标签首字（默认态显示标签 SVG）
         const btn = document.getElementById('galleryTagBtn');
-        if (btn) btn.textContent = this.galleryTag === 'all' ? '🏷' : this.galleryTag.charAt(0);
+        if (btn) {
+            if (this.galleryTag === 'all') {
+                btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>';
+            } else {
+                btn.textContent = this.galleryTag.charAt(0);
+            }
+        }
         const panel = document.getElementById('galleryTagFloatPanel');
         if (panel) panel.classList.remove('show');
     },
@@ -720,7 +726,7 @@ const BlogApp = {
             if (this.isR18Image(img) && !(img.url || '').includes('adminKey=')) {
                 return `<figure class="gallery-item gallery-item-locked" title="R18 内容，点击输入管理员密钥查看"
                      onclick="openGalleryLightbox('${img.url}', ${i})">
-                    <div class="gallery-lock-badge">🔒 R18</div>
+                    <div class="gallery-lock-badge">R18</div>
                 </figure>`;
             }
             return `<figure class="gallery-item">
@@ -968,12 +974,12 @@ const BlogApp = {
         if (!file) return;
         const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
         if (!validTypes.includes(file.type)) {
-            if (tip) tip.textContent = '✗ 仅支持 jpg / png / gif / webp 图片';
+            if (tip) tip.textContent = '仅支持 jpg / png / gif / webp 图片';
             e.target.value = '';
             return;
         }
         if (file.size > 2 * 1024 * 1024) {
-            if (tip) tip.textContent = '✗ 图片过大（限 2MB）';
+            if (tip) tip.textContent = '图片过大（限 2MB）';
             e.target.value = '';
             return;
         }
@@ -1081,10 +1087,10 @@ const BlogApp = {
             nameInput.value = '';
             contentInput.value = '';
             this.clearCommentImage();
-            if (tip) tip.textContent = '✓ 留言成功';
+            if (tip) tip.textContent = '留言成功';
             await this.loadComments();
         } catch (err) {
-            if (tip) tip.textContent = '✗ ' + (err.message || '留言失败，请稍后再试');
+            if (tip) tip.textContent = err.message || '留言失败，请稍后再试';
         } finally {
             submitBtn.disabled = false;
             submitBtn.textContent = '发表留言';

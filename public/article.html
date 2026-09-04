@@ -2455,7 +2455,7 @@
                 header.innerHTML = '';
                 content.innerHTML = `
                     <div class="error-state">
-                        <div class="icon">❌</div>
+                        <div class="icon"><svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m9.5 9.5 5 5M14.5 9.5l-5 5"/></svg></div>
                         <div class="message">${message}</div>
                         <a href="index.html" class="back-link">返回首页</a>
                     </div>
@@ -2470,7 +2470,7 @@
                 header.innerHTML = '';
                 content.innerHTML = `
                     <div class="error-state">
-                        <div class="icon">ℹ️</div>
+                        <div class="icon"><svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="8" r=".5" fill="currentColor"/></svg></div>
                         <div class="message">该资讯暂无站内正文（来源仅提供摘要）</div>
                         <div class="error-actions">
                             <a href="${sourceUrl || '#'}" target="_blank" rel="noopener" class="back-link">前往原文阅读 ↗</a>
@@ -2516,12 +2516,12 @@
                 if (!file) return;
                 const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
                 if (!validTypes.includes(file.type)) {
-                    if (tip) tip.textContent = '✗ 仅支持 jpg / png / gif / webp 图片';
+                    if (tip) tip.textContent = '仅支持 jpg / png / gif / webp 图片';
                     e.target.value = '';
                     return;
                 }
                 if (file.size > 2 * 1024 * 1024) {
-                    if (tip) tip.textContent = '✗ 图片过大（限 2MB）';
+                    if (tip) tip.textContent = '图片过大（限 2MB）';
                     e.target.value = '';
                     return;
                 }
@@ -2634,10 +2634,10 @@
                     nameInput.value = '';
                     contentInput.value = '';
                     this.clearCommentImage();
-                    if (tip) tip.textContent = '✓ 留言成功';
+                    if (tip) tip.textContent = '留言成功';
                     await this.loadComments();
                 } catch (err) {
-                    if (tip) tip.textContent = '✗ ' + (err.message || '留言失败，请稍后再试');
+                    if (tip) tip.textContent = err.message || '留言失败，请稍后再试';
                 } finally {
                     submitBtn.disabled = false;
                     submitBtn.textContent = '发表留言';

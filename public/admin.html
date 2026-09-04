@@ -628,7 +628,7 @@
             <div class="content">
                 <!-- 文章列表 -->
                 <div id="tab-articles">
-                    <div class="page-bar"><h2>文章管理</h2><div class="page-bar-actions"><label class="btn btn-ghost" style="cursor:pointer">📄 导入 .md<input type="file" accept=".md,.markdown" onchange="importAndEdit(this.files[0])" style="display:none"></label></div></div>
+                    <div class="page-bar"><h2>文章管理</h2><div class="page-bar-actions"><label class="btn btn-ghost" style="cursor:pointer">导入 .md<input type="file" accept=".md,.markdown" onchange="importAndEdit(this.files[0])" style="display:none"></label></div></div>
                     <div class="article-search-box">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
                         <input type="text" id="articleSearchInput" placeholder="搜索文章标题、标签..." oninput="filterArticles()">
@@ -657,8 +657,8 @@
                                     <div class="theme-dot" data-theme="green" title="护眼绿" onclick="switchEditorTheme('green')"></div>
                                     <div class="theme-dot" data-theme="blue" title="淡蓝" onclick="switchEditorTheme('blue')"></div>
                                 </div>
-                                <label class="btn btn-ghost" style="cursor:pointer">📄 导入<input type="file" accept=".md,.markdown" onchange="importAndEdit(this.files[0])" style="display:none"></label>
-                                <button class="btn btn-ghost" onclick="exportMarkdown()">💾 导出</button>
+                                <label class="btn btn-ghost" style="cursor:pointer">导入<input type="file" accept=".md,.markdown" onchange="importAndEdit(this.files[0])" style="display:none"></label>
+                                <button class="btn btn-ghost" onclick="exportMarkdown()">导出</button>
                                 <button class="btn btn-primary" onclick="openPublishModal()">发布 ▾</button>
                             </div>
                         </div>
@@ -683,7 +683,7 @@
                             <input type="file" id="imageUpload" accept="image/*" multiple onchange="uploadImages(this.files)">
                         </label>
                         <button class="btn btn-ghost" onclick="showUploadLog()" id="uploadLogBtn" title="查看上传记录">
-                            📋 上传记录<span id="uploadFailCount" style="margin-left:4px;color:var(--danger)"></span>
+                            上传记录<span id="uploadFailCount" style="margin-left:4px;color:var(--danger)"></span>
                         </button>
                     </div>
                     <div class="classify-workspace">
@@ -836,9 +836,9 @@
                                 <div class="settings-avatar-row">
                                     <div class="settings-avatar-preview" id="settingsFaviconPreview" style="border-radius:var(--radius-sm)"><img id="settingsFaviconImg" alt="" style="display:none;border-radius:var(--radius-sm)"><span>未设置</span></div>
                                     <input type="hidden" id="setFavicon" value="">
-                                    <label class="btn btn-ghost btn-sm" style="cursor:pointer">⬆ 上传<input type="file" accept="image/*" style="display:none" onchange="uploadFaviconImage(this.files[0])"></label>
-                                    <button class="btn btn-ghost btn-sm" onclick="pickFaviconFromGallery()">🖼 从图库选</button>
-                                    <button class="btn btn-ghost btn-sm" onclick="clearFaviconImage()">✕ 移除</button>
+                                    <label class="btn btn-ghost btn-sm" style="cursor:pointer">上传<input type="file" accept="image/*" style="display:none" onchange="uploadFaviconImage(this.files[0])"></label>
+                                    <button class="btn btn-ghost btn-sm" onclick="pickFaviconFromGallery()">从图库选</button>
+                                    <button class="btn btn-ghost btn-sm" onclick="clearFaviconImage()">移除</button>
                                 </div>
                             </div>
                             <div class="settings-field">
@@ -855,9 +855,9 @@
                                 <div class="settings-avatar-row">
                                     <div class="settings-avatar-preview" id="settingsAvatarPreview"><img id="settingsAvatarImg" alt="" style="display:none"><span>未设置</span></div>
                                     <input type="hidden" id="setAvatar" value="">
-                                    <label class="btn btn-ghost btn-sm" style="cursor:pointer">⬆ 上传<input type="file" accept="image/*" style="display:none" onchange="uploadAvatarImage(this.files[0])"></label>
-                                    <button class="btn btn-ghost btn-sm" onclick="pickAvatarFromGallery()">🖼 从图库选</button>
-                                    <button class="btn btn-ghost btn-sm" onclick="clearAvatarImage()" id="clearAvatarBtn">✕ 移除</button>
+                                    <label class="btn btn-ghost btn-sm" style="cursor:pointer">上传<input type="file" accept="image/*" style="display:none" onchange="uploadAvatarImage(this.files[0])"></label>
+                                    <button class="btn btn-ghost btn-sm" onclick="pickAvatarFromGallery()">从图库选</button>
+                                    <button class="btn btn-ghost btn-sm" onclick="clearAvatarImage()" id="clearAvatarBtn">移除</button>
                                 </div>
                             </div>
                             <div class="settings-field">
@@ -989,13 +989,13 @@
                             </div>
                             <div class="settings-tip">默认密码为 1111，修改后请牢记新密码</div>
                             <div class="settings-actions" style="margin-top:12px">
-                                <button class="btn btn-ghost" onclick="changePassword()">🔑 修改密码</button>
+                                <button class="btn btn-ghost" onclick="changePassword()">修改密码</button>
                             </div>
                         </div>
                         </div>
 
                         <div class="settings-actions">
-                            <button class="btn btn-primary" onclick="saveSettings()">💾 保存设置</button>
+                            <button class="btn btn-primary" onclick="saveSettings()">保存设置</button>
                         </div>
                     </div>
                 </div>
@@ -1009,7 +1009,7 @@
 
     <div class="image-picker-panel" id="imagePickerPanel">
         <div class="image-picker-header"><h3>选择图片插入</h3><button onclick="closeImagePicker()">&times;</button></div>
-        <div class="image-picker-upload"><label>📤 上传新图片<input type="file" accept="image/*" multiple onchange="uploadAndInsert(this.files)" style="display:none"></label></div>
+        <div class="image-picker-upload"><label>上传新图片<input type="file" accept="image/*" multiple onchange="uploadAndInsert(this.files)" style="display:none"></label></div>
         <div class="image-picker-list" id="imagePickerList"></div>
     </div>
 
@@ -1052,8 +1052,8 @@
         <button class="admin-lightbox-nav next" title="下一张" onclick="event.stopPropagation();adminLightboxNav(1)">&#8250;</button>
         <div class="admin-lightbox-name" id="adminLbName" onclick="event.stopPropagation()"></div>
         <div class="admin-lightbox-bottom" onclick="event.stopPropagation()">
-            <a id="adminLbDownload" href="#" download title="下载图片">⬇ 下载</a>
-            <button onclick="deleteImageFromLightbox()">🗑 删除</button>
+            <a id="adminLbDownload" href="#" download title="下载图片">下载</a>
+            <button onclick="deleteImageFromLightbox()">删除</button>
         </div>
     </div>
 
@@ -1066,8 +1066,8 @@
                 <div class="publish-field">
                     <label>状态</label>
                     <select id="edStatus">
-                        <option value="published">✅ 发布</option>
-                        <option value="draft">📝 草稿</option>
+                        <option value="published">发布</option>
+                        <option value="draft">草稿</option>
                     </select>
                 </div>
                 <div class="publish-field">
@@ -1088,12 +1088,12 @@
                     <div class="publish-cover-area">
                         <div class="publish-cover-preview" id="coverPreview">
                             <img id="coverPreviewImg" alt="封面预览" style="display:none">
-                            <span id="coverPlaceholder">📷 封面图</span>
+                            <span id="coverPlaceholder">封面图</span>
                         </div>
                         <div class="publish-cover-actions">
-                            <label class="btn btn-ghost btn-sm" style="cursor:pointer">⬆ 上传<input type="file" accept="image/*" style="display:none" onchange="setCoverImage(this.files[0])"></label>
-                            <button class="btn btn-ghost btn-sm" onclick="pickCoverFromGallery()">🖼 从图库选</button>
-                            <button class="btn btn-ghost btn-sm" onclick="clearCoverImage()" id="coverClearBtn" style="display:none">✕ 移除</button>
+                            <label class="btn btn-ghost btn-sm" style="cursor:pointer">上传<input type="file" accept="image/*" style="display:none" onchange="setCoverImage(this.files[0])"></label>
+                            <button class="btn btn-ghost btn-sm" onclick="pickCoverFromGallery()">从图库选</button>
+                            <button class="btn btn-ghost btn-sm" onclick="clearCoverImage()" id="coverClearBtn" style="display:none">移除</button>
                             <input type="hidden" id="edImage" value="">
                         </div>
                     </div>
@@ -3097,7 +3097,7 @@
                 <div class="tags-card">
                     <div class="tc-info">
                         <div class="tc-name">${esc(t.name)}</div>
-                        <div class="tc-counts"><span>${currentTagsView==='article'?'📄':'🖼'} ${t.count} 个${typeLabel}</span></div>
+                        <div class="tc-counts"><span>${t.count} 个${typeLabel}</span></div>
                     </div>
                     <div class="tc-actions">
                         <button class="btn btn-ghost btn-sm" onclick="openRenameModal('${escJs(t.name)}','${currentTagsView}')">重命名</button>
