@@ -8,9 +8,9 @@
     <!-- Markdown 渲染库 -->
     <script src="js/vendor/marked.min.js"></script>
     <script src="js/markdown.js"></script>
-    <!-- Vditor 编辑器（所见即所得，轻量沉浸式） -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vditor@3.10/dist/index.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/vditor@3.10/dist/index.min.js"></script>
+    <!-- Vditor 编辑器（所见即所得，轻量沉浸式），资源本地化避免外网 CDN 不可达导致布局失效 -->
+    <link rel="stylesheet" href="js/vendor/vditor/index.css">
+    <script src="js/vendor/vditor/index.min.js"></script>
     <style>
         *{margin:0;padding:0;box-sizing:border-box}
         :root{--bg:#080808;--bg-card:#111;--bg-input:#1a1a1a;--bg-hover:#1c1c1c;--bg-active:#1a2a3a;--text:#fff;--text-muted:rgba(255,255,255,.85);--accent:#4fc3f7;--accent-dim:rgba(79,195,247,.1);--border:#252525;--border-light:#333;--danger:#ef5350;--success:#66bb6a;--warning:#ffa726;--radius:10px;--radius-sm:6px;--shadow:0 8px 32px rgba(0,0,0,.5);--sidebar-w:220px;--sidebar-collapsed:52px}
@@ -122,39 +122,6 @@
         .article-search-clear{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;padding:0 2px;line-height:1}
         .article-search-clear:hover{color:var(--danger)}
 
-        .editor-top{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
-        .editor-top input,.editor-top select{padding:9px 12px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:13px;transition:border .15s}
-        .editor-top input:focus,.editor-top select:focus{outline:none;border-color:var(--accent)}
-        .editor-top input{flex:1;min-width:180px}
-        .editor-top select{min-width:90px}
-
-        /* ===== 写文章新 UI ===== */
-        .write-settings{display:flex;flex-direction:column;gap:10px;margin-bottom:12px;padding:16px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius)}
-        .write-title-input{width:100%;padding:12px 16px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:17px;font-weight:600;transition:border .15s}
-        .write-title-input:focus{outline:none;border-color:var(--border)}
-        .write-title-input::placeholder{color:#555;font-weight:400}
-        .write-settings-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-        .write-settings-row > input{flex:1;min-width:180px;padding:9px 12px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:13px}
-        .write-settings-row > input:focus{outline:none;border-color:var(--border)}
-        .write-settings-row select{padding:9px 12px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:13px;cursor:pointer}
-        .write-settings-row select:focus{outline:none;border-color:var(--border)}
-        .write-cover{display:flex;gap:14px;align-items:flex-start;margin-top:2px}
-        .write-cover-preview{width:120px;height:68px;border-radius:var(--radius-sm);border:1px dashed var(--border);display:flex;align-items:center;justify-content:center;overflow:hidden;background:var(--bg-input);color:var(--text-muted);font-size:12px;flex-shrink:0;margin-top:4px}
-        .write-cover-preview img{width:100%;height:100%;object-fit:cover}
-        .write-cover-actions{display:flex;flex-direction:column;gap:6px;align-items:stretch;flex-shrink:0}
-        .write-cover-actions .cover-btn{padding:6px 12px;font-size:11px;white-space:nowrap}
-        .write-article-images{flex:1;min-width:180px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;display:flex;flex-direction:column;gap:8px;max-height:150px;overflow:hidden}
-        .write-article-images-title{font-size:12px;color:var(--text-muted);font-weight:500;flex-shrink:0}
-        .write-article-images-list{display:flex;flex-wrap:wrap;gap:8px;overflow-y:auto;min-height:40px;align-content:flex-start}
-        .write-article-images-empty{font-size:11px;color:var(--text-muted)}
-        .write-article-img-item{position:relative;width:52px;height:52px;border-radius:var(--radius-sm);overflow:hidden;border:1px solid var(--border);flex-shrink:0}
-        .write-article-img-item img{width:100%;height:100%;object-fit:cover;display:block}
-        .write-article-img-item .del{position:absolute;top:0;right:0;width:16px;height:16px;background:rgba(0,0,0,.7);border:none;color:var(--danger);cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;border-radius:0 0 0 4px;opacity:0;transition:opacity .1s}
-        .write-article-img-item:hover .del{opacity:1}
-
-        /* ===== 所见即所得编辑器（Toast UI，Obsidian 式） ===== */
-        .editor-extras{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
-        .editor-extras-hint{margin-left:auto;font-size:11px;color:var(--text-muted)}
         /* 图片管理 */
         .imgm-top{display:flex;gap:12px;margin-bottom:16px;align-items:center}
         .imgm-upload{padding:14px 20px;border:2px dashed var(--border);border-radius:var(--radius-sm);color:var(--text-muted);cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:10px;font-size:12px}
@@ -223,7 +190,7 @@
         .toast-success{background:var(--success);color:#000}
         .toast-error{background:var(--danger);color:#fff}
         .empty{text-align:center;padding:48px;color:var(--text-muted);font-size:13px}
-        .upload-progress{display:none;align-items:center;gap:6px;padding:6px 12px;background:var(--accent-dim);border-radius:var(--radius-sm);font-size:11px;color:var(--accent)}
+        .upload-progress{display:none;align-items:center;gap:6px;padding:6px 12px;background:var(--accent-dim);border-radius:var(--radius-sm);font-size:11px;color:var(--accent);position:fixed;left:24px;bottom:24px;z-index:998;box-shadow:var(--shadow)}
         .upload-progress.show{display:inline-flex}
         .upload-progress .spinner{width:12px;height:12px;border:2px solid var(--accent);border-top-color:transparent;border-radius:50%;animation:spin .6s linear infinite}
         @keyframes spin{to{transform:rotate(360deg)}}
@@ -424,17 +391,9 @@
             .article-table tr.article-group-header-row td{padding:4px 10px;border:none;background:transparent}
             .article-search-box{margin-bottom:12px;padding:8px 12px}
             .row-actions{justify-content:flex-end}
-            /* 写文章 */
-            .write-settings{padding:12px}
-            .write-cover{flex-direction:column;align-items:stretch}
-            .write-cover-preview{width:100%;height:120px}
-            .write-cover-actions{flex-direction:row;flex-wrap:wrap;justify-content:flex-start}
-            .write-cover-actions .cover-btn{flex:1;min-width:110px;text-align:center}
-            .write-article-images{max-height:none;min-height:60px}
-            .editor-extras-hint{display:none}
-            .editor-footer{flex-direction:column;gap:10px}
-            .editor-footer-actions{width:100%}
-            .editor-footer-actions .btn{flex:1;justify-content:center}
+            /* 写文章：窄屏时工具栏自动换行，避免按钮挤压堆叠 */
+            .write-toolbar{flex-wrap:wrap;gap:10px 8px}
+            .write-toolbar-right{flex-wrap:wrap;justify-content:flex-end}
             /* 图片管理 */
             .imgm-top{flex-direction:column;align-items:stretch;gap:10px}
             .imgm-upload{justify-content:center;padding:12px}
@@ -458,10 +417,6 @@
             #uploadLogModal .rename-box{width:90%!important;max-width:440px}
             /* 图片选择面板全屏 */
             .image-picker-panel{width:100%}
-            /* 编辑器 */
-            .write-settings-row{flex-direction:column;align-items:stretch}
-            .write-settings-row>input{min-width:0}
-            .write-settings-row select{width:100%}
             /* 图片灯箱 */
             .admin-lightbox-img{max-width:95vw;max-height:75vh}
             .admin-lightbox-nav{width:36px;height:36px;font-size:20px}
@@ -476,12 +431,9 @@
             .mobile-tab svg{width:18px;height:18px}
             .admin-header-right a{font-size:11px}
             .classify-card img{height:70px}
-            .editor-toolbar-group button{padding:0 5px;font-size:10px}
-            .editor-toolbar .sep{margin:0 3px}
             .tags-card{flex-direction:column;align-items:flex-start;gap:10px}
             .tags-card .tc-actions{margin-left:0}
             .tags-card .tc-actions button{opacity:1}
-            .editor-footer-actions{flex-wrap:wrap}
             .page-bar h2{font-size:16px}
         }
 
@@ -547,9 +499,9 @@
             backdrop-filter:blur(12px) saturate(150%);-webkit-backdrop-filter:blur(12px) saturate(150%);
             border-bottom:1px solid var(--glass-border)!important;
         }
-        .vditor-toolbar__item{color:rgba(255,255,255,0.7)!important;transition:all 0.2s ease}
-        .vditor-toolbar__item--current{color:var(--accent)!important}
-        .vditor-toolbar__item:hover{color:var(--accent)!important;transform:translateY(-1px)}
+        .vditor-toolbar__item{color:var(--editor-text,#fff)!important;opacity:.78;transition:all 0.2s ease}
+        .vditor-toolbar__item--current{color:var(--accent)!important;opacity:1}
+        .vditor-toolbar__item:hover{color:var(--accent)!important;opacity:1;transform:translateY(-1px)}
         .vditor-content{background:var(--editor-bg,rgba(26,26,26,0.5))!important}
         .vditor-ir,.vditor-wysiwyg,.vditor-sv{color:var(--editor-text,#fff)!important}
         .vditor-ir *,.vditor-wysiwyg *,.vditor-sv *{color:var(--editor-text,#fff)!important}
@@ -1015,6 +967,7 @@
         </div>
     </div>
 
+    <div class="upload-progress" id="uploadProgress"><span class="spinner"></span><span id="uploadProgressText"></span></div>
     <div class="toast" id="toast"></div>
 
     <!-- 图片灯箱 -->
@@ -1337,7 +1290,8 @@
                 return null;
             }
             vditorInstance=new Vditor('vditor',{
-                height:document.querySelector('.content')?.offsetHeight-180||500,
+                height:Math.max(400,document.querySelector('.content')?.offsetHeight-230||500),
+                cdn:'js/vendor/vditor/',
                 mode:'wysiwyg',
                 theme:'dark',
                 lang:'zh_CN',
