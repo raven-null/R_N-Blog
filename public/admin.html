@@ -1282,6 +1282,8 @@
         }
         // ===== Vditor 编辑器（所见即所得，轻量沉浸式） =====
         let vditorInstance=null;
+        let vditorReady=false;      // after 回调触发后为 true
+        let vditorPendingMd=null;   // 初始化完成前暂存待写入内容
         function ensureEditor(){
             if(vditorInstance)return vditorInstance;
             if(typeof Vditor==='undefined'){
@@ -1291,7 +1293,8 @@
             }
             vditorInstance=new Vditor('vditor',{
                 height:Math.max(400,document.querySelector('.content')?.offsetHeight-230||500),
-                cdn:'js/vendor/vditor/',
+                // 注意：不带尾部斜杠，Vditor 内部按 cdn + '/dist/...' 拼接
+                cdn:'js/vendor/vditor',
                 mode:'wysiwyg',
                 theme:'dark',
                 lang:'zh_CN',
@@ -1326,7 +1329,14 @@
                 },
                 cache:{enable:true},
                 after:()=>{
+                    vditorReady=true;
                     switchEditorTheme(currentEditorTheme);
+                    if(vditorPendingMd!==null){
+                        const md=vditorPendingMd;
+                        vditorPendingMd=null;
+                        vditorInstance.setValue(md);
+                        scanArticleImagesFromContent(md);
+                    }
                     updateEditorInfo();
                 }
             });
@@ -1336,8 +1346,11 @@
         function setEditorContent(md){
             const ed=ensureEditor();
             if(!ed)return;
-            ed.setValue(md||'');
-            scanArticleImagesFromContent(md||'');
+            md=md||'';
+            // 编辑器尚未初始化完成（懒加载 i18n/lute 中）时先暂存，after 后写入，避免 setValue 报错或内容丢失
+            if(!vditorReady){vditorPendingMd=md;return}
+            ed.setValue(md);
+            scanArticleImagesFromContent(md);
             updateEditorInfo();
         }
         function updateEditorInfo(){
