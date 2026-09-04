@@ -492,12 +492,16 @@
         .vditor-theme-green{--editor-bg:rgba(199,237,204,0.9);--editor-text:#1a3a1a;--editor-pre-bg:rgba(170,210,175,0.5)}
         .vditor-theme-blue{--editor-bg:rgba(220,232,245,0.9);--editor-text:#1a2a3a;--editor-pre-bg:rgba(190,205,225,0.5)}
 
-        .vditor-wrap{flex:1;min-height:60vh}
-        /* 长文在编辑区内滚动而不是溢出盒子（避免内容超高撑破容器导致页面被拉长） */
-        .vditor .vditor-wysiwyg pre.vditor-reset,
-        .vditor .vditor-ir pre.vditor-reset,
-        .vditor .vditor-sv pre.vditor-reset{overflow-y:auto}
-        .vditor .vditor-wysiwyg,.vditor .vditor-ir,.vditor .vditor-sv{overscroll-behavior:contain}
+        .vditor-wrap{flex:1;min-height:60vh;display:flex;flex-direction:column}
+        /* ===== 编辑器盒子：工具栏与正文上下一体，正文超高时隐藏溢出并在盒内滚动 ===== */
+        .vditor-wrap .vditor{overflow:hidden;height:calc(100vh - 352px);min-height:360px}
+        .vditor-wrap .vditor-content{overflow:hidden;min-height:0}
+        .vditor-wrap .vditor-wysiwyg,
+        .vditor-wrap .vditor-ir,
+        .vditor-wrap .vditor-sv{flex:1;min-width:1px;overflow-y:auto;overscroll-behavior:contain}
+        /* 隐藏大纲按钮（会切换成左侧大纲+右侧正文的左右分栏），保持工具栏+正文上下一体 */
+        .vditor-wrap .vditor-toolbar{padding-left:0!important}
+        .vditor-wrap .vditor-toolbar [data-type="outline"]{display:none!important}
         .vditor{border:1px solid var(--glass-border)!important;border-radius:var(--radius)!important;background:var(--editor-bg,rgba(26,26,26,0.8))!important;box-shadow:var(--glass-shadow)!important}
         .vditor-toolbar{
             background:var(--glass-bg)!important;
