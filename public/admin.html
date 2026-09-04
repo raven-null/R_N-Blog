@@ -493,6 +493,11 @@
         .vditor-theme-blue{--editor-bg:rgba(220,232,245,0.9);--editor-text:#1a2a3a;--editor-pre-bg:rgba(190,205,225,0.5)}
 
         .vditor-wrap{flex:1;min-height:60vh}
+        /* 长文在编辑区内滚动而不是溢出盒子（避免内容超高撑破容器导致页面被拉长） */
+        .vditor .vditor-wysiwyg pre.vditor-reset,
+        .vditor .vditor-ir pre.vditor-reset,
+        .vditor .vditor-sv pre.vditor-reset{overflow-y:auto}
+        .vditor .vditor-wysiwyg,.vditor .vditor-ir,.vditor .vditor-sv{overscroll-behavior:contain}
         .vditor{border:1px solid var(--glass-border)!important;border-radius:var(--radius)!important;background:var(--editor-bg,rgba(26,26,26,0.8))!important;box-shadow:var(--glass-shadow)!important}
         .vditor-toolbar{
             background:var(--glass-bg)!important;
@@ -1284,15 +1289,20 @@
         let vditorInstance=null;
         let vditorReady=false;      // after 回调触发后为 true
         let vditorPendingMd=null;   // 初始化完成前暂存待写入内容
+        let vditorResizeBound=false; // resize 自适应监听只绑定一次
         function ensureEditor(){
             if(vditorInstance)return vditorInstance;
+            const host=document.getElementById('vditor');
+            if(!host)return null;
             if(typeof Vditor==='undefined'){
-                const el=document.getElementById('vditor');
-                if(el)el.innerHTML='<div style="height:100%;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:13px">编辑器加载失败，请刷新页面重试</div>';
+                host.innerHTML='<div style="height:100%;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:13px">编辑器加载失败，请刷新页面重试</div>';
                 return null;
             }
+            // 防御：若此前某次初始化中断在 #vditor 内残留了编辑器 DOM，
+            // 先清空再重建，避免页面上出现两份编辑器 DOM 上下堆叠
+            if(host.querySelector('.vditor'))host.innerHTML='';
             vditorInstance=new Vditor('vditor',{
-                height:Math.max(400,document.querySelector('.content')?.offsetHeight-230||500),
+                height:Math.max(360,document.querySelector('.content')?.offsetHeight-300||500),
                 // 注意：不带尾部斜杠，Vditor 内部按 cdn + '/dist/...' 拼接
                 cdn:'js/vendor/vditor',
                 mode:'wysiwyg',
@@ -1331,6 +1341,15 @@
                 after:()=>{
                     vditorReady=true;
                     switchEditorTheme(currentEditorTheme);
+                    if(!vditorResizeBound){
+                        vditorResizeBound=true;
+                        // 窗口尺寸变化时同步编辑器高度，避免底部留白或超高溢出
+                        window.addEventListener('resize',()=>{
+                            const el=vditorInstance&&vditorInstance.element;
+                            if(!el||el.classList.contains('vditor--fullscreen'))return;
+                            el.style.height=Math.max(360,(document.querySelector('.content')?.offsetHeight||700)-300)+'px';
+                        });
+                    }
                     if(vditorPendingMd!==null){
                         const md=vditorPendingMd;
                         vditorPendingMd=null;
