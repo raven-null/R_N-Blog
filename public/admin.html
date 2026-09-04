@@ -155,53 +155,6 @@
         /* ===== 所见即所得编辑器（Toast UI，Obsidian 式） ===== */
         .editor-extras{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
         .editor-extras-hint{margin-left:auto;font-size:11px;color:var(--text-muted)}
-        /* 编辑器高度由 JS 按视口计算并传给 Toast UI（内部自带滚动），此处只做圆角容器 */
-        .editor-container{border-radius:var(--radius-sm);overflow:hidden}
-        /* 暗色主题与站点配色统一 */
-        .toastui-editor-dark.toastui-editor-defaultUI{border-color:var(--border)}
-        .toastui-editor-dark .toastui-editor-md-container,.toastui-editor-dark .toastui-editor-ww-container{background-color:var(--bg-input)}
-        .toastui-editor-dark .toastui-editor-defaultUI-toolbar{background-color:var(--bg-card);border-bottom-color:var(--border)}
-        .toastui-editor-dark .toastui-editor-toolbar-icons{border-color:var(--bg-card)}
-        .toastui-editor-dark .toastui-editor-toolbar-icons.active{background-color:var(--accent-dim);border-color:var(--accent)}
-        .toastui-editor-dark .toastui-editor-defaultUI-toolbar button:not(:disabled):hover{background-color:var(--bg-hover);border-color:var(--bg-hover)}
-        .toastui-editor-dark .toastui-editor-toolbar-divider{background-color:var(--border)}
-        .toastui-editor-dark .toastui-editor-mode-switch{background-color:var(--bg-card);border-color:var(--border)}
-        .toastui-editor-dark .toastui-editor-mode-switch .tab-item{color:var(--text-muted)}
-        .toastui-editor-dark .toastui-editor-mode-switch .tab-item.active{color:var(--accent)}
-        .toastui-editor .toastui-editor-contents{background:var(--bg-input);color:var(--text);font-size:14px;line-height:1.8;padding:14px}
-        .toastui-editor-contents h1,.toastui-editor-contents h2,.toastui-editor-contents h3{color:var(--accent);margin:18px 0 8px;font-weight:600}
-        .toastui-editor-contents h1{font-size:22px;border-bottom:1px solid var(--border);padding-bottom:6px}
-        .toastui-editor-contents h2{font-size:18px}.toastui-editor-contents h3{font-size:15px}
-        .toastui-editor-contents p{margin-bottom:10px}
-        .toastui-editor-contents code{background:var(--bg);color:var(--accent);padding:2px 5px;border-radius:3px;font-size:12px;font-family:'JetBrains Mono',monospace}
-        .toastui-editor-contents pre{background:var(--bg);padding:12px;border-radius:var(--radius-sm);overflow-x:auto;margin-bottom:12px;border:1px solid var(--border)}
-        .toastui-editor-contents pre code{padding:0;background:none;color:var(--text)}
-        .toastui-editor-contents blockquote{border-left:3px solid var(--accent);padding:6px 12px;color:var(--text-muted);margin-bottom:10px;background:var(--accent-dim);border-radius:0 var(--radius-sm) var(--radius-sm) 0}
-        .toastui-editor-contents ul,.toastui-editor-contents ol{padding-left:22px;margin-bottom:10px}
-        .toastui-editor-contents a{color:var(--accent)}
-        .toastui-editor-contents img{max-width:100%;border-radius:var(--radius-sm);margin:8px 0}
-        .toastui-editor-contents table{width:100%;border-collapse:collapse;margin-bottom:12px}
-        .toastui-editor-contents th,.toastui-editor-contents td{border:1px solid var(--border);padding:8px 10px;text-align:left}
-        .toastui-editor-contents th{background:var(--bg-input);font-weight:600;font-size:12px}
-        .toastui-editor-contents hr{border:none;border-top:1px solid var(--border);margin:16px 0}
-        /* 弹窗（插入链接/图片/表格）暗色 */
-        .toastui-editor-dark .toastui-editor-popup{background:var(--bg-card);border-color:var(--border);box-shadow:var(--shadow)}
-        .toastui-editor-dark .toastui-editor-popup input[type="text"]{background:var(--bg-input);border-color:var(--border);color:var(--text)}
-        .toastui-editor-dark .toastui-editor-popup input[type="text"]:focus{border-color:var(--accent);outline:none}
-        .toastui-editor-dark .toastui-editor-popup label{color:var(--text-muted)}
-        .toastui-editor-dark .toastui-editor-popup .toastui-editor-button{background:var(--bg-input);border-color:var(--border);color:var(--text)}
-        .toastui-editor-dark .toastui-editor-popup .toastui-editor-button:hover{background:var(--bg-hover);border-color:var(--accent);color:var(--accent)}
-        .toastui-editor-dark .toastui-editor-popup .toastui-editor-ok-button{background:var(--accent);border-color:var(--accent);color:#000;font-weight:600}
-        .toastui-editor-dark .toastui-editor-popup .toastui-editor-ok-button:hover{background:var(--accent);border-color:var(--accent);color:#000}
-        .toastui-editor-dark .toastui-editor-popup .toastui-editor-table-selection{background:var(--accent-dim)}
-        .toastui-editor-dark .toastui-editor-popup .toastui-editor-table-selection-layer{border-color:var(--accent)}
-        .toastui-editor-dark .toastui-editor-popup .toastui-editor-table-cell{background:var(--bg-hover);border-color:var(--border)}
-        .toastui-editor-dark .toastui-editor-tooltip{background:#1a1a1a;border:1px solid var(--border);color:var(--text)}
-        .toastui-editor-dark .toastui-editor-tooltip .arrow{background:#1a1a1a;border-color:var(--border)}
-        .editor-footer{display:flex;margin-top:12px;align-items:center;justify-content:space-between}
-        .editor-info{font-size:11px;color:var(--text-muted)}
-        .editor-footer-actions{display:flex;gap:8px}
-
         /* 图片管理 */
         .imgm-top{display:flex;gap:12px;margin-bottom:16px;align-items:center}
         .imgm-upload{padding:14px 20px;border:2px dashed var(--border);border-radius:var(--radius-sm);color:var(--text-muted);cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:10px;font-size:12px}
