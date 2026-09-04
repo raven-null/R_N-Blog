@@ -123,7 +123,13 @@ function NoteApp({ note, mode }: { note: string; mode: "edit" | "view" }) {
       const res = await apiFetch(`/api/excalidraw?id=${encodeURIComponent(note)}`)
       if (res.status === 404) {
         setNotFound(true)
-        if (!silent) setLoading(false)
+        if (!silent) {
+          setLoading(false)
+          // 编辑模式：给一块空画布直接画，保存时才创建
+          if (mode === "edit") {
+            setMsg("新笔记：直接开始画，点「保存」即创建（仅管理员可创建，请先登录 /admin.html）")
+          }
+        }
         return
       }
       const data = await res.json()
@@ -261,6 +267,7 @@ function NoteApp({ note, mode }: { note: string; mode: "edit" | "view" }) {
       }
       loadedRev.current = data.rev ?? loadedRev.current
       setMeta(m => (m ? { ...m, rev: data.rev ?? m.rev } : m))
+      if (data.created) setNotFound(false) // 创建成功：退出"新笔记"状态
       setMsg(`✅ 已保存 rev ${data.rev}（${new Date().toLocaleTimeString()}）`)
       return true
     } catch (e: any) {
@@ -368,14 +375,13 @@ function NoteApp({ note, mode }: { note: string; mode: "edit" | "view" }) {
   if (loading) {
     return <div style={{ ...placeholder, color: "#999" }}>加载中…</div>
   }
-  if (notFound) {
+  // 仅 view 模式对不存在的笔记显示占位；edit 模式继续渲染空画布（保存时创建）
+  if (notFound && mode === "view") {
     return (
       <div style={placeholder}>
         <div style={{ fontSize: 18, marginBottom: 8 }}>📄 白板不存在</div>
         <div style={{ color: "#999", fontSize: 13 }}>
-          {mode === "edit"
-            ? "新笔记将在你保存时创建（需管理员登录后台）。"
-            : "链接可能已失效，或笔记尚未创建。"}
+          链接可能已失效，或笔记尚未创建。
         </div>
       </div>
     )
