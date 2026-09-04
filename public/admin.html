@@ -8,11 +8,9 @@
     <!-- Markdown 渲染库 -->
     <script src="js/vendor/marked.min.js"></script>
     <script src="js/markdown.js"></script>
-    <!-- 所见即所得编辑器（Obsidian 式，无需手写 Markdown） -->
-    <link rel="stylesheet" href="js/vendor/toastui-editor.min.css">
-    <link rel="stylesheet" href="js/vendor/toastui-editor-dark.min.css">
-    <script src="js/vendor/toastui-editor.bundle.min.js"></script>
-    <script src="js/vendor/toastui-i18n-zh-cn.js"></script>
+    <!-- Vditor 编辑器（所见即所得，轻量沉浸式） -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vditor@3.10/dist/index.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/vditor@3.10/dist/index.min.js"></script>
     <style>
         *{margin:0;padding:0;box-sizing:border-box}
         :root{--bg:#080808;--bg-card:#111;--bg-input:#1a1a1a;--bg-hover:#1c1c1c;--bg-active:#1a2a3a;--text:#ddd;--text-muted:#777;--accent:#4fc3f7;--accent-dim:rgba(79,195,247,.1);--border:#252525;--border-light:#333;--danger:#ef5350;--success:#66bb6a;--warning:#ffa726;--radius:10px;--radius-sm:6px;--shadow:0 8px 32px rgba(0,0,0,.5);--sidebar-w:220px;--sidebar-collapsed:52px}
@@ -497,6 +495,42 @@
             .editor-footer-actions{flex-wrap:wrap}
             .page-bar h2{font-size:16px}
         }
+
+        /* ===== 写文章极简模式 ===== */
+        .write-toolbar{display:flex;justify-content:space-between;align-items:center;padding:12px 0;margin-bottom:12px;border-bottom:1px solid var(--border)}
+        .write-toolbar-right{display:flex;gap:8px;align-items:center}
+        .write-title-input{width:100%;padding:16px 0;background:transparent;border:none;color:var(--text);font-size:28px;font-weight:700;outline:none;margin-bottom:16px}
+        .write-title-input::placeholder{color:#555;font-weight:400}
+        .vditor-wrap{flex:1;min-height:60vh}
+        .write-footer{display:flex;justify-content:space-between;align-items:center;padding:12px 0;margin-top:12px;border-top:1px solid var(--border)}
+        .write-word-count{font-size:12px;color:var(--text-muted)}
+        .write-save-hint{font-size:12px;color:var(--success)}
+
+        /* Vditor 暗色主题适配 */
+        .vditor{border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-input)}
+        .vditor--dark{--panel-background-color:var(--bg-card);--textarea-background-color:var(--bg-input)}
+        .vditor-toolbar{background-color:var(--bg-card)!important;border-bottom-color:var(--border)!important}
+        .vditor-toolbar__item--current{color:var(--accent)!important}
+        .vditor-toolbar__item:hover{color:var(--accent)!important}
+        .vditor-content{background-color:var(--bg-input)!important}
+        .vditor-ir,.vditor-wysiwyg,.vditor-sv{color:var(--text)!important}
+        .vditor-ir pre,.vditor-wysiwyg pre,.vditor-sv pre{background:var(--bg)!important}
+
+        /* ===== 发布弹窗 ===== */
+        .publish-modal{display:none;position:fixed;inset:0;z-index:1000}
+        .publish-modal.open{display:flex;align-items:center;justify-content:center}
+        .publish-modal-overlay{position:absolute;inset:0;background:rgba(0,0,0,.6)}
+        .publish-modal-box{position:relative;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;width:480px;max-width:90vw;max-height:85vh;overflow-y:auto;box-shadow:var(--shadow)}
+        .publish-modal-box h3{font-size:18px;color:var(--accent);margin-bottom:20px;font-weight:600}
+        .publish-modal-body{display:flex;flex-direction:column;gap:16px}
+        .publish-field label{display:block;font-size:13px;color:var(--text-muted);margin-bottom:8px;font-weight:500}
+        .publish-field select,.publish-field textarea{width:100%;padding:10px 14px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:13px;font-family:inherit;resize:vertical}
+        .publish-field select:focus,.publish-field textarea:focus{outline:none;border-color:var(--accent)}
+        .publish-cover-area{display:flex;gap:16px;align-items:flex-start}
+        .publish-cover-preview{width:120px;height:68px;border-radius:var(--radius-sm);border:1px dashed var(--border);display:flex;align-items:center;justify-content:center;overflow:hidden;background:var(--bg-input);color:var(--text-muted);font-size:12px;flex-shrink:0}
+        .publish-cover-preview img{width:100%;height:100%;object-fit:cover}
+        .publish-cover-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+        .publish-modal-footer{display:flex;justify-content:flex-end;gap:12px;margin-top:24px;padding-top:16px;border-top:1px solid var(--border)}
     </style>
     <link rel="stylesheet" href="css/glass.css?v=1.0.4">
 </head>
@@ -545,66 +579,25 @@
                     </div>
                 </div>
 
-                <!-- 写文章 -->
+                <!-- 写文章（极简沉浸式） -->
                 <div id="tab-write" style="display:none">
-                    <div class="page-bar">
-                        <h2 id="writeTitle">写文章</h2>
-                        <div class="page-bar-actions">
-                            <button class="btn btn-ghost" onclick="exportMarkdown()">💾 导出 MD</button>
+                    <!-- 顶部工具栏 -->
+                    <div class="write-toolbar">
+                        <button class="btn btn-ghost" onclick="switchTab('articles')">← 返回</button>
+                        <div class="write-toolbar-right">
                             <label class="btn btn-ghost" style="cursor:pointer">📄 导入<input type="file" accept=".md,.markdown" onchange="importAndEdit(this.files[0])" style="display:none"></label>
+                            <button class="btn btn-ghost" onclick="exportMarkdown()">💾 导出 MD</button>
+                            <button class="btn btn-primary" onclick="openPublishModal()">发布 ▾</button>
                         </div>
                     </div>
-                    <!-- 文章设置区 -->
-                    <div class="write-settings">
-                        <input type="text" id="edTitle" class="write-title-input" placeholder="请输入文章标题 *" maxlength="100" autocomplete="off">
-                        <div class="write-settings-row">
-                            <input type="text" id="edExcerpt" placeholder="文章摘要（选填，不填自动提取正文前150字）" maxlength="200" autocomplete="off">
-                            <div class="tag-picker-wrap" style="flex:1;min-width:200px">
-                                <div class="tag-picker-input" id="tagPickerInput" onclick="focusTagPicker()">
-                                    <input type="text" id="tagPickerText" placeholder="添加标签，回车确认..." oninput="filterTagDropdown()" onkeydown="tagPickerKeydown(event)" onfocus="openTagDropdown()" autocomplete="off">
-                                </div>
-                                <div class="tag-picker-dropdown" id="tagPickerDropdown"></div>
-                            </div>
-                            <select id="edStatus" title="发布状态">
-                                <option value="published">✅ 发布</option>
-                                <option value="draft">📝 草稿</option>
-                            </select>
-                        </div>
-                        <!-- 封面图 + 文中图片 -->
-                        <div class="write-cover">
-                            <div class="write-cover-preview" id="coverPreview">
-                                <img id="coverPreviewImg" alt="封面预览" style="display:none">
-                                <span id="coverPlaceholder">📷 封面图</span>
-                            </div>
-                            <div class="write-cover-actions">
-                                <label class="btn btn-ghost btn-sm cover-btn" style="cursor:pointer">⬆ 上传封面<input type="file" accept="image/*" style="display:none" onchange="setCoverImage(this.files[0])"></label>
-                                <button class="btn btn-ghost btn-sm cover-btn" onclick="pickCoverFromGallery()">🖼 从图库选</button>
-                                <button class="btn btn-ghost btn-sm cover-btn" onclick="clearCoverImage()" id="coverClearBtn" style="display:none">✕ 移除封面</button>
-                                <input type="hidden" id="edImage" value="">
-                            </div>
-                            <div class="write-article-images">
-                                <div class="write-article-images-title">📎 文中图片 <span id="articleImgCount">0</span></div>
-                                <div class="write-article-images-list" id="articleImagesList">
-                                    <span class="write-article-images-empty">暂无图片，上传或从图库插入后显示</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- 编辑器附加操作 -->
-                    <div class="editor-extras">
-                        <button class="btn btn-ghost" onclick="openImagePicker()" title="从图库插入图片">🖼 图库</button>
-                        <label class="btn btn-ghost" style="cursor:pointer" title="上传图片">⬆ 上传图片<input type="file" accept="image/*" multiple style="display:none" onchange="uploadAndInsertToEditor(this.files);this.value=''"></label>
-                        <div class="upload-progress" id="uploadProgress"><div class="spinner"></div><span id="uploadProgressText">上传中...</span></div>
-                        <span class="editor-extras-hint">选中文字后点击编辑器上方按钮即可排版，所见即所得，无需手写 Markdown</span>
-                    </div>
-                    <!-- 所见即所得编辑器（Obsidian 式） -->
-                    <div class="editor-container" id="editorContainer"></div>
-                    <div class="editor-footer">
-                        <span class="editor-info" id="editorInfo">0 字</span>
-                        <div class="editor-footer-actions">
-                            <button class="btn btn-ghost" onclick="resetEditor()">清空</button>
-                            <button class="btn btn-primary" onclick="saveArticle()">💾 保存文章</button>
-                        </div>
+                    <!-- 标题输入 -->
+                    <input type="text" id="edTitle" class="write-title-input" placeholder="输入文章标题..." maxlength="100" autocomplete="off">
+                    <!-- Vditor 编辑器 -->
+                    <div id="vditor" class="vditor-wrap"></div>
+                    <!-- 底部信息栏 -->
+                    <div class="write-footer">
+                        <span class="write-word-count" id="editorInfo">0 字</span>
+                        <span class="write-save-hint" id="saveHint"></span>
                     </div>
                 </div>
 
@@ -934,6 +927,55 @@
         </div>
     </div>
 
+    <!-- 发布弹窗 -->
+    <div class="publish-modal" id="publishModal">
+        <div class="publish-modal-overlay" onclick="closePublishModal()"></div>
+        <div class="publish-modal-box">
+            <h3>发布文章</h3>
+            <div class="publish-modal-body">
+                <div class="publish-field">
+                    <label>状态</label>
+                    <select id="edStatus">
+                        <option value="published">✅ 发布</option>
+                        <option value="draft">📝 草稿</option>
+                    </select>
+                </div>
+                <div class="publish-field">
+                    <label>标签</label>
+                    <div class="tag-picker-wrap">
+                        <div class="tag-picker-input" id="tagPickerInput" onclick="focusTagPicker()">
+                            <input type="text" id="tagPickerText" placeholder="添加标签，回车确认..." oninput="filterTagDropdown()" onkeydown="tagPickerKeydown(event)" onfocus="openTagDropdown()" autocomplete="off">
+                        </div>
+                        <div class="tag-picker-dropdown" id="tagPickerDropdown"></div>
+                    </div>
+                </div>
+                <div class="publish-field">
+                    <label>摘要（选填，不填自动提取正文前150字）</label>
+                    <textarea id="edExcerpt" placeholder="输入文章摘要..." maxlength="200" rows="3"></textarea>
+                </div>
+                <div class="publish-field">
+                    <label>封面图</label>
+                    <div class="publish-cover-area">
+                        <div class="publish-cover-preview" id="coverPreview">
+                            <img id="coverPreviewImg" alt="封面预览" style="display:none">
+                            <span id="coverPlaceholder">📷 封面图</span>
+                        </div>
+                        <div class="publish-cover-actions">
+                            <label class="btn btn-ghost btn-sm" style="cursor:pointer">⬆ 上传<input type="file" accept="image/*" style="display:none" onchange="setCoverImage(this.files[0])"></label>
+                            <button class="btn btn-ghost btn-sm" onclick="pickCoverFromGallery()">🖼 从图库选</button>
+                            <button class="btn btn-ghost btn-sm" onclick="clearCoverImage()" id="coverClearBtn" style="display:none">✕ 移除</button>
+                            <input type="hidden" id="edImage" value="">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="publish-modal-footer">
+                <button class="btn btn-ghost" onclick="closePublishModal()">取消</button>
+                <button class="btn btn-primary" onclick="saveArticle()">确认发布</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let adminKey=localStorage.getItem('admin_key')||'';
         let articles=[],editingId=null,cachedImages=[];
@@ -1084,13 +1126,74 @@
             try{const bc=new BroadcastChannel('blog-articles');bc.postMessage({type:'articles-changed'});bc.close()}catch(e){}
         }
         async function deleteArticle(id,title){const confirmed=await showConfirm(`确定删除「${title}」？删除后不可恢复！`,'删除文章','删除');if(!confirmed)return;const r=await apiFetch(`action=articles&id=${id}`,{method:'DELETE'});if(r.status==='success'){showToast('已删除','success');loadArticles();notifyArticlesChanged()}else showToast(r.message||'删除失败','error')}
-        function editArticle(id){editingId=id;switchTab('write');document.getElementById('writeTitle').textContent='编辑文章';loadArticleForEdit(id)}
-        async function loadArticleForEdit(id){const r=await apiFetch(`action=articles&id=${id}`);if(r.status==='success'){const d=r.data;document.getElementById('edTitle').value=d.title||'';document.getElementById('edExcerpt').value=d.excerpt||'';document.getElementById('edImage').value=d.image||'';renderCoverPreview();selectedArticleTags=[...(d.tags||[])];renderTagPickerChips();document.getElementById('edStatus').value=d.status||'published';setEditorContent(d.content||'')}}
-        function importAndEdit(f){if(!f)return;const r=new FileReader();r.onload=()=>{const raw=r.result,m=raw.match(/^---\s*\n([\s\S]*?)\n---\s*\n([\s\S]*)$/);let title=f.name.replace(/\.md$/),excerpt='',tags=[],content=raw,image='';if(m){const fm=m[1],t=fm.match(/title:\s*(.+)/);if(t)title=t[1].trim();const tg=fm.match(/tags:\s*\[([^\]]+)\]/);if(tg)tags=tg[1].split(',').map(s=>s.trim());const ex=fm.match(/excerpt:\s*(.+)/);if(ex)excerpt=ex[1].trim();const im=fm.match(/image:\s*(.+)/);if(im)image=im[1].trim();content=m[2]}editingId=null;switchTab('write');document.getElementById('writeTitle').textContent='导入文章';document.getElementById('edTitle').value=title;document.getElementById('edExcerpt').value=excerpt;document.getElementById('edImage').value=image;renderCoverPreview();selectedArticleTags=tags;renderTagPickerChips();setEditorContent(content);showToast(`已导入: ${f.name}`,'success')};r.readAsText(f)}
+        function editArticle(id){editingId=id;switchTab('write');loadArticleForEdit(id)}
+        async function loadArticleForEdit(id){
+            const r=await apiFetch(`action=articles&id=${id}`);
+            if(r.status==='success'){
+                const d=r.data;
+                document.getElementById('edTitle').value=d.title||'';
+                document.getElementById('edExcerpt').value=d.excerpt||'';
+                document.getElementById('edImage').value=d.image||'';
+                renderCoverPreview();
+                selectedArticleTags=[...(d.tags||[])];
+                renderTagPickerChips();
+                document.getElementById('edStatus').value=d.status||'published';
+                setEditorContent(d.content||'');
+            }
+        }
+        function importAndEdit(f){
+            if(!f)return;
+            const r=new FileReader();
+            r.onload=()=>{
+                const raw=r.result,m=raw.match(/^---\s*\n([\s\S]*?)\n---\s*\n([\s\S]*)$/);
+                let title=f.name.replace(/\.md$/),excerpt='',tags=[],content=raw,image='';
+                if(m){
+                    const fm=m[1],t=fm.match(/title:\s*(.+)/);
+                    if(t)title=t[1].trim();
+                    const tg=fm.match(/tags:\s*\[([^\]]+)\]/);
+                    if(tg)tags=tg[1].split(',').map(s=>s.trim());
+                    const ex=fm.match(/excerpt:\s*(.+)/);
+                    if(ex)excerpt=ex[1].trim();
+                    const im=fm.match(/image:\s*(.+)/);
+                    if(im)image=im[1].trim();
+                    content=m[2];
+                }
+                editingId=null;
+                switchTab('write');
+                document.getElementById('edTitle').value=title;
+                document.getElementById('edExcerpt').value=excerpt;
+                document.getElementById('edImage').value=image;
+                renderCoverPreview();
+                selectedArticleTags=tags;
+                renderTagPickerChips();
+                setEditorContent(content);
+                showToast(`已导入: ${f.name}`,'success');
+            };
+            r.readAsText(f);
+        }
 
         // ===== 写文章 =====
-        function resetEditor(){editingId=null;document.getElementById('writeTitle').textContent='写文章';document.getElementById('edTitle').value='';document.getElementById('edExcerpt').value='';document.getElementById('edImage').value='';renderCoverPreview();selectedArticleTags=[];renderTagPickerChips();document.getElementById('edStatus').value='published';setEditorContent('')}
-        async function saveArticle(){const title=document.getElementById('edTitle').value.trim(),excerpt=document.getElementById('edExcerpt').value.trim(),tags=selectedArticleTags.join(', '),status=document.getElementById('edStatus').value,content=getEditorContent();let image=document.getElementById('edImage').value.trim();if(!title){showToast('请填写文章标题','error');return}if(!content){showToast('请填写文章内容','error');return}
+        function resetEditor(){
+            editingId=null;
+            document.getElementById('edTitle').value='';
+            document.getElementById('edExcerpt').value='';
+            document.getElementById('edImage').value='';
+            renderCoverPreview();
+            selectedArticleTags=[];
+            renderTagPickerChips();
+            document.getElementById('edStatus').value='published';
+            setEditorContent('');
+            closePublishModal();
+        }
+        async function saveArticle(){
+            const title=document.getElementById('edTitle').value.trim();
+            const excerpt=document.getElementById('edExcerpt').value.trim();
+            const tags=selectedArticleTags.join(', ');
+            const status=document.getElementById('edStatus').value;
+            const content=getEditorContent();
+            let image=document.getElementById('edImage').value.trim();
+            if(!title){showToast('请填写文章标题','error');return}
+            if(!content){showToast('请填写文章内容','error');return}
             // 未设置封面图时：图库有图则随机选一张，图库空则报错
             if(!image){
                 const galleryRes=await apiFetch('action=images');
@@ -1103,57 +1206,101 @@
                     showToast(`已自动从图库选择封面: ${picked.key}`,'success');
                 }else{
                     showConfirm('图库中没有图片，无法自动选择封面。请先上传一张封面图或先在图片管理中上传图片。','缺少封面图','知道了');
-                    switchTab('write');
                     return;
                 }
             }
-            const body={title,excerpt,tags,content,status,image};if(editingId)body.id=editingId;const r=await apiFetch('action=articles',{method:'POST',body:JSON.stringify(body)});if(r.status==='success'){showToast('保存成功','success');resetEditor();switchTab('articles');notifyArticlesChanged()}else showToast(r.message||'保存失败','error')}
-        // ===== 所见即所得编辑器（Toast UI，Obsidian 式） =====
-        let toastEditor=null;
+            const body={title,excerpt,tags,content,status,image};
+            if(editingId)body.id=editingId;
+            const r=await apiFetch('action=articles',{method:'POST',body:JSON.stringify(body)});
+            if(r.status==='success'){
+                showToast('保存成功','success');
+                resetEditor();
+                switchTab('articles');
+                notifyArticlesChanged();
+            }else{
+                showToast(r.message||'保存失败','error');
+            }
+        }
+        // ===== Vditor 编辑器（所见即所得，轻量沉浸式） =====
+        let vditorInstance=null;
         function ensureEditor(){
-            if(toastEditor)return toastEditor;
-            if(typeof toastui==='undefined'||!toastui.Editor){
-                const el=document.getElementById('editorContainer');
-                if(el)el.innerHTML='<div class="preview-empty" style="height:100%;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:13px">编辑器加载失败，请刷新页面重试</div>';
+            if(vditorInstance)return vditorInstance;
+            if(typeof Vditor==='undefined'){
+                const el=document.getElementById('vditor');
+                if(el)el.innerHTML='<div style="height:100%;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:13px">编辑器加载失败，请刷新页面重试</div>';
                 return null;
             }
-            const computeEditorHeight=()=>'50vh';
-            toastEditor=new toastui.Editor({
-                el:document.getElementById('editorContainer'),
-                height:computeEditorHeight(),
-                minHeight:'280px',
-                initialEditType:'wysiwyg',
-                previewStyle:'vertical',
+            vditorInstance=new Vditor('vditor',{
+                height:document.querySelector('.content')?.offsetHeight-180||500,
+                mode:'wysiwyg',
                 theme:'dark',
-                language:'zh-CN',
-                placeholder:'开始写作吧……选中文字后点击上方按钮即可排版，拖拽或粘贴图片会自动上传，无需手写 Markdown',
-                toolbarItems:[
-                    ['heading','bold','italic','strike'],
-                    ['hr','quote'],
-                    ['ul','ol','task'],
-                    ['table','link','image','code','codeblock']
+                lang:'zh_CN',
+                placeholder:'开始写作吧……支持 Markdown 语法，拖拽或粘贴图片会自动上传',
+                toolbar:[
+                    'emoji','headings','bold','italic','strike','link',
+                    '|','list','ordered-list','check','outdent','indent',
+                    '|','quote','line','code','inline-code','table',
+                    '|','upload','edit-mode','fullscreen',
+                    '|','undo','redo','more'
                 ],
-                hooks:{
-                    addImageBlobHook:async(blob,callback)=>{
-                        const url=await uploadArticleImageAndGetUrl(blob);
-                        if(url){callback(url,blob.name||'图片');trackArticleImage(url)}
-                        else showToast('图片上传失败','error');
+                upload:{
+                    url:'/api/article-image',
+                    fieldName:'file',
+                    max:10*1024*1024,
+                    accept:'image/*',
+                    format:(files,responseText)=>{
+                        const resp=JSON.parse(responseText);
+                        if(resp.status==='success'&&resp.data){
+                            return JSON.stringify({
+                                msg:'',
+                                code:0,
+                                data:{src:[resp.data.url],alt:[files[0]?.name||'图片']}
+                            });
+                        }
+                        return JSON.stringify({msg:'上传失败',code:1,data:{src:[]}});
+                    },
+                    success:(editor,msg)=>{
+                        const resp=JSON.parse(msg);
+                        if(resp.data?.src?.[0])trackArticleImage(resp.data.src[0]);
                     }
+                },
+                cache:{enable:true},
+                after:()=>{
+                    updateEditorInfo();
                 }
             });
-            // 视口变化时同步编辑器高度，保证内部滚动可用
-            window.addEventListener('resize',()=>{
-                if(toastEditor)toastEditor.setHeight(computeEditorHeight());
-            });
-            toastEditor.on('change',updateEditorInfo);
-            updateEditorInfo();
-            return toastEditor;
+            return vditorInstance;
         }
-        function getEditorContent(){const ed=ensureEditor();return ed?ed.getMarkdown():''}
-        function setEditorContent(md){const ed=ensureEditor();if(!ed)return;ed.setMarkdown(md||'');scanArticleImagesFromContent(md||'');updateEditorInfo()}
-        function updateEditorInfo(){const el=document.getElementById('editorInfo');if(el&&toastEditor)el.textContent=toastEditor.getMarkdown().length+' 字'}
-        // 向编辑器光标处插入内容（图片插入/导入共用）
-        function insertAtCursor(t){const ed=ensureEditor();if(!ed)return;ed.insertText(t);updateEditorInfo()}
+        function getEditorContent(){const ed=ensureEditor();return ed?ed.getValue():''}
+        function setEditorContent(md){
+            const ed=ensureEditor();
+            if(!ed)return;
+            ed.setValue(md||'');
+            scanArticleImagesFromContent(md||'');
+            updateEditorInfo();
+        }
+        function updateEditorInfo(){
+            const el=document.getElementById('editorInfo');
+            if(el&&vditorInstance){
+                const val=vditorInstance.getValue()||'';
+                el.textContent=val.length+' 字';
+            }
+        }
+        function insertAtCursor(t){
+            const ed=ensureEditor();
+            if(!ed)return;
+            ed.insertValue(t);
+            updateEditorInfo();
+        }
+
+        // ===== 发布弹窗 =====
+        function openPublishModal(){
+            document.getElementById('publishModal').classList.add('open');
+            loadArticleTagNames();
+        }
+        function closePublishModal(){
+            document.getElementById('publishModal').classList.remove('open');
+        }
 
         // ===== 图片上传 =====
         // tags 参数：可选的初始标签
