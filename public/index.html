@@ -720,6 +720,57 @@
     <!-- 不蒜子统计 -->
     <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
 
+    <!-- 卡片笔记弹窗（内联样式，不依赖外部 css 缓存） -->
+    <style>
+        #noteViewerMask {
+            position: fixed; inset: 0; z-index: 200;
+            display: flex; align-items: center; justify-content: center; padding: 20px;
+            background: rgba(5, 5, 9, 0.55);
+            backdrop-filter: blur(12px) saturate(150%); -webkit-backdrop-filter: blur(12px) saturate(150%);
+            opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+        }
+        #noteViewerMask.show { opacity: 1; pointer-events: auto; }
+        #noteViewer {
+            width: min(560px, 94vw); max-height: 82vh; overflow-y: auto;
+            padding: 26px 30px; border-radius: 26px; box-sizing: border-box;
+            transform: scale(0.94) translateY(12px); transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+            background: linear-gradient(145deg, rgba(34, 34, 42, 0.97), rgba(20, 20, 26, 0.95));
+            backdrop-filter: blur(32px) saturate(190%); -webkit-backdrop-filter: blur(32px) saturate(190%);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            box-shadow: 0 40px 110px -24px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+            color: #eceef4; font-size: 15px;
+        }
+        #noteViewerMask.show #noteViewer { transform: none; }
+        #noteViewer .nv-loading { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 60px 0; color: rgba(255, 255, 255, 0.5); font-size: 13px; }
+        #noteViewer .nv-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+        #noteViewer .nv-title { font-size: 18px; font-weight: 700; color: #fff; }
+        #noteViewer .nv-close {
+            cursor: pointer; color: rgba(255, 255, 255, 0.5); background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 999px; padding: 5px 10px;
+            display: inline-flex; align-items: center;
+        }
+        #noteViewer .nv-close:hover { color: #fff; border-color: rgba(255, 255, 255, 0.3); }
+        #noteViewer .nv-body { font-size: 15px; line-height: 2; color: #eceef4; white-space: pre-wrap; word-break: break-word; }
+        #noteViewer .nv-body code { background: rgba(255, 255, 255, 0.12); padding: 1px 7px; border-radius: 7px; font-size: 13px; }
+        #noteViewer .nv-body a { color: #8ab4ff; }
+        #noteViewer .nv-foot {
+            display: flex; align-items: center; gap: 8px; margin-top: 22px; padding-top: 16px;
+            border-top: 1px solid rgba(255, 255, 255, 0.09); flex-wrap: wrap;
+            font-size: 12px; color: rgba(255, 255, 255, 0.5);
+        }
+        #noteViewer .nv-foot .t { padding: 2px 11px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, 0.16); color: #bcd0ff; }
+        #noteViewer .nv-foot .nv-date { margin-right: auto; }
+        #noteViewer .nv-copy {
+            cursor: pointer; color: rgba(255, 255, 255, 0.65); background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 999px;
+            padding: 4px 14px; font-size: 12px; font-family: inherit;
+        }
+        #noteViewer .nv-copy:hover { color: #fff; border-color: rgba(255, 255, 255, 0.32); }
+        #noteViewer .nv-err { padding: 40px 0; text-align: center; color: rgba(255, 255, 255, 0.5); }
+        @media (prefers-reduced-motion: reduce) { #noteViewer { transition: none; } }
+    </style>
+
     <!-- 卡片笔记查看浮层（液态玻璃） -->
     <div class="note-viewer-mask" id="noteViewerMask">
         <div class="note-viewer" id="noteViewer"></div>
