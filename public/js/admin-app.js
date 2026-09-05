@@ -160,6 +160,19 @@
                 });
             }
         }
+        // 单篇发布 / 下架（卡片按钮调用）
+        async function toggleArticleStatus(id,status){
+            const action=status==='published'?'发布':'下架';
+            const article=allArticles.find(function(a){return a.id===id});
+            if(!article)return;
+            const confirmed=await showConfirm('确定'+action+'「'+(article.title||id)+'」？',action+'文章',action);
+            if(!confirmed)return;
+            try{
+                const r=await apiFetch('action=articles',{method:'PATCH',body:JSON.stringify({id,status})});
+                if(r.status==='success'){showToast(r.message||(action+'成功'),'success');loadArticles();notifyArticlesChanged()}
+                else showToast(r.message||(action+'失败'),'error');
+            }catch(e){showToast(action+'失败','error')}
+        }
         // 排序模式
         function toggleArtSort(force){
             artSort=force===undefined?!artSort:!!force;
