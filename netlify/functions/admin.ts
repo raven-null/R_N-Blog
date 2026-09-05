@@ -245,17 +245,28 @@ export default async (req: Request) => {
       return json(200, { status: "success", message: "已删除" }, req)
     }
 
-    // PATCH: 修改文章状态（发布 / 下架）
+    // PATCH: 修改文章（status 发布/下架；tags 改标签，可选同传）
     if (req.method === "PATCH") {
       const body = await req.json().catch(() => ({}))
-      const { id, status } = body
+      const { id, status, tags } = body
       if (!id) return badRequest("id 必填", req)
-      if (status !== "published" && status !== "draft") return badRequest("status 必须是 published 或 draft", req)
+      if (status !== undefined && status !== "published" && status !== "draft") return badRequest("status 必须是 published 或 draft", req)
+      if (tags !== undefined && !Array.isArray(tags)) return badRequest("tags 必须是数组", req)
 
       const raw = await store.get(id, { type: "text" })
       if (!raw) return json(404, { status: "error", message: "文章不存在" }, req)
       const article = JSON.parse(raw)
-      article.status = status
+
+      // 固定标签约束：卡片（随记）强制包含「随记」
+      const FIXED_CARD_TAG = "随记"
+      let nextTags: string[] | null = null
+      if (tags !== undefined) {
+        const clean = tags.map((t: unknown) => String(t).trim()).filter(Boolean)
+        if (article.type === "card" && !clean.includes(FIXED_CARD_TAG)) clean.unshift(FIXED_CARD_TAG)
+        article.tags = clean
+        nextTags = clean
+      }
+      if (status !== undefined) article.status = status
       article.updatedAt = new Date().toISOString().slice(0, 10)
       await store.set(id, JSON.stringify(article))
 
@@ -263,14 +274,35 @@ export default async (req: Request) => {
       const index = await getArticleIndexStrong(store)
       const idx = index.findIndex(a => a.id === id)
       if (idx >= 0) {
-        index[idx].status = status
-        const meta = index[idx]
-        index.splice(idx, 1)
-        index.unshift(meta)
+        if (status !== undefined) {
+          index[idx].status = status
+          const meta = index[idx]
+          index.splice(idx, 1)
+          index.unshift(meta)
+        } else if (nextTags) {
+          index[idx].tags = nextTags
+          await saveArticleIndex(store, index)
+        }
       }
-      await saveArticleIndex(store, index)
+      if (status !== undefined) await saveArticleIndex(store, index)
 
-      return json(200, { status: "success", message: status === "published" ? "已发布" : "已下架为草稿" }, req)
+      // 标签注册表同步
+      if (nextTags) {
+        try {
+          const registryStore = getBlobStore("blog-tag-registry")
+          const rawReg = await registryStore.get("index", { type: "text" })
+          const reg = rawReg ? JSON.parse(rawReg) : { article: [], image: [] }
+          for (const t of nextTags) {
+            if (!reg.article.includes(t)) reg.article.push(t)
+          }
+          await registryStore.set("index", JSON.stringify(reg))
+        } catch { /* 注册表失败不影响主流程 */ }
+      }
+
+      return json(200, {
+        status: "success",
+        message: status ? (status === "published" ? "已发布" : "已下架为草稿") : "标签已更新",
+      }, req)
     }
   }
 

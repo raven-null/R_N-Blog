@@ -125,6 +125,13 @@ check("12) 创建 type=card", r.status === 200 && r.data?.status === "success" &
 const cardId = r.data?.data?.id || ""
 r = await call(adminFn, "GET", `/api/admin?action=articles&id=${cardId}`)
 check("13) card 类型与内容正确", r.data?.data?.type === "card" && String(r.data?.data?.content || "").includes("卡片"), JSON.stringify({ type: r.data?.data?.type }))
+
+// PATCH tags：card 强制附带「随记」
+r = await call(adminFn, "PATCH", `/api/admin?action=articles`, { id: cardId, tags: ["生活", "测试"] }, true)
+check("13a) PATCH tags 成功", r.status === 200 && r.data?.status === "success", JSON.stringify(r.data))
+r = await call(adminFn, "GET", `/api/admin?action=articles&id=${cardId}`)
+const tagsAfter = (r.data?.data?.tags || []) as string[]
+check("13b) card 标签强制含「随记」且保留新标签", tagsAfter.includes("随记") && tagsAfter.includes("生活") && !tagsAfter.includes("测试") === false, JSON.stringify(tagsAfter))
 r = await call(adminFn, "GET", `/api/admin?action=articles`)
 check("14) 列表含 card 条目", Array.isArray(r.data?.data) && r.data.data.some((a: any) => a.id === cardId && a.type === "card"), "")
 r = await call(adminFn, "GET", `/api/admin?action=articles&filter=card&withContent=1`)

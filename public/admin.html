@@ -626,20 +626,117 @@
                 </div>
             </div>
             <div class="content">
-                <!-- 文章列表 -->
+                <!-- 文章管理（卡片工作台） -->
                 <div id="tab-articles">
-                    <div class="page-bar"><h2>文章管理</h2><div class="page-bar-actions"><label class="btn btn-ghost" style="cursor:pointer">导入 .md<input type="file" accept=".md,.markdown" onchange="importAndEdit(this.files[0])" style="display:none"></label></div></div>
-                    <div class="article-search-box">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-                        <input type="text" id="articleSearchInput" placeholder="搜索文章标题、标签..." oninput="filterArticles()">
-                        <button class="article-search-clear" onclick="clearArticleSearch()" title="清空" style="display:none">&times;</button>
+                    <style>
+                        .art-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:0 20px 12px}
+                        .art-seg{display:flex;gap:4px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:999px;padding:3px}
+                        .art-chip{border:none;background:transparent;color:var(--text-muted);font-size:12.5px;padding:4px 13px;border-radius:999px;cursor:pointer;font-family:inherit;transition:background .2s,color .2s}
+                        .art-chip:hover{color:var(--text-secondary)}
+                        .art-chip.active{background:linear-gradient(180deg,#fff,#d9d9e3);color:#0b0b10;font-weight:600}
+                        .art-chip .cnt{opacity:.55;font-size:11px;margin-left:4px}
+                        .art-search{display:flex;align-items:center;gap:6px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:999px;padding:5px 13px;flex:1;min-width:180px;max-width:320px}
+                        .art-search svg{width:13px;height:13px;color:var(--text-muted);flex:none}
+                        .art-search input{flex:1;border:none;outline:none;background:transparent;color:var(--text-primary);font-size:13px;font-family:inherit}
+                        .art-search input::placeholder{color:var(--text-muted)}
+                        .art-search .clear{border:none;background:none;color:var(--text-muted);cursor:pointer;font-size:14px;display:none;padding:0 2px}
+                        .art-tools{margin-left:auto;display:flex;gap:6px}
+                        /* 网格 */
+                        .art-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(292px,1fr));gap:14px;padding:0 20px 24px}
+                        .art-card{position:relative;display:flex;flex-direction:column;overflow:hidden;cursor:pointer;background:var(--bg-card);border:1px solid var(--border);border-radius:16px;transition:transform .3s cubic-bezier(.16,1,.3,1),border-color .25s,box-shadow .25s,opacity .3s;opacity:0;transform:translateY(10px)}
+                        .art-card.visible{opacity:1;transform:none}
+                        .art-card:hover{border-color:var(--border-light);transform:translateY(-3px);box-shadow:0 14px 34px -18px var(--shadow)}
+                        .art-card .ac-cover{height:88px;background-size:cover;background-position:center;position:relative;flex:none}
+                        .art-card.noimg .ac-cover{display:flex;align-items:center;justify-content:center}
+                        .ac-cover .ac-ph{font-size:26px;font-weight:800;letter-spacing:2px;opacity:.25}
+                        .ac-cover .ac-badge{position:absolute;left:8px;bottom:8px;font-size:10.5px;padding:2px 9px;border-radius:999px;border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.35);color:#e6ecff}
+                        .ac-status{position:absolute;top:8px;right:8px;width:8px;height:8px;border-radius:50%}
+                        .ac-status.pub{background:#4cc2ff;box-shadow:0 0 8px rgba(76,194,255,.8)}
+                        .ac-status.draft{background:#ffb020;box-shadow:0 0 8px rgba(255,176,32,.7)}
+                        .ac-body{padding:12px 14px 8px;display:flex;flex-direction:column;gap:6px;flex:1;min-width:0}
+                        .ac-title{display:flex;align-items:center;gap:6px;font-weight:600;font-size:14px;color:var(--text-primary);line-height:1.4}
+                        .ac-title .tt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+                        .ac-title .tt-b{flex:none;font-size:10px;padding:1px 8px;border-radius:999px;border:1px solid var(--border-light);color:var(--text-muted);font-weight:400}
+                        .ac-desc{font-size:12px;color:var(--text-muted);line-height:1.6;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}
+                        .ac-meta{display:flex;align-items:center;gap:10px;font-size:11px;color:var(--text-muted);margin-top:6px}
+                        .ac-meta .up{margin-left:auto}
+                        .ac-ops{display:flex;align-items:center;gap:6px;padding:8px 10px;border-top:1px solid var(--border)}
+                        .ac-ops .sp{flex:1}
+                        .ac-more{position:relative}
+                        .ac-menu{position:absolute;right:0;bottom:calc(100% + 6px);z-index:30;min-width:150px;background:var(--bg-card);border:1px solid var(--border-light);border-radius:12px;padding:4px;box-shadow:0 18px 40px -12px var(--shadow);display:none}
+                        .ac-menu.show{display:block}
+                        .ac-menu button{display:block;width:100%;text-align:left;border:none;background:none;color:var(--text-secondary);font-size:12.5px;padding:7px 12px;border-radius:8px;cursor:pointer;font-family:inherit}
+                        .ac-menu button:hover{background:var(--bg-tertiary);color:var(--text-primary)}
+                        .ac-menu button.danger{color:#ef6a5e}
+                        .ac-check{position:absolute;top:8px;left:8px;z-index:5;display:none;width:18px;height:18px;accent-color:#2f6fed;cursor:pointer}
+                        .art-batch .ac-check{display:block}
+                        .art-batch .art-card{cursor:default}
+                        /* 批量/排序工具条 */
+                        .art-batch-bar,.art-sort-bar{display:flex;align-items:center;gap:8px;margin:0 20px 12px;padding:9px 14px;border-radius:12px;background:var(--bg-card);border:1px solid var(--border);font-size:12.5px;color:var(--text-secondary);flex-wrap:wrap}
+                        .art-batch-bar b{color:var(--text-primary)}
+                        .art-sort-bar .tip{color:var(--text-muted);margin-right:auto}
+                        /* 排序列表 */
+                        .art-sort-list{margin:0 20px 24px;border:1px solid var(--border);border-radius:14px;overflow:hidden}
+                        .art-sort-list table{width:100%;border-collapse:collapse}
+                        .art-sort-list td,.art-sort-list th{padding:9px 12px;border-bottom:1px solid var(--border);font-size:12.5px;text-align:left}
+                        .art-sort-list tr:last-child td{border-bottom:none}
+                        .art-sort-list tr.dragging{opacity:.4}
+                        .art-sort-list .drag-handle{cursor:grab;color:var(--text-muted);letter-spacing:-2px}
+                        .art-empty{padding:60px 0;text-align:center;color:var(--text-muted);font-size:13px}
+                    </style>
+                    <div class="page-bar"><h2>文章管理</h2><div class="page-bar-actions">
+                        <button class="btn" onclick="switchTab('write')">写文章</button>
+                        <label class="btn btn-ghost" style="cursor:pointer">导入 .md<input type="file" accept=".md,.markdown" onchange="importAndEdit(this.files[0])" style="display:none"></label>
+                    </div></div>
+
+                    <!-- 筛选工具栏 -->
+                    <div class="art-toolbar">
+                        <div class="art-seg" id="artStatusSeg">
+                            <button class="art-chip active" onclick="setArtStatus('all')">全部 <span class="cnt" id="artCntAll"></span></button>
+                            <button class="art-chip" onclick="setArtStatus('published')">已发布 <span class="cnt" id="artCntPub"></span></button>
+                            <button class="art-chip" onclick="setArtStatus('draft')">草稿 <span class="cnt" id="artCntDraft"></span></button>
+                        </div>
+                        <div class="art-seg" id="artTypeSeg">
+                            <button class="art-chip active" onclick="setArtType('all')">全部类型</button>
+                            <button class="art-chip" onclick="setArtType('article')">文章</button>
+                            <button class="art-chip" onclick="setArtType('whiteboard')">白板</button>
+                            <button class="art-chip" onclick="setArtType('card')">随记</button>
+                        </div>
+                        <div class="art-search">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                            <input type="text" id="articleSearchInput" placeholder="搜索标题、标签、ID…" oninput="filterArticles()">
+                            <button class="clear" id="artSearchClear" onclick="clearArticleSearch()" title="清空">&times;</button>
+                        </div>
+                        <div class="art-tools">
+                            <button class="btn btn-ghost" id="artSortBtn" onclick="toggleArtSort()">排序模式</button>
+                            <button class="btn btn-ghost" id="artBatchBtn" onclick="toggleArtBatch()">批量选择</button>
+                        </div>
                     </div>
-                    <div id="articleList">
-                        <table class="article-table">
-                            <thead><tr><th style="width:30px" title="拖动调整排序"></th><th>标题</th><th>标签</th><th>日期</th><th>操作</th></tr></thead>
-                            <tbody id="publishedBody"></tbody>
-                            <tbody id="draftBody"></tbody>
-                        </table>
+
+                    <!-- 批量工具条 -->
+                    <div class="art-batch-bar" id="artBatchBar" style="display:none">
+                        <span>已选 <b id="artSelCount">0</b> 篇</span>
+                        <button class="btn btn-sm" onclick="artBatchRun('published')">发布</button>
+                        <button class="btn btn-ghost btn-sm" onclick="artBatchRun('draft')">下架</button>
+                        <button class="btn btn-ghost btn-sm" onclick="artBatchTag()">改标签</button>
+                        <button class="btn btn-danger btn-sm" onclick="artBatchDelete()">删除</button>
+                        <button class="btn btn-ghost btn-sm" onclick="toggleArtBatch(false)">取消</button>
+                    </div>
+
+                    <!-- 排序模式工具条 -->
+                    <div class="art-sort-bar" id="artSortBar" style="display:none">
+                        <span class="tip">拖动 ⋮⋮ 调整「已发布」文章在前台的顺序，完成后保存</span>
+                        <button class="btn btn-sm" onclick="persistArticleOrder()">保存排序</button>
+                        <button class="btn btn-ghost btn-sm" onclick="toggleArtSort(false)">退出</button>
+                    </div>
+
+                    <!-- 列表主体 -->
+                    <div id="artGridWrap">
+                        <div class="art-grid" id="artCardGrid"></div>
+                        <div id="artSortWrap" style="display:none">
+                            <div class="art-sort-list"><table><tbody id="artSortTbody"></tbody></table></div>
+                        </div>
+                        <div class="art-empty" id="artEmpty" style="display:none"></div>
                     </div>
                 </div>
 
@@ -1131,127 +1228,273 @@
         function displayUrl(u){if(!u||!adminKey)return u;return u+(u.includes('?')?'&':'?')+'adminKey='+encodeURIComponent(adminKey)}
         function toggleSidebar(){document.getElementById('sidebar').classList.toggle('collapsed')}
 
-        // ===== 文章 =====
-        async function loadArticles(){const r=await apiFetch('action=articles');if(r.status==='success'){allArticles=r.data||[];applyArticleFilter()}}
-        // 应用搜索过滤并渲染
-        function applyArticleFilter(){
-            const kw=(document.getElementById('articleSearchInput')?.value||'').trim().toLowerCase();
-            if(!kw){
-                articles=allArticles;
-                updateSearchClearBtn(false);
-            }else{
-                articles=allArticles.filter(a=>{
-                    const title=(a.title||'').toLowerCase();
-                    const id=(a.id||'').toLowerCase();
-                    const tags=(a.tags||[]).join(' ').toLowerCase();
-                    return title.includes(kw)||id.includes(kw)||tags.includes(kw);
-                });
-                updateSearchClearBtn(true);
-            }
-            renderArticleList();
+        // ===== 文章（卡片工作台） =====
+        let artStatus = 'all', artType = 'all', artSort = false, artBatch = false;
+        const artSel = new Set();
+        async function loadArticles(){const r=await apiFetch('action=articles');if(r.status==='success'){allArticles=r.data||[];artSel.clear();renderArticles()}}
+        function artKw(){const i=document.getElementById('articleSearchInput');return (i&&i.value||'').trim().toLowerCase()}
+        function filteredArticles(){
+            const kw=artKw();
+            return allArticles.filter(a=>{
+                if(artStatus!=='all'&&a.status!==artStatus)return false;
+                if(artType!=='all'&&(a.type||'article')!==artType)return false;
+                if(kw){
+                    const hay=(((a.title||'')+' '+(a.tags||[]).join(' ')+' '+(a.id||'')).toLowerCase());
+                    if(!hay.includes(kw))return false;
+                }
+                return true;
+            });
         }
-        // 搜索框输入
-        function filterArticles(){applyArticleFilter()}
-        // 清空搜索
+        function setArtStatus(st){
+            artStatus=st;
+            document.querySelectorAll('#artStatusSeg .art-chip').forEach(function(b,i){b.classList.toggle('active',['all','published','draft'][i]===st)});
+            renderArticles();
+        }
+        function setArtType(t){
+            artType=t;
+            document.querySelectorAll('#artTypeSeg .art-chip').forEach(function(b,i){b.classList.toggle('active',['all','article','whiteboard','card'][i]===t)});
+            renderArticles();
+        }
+        function filterArticles(){
+            const c=document.getElementById('artSearchClear');
+            if(c)c.style.display=artKw()?'':'none';
+            renderArticles();
+        }
         function clearArticleSearch(){
-            const input=document.getElementById('articleSearchInput');
-            if(input)input.value='';
-            applyArticleFilter();
+            const i=document.getElementById('articleSearchInput');
+            if(i)i.value='';
+            filterArticles();
         }
-        // 更新清空按钮显示
-        function updateSearchClearBtn(show){
-            const btn=document.getElementById('articleSearchInput')?.nextElementSibling;
-            if(btn)btn.style.display=show?'':'none';
-        }
-        function articleRowHtml(a){
+        function artTypeLabel(t){if(t==='whiteboard')return '白板';if(t==='card')return '随记';return ''}
+        function artCardHtml(a){
             const isPub=a.status==='published';
-            const statusBtn=isPub
-                ? `<button class="btn btn-ghost btn-sm" onclick="toggleArticleStatus('${escJs(a.id)}','draft')">下架</button>`
-                : `<button class="btn btn-primary btn-sm" onclick="toggleArticleStatus('${escJs(a.id)}','published')">发布</button>`;
-            return `<tr draggable="true" data-id="${esc(a.id)}"><td class="drag-handle" title="拖动调整排序">⋮⋮</td><td><strong>${esc(a.title)}</strong><br><small style="color:var(--text-muted);font-size:10px">${esc(a.id)}</small></td><td>${(a.tags||[]).map(t=>`<span class="tag">${esc(t)}</span>`).join('')}</td><td style="font-size:11px;color:var(--text-muted)">${a.date}${a.update?'<br>↑ '+a.update:''}</td><td><div class="row-actions">${statusBtn}<button class="btn btn-ghost btn-sm" onclick="editArticle('${escJs(a.id)}')">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteArticle('${escJs(a.id)}','${escJs(a.title)}')">删除</button></div></td></tr>`;
+            const type=a.type||'article';
+            const tlabel=artTypeLabel(type);
+            const badge=tlabel?'<span class="ac-badge">'+esc(tlabel)+'</span>':'';
+            const dot='<span class="ac-status '+(isPub?'pub':'draft')+'"></span>';
+            const id=escJs(a.id);
+            let cover;
+            if(a.image){
+                cover='<div class="ac-cover" style="background-image:url('+escAttr(a.image)+')">'+badge+dot+'</div>';
+            }else{
+                const ph=type==='whiteboard'?'白':(type==='card'?'记':'文');
+                cover='<div class="ac-cover noimg" style="background:linear-gradient(135deg,hsl('+(type==='whiteboard'?210:type==='card'?38:222)+' 26% 24%),hsl('+(type==='whiteboard'?230:type==='card'?20:230)+' 20% 17%))"><span class="ac-ph">'+ph+'</span>'+badge+dot+'</div>';
+            }
+            const meta='<span>'+(a.wordCount||0)+' 字</span><span>'+esc(a.date||'')+'</span>'+(a.update?'<span class="up">更新 '+esc(a.update)+'</span>':'');
+            const pubBtn=isPub
+                ? '<button class="btn btn-ghost btn-sm" onclick="toggleArticleStatus('+id+',\'draft\')">下架</button>'
+                : '<button class="btn btn-sm" onclick="toggleArticleStatus('+id+',\'published\')">发布</button>';
+            return '<div class="art-card" data-id="'+escAttr(a.id)+'" onclick="artCardClick('+id+',event)">'+
+                cover+
+                '<div class="ac-body">'+
+                '<div class="ac-title"><span class="tt">'+esc(a.title||'(未命名)')+'</span></div>'+
+                '<div class="ac-desc">'+esc(String(a.excerpt||'').slice(0,130))+'</div>'+
+                '<div class="ac-meta">'+meta+'</div>'+
+                '</div>'+
+                '<div class="ac-ops">'+pubBtn+
+                '<span class="sp"></span>'+
+                '<div class="ac-more"><button class="btn btn-ghost btn-sm" onclick="toggleArtMenu(event,'+id+')" title="更多操作">•••</button>'+
+                '<div class="ac-menu" id="acMenu_'+escAttr(a.id)+'">'+
+                '<button onclick="artPreview('+id+')">预览前台</button>'+
+                '<button onclick="artCopyLink('+id+')">复制链接</button>'+
+                (isPub?'<button onclick="artTop('+id+')">置顶</button>':'')+
+                '<button class="danger" onclick="artDeleteOne('+id+')">删除</button>'+
+                '</div></div>'+
+                '<input type="checkbox" class="ac-check" onchange="artToggleSel('+id+',this.checked)">'+
+                '</div></div>';
         }
-        // 渲染文章列表：已发布 / 草稿 在同一表格中分组显示（保证列对齐）
-        function articleGroupRowsHtml(label,dotClass,countId,items,noMatch){
-            const header=`<tr class="article-group-header-row"><td colspan="5"><div class="article-group-header"><span class="dot ${dotClass}"></span><span>${label}</span><span class="article-group-count" id="${countId}">${items.length}</span></div></td></tr>`;
-            const body=items.length?items.map(articleRowHtml).join(''):`<tr><td colspan="5" class="empty">${noMatch}</td></tr>`;
-            return header+body;
+        function artCardClick(id,e){
+            if(e.target.closest('.ac-ops,.ac-check'))return;
+            if(artBatch){
+                const card=e.currentTarget;
+                const cb=card.querySelector('.ac-check');
+                if(cb){cb.checked=!cb.checked;artToggleSel(id,cb.checked)}
+                return;
+            }
+            editArticle(id);
         }
-        function renderArticleList(){
-            const kw=(document.getElementById('articleSearchInput')?.value||'').trim();
-            const noMatch=kw?'无匹配文章':'暂无文章';
-            const published=articles.filter(a=>a.status==='published');
-            const drafts=articles.filter(a=>a.status!=='published');
-            document.getElementById('publishedBody').innerHTML=articleGroupRowsHtml('已发布','on','publishedCount',published,noMatch);
-            document.getElementById('draftBody').innerHTML=articleGroupRowsHtml('草稿','off','draftCount',drafts,noMatch);
+        function renderArticles(){
+            const list=filteredArticles();
+            const cnt=function(st){return allArticles.filter(function(a){return a.status===st}).length};
+            const setT=function(id,v){const el=document.getElementById(id);if(el)el.textContent=v};
+            setT('artCntAll',allArticles.length);setT('artCntPub',cnt('published'));setT('artCntDraft',cnt('draft'));
+            const empty=document.getElementById('artEmpty');
+            const grid=document.getElementById('artCardGrid');
+            const sortWrap=document.getElementById('artSortWrap');
+            const sortTb=document.getElementById('artSortTbody');
+            if(artSort){
+                if(grid)grid.style.display='none';
+                if(sortWrap)sortWrap.style.display='';
+                if(empty)empty.style.display='none';
+                if(sortTb){
+                    const pubs=list.filter(function(a){return a.status==='published'});
+                    sortTb.innerHTML=pubs.length
+                        ? pubs.map(function(a){
+                            const tl=artTypeLabel(a.type);
+                            return '<tr draggable="true" data-id="'+escAttr(a.id)+'">'+
+                                '<td class="drag-handle" title="拖动调整排序">⋮⋮</td>'+
+                                '<td><strong>'+esc(a.title||'(未命名)')+'</strong>'+(tl?' <span class="tt-b" style="font-size:10px;border:1px solid var(--border-light);color:var(--text-muted);padding:1px 7px;border-radius:999px">'+tl+'</span>':'')+'</td>'+
+                                '<td style="font-size:11px;color:var(--text-muted)">'+esc(a.date||'')+'</td></tr>';
+                        }).join('')
+                        : '<tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:22px">暂无已发布文章</td></tr>';
+                }
+                return;
+            }
+            if(sortWrap)sortWrap.style.display='none';
+            if(grid)grid.style.display='';
+            if(!list.length){
+                if(grid)grid.innerHTML='';
+                if(empty){empty.style.display='';empty.textContent=artKw()?'无匹配文章':'暂无文章'}
+                return;
+            }
+            if(empty)empty.style.display='none';
+            if(grid){
+                grid.innerHTML=list.map(artCardHtml).join('');
+                requestAnimationFrame(function(){
+                    grid.querySelectorAll('.art-card').forEach(function(c,i){setTimeout(function(){c.classList.add('visible')},i*28)});
+                });
+            }
         }
-        // 一键发布 / 下架
-        async function toggleArticleStatus(id,status){
-            const action=status==='published'?'发布':'下架';
-            const article=allArticles.find(a=>a.id===id);
-            if(!article)return;
-            const confirmed=await showConfirm(`确定${action}「${article.title}」？`,action==='发布'?'发布文章':'下架文章',action);
-            if(!confirmed)return;
-            try{
-                const r=await apiFetch('action=articles',{method:'PATCH',body:JSON.stringify({id,status})});
-                if(r.status==='success'){showToast(r.message||(action+'成功'),'success');loadArticles();notifyArticlesChanged()}
-                else showToast(r.message||(action+'失败'),'error');
-            }catch{showToast(action+'失败','error')}
+        // 排序模式
+        function toggleArtSort(force){
+            artSort=force===undefined?!artSort:!!force;
+            const btn=document.getElementById('artSortBtn');
+            const bar=document.getElementById('artSortBar');
+            if(btn)btn.classList.toggle('active',artSort);
+            if(bar)bar.style.display=artSort?'':'none';
+            if(artBatch)toggleArtBatch(false);
+            renderArticles();
         }
-        // ===== 文章拖拽排序 =====
-        let dragArticleRow=null;
-        function articleListOrderedIds(){const ids=[];document.querySelectorAll('#articleList tbody tr[data-id]').forEach(tr=>ids.push(tr.dataset.id));return ids}
-        // 拖拽后同步本地顺序（保证与后端保存顺序一致）
-        function syncArticlesFromDOM(){
-            const map=new Map(allArticles.map(a=>[a.id,a]));
-            const ids=articleListOrderedIds();
-            const visible=ids.map(id=>map.get(id)).filter(Boolean);
-            const rest=allArticles.filter(a=>!ids.includes(a.id));
-            allArticles=visible.concat(rest);
-            applyArticleFilter();
+        // 批量选择
+        function toggleArtBatch(force){
+            artBatch=force===undefined?!artBatch:!!force;
+            document.body.classList.toggle('art-batch',artBatch);
+            const bar=document.getElementById('artBatchBar');
+            const btn=document.getElementById('artBatchBtn');
+            if(bar)bar.style.display=artBatch?'':'none';
+            if(btn)btn.classList.toggle('active',artBatch);
+            if(!artBatch)artSel.clear();
+            if(artSort)toggleArtSort(false);
+            updateArtSelBar();
+        }
+        function artToggleSel(id,on){on?artSel.add(id):artSel.delete(id);updateArtSelBar()}
+        function updateArtSelBar(){
+            const c=document.getElementById('artSelCount');
+            if(c)c.textContent=artSel.size;
+        }
+        async function artBatchRun(st){
+            if(!artSel.size){showToast('请先勾选文章','error');return}
+            const ids=[...artSel];
+            const action=st==='published'?'发布':'下架';
+            const ok=await showConfirm('确定'+action+'选中的 '+ids.length+' 篇？','批量'+action,action);
+            if(!ok)return;
+            let n=0;
+            for(const id of ids){const r=await apiFetch('action=articles',{method:'PATCH',body:JSON.stringify({id,status:st})});if(r.status==='success')n++}
+            showToast('已'+action+' '+n+' 篇','success');
+            toggleArtBatch(false);loadArticles();notifyArticlesChanged();
+        }
+        async function artBatchTag(){
+            if(!artSel.size){showToast('请先勾选文章','error');return}
+            const t=prompt('为选中的文章设置标签（逗号分隔，将覆盖原标签）：','');
+            if(t===null)return;
+            const tags=t.split(/[,，]/).map(function(x){return x.trim()}).filter(Boolean);
+            if(!tags.length)return;
+            const ok=await showConfirm('为选中的 '+artSel.size+' 篇设置标签？','批量改标签','确定');
+            if(!ok)return;
+            let n=0;
+            for(const id of [...artSel]){const r=await apiFetch('action=articles',{method:'PATCH',body:JSON.stringify({id,tags})});if(r.status==='success')n++}
+            showToast('已更新 '+n+' 篇标签','success');
+            toggleArtBatch(false);loadArticles();
+        }
+        async function artBatchDelete(){
+            if(!artSel.size){showToast('请先勾选文章','error');return}
+            const ok=await showConfirm('确定删除选中的 '+artSel.size+' 篇？删除后不可恢复！','批量删除','删除');
+            if(!ok)return;
+            for(const id of [...artSel]){await apiFetch('action=articles&id='+encodeURIComponent(id),{method:'DELETE'})}
+            showToast('已删除','success');
+            toggleArtBatch(false);loadArticles();notifyArticlesChanged();
+        }
+        // 卡片操作菜单
+        function toggleArtMenu(e,id){
+            e.stopPropagation();
+            const m=document.getElementById('acMenu_'+id);
+            const any=document.querySelector('.ac-menu.show');
+            if(any&&any!==m)any.classList.remove('show');
+            if(m)m.classList.toggle('show');
+        }
+        function artPreview(id){
+            const a=allArticles.find(function(x){return x.id===id});
+            if(a)window.open('/article.html?post='+encodeURIComponent(a.filename||(a.id+'.md'))+'&blob='+encodeURIComponent(a.id),'_blank');
+        }
+        function artCopyLink(id){
+            const a=allArticles.find(function(x){return x.id===id});
+            if(!a)return;
+            const url=location.origin+'/article.html?post='+encodeURIComponent(a.filename||(a.id+'.md'))+'&blob='+encodeURIComponent(a.id);
+            try{navigator.clipboard.writeText(url);showToast('链接已复制','success')}catch(e){prompt('复制链接：',url)}
+        }
+        function artDeleteOne(id){
+            const a=allArticles.find(function(x){return x.id===id});
+            deleteArticle(id,a?escJs(a.title||''):'');
+        }
+        async function artTop(id){
+            const pubs=allArticles.filter(function(a){return a.status==='published'});
+            const ids=[id].concat(pubs.filter(function(a){return a.id!==id}).map(function(a){return a.id}));
+            const r=await apiFetch('action=articles&reorder=1',{method:'POST',body:JSON.stringify({ids})});
+            if(r.status==='success'){showToast('已置顶','success');loadArticles()}else showToast(r.message||'置顶失败','error');
+        }
+        // ===== 文章拖拽排序（排序模式列表） =====
+        let dragArtRow=null;
+        function artSortIds(){const out=[];document.querySelectorAll('#artSortTbody tr[data-id]').forEach(function(tr){out.push(tr.dataset.id)});return out}
+        function syncArtSortFromDOM(){
+            const map=new Map(allArticles.map(function(a){return [a.id,a]}));
+            const ids=artSortIds();
+            allArticles=ids.map(function(id){return map.get(id)}).filter(Boolean).concat(allArticles.filter(function(a){return ids.indexOf(a.id)<0}));
+            renderArticles();
         }
         async function persistArticleOrder(){
-            const ids=articleListOrderedIds();
+            const ids=artSortIds();
+            if(!ids.length){showToast('没有可排序的文章','error');return}
             try{
                 const r=await apiFetch('action=articles&reorder=1',{method:'POST',body:JSON.stringify({ids})});
                 if(r.status==='success'){showToast('排序已保存','success');notifyArticlesChanged()}
                 else showToast(r.message||'排序保存失败','error');
-            }catch{showToast('排序保存失败','error')}
+            }catch(e){showToast('排序保存失败','error')}
         }
-        document.addEventListener('dragstart',e=>{
-            const tr=e.target.closest('#articleList tr[data-id]');
+        document.addEventListener('dragstart',function(e){
+            const tr=e.target.closest('#artSortTbody tr[data-id]');
             if(!tr)return;
-            dragArticleRow=tr;
+            dragArtRow=tr;
             tr.classList.add('dragging');
-            e.dataTransfer.effectAllowed='move';
-            try{e.dataTransfer.setData('text/plain',tr.dataset.id)}catch{}
+            try{e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',tr.dataset.id)}catch(err){}
         });
-        document.addEventListener('dragover',e=>{
+        document.addEventListener('dragover',function(e){
+            const tr=e.target.closest('#artSortTbody tr[data-id]');
+            if(!tr||!dragArtRow||tr===dragArtRow)return;
+            if(tr.parentNode!==dragArtRow.parentNode)return;
             e.preventDefault();
-            const tr=e.target.closest('#articleList tr[data-id]');
-            if(!tr||!dragArticleRow||tr===dragArticleRow)return;
-            if(tr.parentNode!==dragArticleRow.parentNode)return; // 禁止跨组拖动
             const rect=tr.getBoundingClientRect();
             const after=(e.clientY-rect.top)>rect.height/2;
-            if(after){
-                if(tr.nextElementSibling!==dragArticleRow)tr.after(dragArticleRow);
-            }else{
-                if(tr.previousElementSibling!==dragArticleRow)tr.before(dragArticleRow);
-            }
-            document.querySelectorAll('#articleList tr.drag-over').forEach(r=>r.classList.remove('drag-over'));
+            if(after){if(tr.nextElementSibling!==dragArtRow)tr.after(dragArtRow)}
+            else{if(tr.previousElementSibling!==dragArtRow)tr.before(dragArtRow)}
+            document.querySelectorAll('#artSortTbody tr.drag-over').forEach(function(r){r.classList.remove('drag-over')});
             tr.classList.add('drag-over');
         });
-        document.addEventListener('drop',e=>{
-            if(!dragArticleRow)return;
+        document.addEventListener('drop',function(e){
+            if(!dragArtRow)return;
             e.preventDefault();
-            document.querySelectorAll('#articleList tr.dragging,#articleList tr.drag-over').forEach(r=>r.classList.remove('dragging','drag-over'));
-            dragArticleRow=null;
-            syncArticlesFromDOM();
-            persistArticleOrder();
+            document.querySelectorAll('#artSortTbody tr.dragging,#artSortTbody tr.drag-over').forEach(function(r){r.classList.remove('dragging','drag-over')});
+            dragArtRow=null;
+            syncArtSortFromDOM();
         });
-        document.addEventListener('dragend',()=>{
-            document.querySelectorAll('#articleList tr.dragging,#articleList tr.drag-over').forEach(r=>r.classList.remove('dragging','drag-over'));
-            dragArticleRow=null;
+        document.addEventListener('dragend',function(){
+            document.querySelectorAll('#artSortTbody tr.dragging,#artSortTbody tr.drag-over').forEach(function(r){r.classList.remove('dragging','drag-over')});
+            dragArtRow=null;
         });
+        // 点击页面任意处关闭卡片菜单
+        document.addEventListener('click',function(){
+            document.querySelectorAll('.ac-menu.show').forEach(function(m){m.classList.remove('show')});
+        });
+
         // 文章增删改后通知首页（同浏览器标签页）即时刷新
         function notifyArticlesChanged(){
             try{const bc=new BroadcastChannel('blog-articles');bc.postMessage({type:'articles-changed'});bc.close()}catch(e){}
