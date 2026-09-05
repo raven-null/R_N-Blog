@@ -2436,7 +2436,12 @@
                 const editBtn = document.getElementById('boardEditBtn');
                 if (editBtn) editBtn.addEventListener('click', enterEdit);
                 const doneBtn = document.getElementById('boardDoneBtn');
-                if (doneBtn) doneBtn.addEventListener('click', showDlg);
+                if (doneBtn) doneBtn.addEventListener('click', () => {
+                    if (stage.dataset.editing !== '1') return;
+                    // 已保存（无未保存改动）直接退出；有改动才询问保存
+                    const dirty = !!(window.__excalidrawDirty && window.__excalidrawDirty());
+                    if (dirty) showDlg(); else doExit();
+                });
                 const bdSaveExit = document.getElementById('bdSaveExit');
                 if (bdSaveExit) bdSaveExit.addEventListener('click', doSaveAndExit);
                 const bdDiscard = document.getElementById('bdDiscardExit');
@@ -2512,11 +2517,11 @@
                 // 样式独立文件（Excalidraw 0.18 Vite 产物）：先注入 CSS 再注入 JS
                 const css = document.createElement('link');
                 css.rel = 'stylesheet';
-                css.href = '/js/vendor/excalidraw/excalidraw-editor.v9.css';
+                css.href = '/js/vendor/excalidraw/excalidraw-editor.v10.css';
                 css.dataset.excalidrawBundle = '1';
                 document.head.appendChild(css);
                 const s = document.createElement('script');
-                s.src = '/js/vendor/excalidraw/excalidraw-editor.v9.js';
+                s.src = '/js/vendor/excalidraw/excalidraw-editor.v10.js';
                 s.dataset.excalidrawBundle = '1';
                 s.onload = () => { if (window.ExcalidrawMount) window.ExcalidrawMount(); };
                 s.onerror = () => {

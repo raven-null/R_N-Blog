@@ -187,9 +187,30 @@ async function gzipEncode(text: string): Promise<string | null> {
   }
 }
 
+/** 场景轻量指纹：元素数 + versionNonce 混合（判断是否有未保存改动，O(n) 开销极小） */
+function sceneFp(elements: readonly any[]): number {
+  let h = (elements.length * 2654435761) >>> 0
+  for (let i = 0; i < elements.length; i++) {
+    const el = elements[i]
+    if (el) h = ((h ^ (el.versionNonce | 0)) * 31) >>> 0
+  }
+  return h
+}
+
 function NoteApp({ note, mode, bare }: { note: string; mode: "edit" | "view"; bare?: boolean }) {
   const apiRef = useRef<any>(null)
   const loadedRev = useRef<number | null>(null)
+  // 未保存改动检测：画布指纹基准
+  const fpRef = useRef(0)
+  const dirtyRef = useRef(false)
+  // 成功类消息短暂显示后自动消失
+  const okTimer = useRef<number | undefined>(undefined)
+  const setMsgOk = (text: string) => {
+    setMsg(text)
+    if (okTimer.current) window.clearTimeout(okTimer.current)
+    okTimer.current = window.setTimeout(() => setMsg(""), 6000)
+  }
+  useEffect(() => () => { if (okTimer.current) window.clearTimeout(okTimer.current) }, [])
   const [scene, setScene] = useState<SceneData | null>(null)
   const [meta, setMeta] = useState<NoteMeta | null>(null)
   const [loading, setLoading] = useState(true)
@@ -241,9 +262,12 @@ function NoteApp({ note, mode, bare }: { note: string; mode: "edit" | "view"; ba
       setMeta(data.meta as NoteMeta)
       loadedRev.current = data.meta?.rev ?? null
       setTitle(data.meta?.title || note)
+      // 指纹基准同步到服务器内容（初始载入 / 自动刷新都不算未保存改动）
+      fpRef.current = sceneFp(sc.elements || [])
+      dirtyRef.current = false
       if (!silent) {
         setLoading(false)
-        setMsg(
+        setMsgOk(
           data.meta?.editable === 1
             ? `已载入（rev ${data.meta?.rev ?? 0}）`
             : "已载入（当前只读：作者未开放编辑）",
@@ -263,13 +287,6 @@ function NoteApp({ note, mode, bare }: { note: string; mode: "edit" | "view"; ba
     document.title = mode === "edit" ? `编辑：${title}` : title
   }, [title, mode])
 
-  // view 模式的消息条自动淡出（不干扰阅读）
-  useEffect(() => {
-    if (mode !== "view" || !msg) return
-    const t = window.setTimeout(() => setMsg(""), 4000)
-    return () => window.clearTimeout(t)
-  }, [msg, mode])
-
   // L1.5 协作感知：轻量轮询 meta.rev 检测他人更新
   // view 模式自动静默刷新；edit 模式提示（避免覆盖未保存改动）
   useEffect(() => {
@@ -284,7 +301,7 @@ function NoteApp({ note, mode, bare }: { note: string; mode: "edit" | "view"; ba
         const localRev = loadedRev.current
         if (localRev === null || remoteRev === localRev) return
         if (mode === "view") {
-          setMsg(`已自动更新到 rev ${remoteRev}`)
+          setMsgOk(`已自动更新到 rev ${remoteRev}`)
           await load(true)
         } else {
           setMsg(`检测到他人更新（rev ${remoteRev}，你当前 rev ${localRev}）：可刷新页面查看；如需提交你的改动请先保存（将提示覆盖确认）`)
@@ -340,6 +357,11 @@ function NoteApp({ note, mode, bare }: { note: string; mode: "edit" | "view"; ba
       })
       const data = await res.json().catch(() => ({}))
       if (res.status === 409) {
+        if (bare) {
+          // 前台舞台：不弹确认，自动以当前画布覆盖（旧版照常进快照可回滚）
+          setSaving(false)
+          return save(true)
+        }
         const ok = window.confirm(
           `检测到他人更新（最新 rev ${data.latestRev}）。以你当前画布覆盖吗？旧版已自动存快照可找回。`,
         )
@@ -366,7 +388,16 @@ function NoteApp({ note, mode, bare }: { note: string; mode: "edit" | "view"; ba
       loadedRev.current = data.rev ?? loadedRev.current
       setMeta(m => (m ? { ...m, rev: data.rev ?? m.rev } : m))
       if (data.created) setNotFound(false) // 创建成功：退出"新笔记"状态
-      setMsg(`已保存 rev ${data.rev}（${new Date().toLocaleTimeString()}）`)
+      // 保存成功：更新指纹基准与脏标记
+      fpRef.current = sceneFp(elements)
+      dirtyRef.current = false
+      setMsgOk(
+        bare
+          ? force
+            ? "已保存（他人更新的较新版本已被覆盖，旧版已存快照）"
+            : "已保存"
+          : `已保存 rev ${data.rev}（${new Date().toLocaleTimeString()}）`,
+      )
       return true
     } catch (e: any) {
       setMsg("保存出错：" + (e?.message || e))
@@ -390,7 +421,7 @@ function NoteApp({ note, mode, bare }: { note: string; mode: "edit" | "view"; ba
       a.href = URL.createObjectURL(blob)
       a.download = `excalidraw-${note || "board"}.png`
       a.click()
-      setMsg(`已导出 PNG（${Math.round(blob.size / 1024)} KB）`)
+      setMsgOk(`已导出 PNG（${Math.round(blob.size / 1024)} KB）`)
     } catch (e: any) {
       setMsg("导出 PNG 出错：" + (e?.message || e))
     }
@@ -482,13 +513,15 @@ function NoteApp({ note, mode, bare }: { note: string; mode: "edit" | "view"; ba
     return () => window.removeEventListener("keydown", h)
   })
 
-  // 暴露保存方法给宿主页面（bare 模式：前台舞台「完成」时询问是否保存）
+  // 暴露保存方法与脏标记给宿主页面（bare 模式：前台舞台「完成」时判断是否需询问保存）
   useEffect(() => {
     if (mode !== "edit") return
     const fn = () => save(false)
     ;(window as any).__excalidrawSave = fn
+    ;(window as any).__excalidrawDirty = () => dirtyRef.current
     return () => {
       if ((window as any).__excalidrawSave === fn) delete (window as any).__excalidrawSave
+      if ((window as any).__excalidrawDirty) delete (window as any).__excalidrawDirty
     }
   })
 
@@ -568,6 +601,17 @@ function NoteApp({ note, mode, bare }: { note: string; mode: "edit" | "view"; ba
         <Excalidraw
           key={note + mode}
           excalidrawAPI={api => { apiRef.current = api }}
+          onChange={(els: readonly any[]) => {
+            // 画布指纹变化即视为有未保存改动；撤销回原状会自动恢复「已保存」态
+            if (!Array.isArray(els)) return
+            const f = sceneFp(els)
+            if (f !== fpRef.current) {
+              fpRef.current = f
+              dirtyRef.current = true
+            } else {
+              dirtyRef.current = false
+            }
+          }}
           initialData={initialData}
           viewModeEnabled={mode === "view"}
           langCode="zh-CN"
