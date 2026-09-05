@@ -446,7 +446,7 @@
                 host.innerHTML='<div style="height:100%;display:flex;align-items:center;justify-content:center;color:#888;font-size:13px">请输入有效画板 ID，或点「新建画板」</div>';
                 return;
             }
-            host.innerHTML='<div data-excalidraw data-note="'+escAttr(id)+'" data-mode="edit"></div>';
+            host.innerHTML='<div style="height:100%" data-excalidraw data-note="'+escAttr(id)+'" data-mode="edit"></div>';
             if(window.ExcalidrawMount)window.ExcalidrawMount();
             else ensureExcBundle();
         }
