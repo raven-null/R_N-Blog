@@ -134,7 +134,12 @@ const BlogApp = {
                     wordCount: a.wordCount || 0,
                     type: a.type || 'article',
                     content: '', // 列表不加载正文
-                }));
+                }))
+                .map(p => {
+                    // 卡片笔记固定标签兜底（存量数据无「随记」时补上，保证导航分类一致）
+                    if (p.type === 'card' && !(p.tags || []).includes('随记')) p.tags = ['随记'].concat(p.tags || []);
+                    return p;
+                });
         } catch { return []; }
     },
 
@@ -357,12 +362,14 @@ const BlogApp = {
             if (!d || d.status !== 'success' || !d.data) throw new Error('加载失败');
             const c = d.data;
             const esc = this.esc.bind(this);
+            const cardTags = (c.tags || []).slice();
+            if (!cardTags.includes('随记')) cardTags.unshift('随记');
             viewer.innerHTML =
                 '<div class="nv-head"><span class="nv-title">' + esc(c.title || '卡片笔记') + '</span>' +
                 '<button class="nv-close" id="nvClose" title="关闭"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>' +
                 '<div class="nv-body">' + this.miniMarkdown(c.content || '') + '</div>' +
                 '<div class="nv-foot">' +
-                (c.tags || []).map(t => '<span class="t">' + esc(t) + '</span>').join('') +
+                cardTags.map(t => '<span class="t">' + esc(t) + '</span>').join('') +
                 '<span class="nv-date">' + esc(String(c.date || '').slice(0, 10)) + '</span>' +
                 '<button class="nv-copy" id="nvCopy">复制内容</button></div>';
             document.getElementById('nvClose').addEventListener('click', () => this.closeNotePill());

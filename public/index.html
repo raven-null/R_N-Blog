@@ -9,7 +9,7 @@
 
     <!-- Styles -->
     <link rel="stylesheet" href="css/style.css?v=3.16.3">
-    <link rel="stylesheet" href="css/glass.css?v=1.0.9">
+    <link rel="stylesheet" href="css/glass.css?v=1.0.10">
 
     <!-- Marked.js -->
     <script src="js/vendor/marked.min.js"></script>
@@ -49,6 +49,7 @@
                     <a href="#" class="nav-link" onclick="BlogApp.filterByTag('技术'); return false;">技术</a>
                     <a href="#" class="nav-link" onclick="BlogApp.filterByTag('生活'); return false;">生活</a>
                     <a href="#" class="nav-link" onclick="BlogApp.filterByTag('AI'); return false;">AI</a>
+                    <a href="#" class="nav-link" onclick="BlogApp.filterByTag('随记'); return false;">随记</a>
                 </div>
                 <div class="nav-tools">
                     <div class="nav-tools-item">
@@ -239,7 +240,7 @@
     <!-- Scripts -->
     <script src="js/theme.js?v=3.13.6"></script>
     <script src="js/markdown.js?v=3.14.2"></script>
-    <script src="js/app.js?v=3.30.0"></script>
+    <script src="js/app.js?v=3.31.0"></script>
     <script src="js/animations.js?v=3.14.0"></script>
 
     <script>
@@ -722,16 +723,16 @@
 
     <!-- 卡片笔记弹窗与卡片布局（内联样式，不依赖外部 css 缓存） -->
     <style>
-        /* 卡片笔记卡：标题大号居中 / 标签左下 / 时间右下 */
-        .note-plain-card { min-height: 140px; display: flex; }
+        /* 卡片笔记卡：标题大号居中 / 标签左下 / 时间右下（紧凑） */
+        .note-plain-card { min-height: 0; display: flex; margin-bottom: 10px; }
         .note-plain-card .card-body {
             width: 100%; box-sizing: border-box;
             display: flex; flex-direction: column;
-            padding: 26px 22px 16px;
+            padding: 15px 18px 10px;
         }
         .note-plain-card .card-title {
-            text-align: center; font-size: 17px; line-height: 1.55;
-            margin: 2px 0 20px; padding: 0;
+            text-align: center; font-size: 15px; line-height: 1.5;
+            margin: 0 0 9px; padding: 0;
         }
         .note-plain-card .note-card-foot {
             display: flex; align-items: center; justify-content: space-between; gap: 12px;

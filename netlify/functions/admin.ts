@@ -158,7 +158,9 @@ export default async (req: Request) => {
         ? body.boardId.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 64)
         : ""
 
+      const FIXED_CARD_TAG = "随记" // 卡片笔记的固定标签（自动附加、不可删除，用于首页导航分类）
       const tagsArr = Array.isArray(tags) ? tags : (tags || "").split(",").map((t: string) => t.trim()).filter(Boolean)
+      if (type === "card" && !tagsArr.includes(FIXED_CARD_TAG)) tagsArr.unshift(FIXED_CARD_TAG)
 
       // 提取摘要（有内容时自动提取，否则用传入的 excerpt）
       const autoExcerpt = content

@@ -593,7 +593,7 @@
             border-top:1px solid var(--glass-border);
         }
     </style>
-    <link rel="stylesheet" href="css/glass.css?v=1.0.9">
+    <link rel="stylesheet" href="css/glass.css?v=1.0.10">
 </head>
 <body>
     <div class="login-page" id="loginPage">
@@ -805,6 +805,7 @@
                         <input type="text" id="cardTitle" placeholder="标题（可选，留空自动取内容开头）" />
                         <textarea id="cardContent" rows="4" placeholder="记录点什么… 支持 **粗体**、`行内代码`、[链接](https://…)"></textarea>
                         <input type="text" id="cardTags" placeholder="标签（逗号分隔，可选）" />
+                        <div style="font-size:11px;color:var(--text-muted);margin:-6px 0 10px">固定标签「随记」会在保存时自动附加（用于首页导航分类，不可删除）。</div>
                         <div class="card-form-actions">
                             <button class="btn btn-ghost" onclick="toggleCardForm(false)">取消</button>
                             <button class="btn" onclick="saveCard()">保存卡片</button>
