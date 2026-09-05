@@ -773,6 +773,40 @@
         .board-stage.editing .board-done { display: inline-flex; }
         .board-stage.editing .exc-shell .exc-bar { border-radius: 0; }
         .board-stage.editing .exc-shell .exc-msg { margin: 6px 10px 8px; }
+        /* 退出编辑确认弹层 */
+        .board-dlg {
+            position: absolute; inset: 0; z-index: 60; display: none;
+            align-items: center; justify-content: center; padding: 18px;
+            background: rgba(5, 5, 9, 0.5); backdrop-filter: blur(10px) saturate(140%);
+            -webkit-backdrop-filter: blur(10px) saturate(140%);
+        }
+        .board-dlg.show { display: flex; }
+        .board-dlg .bd-card {
+            width: min(350px, 92vw); padding: 22px; border-radius: 22px;
+            background: linear-gradient(145deg, rgba(34, 34, 42, 0.97), rgba(20, 20, 26, 0.95));
+            border: 1px solid rgba(255, 255, 255, 0.13);
+            box-shadow: 0 30px 90px -20px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+            animation: board-pop-in 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        .board-dlg .bd-title { font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+        .board-dlg .bd-sub { font-size: 12.5px; color: rgba(255, 255, 255, 0.45); margin-bottom: 16px; line-height: 1.7; }
+        .board-dlg .bd-btns { display: flex; flex-direction: column; gap: 8px; }
+        .board-dlg .bd-btn {
+            display: flex; align-items: center; justify-content: center; gap: 7px;
+            padding: 10px 16px; border-radius: 13px; cursor: pointer;
+            font-size: 13.5px; color: #e8e8ea; font-family: inherit;
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.04));
+            border: 1px solid rgba(255, 255, 255, 0.13);
+            transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s ease, border-color 0.2s ease;
+        }
+        .board-dlg .bd-btn:hover { background: linear-gradient(145deg, rgba(255, 255, 255, 0.17), rgba(255, 255, 255, 0.07)); border-color: rgba(255, 255, 255, 0.28); }
+        .board-dlg .bd-btn:active { transform: scale(0.97); }
+        .board-dlg .bd-btn svg { width: 14px; height: 14px; }
+        .board-dlg .bd-btn.primary { color: #0b0b10; font-weight: 600; background: linear-gradient(180deg, #fff, #d9d9e3); border-color: rgba(255, 255, 255, 0.55); }
+        .board-dlg .bd-btn.primary:hover { background: linear-gradient(180deg, #fff, #e8e8f0); }
+        .board-dlg .bd-err { display: none; margin-top: 12px; padding: 8px 12px; border-radius: 10px; font-size: 12px; color: #ff9f0a; background: rgba(255, 159, 10, 0.1); border: 1px solid rgba(255, 159, 10, 0.25); }
+        .board-dlg .bd-err.show { display: block; }
         /* 顶部悬浮胶囊 */
         .board-topbar {
             position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
@@ -2279,7 +2313,18 @@
                     '<div class="board-drawer-head"><span class="dh-title">留言</span><button class="bt-btn" id="boardDrawerClose" title="关闭"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>关闭</button></div>' +
                     '<div class="board-drawer-body" id="boardDrawerBody"></div>' +
                     '</aside>' +
-                    '<button class="board-done" id="boardDoneBtn" title="保存改动后退出编辑（编辑工具栏在画布上方）"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>完成</button>' +
+                    '<button class="board-done" id="boardDoneBtn" title="退出编辑"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>完成</button>' +
+                    '<div class="board-dlg" id="boardDlg">' +
+                    '<div class="bd-card">' +
+                    '<div class="bd-title">退出编辑</div>' +
+                    '<div class="bd-sub">改动需要先写入服务器才会保留。随时可用 Ctrl / ⌘ + S 保存。</div>' +
+                    '<div class="bd-btns">' +
+                    '<button class="bd-btn primary" id="bdSaveExit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="m7 11 5 5 5-5"/><path d="M4 20h16"/></svg>保存并退出</button>' +
+                    '<button class="bd-btn" id="bdDiscardExit">不保存，直接退出</button>' +
+                    '<button class="bd-btn" id="bdCancel">取消</button>' +
+                    '</div>' +
+                    '<div class="bd-err" id="bdErr"></div>' +
+                    '</div></div>' +
                     '<button class="board-navbtn prev" id="boardPrev" hidden title="上一篇"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>' +
                     '<button class="board-navbtn next" id="boardNext" hidden title="下一篇"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></button>' +
                     '</div>';
@@ -2350,6 +2395,7 @@
                     div.dataset.excalidraw = '';
                     div.dataset.note = boardId;
                     div.dataset.mode = mode;
+                    div.dataset.bare = '1'; // 前台舞台：精简模式（无工具条，Ctrl+S/退出询问保存）
                     old.parentNode.replaceChild(div, old);
                     if (window.ExcalidrawMount) window.ExcalidrawMount();
                     else this.loadExcalidrawBundle(); // bundle 未就绪：加载完成后会自动扫描当前容器
@@ -2360,20 +2406,44 @@
                     stage.classList.add('editing');
                     mountBoardHost('edit');
                 };
-                const exitEdit = () => {
+                const dlg = document.getElementById('boardDlg');
+                const dlgErr = document.getElementById('bdErr');
+                const showDlg = () => {
                     if (stage.dataset.editing !== '1') return;
-                    // 先提示保存：未点「保存」的改动不会写入
-                    if (!window.confirm('退出编辑？\n提示：改动需点击画布上方工具栏的「保存」才会写入。')) return;
+                    if (dlgErr) { dlgErr.classList.remove('show'); dlgErr.textContent = ''; }
+                    if (dlg) dlg.classList.add('show');
+                };
+                const hideDlg = () => { if (dlg) dlg.classList.remove('show'); };
+                const doExit = () => {
                     stage.dataset.editing = '';
                     stage.classList.remove('editing');
                     mountBoardHost('view');
                     // 恢复浮层可见性（idle 状态由鼠标唤醒）
                     stage.classList.remove('idle');
+                    hideDlg();
+                };
+                const doSaveAndExit = async () => {
+                    const saver = window.__excalidrawSave;
+                    if (!saver) { doExit(); return; }
+                    const saved = await saver();
+                    if (saved) { doExit(); return; }
+                    // 保存未完成（口令错误/只读/空画布等）：留在编辑态并提示
+                    if (dlgErr) {
+                        dlgErr.textContent = '保存未完成（可能未输入口令、画布为空或网络问题）。可取消后重试，或选择不保存退出。';
+                        dlgErr.classList.add('show');
+                    }
                 };
                 const editBtn = document.getElementById('boardEditBtn');
                 if (editBtn) editBtn.addEventListener('click', enterEdit);
                 const doneBtn = document.getElementById('boardDoneBtn');
-                if (doneBtn) doneBtn.addEventListener('click', exitEdit);
+                if (doneBtn) doneBtn.addEventListener('click', showDlg);
+                const bdSaveExit = document.getElementById('bdSaveExit');
+                if (bdSaveExit) bdSaveExit.addEventListener('click', doSaveAndExit);
+                const bdDiscard = document.getElementById('bdDiscardExit');
+                if (bdDiscard) bdDiscard.addEventListener('click', doExit);
+                const bdCancel = document.getElementById('bdCancel');
+                if (bdCancel) bdCancel.addEventListener('click', hideDlg);
+                if (dlg) dlg.addEventListener('click', (e) => { if (e.target === dlg) hideDlg(); });
                 // 分享链接带 &edit=1 时打开即进入编辑态（可编辑分享链接）
                 if (new URLSearchParams(location.search).get('edit') === '1') enterEdit();
 
@@ -2442,11 +2512,11 @@
                 // 样式独立文件（Excalidraw 0.18 Vite 产物）：先注入 CSS 再注入 JS
                 const css = document.createElement('link');
                 css.rel = 'stylesheet';
-                css.href = '/js/vendor/excalidraw/excalidraw-editor.v8.css';
+                css.href = '/js/vendor/excalidraw/excalidraw-editor.v9.css';
                 css.dataset.excalidrawBundle = '1';
                 document.head.appendChild(css);
                 const s = document.createElement('script');
-                s.src = '/js/vendor/excalidraw/excalidraw-editor.v8.js';
+                s.src = '/js/vendor/excalidraw/excalidraw-editor.v9.js';
                 s.dataset.excalidrawBundle = '1';
                 s.onload = () => { if (window.ExcalidrawMount) window.ExcalidrawMount(); };
                 s.onerror = () => {

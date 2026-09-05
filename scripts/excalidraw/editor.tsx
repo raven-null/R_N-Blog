@@ -77,6 +77,10 @@ const UI_CSS = `
 @keyframes exc-modal-in{from{opacity:0;transform:scale(.96) translateY(8px)}to{opacity:1;transform:none}}
 .exc-msg{display:flex;align-items:center;gap:8px;margin:8px 14px 10px;padding:7px 14px;border-radius:14px;font-size:12.5px;line-height:1.5;color:#d4d7e2;background:linear-gradient(145deg,rgba(30,30,36,.72),rgba(24,24,30,.6));backdrop-filter:blur(20px) saturate(160%);-webkit-backdrop-filter:blur(20px) saturate(160%);border:1px solid rgba(255,255,255,.1);box-shadow:inset 0 1px 0 rgba(255,255,255,.07);animation:exc-msg-in .35s cubic-bezier(.22,1,.36,1)}
 .exc-msg .dot{width:6px;height:6px;border-radius:50%;flex:none;background:#5ac8fa;box-shadow:0 0 10px rgba(90,200,250,.9)}
+/* bare 模式（前台画布舞台就地编辑）：极简口令浮条 */
+.exc-bare-key{position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:8;display:flex;align-items:center;gap:8px;padding:6px 8px 6px 14px;border-radius:999px;background:linear-gradient(145deg,rgba(28,28,34,.86),rgba(18,18,24,.8));backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%);border:1px solid rgba(255,255,255,.13);box-shadow:0 10px 30px -8px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.09)}
+.exc-bare-key svg{width:13px;height:13px;flex:none;color:#9aa0ff}
+.exc-bare-key .exc-input{width:130px}
 .exc-ph{height:100%;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse 60% 50% at 30% 20%,rgba(90,120,255,.10),transparent 60%),radial-gradient(ellipse 50% 40% at 80% 75%,rgba(0,210,190,.06),transparent 60%),#101014}
 .exc-ph-card{display:flex;flex-direction:column;align-items:center;gap:10px;padding:38px 46px;border-radius:26px;text-align:center;background:linear-gradient(145deg,rgba(255,255,255,.08),rgba(255,255,255,.03));backdrop-filter:blur(26px) saturate(180%);-webkit-backdrop-filter:blur(26px) saturate(180%);border:1px solid rgba(255,255,255,.12);box-shadow:0 20px 60px -16px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.09)}
 .exc-ph-card>svg{width:36px;height:36px;color:rgba(255,255,255,.4)}
@@ -183,7 +187,7 @@ async function gzipEncode(text: string): Promise<string | null> {
   }
 }
 
-function NoteApp({ note, mode }: { note: string; mode: "edit" | "view" }) {
+function NoteApp({ note, mode, bare }: { note: string; mode: "edit" | "view"; bare?: boolean }) {
   const apiRef = useRef<any>(null)
   const loadedRev = useRef<number | null>(null)
   const [scene, setScene] = useState<SceneData | null>(null)
@@ -478,6 +482,16 @@ function NoteApp({ note, mode }: { note: string; mode: "edit" | "view" }) {
     return () => window.removeEventListener("keydown", h)
   })
 
+  // 暴露保存方法给宿主页面（bare 模式：前台舞台「完成」时询问是否保存）
+  useEffect(() => {
+    if (mode !== "edit") return
+    const fn = () => save(false)
+    ;(window as any).__excalidrawSave = fn
+    return () => {
+      if ((window as any).__excalidrawSave === fn) delete (window as any).__excalidrawSave
+    }
+  })
+
   if (loading) {
     return (
       <div className="exc-ph">
@@ -503,8 +517,8 @@ function NoteApp({ note, mode }: { note: string; mode: "edit" | "view" }) {
     : { elements: [] }
 
   return (
-    <div className="exc-shell">
-      {mode === "edit" && (
+    <div className="exc-shell" style={{ position: "relative" }}>
+      {mode === "edit" && !bare && (
         <div className="exc-bar">
           <span className="exc-bar-title">
             <Ic p={ICONS.pencil} />
@@ -535,6 +549,19 @@ function NoteApp({ note, mode }: { note: string; mode: "edit" | "view" }) {
             <Ic p={ICONS.save} />
             {saving ? "保存中…" : "保存（Ctrl+S）"}
           </button>
+        </div>
+      )}
+      {/* bare 模式（前台舞台）：无工具条，仅口令输入浮条；保存用 Ctrl+S / 宿主「完成」询问 */}
+      {mode === "edit" && bare && meta?.hasKey && !isAdmin && (
+        <div className="exc-bare-key">
+          <Ic p={ICONS.lock} />
+          <input
+            className="exc-input"
+            value={editKey}
+            onChange={e => setEditKey(e.target.value)}
+            type="password"
+            placeholder="编辑口令（输入后 Ctrl+S 保存）"
+          />
         </div>
       )}
       <div className="exc-canvas">
@@ -615,7 +642,8 @@ function mountAll() {
     el.dataset.mounted = "1"
     const note = (el.dataset.note || "").trim()
     const mode = el.dataset.mode === "edit" ? "edit" : "view"
-    createRoot(el).render(<NoteApp note={note} mode={mode} />)
+    const bare = el.dataset.bare === "1"
+    createRoot(el).render(<NoteApp note={note} mode={mode} bare={bare} />)
   })
 }
 
