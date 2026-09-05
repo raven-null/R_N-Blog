@@ -1242,6 +1242,32 @@
         #fpDrawer .fp-title{font-weight:600;color:var(--text-primary);font-size:13.5px;flex:1}
         #fpDrawer .fp-body{flex:1;min-height:0;background:#fff}
         #fpDrawer .fp-body iframe{width:100%;height:100%;border:none}
+
+        /* ===== 写文章：更宽 + 自适应排版 ===== */
+        /* 随记输入与最近列表：不再限 760px 窄栏，随内容区自适应 */
+        .wm-note-form,.wm-recent{max-width:none;width:100%}
+        .wm-note-form textarea{min-height:180px}
+        /* 文章编辑器高度自适应剩余空间（标题/形态条/页边距后尽量占满） */
+        .vditor-wrap .vditor{height:calc(100vh - 300px);min-height:380px}
+        /* 宽屏写作舒适区：编辑器内容最大 1400px 居中（避免 2K/4K 屏幕无限拉长） */
+        @media(min-width:1600px){
+            .wm-bar,.write-header,.vditor-wrap{max-width:1500px;margin-left:auto;margin-right:auto}
+        }
+        /* 窄屏自适应：紧凑边距与换行，避免被工具栏挤压 */
+        @media(max-width:1100px){
+            .write-header{padding:12px 14px}
+            .write-toolbar{flex-wrap:wrap;gap:8px}
+            .write-toolbar-right{flex-wrap:wrap}
+            .vditor-wrap .vditor{height:calc(100vh - 330px)}
+            .wm-board-host{height:calc(100vh - 280px)}
+        }
+        @media(max-width:640px){
+            .wm-bar .wm-hint{display:none}
+            .wm-bar{padding:10px 12px 2px}
+            .wm-note-form,.wm-board-bar,.wm-recent{padding-left:12px;padding-right:12px}
+            .wm-board-host{margin:0 12px 16px}
+            .wm-board-bar input{width:100%}
+        }
     </style>
     <div id="fpMask" onclick="closeFrontPreview()"></div>
     <aside id="fpDrawer" aria-hidden="true">
