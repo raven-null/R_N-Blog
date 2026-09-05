@@ -723,6 +723,125 @@
             color: var(--text-muted);
         }
 
+        /* ===== 纯白板文章 · 沉浸式画布舞台（body.board-mode） ===== */
+        body.board-mode { overflow: hidden; height: 100%; }
+        body.board-mode .article-progress,
+        body.board-mode #tocSidebar,
+        body.board-mode .mobile-top-bar,
+        body.board-mode .reader-toolbar,
+        body.board-mode #article-header,
+        body.board-mode #article-navigation,
+        body.board-mode .mobile-float-ball { display: none !important; }
+        body.board-mode .article-layout { padding: 0; margin: 0; max-width: 100%; }
+        body.board-mode .article-main { width: 100%; max-width: none; padding: 0; }
+        body.board-mode #article-content {
+            position: fixed; inset: 0; padding: 0; margin: 0; width: auto; max-width: none;
+        }
+        .board-stage {
+            position: absolute; inset: 0; overflow: hidden;
+            background:
+                radial-gradient(ellipse 55% 45% at 12% 15%, rgba(90, 120, 255, 0.14), transparent 65%),
+                radial-gradient(ellipse 45% 38% at 88% 12%, rgba(190, 90, 255, 0.10), transparent 60%),
+                radial-gradient(ellipse 55% 45% at 80% 85%, rgba(0, 210, 190, 0.08), transparent 60%),
+                #0a0a0e;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+        }
+        .board-stage .board-canvas { position: absolute; inset: 0; }
+        .board-stage .board-canvas .excalidraw { position: absolute; inset: 0; }
+        /* 顶部悬浮胶囊 */
+        .board-topbar {
+            position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
+            z-index: 30; display: flex; align-items: center; gap: 2px;
+            padding: 5px 6px; border-radius: 20px; max-width: 94vw;
+            background: linear-gradient(145deg, rgba(30, 30, 37, 0.85), rgba(20, 20, 26, 0.78));
+            backdrop-filter: blur(26px) saturate(180%); -webkit-backdrop-filter: blur(26px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.13);
+            box-shadow: 0 14px 44px -10px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            transition: opacity 0.45s ease, transform 0.45s ease;
+        }
+        .board-stage.idle .board-topbar { opacity: 0; pointer-events: none; transform: translateX(-50%) translateY(-10px); }
+        @media (hover: none) {
+            .board-stage.idle .board-topbar { opacity: 1; pointer-events: auto; transform: translateX(-50%); }
+        }
+        .board-topbar .bt-title {
+            max-width: 34vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+            font-size: 13.5px; font-weight: 600; color: #fff; padding: 0 10px;
+        }
+        .bt-btn {
+            display: inline-flex; align-items: center; gap: 6px; text-decoration: none;
+            color: #d8dbe4; font-size: 12.5px; padding: 6px 12px; border-radius: 14px;
+            background: transparent; border: none; cursor: pointer; white-space: nowrap;
+            transition: background 0.2s ease, color 0.2s ease, transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+            font-family: inherit;
+        }
+        .bt-btn svg { width: 14px; height: 14px; flex: none; }
+        .bt-btn:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
+        .bt-btn:active { transform: scale(0.94); }
+        /* 信息浮层 */
+        .board-pop {
+            position: absolute; top: 66px; right: 16px; z-index: 32; width: 300px; max-width: calc(100vw - 32px);
+            padding: 16px 18px; border-radius: 18px;
+            background: linear-gradient(145deg, rgba(32, 32, 40, 0.92), rgba(20, 20, 26, 0.88));
+            backdrop-filter: blur(28px) saturate(180%); -webkit-backdrop-filter: blur(28px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.13);
+            box-shadow: 0 22px 60px -16px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            color: #cfd3df; font-size: 12.5px; line-height: 1.8;
+            animation: board-pop-in 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        .board-pop h4 { margin: 0 0 8px; font-size: 15px; color: #fff; }
+        .board-pop .bp-row { display: flex; gap: 8px; }
+        .board-pop .bp-row .k { color: rgba(255, 255, 255, 0.4); flex: none; width: 52px; }
+        .board-pop .bp-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+        .board-pop .bp-tags span { padding: 2px 10px; border-radius: 999px; font-size: 11px; border: 1px solid rgba(255, 255, 255, 0.16); color: #bcd0ff; }
+        .board-pop .bp-actions { display: flex; gap: 8px; margin-top: 12px; }
+        @keyframes board-pop-in { from { opacity: 0; transform: translateY(-6px) scale(0.97); } to { opacity: 1; transform: none; } }
+        /* 遮罩 + 评论抽屉 */
+        .board-scrim { position: absolute; inset: 0; z-index: 34; background: rgba(5, 5, 8, 0.4); opacity: 0; pointer-events: none; transition: opacity 0.35s ease; }
+        .board-scrim.show { opacity: 1; pointer-events: auto; }
+        .board-drawer {
+            position: absolute; top: 0; right: 0; bottom: 0; z-index: 36;
+            width: min(430px, 94vw); transform: translateX(103%);
+            display: flex; flex-direction: column;
+            background: linear-gradient(145deg, rgba(26, 26, 33, 0.96), rgba(17, 17, 22, 0.94));
+            backdrop-filter: blur(30px) saturate(180%); -webkit-backdrop-filter: blur(30px) saturate(180%);
+            border-left: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow: -24px 0 60px -20px rgba(0, 0, 0, 0.7);
+            transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        .board-drawer.open { transform: none; }
+        .board-drawer-head {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 10px 12px 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.09); flex: none;
+        }
+        .board-drawer-head .dh-title { color: #fff; font-weight: 600; font-size: 14px; }
+        .board-drawer-body { flex: 1; overflow-y: auto; padding: 0 18px 30px; overscroll-behavior: contain; }
+        /* 抽屉内留言区外观重置 */
+        .board-drawer-body .dash-panel { background: transparent; border: none; box-shadow: none; margin: 0; padding: 10px 0 0; }
+        .board-drawer-body .dash-panel-title { color: rgba(255, 255, 255, 0.55); font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; }
+        /* 画廊式上下篇箭头 */
+        .board-navbtn {
+            position: absolute; top: 50%; transform: translateY(-50%); z-index: 30;
+            width: 46px; height: 46px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; cursor: pointer;
+            color: #d8dbe4; border: 1px solid rgba(255, 255, 255, 0.14);
+            background: linear-gradient(145deg, rgba(30, 30, 37, 0.8), rgba(18, 18, 24, 0.7));
+            backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+            box-shadow: 0 10px 30px -8px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            opacity: 0.9; transition: opacity 0.4s ease, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s ease;
+        }
+        .board-navbtn:hover { background: linear-gradient(145deg, rgba(48, 48, 58, 0.9), rgba(26, 26, 34, 0.8)); }
+        .board-navbtn:active { transform: translateY(-50%) scale(0.92); }
+        .board-navbtn.prev { left: 14px; }
+        .board-navbtn.next { right: 14px; }
+        .board-stage.idle .board-navbtn { opacity: 0; pointer-events: none; }
+        @media (hover: none) { .board-stage.idle .board-navbtn { opacity: 0.9; pointer-events: auto; } }
+        .board-navbtn svg { width: 18px; height: 18px; }
+        .board-navbtn[hidden] { display: none; }
+        .board-canvas-empty {
+            position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+            color: rgba(255, 255, 255, 0.4); font-size: 14px;
+        }
+
         .article-content .img-figure img {
             display: block;
             margin: 0 auto;
@@ -2085,23 +2204,144 @@
                 `;
             },
 
-            // 纯白板文章：整页交互白板（无目录侧栏、正文全宽）
+            // 纯白板文章：沉浸式画布舞台（无文档感：标题/评论收进悬浮控件，画廊式导航）
             async renderWhiteboard() {
                 const content = document.getElementById('article-content');
                 if (!this.currentPost) return;
-                document.body.classList.add('no-toc');
+                document.body.classList.add('board-mode', 'no-toc');
 
-                this.renderArticleHeader(document.getElementById('article-header'));
+                // 头部信息不占版面（移入「信息」浮层）
+                const header = document.getElementById('article-header');
+                if (header) header.innerHTML = '';
 
                 const boardId = (this.currentPost.boardId || '').trim();
                 if (!boardId || !/^[A-Za-z0-9_-]{1,64}$/.test(boardId)) {
-                    content.innerHTML = '<p class="article-empty-tip">这篇白板文章尚未关联画板</p>';
+                    content.innerHTML = '<div class="board-stage"><div class="board-canvas-empty">这篇白板文章尚未关联画板</div></div>';
                     return;
                 }
+
+                // 评论区整块移入右侧抽屉（复用全部留言逻辑）
+                const comments = document.getElementById('comment-section');
+
+                const p = this.currentPost;
+                const escT = this.escHtml ? this.escHtml : (s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'));
+                const title = escT(p.title || '白板');
+                const tagChips = (p.tags || []).map(t => '<span>' + escT(t) + '</span>').join('');
+
                 content.innerHTML =
-                    '<div class="article-whiteboard" data-excalidraw data-note="' + boardId + '" data-mode="view"></div>';
-                // 懒加载 Excalidraw bundle（onload 后自动挂载容器）
+                    '<div class="board-stage" id="boardStage">' +
+                    '<div class="board-canvas" data-excalidraw data-note="' + boardId + '" data-mode="view"></div>' +
+                    '<div class="board-topbar" id="boardTopbar">' +
+                    '<a class="bt-btn" href="/" title="返回博客"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m3 10.5 9-7.5 9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg></a>' +
+                    '<span class="bt-title">' + title + '</span>' +
+                    '<a class="bt-btn" href="/excalidraw.html?note=' + encodeURIComponent(boardId) + '&edit=1" target="_blank" title="在编辑器中打开此白板"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>编辑</a>' +
+                    '<button class="bt-btn" id="boardInfoBtn" title="白板信息"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="8" r=".4" fill="currentColor"/></svg>信息</button>' +
+                    '<button class="bt-btn" id="boardCommentBtn" title="留言"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>留言</button>' +
+                    '</div>' +
+                    '<div class="board-pop" id="boardInfoPop" hidden>' +
+                    '<h4>' + title + '</h4>' +
+                    '<div class="bp-row"><span class="k">作者</span><span>' + escT(p.author || '博主') + '</span></div>' +
+                    '<div class="bp-row"><span class="k">日期</span><span>' + escT(p.date || '') + '</span></div>' +
+                    (p.update ? '<div class="bp-row"><span class="k">更新</span><span>' + escT(p.update) + '</span></div>' : '') +
+                    '<div class="bp-row"><span class="k">画板</span><span style="word-break:break-all">' + escT(boardId) + '</span></div>' +
+                    '<div class="bp-tags">' + (tagChips || '<span style="opacity:.5">无标签</span>') + '</div>' +
+                    '<div class="bp-actions">' +
+                    '<button class="bt-btn" id="boardShareBtn" style="background:rgba(255,255,255,.08)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg>复制链接</button>' +
+                    '</div></div>' +
+                    '<div class="board-scrim" id="boardScrim"></div>' +
+                    '<aside class="board-drawer" id="boardDrawer" aria-hidden="true">' +
+                    '<div class="board-drawer-head"><span class="dh-title">留言</span><button class="bt-btn" id="boardDrawerClose" title="关闭"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>关闭</button></div>' +
+                    '<div class="board-drawer-body" id="boardDrawerBody"></div>' +
+                    '</aside>' +
+                    '<button class="board-navbtn prev" id="boardPrev" hidden title="上一篇"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>' +
+                    '<button class="board-navbtn next" id="boardNext" hidden title="下一篇"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></button>' +
+                    '</div>';
+
+                // 评论区移入抽屉
+                const drawerBody = document.getElementById('boardDrawerBody');
+                if (comments && drawerBody) drawerBody.appendChild(comments);
+
+                this.initBoardMode();
+                // 懒加载 Excalidraw bundle（onload 后自动挂载画布容器）
                 this.loadExcalidrawBundle();
+            },
+
+            // 画布舞台控件：信息/评论抽屉/画廊导航/闲置自动隐藏
+            initBoardMode() {
+                const stage = document.getElementById('boardStage');
+                if (!stage) return;
+                const infoPop = document.getElementById('boardInfoPop');
+                const infoBtn = document.getElementById('boardInfoBtn');
+                const drawer = document.getElementById('boardDrawer');
+                const scrim = document.getElementById('boardScrim');
+                const drawerBody = document.getElementById('boardDrawerBody');
+
+                // 评论抽屉（评论区已移入 drawerBody，直接显示）
+                const openDrawer = () => {
+                    drawer.classList.add('open');
+                    drawer.setAttribute('aria-hidden', 'false');
+                    scrim.classList.add('show');
+                    if (drawerBody && !drawerBody.dataset.init) {
+                        drawerBody.dataset.init = '1';
+                        const section = drawerBody.querySelector('.dash-panel');
+                        if (section) section.style.display = '';
+                    }
+                };
+                const closeDrawer = () => {
+                    drawer.classList.remove('open');
+                    drawer.setAttribute('aria-hidden', 'true');
+                    scrim.classList.remove('show');
+                };
+                const closeAll = () => { closeDrawer(); infoPop.hidden = true; };
+                const cb = document.getElementById('boardCommentBtn');
+                if (cb) cb.addEventListener('click', openDrawer);
+                const cbtn = document.getElementById('boardDrawerClose');
+                if (cbtn) cbtn.addEventListener('click', closeDrawer);
+                if (scrim) scrim.addEventListener('click', closeAll);
+
+                // 信息浮层
+                if (infoBtn) infoBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    infoPop.hidden = !infoPop.hidden;
+                });
+                const shareBtn = document.getElementById('boardShareBtn');
+                if (shareBtn) shareBtn.addEventListener('click', () => {
+                    try {
+                        navigator.clipboard.writeText(location.href);
+                        shareBtn.textContent = '已复制链接';
+                        setTimeout(() => { shareBtn.textContent = '复制链接'; }, 1800);
+                    } catch (e) { /* 剪贴板不可用时忽略 */ }
+                });
+
+                // 画廊式上下篇（原隐藏导航卡中取 href）
+                const navHref = (sel) => {
+                    const el = document.querySelector(sel);
+                    return el && el.getAttribute('href') ? el.getAttribute('href') : '';
+                };
+                const prev = document.getElementById('boardPrev');
+                const next = document.getElementById('boardNext');
+                const prevHref = navHref('.nav-card.prev');
+                const nextHref = navHref('.nav-card.next');
+                if (prev && prevHref) { prev.hidden = false; prev.addEventListener('click', () => { location.href = prevHref; }); }
+                if (next && nextHref) { next.hidden = false; next.addEventListener('click', () => { location.href = nextHref; }); }
+
+                // 闲置自动隐藏控件（鼠标/触控唤醒）；触屏由 CSS 保持常驻
+                if (window.matchMedia('(hover: hover)').matches) {
+                    let timer = null;
+                    const wake = () => {
+                        stage.classList.remove('idle');
+                        clearTimeout(timer);
+                        timer = setTimeout(() => stage.classList.add('idle'), 2600);
+                    };
+                    stage.addEventListener('mousemove', wake);
+                    stage.addEventListener('touchstart', wake);
+                    wake();
+                }
+
+                // Esc 关闭浮层/抽屉
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape') closeAll();
+                });
             },
 
             // Excalidraw 内嵌：把 ```excalidraw 代码块替换为交互白板容器，按需懒加载 bundle
@@ -2138,11 +2378,11 @@
                 // 样式独立文件（Excalidraw 0.18 Vite 产物）：先注入 CSS 再注入 JS
                 const css = document.createElement('link');
                 css.rel = 'stylesheet';
-                css.href = '/js/vendor/excalidraw/excalidraw-editor.v7.css';
+                css.href = '/js/vendor/excalidraw/excalidraw-editor.v8.css';
                 css.dataset.excalidrawBundle = '1';
                 document.head.appendChild(css);
                 const s = document.createElement('script');
-                s.src = '/js/vendor/excalidraw/excalidraw-editor.v7.js';
+                s.src = '/js/vendor/excalidraw/excalidraw-editor.v8.js';
                 s.dataset.excalidrawBundle = '1';
                 s.onload = () => { if (window.ExcalidrawMount) window.ExcalidrawMount(); };
                 s.onerror = () => {

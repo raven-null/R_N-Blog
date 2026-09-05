@@ -3,104 +3,184 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>卡片笔记 - 我的博客</title>
+  <title>灵感 - 卡片笔记</title>
   <link rel="icon" id="siteFavicon" href="images/Default/web-logo.webp" type="image/webp" />
   <link rel="stylesheet" href="css/style.css?v=3.16.3" />
   <link rel="stylesheet" href="css/glass.css?v=1.0.4" />
   <script src="js/theme.js?v=3.13.6"></script>
   <style>
-    /* ===== 卡片流页面（液态玻璃） ===== */
+    /* ===== 灵感墙：卡片笔记时间流（液态玻璃） ===== */
+    :root {
+      --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
     html, body { height: auto; min-height: 100%; }
     body { overflow-y: auto; }
     .notes-top {
-      position: sticky; top: 0; z-index: 20;
-      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+      position: sticky; top: 0; z-index: 50;
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
       padding: 10px 18px;
-      background: rgba(16, 16, 19, 0.6);
-      backdrop-filter: blur(24px) saturate(180%); -webkit-backdrop-filter: blur(24px) saturate(180%);
+      background: rgba(16, 16, 19, 0.62);
+      backdrop-filter: blur(26px) saturate(180%); -webkit-backdrop-filter: blur(26px) saturate(180%);
       border-bottom: 1px solid rgba(255, 255, 255, 0.1);
       box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
       font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
     }
-    .notes-top .title { color: #fff; font-weight: 700; font-size: 16px; display: inline-flex; align-items: center; gap: 8px; }
-    .notes-top .title svg { width: 17px; height: 17px; color: #9aa0ff; }
-    .notes-top .spacer { flex: 1; }
+    .brand { display: inline-flex; align-items: center; gap: 9px; color: #fff; font-weight: 700; font-size: 16px; margin-right: 6px; }
+    .brand svg { width: 17px; height: 17px; color: #9aa0ff; }
+    .count-pill { font-size: 11.5px; color: rgba(255, 255, 255, 0.55); border: 1px solid rgba(255, 255, 255, 0.14); padding: 2px 10px; border-radius: 999px; }
     .nav-pill {
       display: inline-flex; align-items: center; gap: 6px; text-decoration: none;
       color: #e8e8ea; padding: 5px 13px; border-radius: 999px; font-size: 13px;
       background: linear-gradient(145deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.035));
       border: 1px solid rgba(255, 255, 255, 0.12);
       box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
-      transition: transform 0.25s var(--spring, cubic-bezier(0.34, 1.56, 0.64, 1)), background 0.2s ease, border-color 0.2s ease;
+      transition: transform 0.25s var(--spring), background 0.2s ease, border-color 0.2s ease;
     }
     .nav-pill:hover { background: linear-gradient(145deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.07)); border-color: rgba(255, 255, 255, 0.26); }
     .nav-pill:active { transform: scale(0.95); }
     .nav-pill svg { width: 14px; height: 14px; }
-    .notes-wrap { max-width: 1200px; margin: 0 auto; padding: 22px 20px 60px; position: relative; z-index: 1; }
-    /* 标签筛选 */
-    .note-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 22px; }
-    .note-tag {
-      padding: 5px 14px; border-radius: 999px; cursor: pointer; font-size: 13px;
+    .spacer { flex: 1; }
+    .search-box {
+      display: inline-flex; align-items: center; gap: 6px; padding: 5px 14px; border-radius: 999px;
+      background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 255, 255, 0.13);
+      transition: border-color 0.2s ease, background 0.2s ease;
+    }
+    .search-box:focus-within { border-color: rgba(255, 255, 255, 0.34); background: rgba(255, 255, 255, 0.1); }
+    .search-box svg { width: 13px; height: 13px; color: rgba(255, 255, 255, 0.4); flex: none; }
+    .search-box input { border: none; outline: none; background: transparent; color: #fff; font-size: 13px; width: 120px; font-family: inherit; }
+    .search-box input::placeholder { color: rgba(255, 255, 255, 0.32); }
+    .wrap { max-width: 1120px; margin: 0 auto; padding: 24px 22px 80px; position: relative; z-index: 1; }
+    /* 标签行 */
+    .tag-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 26px; }
+    .tag-chip {
+      padding: 5px 15px; border-radius: 999px; cursor: pointer; font-size: 12.5px;
       color: #d6d9e2; border: 1px solid rgba(255, 255, 255, 0.14);
       background: linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
-      transition: transform 0.25s var(--spring, cubic-bezier(0.34, 1.56, 0.64, 1)), border-color 0.2s, background 0.2s, color 0.2s;
-      user-select: none;
+      transition: transform 0.25s var(--spring), border-color 0.2s, background 0.2s, color 0.2s;
+      user-select: none; font-family: inherit;
     }
-    .note-tag:hover { border-color: rgba(255, 255, 255, 0.32); }
-    .note-tag.active {
-      color: #0b0b10; font-weight: 600;
-      background: linear-gradient(180deg, #fff, #d9d9e3);
-      border-color: rgba(255, 255, 255, 0.6);
+    .tag-chip:hover { border-color: rgba(255, 255, 255, 0.32); }
+    .tag-chip.active { color: #0b0b10; font-weight: 600; background: linear-gradient(180deg, #fff, #d9d9e3); border-color: rgba(255, 255, 255, 0.6); }
+    .tag-chip .cnt { opacity: 0.5; font-size: 11px; margin-left: 5px; }
+    /* 今日大卡 */
+    .hero-card {
+      display: flex; gap: 20px; align-items: stretch; margin-bottom: 34px; padding: 26px 28px;
+      border-radius: 26px; position: relative; overflow: hidden; cursor: pointer;
+      background: linear-gradient(145deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.04));
+      backdrop-filter: blur(28px) saturate(180%); -webkit-backdrop-filter: blur(28px) saturate(180%);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      box-shadow: 0 24px 70px -22px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+      animation: rise-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
     }
-    .note-tag .cnt { opacity: 0.55; font-size: 11px; margin-left: 4px; }
-    /* 瀑布流 */
-    .notes-masonry { column-count: 3; column-gap: 16px; }
-    @media (max-width: 1024px) { .notes-masonry { column-count: 2; } }
-    @media (max-width: 640px) { .notes-masonry { column-count: 1; } }
+    .hero-card::before {
+      content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 5px;
+      background: var(--hc-accent, linear-gradient(180deg, #9aa0ff, #6ee7ff));
+    }
+    .hero-label { position: absolute; top: 18px; right: 22px; font-size: 11px; letter-spacing: 0.14em; color: rgba(255, 255, 255, 0.4); }
+    .hero-body { flex: 1; font-size: 17px; line-height: 1.9; color: #f2f3f7; padding-right: 90px; }
+    .hero-body a { color: #8ab4ff; }
+    .hero-body code { background: rgba(255, 255, 255, 0.12); padding: 1px 7px; border-radius: 7px; font-size: 15px; }
+    .hero-date { align-self: flex-end; font-size: 12px; color: rgba(255, 255, 255, 0.45); white-space: nowrap; }
+    @keyframes rise-in { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+    /* 月份分组 */
+    .month-group { margin-bottom: 34px; }
+    .month-head {
+      display: flex; align-items: center; gap: 14px; margin-bottom: 16px;
+      font-size: 13px; color: rgba(255, 255, 255, 0.5); letter-spacing: 0.03em;
+    }
+    .month-head strong { font-size: 15px; color: #fff; font-weight: 700; }
+    .month-head .line { flex: 1; height: 1px; background: linear-gradient(90deg, rgba(255, 255, 255, 0.16), transparent); }
+    .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 14px; }
     .note-card {
-      break-inside: avoid; margin-bottom: 16px; padding: 18px 20px;
-      border-radius: 20px;
-      background: linear-gradient(145deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.035));
+      padding: 17px 18px 14px; border-radius: 20px; position: relative; cursor: pointer;
+      background: linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
       backdrop-filter: blur(24px) saturate(180%); -webkit-backdrop-filter: blur(24px) saturate(180%);
       border: 1px solid rgba(255, 255, 255, 0.12);
-      box-shadow: 0 10px 34px -14px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.09);
+      box-shadow: 0 12px 34px -16px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.08);
       font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
-      transition: transform 0.25s var(--spring, cubic-bezier(0.34, 1.56, 0.64, 1)), box-shadow 0.25s ease, border-color 0.2s ease;
-      animation: note-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+      transition: transform 0.35s var(--spring), box-shadow 0.3s ease, border-color 0.25s ease;
+      animation: rise-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
     }
-    .note-card:hover { transform: translateY(-3px); border-color: rgba(255, 255, 255, 0.26); box-shadow: 0 18px 46px -16px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.12); }
-    @keyframes note-in { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
-    .note-card .nc-body { font-size: 14px; line-height: 1.85; color: #e6e8ee; word-break: break-word; }
-    .note-card .nc-body code { background: rgba(255, 255, 255, 0.12); padding: 1px 6px; border-radius: 6px; font-size: 12.5px; }
+    .note-card::before {
+      content: ''; position: absolute; left: 0; top: 14px; bottom: 14px; width: 3px; border-radius: 3px;
+      background: var(--nc-accent, rgba(154, 160, 255, 0.65));
+    }
+    .note-card:hover { transform: translateY(-4px) rotate(-0.3deg); border-color: rgba(255, 255, 255, 0.28); box-shadow: 0 20px 48px -18px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.12); }
+    .note-card .nc-body { font-size: 13.5px; line-height: 1.85; color: #e8eaf0; word-break: break-word; }
+    .note-card .nc-body code { background: rgba(255, 255, 255, 0.12); padding: 1px 6px; border-radius: 6px; font-size: 12px; }
     .note-card .nc-body a { color: #8ab4ff; }
-    .note-card .nc-foot { display: flex; align-items: center; gap: 8px; margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255, 255, 255, 0.08); font-size: 11.5px; color: rgba(255, 255, 255, 0.4); flex-wrap: wrap; }
-    .note-card .nc-foot .tag { padding: 1px 8px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, 0.14); color: rgba(255, 255, 255, 0.6); }
+    .note-card .nc-foot { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 11px; color: rgba(255, 255, 255, 0.42); flex-wrap: wrap; }
+    .note-card .nc-foot .t { padding: 1px 9px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, 0.14); color: rgba(255, 255, 255, 0.6); }
     .note-card .nc-date { margin-left: auto; }
-    .notes-empty { text-align: center; padding: 90px 20px; color: rgba(255, 255, 255, 0.4); font-size: 14px; }
-    .notes-loading { text-align: center; padding: 90px 20px; }
+    /* 空态 */
+    .empty-state { text-align: center; padding: 90px 20px; color: rgba(255, 255, 255, 0.4); font-size: 14px; }
+    .loading-state { text-align: center; padding: 90px 20px; }
+    /* 居中浮层 */
+    .view-mask { position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(5, 5, 9, 0.55); backdrop-filter: blur(10px) saturate(140%); -webkit-backdrop-filter: blur(10px) saturate(140%); opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+    .view-mask.show { opacity: 1; pointer-events: auto; }
+    .view-card {
+      width: min(560px, 94vw); max-height: 82vh; overflow-y: auto; padding: 30px 32px;
+      border-radius: 26px; transform: scale(0.94) translateY(10px); transition: transform 0.35s var(--spring);
+      background: linear-gradient(145deg, rgba(34, 34, 42, 0.97), rgba(20, 20, 26, 0.95));
+      backdrop-filter: blur(32px) saturate(190%); -webkit-backdrop-filter: blur(32px) saturate(190%);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      box-shadow: 0 40px 110px -24px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+    }
+    .view-mask.show .view-card { transform: none; }
+    .view-card .vc-title { font-size: 18px; font-weight: 700; color: #fff; margin-bottom: 14px; display: flex; justify-content: space-between; gap: 12px; }
+    .view-card .vc-close { cursor: pointer; color: rgba(255, 255, 255, 0.5); background: none; border: none; padding: 2px; }
+    .view-card .vc-close:hover { color: #fff; }
+    .view-card .vc-body { font-size: 15px; line-height: 2; color: #eceef4; white-space: pre-wrap; word-break: break-word; }
+    .view-card .vc-body code { background: rgba(255, 255, 255, 0.12); padding: 1px 7px; border-radius: 7px; font-size: 13px; }
+    .view-card .vc-body a { color: #8ab4ff; }
+    .view-card .vc-foot { display: flex; align-items: center; gap: 8px; margin-top: 22px; padding-top: 16px; border-top: 1px solid rgba(255, 255, 255, 0.09); flex-wrap: wrap; font-size: 12px; color: rgba(255, 255, 255, 0.5); }
+    .view-card .vc-foot .t { padding: 2px 11px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, 0.16); color: #bcd0ff; }
+    .vc-copy { margin-left: auto; display: inline-flex; align-items: center; gap: 5px; cursor: pointer; color: rgba(255, 255, 255, 0.65); background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 999px; padding: 4px 13px; font-size: 12px; font-family: inherit; }
+    .vc-copy:hover { color: #fff; border-color: rgba(255, 255, 255, 0.3); }
+    @media (max-width: 640px) {
+      .hero-body { font-size: 15px; padding-right: 0; }
+      .cards { grid-template-columns: 1fr; }
+      .search-box input { width: 90px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .note-card, .hero-card { animation: none; }
+      .note-card:hover { transform: none; }
+    }
   </style>
 </head>
 <body>
-  <!-- 卡片笔记归档：type=card 的文章以玻璃卡片流展示，标签筛选 -->
+  <!-- 灵感墙：type=card 文章按月份分组的卡片笔记时间流 -->
   <header class="notes-top">
     <a class="nav-pill" href="/">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m3 10.5 9-7.5 9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>
       博客
     </a>
-    <span class="title">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M8 12h8M12 8v8"/></svg>
-      卡片笔记
+    <span class="brand">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.6L20 9l-5 3.6L16.5 19 12 15.6 7.5 19 9 12.6 4 9l6.1-.4Z"/></svg>
+      灵感
     </span>
+    <span class="count-pill" id="totalPill">…</span>
     <span class="spacer"></span>
+    <label class="search-box">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="searchInput" type="text" placeholder="搜索灵感…" />
+    </label>
     <span id="themeMount"></span>
   </header>
 
-  <main class="notes-wrap">
-    <div class="note-tags" id="noteTags"></div>
-    <div id="notesLoading" class="notes-loading"><span class="loading-spinner"></span></div>
-    <div class="notes-masonry" id="notesMasonry"></div>
-    <div id="notesEmpty" class="notes-empty" style="display:none"></div>
+  <main class="wrap">
+    <div class="tag-row" id="tagRow"></div>
+    <div id="todayHero"></div>
+    <div id="groups"></div>
+    <div id="loadingState" class="loading-state"><span class="loading-spinner"></span></div>
+    <div id="emptyState" class="empty-state" style="display:none"></div>
   </main>
+
+  <!-- 卡片查看浮层 -->
+  <div class="view-mask" id="viewMask">
+    <div class="view-card" id="viewCard"></div>
+  </div>
 
   <script>
     (function () {
@@ -111,13 +191,16 @@
 
       var all = [];
       var activeTag = new URLSearchParams(location.search).get('tag') || '';
-      var masonry = document.getElementById('notesMasonry');
-      var emptyEl = document.getElementById('notesEmpty');
+      var query = '';
+      var groupsEl = document.getElementById('groups');
+      var emptyEl = document.getElementById('emptyState');
+      var loadingEl = document.getElementById('loadingState');
+      var mask = document.getElementById('viewMask');
+      var card = document.getElementById('viewCard');
 
       function esc(s) {
         return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
       }
-      // 轻量 Markdown：行内代码 / 粗体 / 链接 / 换行
       function miniMd(s) {
         return esc(s)
           .replace(/`([^`]+)`/g, '<code>$1</code>')
@@ -125,68 +208,166 @@
           .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
           .replace(/\n/g, '<br>');
       }
-      function fmt(d) {
-        return String(d || '').slice(0, 10);
+      function hashHue(t) {
+        var h = 0;
+        for (var i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) >>> 0;
+        return h % 360;
+      }
+      function accentOf(tags) {
+        var t = (tags && tags[0]) || 'card';
+        return 'hsl(' + hashHue(t) + ' 70% 62% / 0.65)';
+      }
+      function fmtDate(d) { return String(d || '').slice(0, 10); }
+      function monthKey(d) { return String(d || '').slice(0, 7); }
+      function monthLabel(k) {
+        var p = k.split('-');
+        return p[0] + ' 年 ' + Number(p[1]) + ' 月';
+      }
+      function isToday(d) {
+        var now = new Date();
+        var p = String(d || '').slice(0, 10).split('-');
+        if (p.length < 3) return false;
+        return Number(p[0]) === now.getFullYear() && Number(p[1]) === now.getMonth() + 1 && Number(p[2]) === now.getDate();
+      }
+
+      function visible() {
+        return all.filter(function (c) {
+          if (activeTag && !(c.tags || []).includes(activeTag)) return false;
+          if (query) {
+            var hay = (c.title + ' ' + (c.content || '') + ' ' + (c.tags || []).join(' ')).toLowerCase();
+            if (hay.indexOf(query) < 0) return false;
+          }
+          return true;
+        });
       }
 
       function renderTags() {
-        var box = document.getElementById('noteTags');
+        var box = document.getElementById('tagRow');
         var counts = {};
         all.forEach(function (c) { (c.tags || []).forEach(function (t) { counts[t] = (counts[t] || 0) + 1; }); });
         var names = Object.keys(counts).sort();
-        var html = '<button class="note-tag' + (activeTag ? '' : ' active') + '" data-t="__all__">全部<span class="cnt">' + all.length + '</span></button>';
+        var html = '<button class="tag-chip' + (activeTag ? '' : ' active') + '" data-t="__all__">全部<span class="cnt">' + all.length + '</span></button>';
         names.forEach(function (t) {
-          html += '<button class="note-tag' + (t === activeTag ? ' active' : '') + '" data-t="' + esc(t) + '">' + esc(t) + '<span class="cnt">' + counts[t] + '</span></button>';
+          html += '<button class="tag-chip' + (t === activeTag ? ' active' : '') + '" data-t="' + esc(t) + '">' + esc(t) + '<span class="cnt">' + counts[t] + '</span></button>';
         });
         box.innerHTML = html;
-        box.querySelectorAll('.note-tag').forEach(function (btn) {
+        box.querySelectorAll('.tag-chip').forEach(function (btn) {
           btn.addEventListener('click', function () {
             activeTag = btn.dataset.t === '__all__' ? '' : btn.dataset.t;
             renderTags();
-            renderCards();
-            history.replaceState(null, '', activeTag ? '?tag=' + encodeURIComponent(activeTag) : location.pathname);
+            render();
+            var url = new URL(location.href);
+            if (activeTag) url.searchParams.set('tag', activeTag); else url.searchParams.delete('tag');
+            history.replaceState(null, '', url);
           });
         });
       }
 
-      function renderCards() {
-        var list = activeTag ? all.filter(function (c) { return (c.tags || []).includes(activeTag); }) : all;
+      function render() {
+        var list = visible();
+        document.getElementById('totalPill').textContent = list.length + ' 条';
+        loadingEl.style.display = 'none';
+        // 今日大卡
+        var heroEl = document.getElementById('todayHero');
+        var today = list.filter(function (c) { return isToday(c.date); });
+        if (today.length) {
+          var hc = today[0];
+          heroEl.innerHTML =
+            '<div class="hero-card" data-id="' + hc.id + '" style="--hc-accent:' + accentOf(hc.tags) + '">' +
+            '<span class="hero-label">TODAY</span>' +
+            '<div class="hero-body">' + miniMd(hc.content || '') + '</div>' +
+            '<span class="hero-date">' + fmtDate(hc.date) + '</span></div>';
+          heroEl.querySelector('.hero-card').addEventListener('click', function () { openView(hc); });
+        } else {
+          heroEl.innerHTML = '';
+        }
+        // 月份分组
         if (!list.length) {
-          masonry.style.display = 'none';
+          groupsEl.innerHTML = '';
           emptyEl.style.display = '';
-          emptyEl.textContent = activeTag ? '这个标签下还没有卡片笔记' : '还没有卡片笔记';
+          emptyEl.innerHTML = query
+            ? '没有找到与「' + esc(query) + '」相关的灵感'
+            : (activeTag ? '「' + esc(activeTag) + '」标签下还没有卡片' : '还没有卡片笔记，去后台记第一条灵感吧');
           return;
         }
-        masonry.style.display = '';
         emptyEl.style.display = 'none';
-        masonry.innerHTML = list.map(function (c, i) {
-          var tags = (c.tags || []).map(function (t) { return '<span class="tag">' + esc(t) + '</span>'; }).join('');
-          return '<div class="note-card" style="animation-delay:' + Math.min(i * 40, 400) + 'ms">' +
-            '<div class="nc-body">' + miniMd(c.content || '') + '</div>' +
-            '<div class="nc-foot">' + tags + '<span class="nc-date">' + fmt(c.date) + '</span></div>' +
-            '</div>';
+        var groups = {};
+        list.forEach(function (c) {
+          var k = monthKey(c.date);
+          (groups[k] = groups[k] || []).push(c);
+        });
+        var keys = Object.keys(groups).sort().reverse();
+        groupsEl.innerHTML = keys.map(function (k) {
+          var items = groups[k];
+          return '<section class="month-group">' +
+            '<div class="month-head"><strong>' + monthLabel(k) + '</strong><span>' + items.length + ' 条</span><span class="line"></span></div>' +
+            '<div class="cards">' + items.map(function (c, ci) {
+              return '<div class="note-card" data-id="' + c.id + '" style="animation-delay:' + Math.min(ci * 55, 500) + 'ms;--nc-accent:' + accentOf(c.tags) + '">' +
+                '<div class="nc-body">' + miniMd(c.content || '') + '</div>' +
+                '<div class="nc-foot">' +
+                (c.tags || []).slice(0, 3).map(function (t) { return '<span class="t">' + esc(t) + '</span>'; }).join('') +
+                '<span class="nc-date">' + fmtDate(c.date) + '</span></div></div>';
+            }).join('') + '</div></section>';
         }).join('');
+        groupsEl.querySelectorAll('.note-card').forEach(function (el) {
+          var c = list.find(function (x) { return x.id === el.dataset.id; });
+          if (c) el.addEventListener('click', function () { openView(c); });
+        });
       }
+
+      function openView(c) {
+        card.innerHTML =
+          '<div class="vc-title"><span>' + esc(c.title || '灵感') + '</span><button class="vc-close" id="vcClose" title="关闭"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>' +
+          '<div class="vc-body">' + miniMd(c.content || '') + '</div>' +
+          '<div class="vc-foot">' +
+          (c.tags || []).map(function (t) { return '<span class="t">' + esc(t) + '</span>'; }).join('') +
+          '<span>' + fmtDate(c.date) + '</span>' +
+          '<button class="vc-copy" id="vcCopy">复制内容</button></div>';
+        mask.classList.add('show');
+        document.getElementById('vcClose').addEventListener('click', closeView);
+        document.getElementById('vcCopy').addEventListener('click', function () {
+          try {
+            navigator.clipboard.writeText(c.content || '');
+            this.textContent = '已复制';
+            var btn = this;
+            setTimeout(function () { btn.textContent = '复制内容'; }, 1600);
+          } catch (e) { /* ignore */ }
+        });
+      }
+      function closeView() { mask.classList.remove('show'); }
+      mask.addEventListener('click', function (e) { if (e.target === mask) closeView(); });
+      document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeView(); });
+
+      // 搜索
+      var searchInput = document.getElementById('searchInput');
+      var debounce = null;
+      searchInput.addEventListener('input', function () {
+        clearTimeout(debounce);
+        debounce = setTimeout(function () {
+          query = searchInput.value.trim().toLowerCase();
+          render();
+        }, 180);
+      });
 
       fetch('/api/admin?action=articles', { cache: 'no-store' })
         .then(function (r) { return r.json(); })
         .then(function (d) {
-          document.getElementById('notesLoading').style.display = 'none';
+          loadingEl.style.display = 'none';
           if (!d || d.status !== 'success' || !Array.isArray(d.data)) {
             emptyEl.style.display = '';
-            emptyEl.textContent = '卡片加载失败';
+            emptyEl.textContent = '灵感加载失败';
             return;
           }
           all = d.data
             .filter(function (a) { return a.status === 'published' && a.type === 'card'; })
             .sort(function (a, b) { return String(b.date).localeCompare(String(a.date)); });
           renderTags();
-          renderCards();
+          render();
         })
         .catch(function () {
-          document.getElementById('notesLoading').style.display = 'none';
+          loadingEl.style.display = 'none';
           emptyEl.style.display = '';
-          emptyEl.textContent = '卡片加载失败';
+          emptyEl.textContent = '灵感加载失败';
         });
     })();
   </script>

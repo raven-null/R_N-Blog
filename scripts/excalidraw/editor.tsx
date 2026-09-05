@@ -68,6 +68,12 @@ const UI_CSS = `
 .exc-pick .pt{display:block;font-size:14px;font-weight:600;color:#fff;margin-bottom:3px}
 .exc-pick .pd{display:block;font-size:12px;color:rgba(255,255,255,.45);line-height:1.6}
 .exc-modal-row{display:flex;justify-content:flex-end;gap:8px;margin-top:2px}
+/* 隐藏 Excalidraw 内置页脚（版权/语言等链接，本站顶栏已覆盖必要功能） */
+.excalidraw .layer-ui__wrapper .layer-ui__wrapper__footer-center,
+.excalidraw .layer-ui__wrapper .footer-center{display:none!important}
+/* 空画布欢迎屏（新手引导大图）与浮动装饰提示：本站场景不需要 */
+.excalidraw .welcome-screen-center,
+.excalidraw .welcome-screen-decor{display:none!important}
 @keyframes exc-modal-in{from{opacity:0;transform:scale(.96) translateY(8px)}to{opacity:1;transform:none}}
 .exc-msg{display:flex;align-items:center;gap:8px;margin:8px 14px 10px;padding:7px 14px;border-radius:14px;font-size:12.5px;line-height:1.5;color:#d4d7e2;background:linear-gradient(145deg,rgba(30,30,36,.72),rgba(24,24,30,.6));backdrop-filter:blur(20px) saturate(160%);-webkit-backdrop-filter:blur(20px) saturate(160%);border:1px solid rgba(255,255,255,.1);box-shadow:inset 0 1px 0 rgba(255,255,255,.07);animation:exc-msg-in .35s cubic-bezier(.22,1,.36,1)}
 .exc-msg .dot{width:6px;height:6px;border-radius:50%;flex:none;background:#5ac8fa;box-shadow:0 0 10px rgba(90,200,250,.9)}
@@ -537,6 +543,7 @@ function NoteApp({ note, mode }: { note: string; mode: "edit" | "view" }) {
           excalidrawAPI={api => { apiRef.current = api }}
           initialData={initialData}
           viewModeEnabled={mode === "view"}
+          langCode="zh-CN"
           theme="light"
           UIOptions={
             mode === "view"
@@ -551,7 +558,17 @@ function NoteApp({ note, mode }: { note: string; mode: "edit" | "view" }) {
                     toggleTheme: false,
                   },
                 }
-              : undefined
+              : {
+                  welcomeScreen: false,
+                  canvasActions: {
+                    // 编辑模式：功能由本站顶栏承担，隐藏库内同功能入口与无关项
+                    export: false,
+                    saveToActiveFile: false,
+                    loadScene: false,
+                    saveAsImage: false,
+                    toggleTheme: false,
+                  },
+                }
           }
         />
       </div>
