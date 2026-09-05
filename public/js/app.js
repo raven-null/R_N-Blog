@@ -31,6 +31,7 @@ const BlogApp = {
         this.render();
         console.log('[BlogApp] 渲染完成');
         this.setupEventListeners();
+        this.bindPagePrefetch();
         this.handleRoute();
         this.startAutoRefresh();
         // 后台退出登录联动：admin_key / gallery_key 被清除时，前台图库 R18 恢复锁定
@@ -297,7 +298,7 @@ const BlogApp = {
         const readingLabel = post.type === 'whiteboard' ? '交互白板' : `${readTime} 分钟`;
 
         return `
-            <div class="card" onclick="BlogApp.openPost('${this.escAttr(post.filename)}', '${this.escAttr(post.id || '')}')">
+            <div class="card" data-href="article.html?post=${this.escAttr(post.filename)}&blob=${this.escAttr(post.id || '')}" onclick="BlogApp.openPost('${this.escAttr(post.filename)}', '${this.escAttr(post.id || '')}')">
                 ${post.image ? `
                     <div class="card-img">
                         <img src="${this.escAttr(post.image)}" alt="${this.esc(post.title)}" class="img-placeholder" loading="lazy" decoding="async"
@@ -411,6 +412,23 @@ const BlogApp = {
             .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
             .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
             .replace(/\n/g, '<br>');
+    },
+
+    // hover 预取：鼠标悬停文章/白板卡片时后台预取目标页，点击后几乎瞬时打开（不阻塞主线程）
+    bindPagePrefetch() {
+        if (this._pfBound) return;
+        this._pfBound = true;
+        document.addEventListener('mouseover', (e) => {
+            const card = e.target && e.target.closest ? e.target.closest('.card[data-href]') : null;
+            if (!card || card.dataset.pf) return;
+            card.dataset.pf = '1';
+            try {
+                const l = document.createElement('link');
+                l.rel = 'prefetch';
+                l.href = card.dataset.href;
+                document.head.appendChild(l);
+            } catch (err) { /* ignore */ }
+        }, { passive: true });
     },
 
     // 按标签筛选文章

@@ -622,3 +622,44 @@ button:active,
 .note-viewer .nv-copy:hover { color: #fff; border-color: rgba(255, 255, 255, 0.32); }
 .note-viewer .nv-err { padding: 40px 0; text-align: center; color: rgba(255, 255, 255, 0.5); }
 @media (prefers-reduced-motion: reduce) { .note-viewer { transition: none; } }
+/* ===== 卡片按压反馈（苹果式） ===== */
+.card:active { transform: scale(0.985); }
+
+/* ===== View Transitions：同源页面跳转的苹果式过渡 =====
+   渐进增强：不支持 view-transition 的浏览器直接跳过，不影响功能与速度 */
+@view-transition {
+    navigation: auto;
+}
+/* 默认（返回/前进不可判定等）：新页柔和上浮淡入，旧页轻微淡出 */
+::view-transition-old(root) {
+    animation: vt-leave 0.3s ease both;
+}
+::view-transition-new(root) {
+    animation: vt-enter 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes vt-leave {
+    to { opacity: 0; transform: scale(0.99); }
+}
+@keyframes vt-enter {
+    from { opacity: 0; transform: translateY(16px) scale(0.995); }
+}
+/* 前进导航（进入文章/白板等，Chromium 支持时）：iOS push 层级感 */
+:active-view-transition-type(push)::view-transition-old(root) {
+    animation: vt-push-old 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+:active-view-transition-type(push)::view-transition-new(root) {
+    animation: vt-push-new 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes vt-push-old {
+    to { opacity: 0.5; transform: translateX(-12%); }
+}
+@keyframes vt-push-new {
+    from { transform: translateX(100%); }
+}
+@media (prefers-reduced-motion: reduce) {
+    ::view-transition-old(root), ::view-transition-new(root),
+    :active-view-transition-type(push)::view-transition-old(root),
+    :active-view-transition-type(push)::view-transition-new(root) {
+        animation: none !important;
+    }
+}
