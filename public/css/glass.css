@@ -555,37 +555,8 @@ button:active,
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
-/* 顶部导航：内容类型入口分隔（灵感页等） */
-.nav-link-sep {
-    display: inline-block; width: 1px; height: 14px; margin: 0 10px;
-    background: rgba(255, 255, 255, 0.14); vertical-align: -2px;
-}
-
-/* 顶栏「灵感」外链胶囊 */
-.view-link-notes {
-    display: inline-flex; align-items: center; gap: 6px; text-decoration: none;
-    color: rgba(255, 255, 255, 0.78); font-size: 13px; padding: 7px 15px;
-    border-radius: 999px; margin-left: 10px;
-    background: linear-gradient(145deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.04));
-    border: 1px solid rgba(255, 255, 255, 0.16);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
-    transition: transform 0.25s var(--spring), background 0.2s ease, border-color 0.2s ease;
-    vertical-align: middle;
-}
-.view-link-notes:hover { background: linear-gradient(145deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.08)); border-color: rgba(255, 255, 255, 0.32); }
-.view-link-notes:active { transform: scale(0.96); }
-.view-link-notes svg { width: 14px; height: 14px; }
-
-/* ===== 首页「灵感」胶囊区（卡片笔记：胶囊 + 点击原地展开） ===== */
+/* ===== 首页卡片笔记胶囊区（胶囊 + 点击原地展开） ===== */
 .notes-pills { margin: 22px auto 8px; padding: 0 4px; }
-.notes-pills .np-head {
-    display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px;
-    color: rgba(255, 255, 255, 0.5); font-size: 12.5px;
-}
-.notes-pills .np-head strong { font-size: 14px; color: var(--text-primary); font-weight: 700; }
-.notes-pills .np-head .np-count { font-size: 11.5px; }
-.notes-pills .np-head a { margin-left: auto; color: var(--text-muted); font-size: 12.5px; text-decoration: none; }
-.notes-pills .np-head a:hover { color: var(--text-secondary); }
 .notes-pills .np-list { display: flex; flex-direction: column; gap: 10px; }
 .notes-pills .pill-item { margin: 0; }
 .notes-pills .pill-row {

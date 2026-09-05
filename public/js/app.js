@@ -234,7 +234,7 @@ const BlogApp = {
         const wrap = document.getElementById('notesPills');
         if (!wrap) return;
         try {
-            const res = await fetch('/api/admin?action=articles', { cache: 'no-store' });
+            const res = await fetch('/api/admin?action=articles&filter=card&withContent=1', { cache: 'no-store' });
             const d = await res.json();
             if (!d || d.status !== 'success' || !Array.isArray(d.data)) return;
             const cards = d.data
@@ -258,8 +258,6 @@ const BlogApp = {
             const accent = (tags) => 'hsl(' + hue((tags && tags[0]) || 'card') + ' 70% 62% / 0.75)';
 
             wrap.innerHTML =
-                '<div class="np-head"><strong>灵感</strong><span class="np-count">' + cards.length + ' 条</span>' +
-                '<a href="/notes.html">全部 →</a></div>' +
                 '<div class="np-list">' +
                 cards.map(c => {
                     const ac = accent(c.tags);
