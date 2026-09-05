@@ -305,7 +305,7 @@
             try{const bc=new BroadcastChannel('blog-articles');bc.postMessage({type:'articles-changed'});bc.close()}catch(e){}
         }
         async function deleteArticle(id,title){const confirmed=await showConfirm(`确定删除「${title}」？删除后不可恢复！`,'删除文章','删除');if(!confirmed)return;const r=await apiFetch(`action=articles&id=${id}`,{method:'DELETE'});if(r.status==='success'){showToast('已删除','success');loadArticles();notifyArticlesChanged()}else showToast(r.message||'删除失败','error')}
-        function editArticle(id){editingId=id;switchTab('write');loadArticleForEdit(id)}
+        function editArticle(id){editingId=id;setWriteMode('article');switchTab('write');loadArticleForEdit(id)}
         async function loadArticleForEdit(id){
             const r=await apiFetch(`action=articles&id=${id}`);
             if(r.status==='success'){
@@ -409,7 +409,98 @@
         }
         // 「保存并预览」：保存后直接在右侧抽屉查看前台效果
         function saveArticlePreview(){saveArticle({preview:true})}
-        // ===== 前台预览抽屉（iframe 内嵌，免跳转） =====
+        // ===== 写文章 tab：形态切换（文章 / 随记 / 白板） =====
+        let writeMode='article';
+        function setWriteMode(mode){
+            writeMode=mode;
+            const pane={article:'writeModeArticle',note:'writeModeNote',board:'writeModeBoard'};
+            document.querySelectorAll('#tab-write .wm-chip').forEach(function(b,i){b.classList.toggle('active',['article','note','board'][i]===mode)});
+            for(const k in pane){
+                const el=document.getElementById(pane[k]);
+                if(el)el.style.display=k===mode?'':'none';
+            }
+            if(mode==='article'){ensureEditor()}
+            else if(mode==='note'){loadRecentNotes()}
+            else if(mode==='board'){ensureExcBundle()}
+        }
+        // 白板 bundle 懒加载（切到白板形态才加载 8MB）
+        function ensureExcBundle(){
+            if(window.ExcalidrawMount)return;
+            if(document.querySelector('script[data-excalidraw-bundle-admin]'))return;
+            const css=document.createElement('link');
+            css.rel='stylesheet';css.href='/js/vendor/excalidraw/excalidraw-editor.v10.css';
+            css.dataset.excalidrawBundleAdmin='1';
+            document.head.appendChild(css);
+            const s=document.createElement('script');
+            s.src='/js/vendor/excalidraw/excalidraw-editor.v10.js';
+            s.dataset.excalidrawBundleAdmin='1';
+            s.onerror=function(){showToast('白板组件加载失败','error')};
+            document.head.appendChild(s);
+        }
+        function wbMount(){
+            const host=document.getElementById('wbBoardHost');
+            const input=document.getElementById('wbNoteId');
+            if(!host)return;
+            const id=(input&&input.value||'').trim();
+            if(!/^[A-Za-z0-9_-]{1,64}$/.test(id)){
+                host.innerHTML='<div style="height:100%;display:flex;align-items:center;justify-content:center;color:#888;font-size:13px">请输入有效画板 ID，或点「新建画板」</div>';
+                return;
+            }
+            host.innerHTML='<div data-excalidraw data-note="'+escAttr(id)+'" data-mode="edit"></div>';
+            if(window.ExcalidrawMount)window.ExcalidrawMount();
+            else ensureExcBundle();
+        }
+        function wbNew(){
+            const d=document.getElementById('wbNoteId');
+            const id='wb-'+Math.random().toString(36).slice(2,10);
+            if(d)d.value=id;
+            wbMount();
+            showToast('新画板 '+id+'：直接开画，保存需管理员','success');
+        }
+        async function wbSave(){
+            const saver=window.__excalidrawSave;
+            if(!saver){showToast('画板尚未初始化，请先新建或载入','error');return}
+            const ok=await saver();
+            showToast(ok?'画板已保存':'保存未完成（口令/空画布/网络？）',ok?'success':'error');
+        }
+        // 随记快速记录
+        async function wmNoteSave(){
+            const content=document.getElementById('wmNoteContent').value;
+            if(!String(content||'').trim()){showToast('写点什么再保存','error');return}
+            const title=(document.getElementById('wmNoteTitle').value||'').trim();
+            const tags=(document.getElementById('wmNoteTags').value||'').split(/[,，]/).map(function(s){return s.trim()}).filter(Boolean);
+            const finalTitle=title||String(content).replace(/\n/g,' ').trim().slice(0,20);
+            const r=await apiFetch('action=articles',{method:'POST',body:JSON.stringify({title:finalTitle,content:String(content),status:'published',type:'card',tags})});
+            if(r.status==='success'){
+                showToast('随记已发布','success');
+                document.getElementById('wmNoteTitle').value='';
+                document.getElementById('wmNoteContent').value='';
+                document.getElementById('wmNoteTags').value='';
+                loadRecentNotes();
+                notifyArticlesChanged();
+            }else showToast(r.message||'保存失败','error');
+        }
+        async function loadRecentNotes(){
+            const box=document.getElementById('wmRecentNotes');
+            if(!box)return;
+            const r=await apiFetch('action=articles&filter=card&withContent=1');
+            const list=((r.data||[])).filter(function(a){return a.status==='published'}).slice(0,5);
+            if(!list.length){box.innerHTML='<div class="wm-hint">还没有随记，上面记一条吧</div>';return}
+            box.innerHTML='<div class="wm-hint" style="margin-bottom:4px">最近随记：</div>'+list.map(function(a){
+                return '<div class="wm-recent-item">'+
+                    '<span class="txt" onclick="switchTab(\'articles\');setArtType(\'card\')" title="到文章管理查看">'+esc(String(a.title||'').slice(0,40))+'</span>'+
+                    '<span class="date">'+esc(String(a.date||'').slice(0,10))+'</span>'+
+                    '<button class="btn btn-ghost btn-sm" onclick="wmNoteDelete(\''+escJs(a.id)+'\')">删除</button></div>';
+            }).join('');
+        }
+        async function wmNoteDelete(id){
+            const ok=await showConfirm('删除这条随记？','删除随记','删除');
+            if(!ok)return;
+            const r=await apiFetch('action=articles&id='+encodeURIComponent(id),{method:'DELETE'});
+            if(r.status==='success'){showToast('已删除','success');loadRecentNotes();notifyArticlesChanged()}
+            else showToast(r.message||'删除失败','error');
+        }
+
         let lastSaved={id:'',filename:''},lastFpUrl='';
         function buildFrontUrl(ref){
             const name=encodeURIComponent(ref.filename||((ref.id||'')+'.md'));
@@ -1582,7 +1673,7 @@
             if(tab==='tags'){loadTags();loadData()}
             if(tab==='excalidraw')loadExcalidrawNotes();
             if(tab==='cards')loadCards();
-            if(tab==='write'){ensureEditor();if(!editingId)resetEditor();loadArticleTagNames()}
+            if(tab==='write'){ensureEditor();if(!editingId)resetEditor();loadArticleTagNames();setWriteMode(writeMode)}
         }
 
         // ===== 白板管理 =====

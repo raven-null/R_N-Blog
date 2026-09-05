@@ -742,6 +742,34 @@
 
                 <!-- 写文章（极简沉浸式） -->
                 <div id="tab-write" style="display:none">
+                    <style>
+                        .wm-bar{display:flex;align-items:center;gap:4px;padding:14px 20px 2px}
+                        .wm-chip{border:1px solid var(--border);background:transparent;color:var(--text-muted);font-size:13px;padding:6px 20px;border-radius:999px;cursor:pointer;transition:all .15s;font-family:inherit}
+                        .wm-chip:hover{color:var(--text-secondary);border-color:var(--border-light)}
+                        .wm-chip.active{background:linear-gradient(180deg,#fff,#d9d9e3);color:#0b0b10;border-color:transparent;font-weight:600}
+                        .wm-note-form{max-width:760px;display:flex;flex-direction:column;gap:12px;padding:14px 0 0}
+                        .wm-note-form input,.wm-note-form textarea{background:var(--bg-tertiary);border:1px solid var(--border);border-radius:12px;color:var(--text-primary);padding:10px 14px;font-size:13.5px;font-family:inherit;resize:vertical;box-sizing:border-box}
+                        .wm-note-form input:focus,.wm-note-form textarea:focus{outline:none;border-color:var(--accent-dim)}
+                        .wm-hint{font-size:12px;color:var(--text-muted)}
+                        .wm-recent{margin-top:20px;display:flex;flex-direction:column;gap:8px;max-width:760px}
+                        .wm-recent-item{display:flex;align-items:center;gap:10px;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:9px 14px;font-size:12.5px}
+                        .wm-recent-item .txt{flex:1;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
+                        .wm-recent-item .txt:hover{color:var(--text-primary)}
+                        .wm-recent-item .date{color:var(--text-muted);font-size:11px}
+                        .wm-board-bar{display:flex;align-items:center;gap:8px;padding:14px 20px 10px;flex-wrap:wrap}
+                        .wm-board-bar input{width:230px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:999px;color:var(--text-primary);padding:7px 14px;font-size:13px;font-family:inherit;box-sizing:border-box}
+                        .wm-board-bar input:focus{outline:none;border-color:var(--accent-dim)}
+                        .wm-board-host{height:calc(100vh - 240px);min-height:420px;margin:0 20px 24px;border:1px solid var(--border);border-radius:16px;overflow:hidden;background:#f5f5f7}
+                    </style>
+                    <!-- 形态切换：文章 / 随记 / 白板 -->
+                    <div class="wm-bar">
+                        <button class="wm-chip active" onclick="setWriteMode('article')">文章</button>
+                        <button class="wm-chip" onclick="setWriteMode('note')">随记</button>
+                        <button class="wm-chip" onclick="setWriteMode('board')">白板</button>
+                        <span class="wm-hint" style="margin-left:auto">文章=长文写作 ｜ 随记=一句话灵感 ｜ 白板=可视化画板</span>
+                    </div>
+                    <!-- 文章模式（Vditor 长文） -->
+                    <div id="writeModeArticle">
                     <!-- 头部区域（工具栏 + 标题） -->
                     <div class="write-header">
                         <div class="write-toolbar">
@@ -768,6 +796,36 @@
                     <div class="write-footer">
                         <span class="write-word-count" id="editorInfo">0 字</span>
                         <span class="write-save-hint" id="saveHint"></span>
+                    </div>
+                    </div>
+
+                    <!-- 随记模式（一句话灵感，保存即发布） -->
+                    <div id="writeModeNote" style="display:none">
+                        <div class="wm-note-form">
+                            <input type="text" id="wmNoteTitle" placeholder="标题（可选，留空取内容开头）" maxlength="60">
+                            <textarea id="wmNoteContent" rows="5" placeholder="记录点什么… 支持 **粗体**、`行内代码`、[链接](https://…)"></textarea>
+                            <input type="text" id="wmNoteTags" placeholder="标签（逗号分隔，可选）">
+                            <div class="wm-row" style="display:flex;align-items:center;gap:10px">
+                                <span class="wm-hint">保存即发布为「随记」（固定标签自动附加）</span>
+                                <button class="btn" style="margin-left:auto" onclick="wmNoteSave()">保存随记</button>
+                            </div>
+                            <div class="wm-recent" id="wmRecentNotes"></div>
+                        </div>
+                    </div>
+
+                    <!-- 白板模式（内嵌 Excalidraw，懒加载） -->
+                    <div id="writeModeBoard" style="display:none">
+                        <div class="wm-board-bar">
+                            <input type="text" id="wbNoteId" placeholder="画板 ID（点击新建自动生成）">
+                            <button class="btn btn-ghost btn-sm" onclick="wbNew()">新建画板</button>
+                            <button class="btn btn-ghost btn-sm" onclick="wbMount()">载入</button>
+                            <button class="btn btn-sm" onclick="wbSave()">保存画板</button>
+                            <span class="wm-hint">保存后在「白板管理」可将画板发布为文章；画布上方工具栏也可保存</span>
+                            <button class="btn btn-ghost btn-sm" onclick="switchTab('excalidraw')">白板管理 →</button>
+                        </div>
+                        <div class="wm-board-host" id="wbBoardHost">
+                            <div style="height:100%;display:flex;align-items:center;justify-content:center;color:#888;font-size:13px">点击「新建画板」或输入已有画板 ID 后「载入」</div>
+                        </div>
                     </div>
                 </div>
 
@@ -1205,7 +1263,7 @@
         </div>
     </div>
 
-        <script src="js/admin-app.js?v=1.0.3"></script>
+        <script src="js/admin-app.js?v=1.0.4"></script>
 
     <!-- 前台预览抽屉（iframe 内嵌，零跳出） -->
     <style>
