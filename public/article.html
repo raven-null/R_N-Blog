@@ -748,6 +748,8 @@
         }
         .board-stage .board-canvas { position: absolute; inset: 0; }
         .board-stage .board-canvas .excalidraw { position: absolute; inset: 0; }
+        /* 画布宿主（view/edit 共用的容器）必须占满舞台，否则高度塌陷不显示 */
+        .board-stage .board-canvas #boardCanvasHost,
         .board-stage .board-canvas .excalidraw-edit-host { position: absolute; inset: 0; }
         /* 编辑态：隐藏舞台浮层，显示左上「完成」胶囊（编辑工具栏由组件自带） */
         .board-stage.editing .board-topbar,
