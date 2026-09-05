@@ -30,8 +30,6 @@ const BlogApp = {
         console.log('[BlogApp] 文章加载完成:', this.posts.length, '篇');
         this.render();
         console.log('[BlogApp] 渲染完成');
-        // 最近卡片笔记板块（独立加载，失败不影响主页）
-        this.loadRecentCards();
         this.setupEventListeners();
         this.handleRoute();
         this.startAutoRefresh();
@@ -226,37 +224,6 @@ const BlogApp = {
     // 渲染页面（文章）
     render() {
         this.renderPosts();
-    },
-
-    // 首页「最近卡片」板块：最近的卡片笔记（type=card，横排玻璃卡）
-    async loadRecentCards() {
-        const wrap = document.getElementById('recentCards');
-        if (!wrap) return;
-        try {
-            const res = await fetch('/api/admin?action=articles', { cache: 'no-store' });
-            const d = await res.json();
-            if (!d || d.status !== 'success' || !Array.isArray(d.data)) return;
-            const cards = d.data
-                .filter(a => a.status === 'published' && a.type === 'card')
-                .sort((a, b) => String(b.date).localeCompare(String(a.date)))
-                .slice(0, 8);
-            if (!cards.length) return;
-            const list = wrap.querySelector('.rc-list');
-            if (!list) return;
-            list.innerHTML = cards.map(c => {
-                const snippet = (typeof MarkdownParser !== 'undefined' && MarkdownParser.extractExcerpt)
-                    ? MarkdownParser.extractExcerpt(c.content || '', 66)
-                    : String(c.content || '').slice(0, 66);
-                const firstTag = (c.tags && c.tags[0]) || '';
-                const href = '/notes.html' + (firstTag ? '?tag=' + encodeURIComponent(firstTag) : '');
-                return '<a class="rc-card" href="' + href + '">' +
-                    '<div class="rc-body">' + this.esc(snippet) + '</div>' +
-                    '<div class="rc-foot"><span>' + this.esc(firstTag || '随手记') + '</span>' +
-                    '<span class="rc-date">' + String(c.date || '').slice(0, 10) + '</span></div>' +
-                    '</a>';
-            }).join('');
-            wrap.hidden = false;
-        } catch (e) { /* 卡片板块加载失败不影响主页 */ }
     },
 
     // 渲染文章瀑布流（一次性渲染全部）

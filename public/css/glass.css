@@ -555,45 +555,9 @@ button:active,
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
-/* 首页「最近卡片」板块 */
-.recent-cards { margin: 20px auto 2px; padding: 0 4px; }
-.recent-cards .rc-head {
-    display: flex; justify-content: space-between; align-items: baseline;
-    margin-bottom: 12px;
+/* 顶部导航：内容类型入口分隔（灵感页等） */
+.nav-link-sep {
+    display: inline-block; width: 1px; height: 14px; margin: 0 10px;
+    background: rgba(255, 255, 255, 0.14); vertical-align: -2px;
 }
-.recent-cards .rc-head > span { font-weight: 700; font-size: 15px; color: var(--text-primary); }
-.recent-cards .rc-head a { color: var(--text-muted); font-size: 12.5px; text-decoration: none; }
-.recent-cards .rc-head a:hover { color: var(--text-secondary); }
-.recent-cards .rc-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-    gap: 12px;
-}
-.recent-cards .rc-card {
-    display: block; text-decoration: none; padding: 14px 16px; border-radius: 18px;
-    color: var(--text-secondary); min-height: 96px;
-    background: linear-gradient(145deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.035));
-    backdrop-filter: blur(22px) saturate(170%);
-    -webkit-backdrop-filter: blur(22px) saturate(170%);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    box-shadow: 0 10px 30px -16px var(--shadow), inset 0 1px 0 rgba(255, 255, 255, 0.08);
-    transition: transform 0.25s var(--spring), border-color 0.2s ease, box-shadow 0.25s ease;
-}
-.recent-cards .rc-card:hover {
-    transform: translateY(-3px);
-    border-color: rgba(255, 255, 255, 0.28);
-    box-shadow: 0 16px 40px -18px var(--shadow), inset 0 1px 0 rgba(255, 255, 255, 0.12);
-}
-.recent-cards .rc-body {
-    font-size: 13px; line-height: 1.75; color: var(--text-secondary);
-    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-}
-.recent-cards .rc-foot {
-    display: flex; align-items: center; gap: 8px; margin-top: 10px;
-    font-size: 11px; color: var(--text-muted);
-}
-.recent-cards .rc-foot > span {
-    padding: 1px 9px; border-radius: 999px;
-    border: 1px solid rgba(255, 255, 255, 0.14); color: var(--text-muted);
-}
-.recent-cards .rc-date { margin-left: auto; }
+
