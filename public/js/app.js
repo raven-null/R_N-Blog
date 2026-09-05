@@ -329,9 +329,8 @@ const BlogApp = {
     renderNotePillCard(post) {
         const dateFormatted = this.formatDate(post.date);
         const id = this.escAttr(post.id || '');
-        const filename = this.escAttr(post.filename || '');
         return `
-            <div class="card note-plain-card" onclick="BlogApp.openPost('${filename}', '${id}')">
+            <div class="card note-plain-card" onclick="BlogApp.openNotePill('${id}')">
                 <div class="card-body">
                     <div class="card-title">${this.esc(post.title || '')}</div>
                     <div class="card-tag">
@@ -342,6 +341,69 @@ const BlogApp = {
                     </div>
                 </div>
             </div>`;
+    },
+
+    // 打开卡片笔记弹窗（点击拉取全文，不跳转）
+    async openNotePill(id) {
+        const mask = document.getElementById('noteViewerMask');
+        const viewer = document.getElementById('noteViewer');
+        if (!mask || !viewer || !id) return;
+        mask.classList.add('show');
+        viewer.innerHTML = '<div class="nv-loading"><span class="loading-spinner"></span><span>加载中…</span></div>';
+        this._bindNoteViewerKeys();
+        try {
+            const r = await fetch('/api/admin?action=articles&id=' + encodeURIComponent(id), { cache: 'no-store' });
+            const d = await r.json();
+            if (!d || d.status !== 'success' || !d.data) throw new Error('加载失败');
+            const c = d.data;
+            const esc = this.esc.bind(this);
+            viewer.innerHTML =
+                '<div class="nv-head"><span class="nv-title">' + esc(c.title || '卡片笔记') + '</span>' +
+                '<button class="nv-close" id="nvClose" title="关闭"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>' +
+                '<div class="nv-body">' + this.miniMarkdown(c.content || '') + '</div>' +
+                '<div class="nv-foot">' +
+                (c.tags || []).map(t => '<span class="t">' + esc(t) + '</span>').join('') +
+                '<span class="nv-date">' + esc(String(c.date || '').slice(0, 10)) + '</span>' +
+                '<button class="nv-copy" id="nvCopy">复制内容</button></div>';
+            document.getElementById('nvClose').addEventListener('click', () => this.closeNotePill());
+            const copyBtn = document.getElementById('nvCopy');
+            if (copyBtn) copyBtn.addEventListener('click', () => {
+                try {
+                    navigator.clipboard.writeText(c.content || '');
+                    copyBtn.textContent = '已复制';
+                    setTimeout(() => { copyBtn.textContent = '复制内容'; }, 1600);
+                } catch (e) { /* ignore */ }
+            });
+        } catch (e) {
+            viewer.innerHTML = '<div class="nv-head"><span class="nv-title">加载失败</span>' +
+                '<button class="nv-close" id="nvClose">关闭</button></div>' +
+                '<div class="nv-err">内容加载失败，请重试</div>';
+            document.getElementById('nvClose').addEventListener('click', () => this.closeNotePill());
+        }
+    },
+
+    closeNotePill() {
+        const mask = document.getElementById('noteViewerMask');
+        if (mask) mask.classList.remove('show');
+    },
+
+    // 弹窗 Esc 关闭（只绑定一次）
+    _bindNoteViewerKeys() {
+        if (this._nvKeyBound) return;
+        this._nvKeyBound = true;
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') this.closeNotePill();
+        });
+    },
+
+    // 卡片笔记的轻量 Markdown 渲染
+    miniMarkdown(s) {
+        const esc = this.esc.bind(this);
+        return esc(s)
+            .replace(/`([^`]+)`/g, '<code>$1</code>')
+            .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+            .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+            .replace(/\n/g, '<br>');
     },
 
     // 按标签筛选文章
