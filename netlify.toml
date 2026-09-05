@@ -87,3 +87,14 @@
   for = "/js/vendor/excalidraw/*"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
+
+# HTML 一律回源校验：防止中间 CDN/浏览器长期缓存旧页面导致改版不生效
+[[headers]]
+  for = "/"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/*.html"
+  [headers.values]
+    Cache-Control = "no-cache"
