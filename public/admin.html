@@ -1253,10 +1253,6 @@
         .wm-note-form textarea{min-height:180px}
         /* 文章编辑器高度自适应剩余空间（标题/形态条/页边距后尽量占满） */
         .vditor-wrap .vditor{height:calc(100vh - 300px);min-height:380px}
-        /* 宽屏写作舒适区：编辑器内容最大 1400px 居中（避免 2K/4K 屏幕无限拉长） */
-        @media(min-width:1600px){
-            .wm-bar,.write-header,.vditor-wrap{max-width:1500px;margin-left:auto;margin-right:auto}
-        }
         /* 窄屏自适应：紧凑边距与换行，避免被工具栏挤压 */
         @media(max-width:1100px){
             .write-header{padding:12px 14px}
