@@ -417,7 +417,45 @@
         }
         // 「保存并预览」：保存后直接在右侧抽屉查看前台效果
         function saveArticlePreview(){saveArticle({preview:true})}
-        // ===== 写文章 tab：形态切换（文章 / 随记 / 白板） =====
+        // ===== 全屏写作（隐藏后台框架，内容占满整个屏幕） =====
+        let writeFull=false;
+        const FS_ICON='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>';
+        function toggleWriteFull(){
+            writeFull=!writeFull;
+            document.body.classList.toggle('admin-write-full',writeFull);
+            // 当前形态 pane 变为 flex 纵向（其余 pane 保持隐藏）
+            const paneId={article:'writeModeArticle',note:'writeModeNote',board:'writeModeBoard'}[writeMode];
+            const pane=paneId?document.getElementById(paneId):null;
+            if(pane)pane.classList.toggle('wm-pane-full',writeFull);
+            const btn=document.getElementById('writeFullBtn');
+            if(btn)btn.innerHTML=writeFull
+                ? FS_ICON+'退出全屏'
+                : FS_ICON+'全屏写作';
+            // 浏览器原生全屏（失败则保持布局级全屏，不影响使用）
+            if(writeFull){
+                const de=document.documentElement;
+                if(de.requestFullscreen&&!document.fullscreenElement){
+                    de.requestFullscreen().catch(function(){});
+                }
+            }else if(document.exitFullscreen&&document.fullscreenElement){
+                document.exitFullscreen().catch(function(){});
+            }
+        }
+        // 用户按 Esc 退出浏览器全屏时，同步还原布局
+        document.addEventListener('fullscreenchange',function(){
+            if(!document.fullscreenElement&&document.body.classList.contains('admin-write-full')){
+                document.body.classList.remove('admin-write-full');
+                const pane=document.getElementById('writeModeArticle')||document.getElementById('writeModeNote')||document.getElementById('writeModeBoard');
+                const active={article:'writeModeArticle',note:'writeModeNote',board:'writeModeBoard'}[writeMode];
+                const cur=document.getElementById(active);
+                if(cur)cur.classList.remove('wm-pane-full');
+                if(pane&&!cur)pane.classList.remove('wm-pane-full');
+                writeFull=false;
+                const btn=document.getElementById('writeFullBtn');
+                if(btn)btn.innerHTML=FS_ICON+'全屏写作';
+            }
+        });
+
         let writeMode='article';
         function setWriteMode(mode){
             writeMode=mode;

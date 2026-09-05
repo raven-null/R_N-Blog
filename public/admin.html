@@ -767,6 +767,10 @@
                         <button class="wm-chip" onclick="setWriteMode('note')">随记</button>
                         <button class="wm-chip" onclick="setWriteMode('board')">白板</button>
                         <span class="wm-hint" style="margin-left:auto">文章=长文写作 ｜ 随记=一句话灵感 ｜ 白板=可视化画板</span>
+                        <button class="btn btn-ghost" id="writeFullBtn" onclick="toggleWriteFull()" title="隐藏后台框架，全屏沉浸写作">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+                            全屏写作
+                        </button>
                     </div>
                     <!-- 文章模式（Vditor 长文） -->
                     <div id="writeModeArticle">
@@ -1230,7 +1234,7 @@
         </div>
     </div>
 
-        <script src="js/admin-app.js?v=1.0.6"></script>
+        <script src="js/admin-app.js?v=1.0.7"></script>
 
     <!-- 前台预览抽屉（iframe 内嵌，零跳出） -->
     <style>
@@ -1267,6 +1271,27 @@
             .wm-note-form,.wm-board-bar,.wm-recent{padding-left:12px;padding-right:12px}
             .wm-board-host{margin:0 12px 16px}
             .wm-board-bar input{width:100%}
+        }
+        /* ===== 全屏写作：隐藏后台框架，写作内容占满整个视口 ===== */
+        body.admin-write-full{overflow:hidden}
+        body.admin-write-full .admin-header,
+        body.admin-write-full .sidebar,
+        body.admin-write-full .mobile-tabs{display:none!important}
+        body.admin-write-full .admin-body{height:100vh;height:100dvh}
+        body.admin-write-full .content{padding:0;overflow:hidden}
+        body.admin-write-full #tab-write{display:flex!important;flex-direction:column;height:100vh;height:100dvh}
+        body.admin-write-full .wm-bar{flex:none;padding:10px 22px}
+        body.admin-write-full .write-header{margin:0;border-radius:0;border-left:none;border-right:none;border-top:none;padding:14px 30px}
+        body.admin-write-full .write-title-input{font-size:30px}
+        body.admin-write-full .wm-pane-full{display:flex!important;flex-direction:column;flex:1;min-height:0}
+        body.admin-write-full .vditor-wrap{flex:1;min-height:0}
+        body.admin-write-full .vditor-wrap .vditor{height:100%!important;border-radius:0!important}
+        body.admin-write-full .wm-note-form{max-width:1000px;margin:0 auto;padding:28px 30px 0}
+        body.admin-write-full .wm-recent{max-width:1000px;margin:0 auto}
+        body.admin-write-full .wm-board-host{margin:10px 22px 22px;border-radius:16px}
+        @media(max-width:640px){
+            body.admin-write-full .write-header{padding:10px 14px}
+            body.admin-write-full .wm-bar{padding:8px 12px}
         }
     </style>
     <div id="fpMask" onclick="closeFrontPreview()"></div>
