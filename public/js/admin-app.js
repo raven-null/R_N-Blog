@@ -19,7 +19,15 @@
 
         function doLogin(){const k=document.getElementById('adminKeyInput').value.trim();if(!k)return;adminKey=k;localStorage.setItem('admin_key',k);apiFetch('action=login',{method:'POST',body:JSON.stringify({key:k})}).then(r=>{if(r.status==='success')showAdmin();else{document.getElementById('loginError').style.display='block';document.getElementById('loginError').textContent=r.message||'密钥错误'}}).catch(()=>{document.getElementById('loginError').style.display='block';document.getElementById('loginError').textContent='连接失败'})}
         function doLogout(){adminKey='';localStorage.removeItem('admin_key');localStorage.removeItem('gallery_key');location.reload()}
-        function showAdmin(){document.getElementById('loginPage').style.display='none';document.getElementById('adminApp').style.display='block';document.getElementById('sidebar').classList.add('collapsed');loadArticles()}
+        function showAdmin(){
+            document.getElementById('loginPage').style.display='none';
+            document.getElementById('adminApp').style.display='block';
+            document.getElementById('sidebar').classList.add('collapsed');
+            loadArticles();
+            // 支持前台快捷入口：/admin.html?edit=文章id → 自动进入该篇编辑
+            const editId=new URLSearchParams(location.search).get('edit');
+            if(editId)setTimeout(function(){editArticle(editId)},350);
+        }
         async function apiFetch(p,o={}){if(p.startsWith('action=images')&&(!o.method||o.method==='GET'))p+='&_='+Date.now();const r=await fetch(`/api/admin?${p}`,{...o,headers:{'Content-Type':'application/json','X-Admin-Key':adminKey,...(o.headers||{})}});return r.json()}
         // 图片显示 URL：附加管理员密钥参数（<img> 无法带 header，R18 图片需密钥参数才能加载）
         function displayUrl(u){if(!u||!adminKey)return u;return u+(u.includes('?')?'&':'?')+'adminKey='+encodeURIComponent(adminKey)}
@@ -221,7 +229,7 @@
         }
         function artPreview(id){
             const a=allArticles.find(function(x){return x.id===id});
-            if(a)window.open('/article.html?post='+encodeURIComponent(a.filename||(a.id+'.md'))+'&blob='+encodeURIComponent(a.id),'_blank');
+            if(a)openFrontPreview(buildFrontUrl({id:a.id,filename:a.filename||(a.id+'.md')}));
         }
         function artCopyLink(id){
             const a=allArticles.find(function(x){return x.id===id});
@@ -356,7 +364,8 @@
             setEditorContent('');
             closePublishModal();
         }
-        async function saveArticle(){
+        async function saveArticle(opts){
+            const opt=opts||{};
             const title=document.getElementById('edTitle').value.trim();
             const excerpt=document.getElementById('edExcerpt').value.trim();
             const tags=selectedArticleTags.join(', ');
@@ -384,14 +393,49 @@
             if(editingId)body.id=editingId;
             const r=await apiFetch('action=articles',{method:'POST',body:JSON.stringify(body)});
             if(r.status==='success'){
-                showToast('保存成功','success');
+                const meta=(r.data&&r.data.data)?r.data.data:(r.data||{});
+                lastSaved={id:editingId||meta.id||'',filename:meta.filename||''};
                 resetEditor();
-                switchTab('articles');
                 notifyArticlesChanged();
+                showToast('已保存','success');
+                // 默认留在写页（不再跳回列表），可继续改或预览
+                if(opt.preview){
+                    if(lastSaved.id)openFrontPreview(buildFrontUrl(lastSaved));
+                    else showToast('预览需要先保存成功','error');
+                }
             }else{
                 showToast(r.message||'保存失败','error');
             }
         }
+        // 「保存并预览」：保存后直接在右侧抽屉查看前台效果
+        function saveArticlePreview(){saveArticle({preview:true})}
+        // ===== 前台预览抽屉（iframe 内嵌，免跳转） =====
+        let lastSaved={id:'',filename:''},lastFpUrl='';
+        function buildFrontUrl(ref){
+            const name=encodeURIComponent(ref.filename||((ref.id||'')+'.md'));
+            const bid=encodeURIComponent(ref.id||'');
+            return '/article.html?post='+name+(bid?'&blob='+bid:'');
+        }
+        function openFrontPreview(url){
+            const d=document.getElementById('fpDrawer'),m=document.getElementById('fpMask'),f=document.getElementById('fpFrame');
+            if(!d||!f)return;
+            lastFpUrl=url;
+            f.src=url;
+            d.classList.add('open');d.setAttribute('aria-hidden','false');
+            if(m)m.classList.add('show');
+        }
+        function closeFrontPreview(){
+            const d=document.getElementById('fpDrawer'),m=document.getElementById('fpMask');
+            if(d)d.classList.remove('open');
+            if(m)m.classList.remove('show');
+        }
+        function openFrontPreviewNew(){if(lastFpUrl)window.open(lastFpUrl,'_blank')}
+        document.addEventListener('keydown',function(e){
+            if(e.key==='Escape'){
+                const d=document.getElementById('fpDrawer');
+                if(d&&d.classList.contains('open'))closeFrontPreview();
+            }
+        });
         // ===== Vditor 编辑器（所见即所得，轻量沉浸式） =====
         let vditorInstance=null;
         let vditorReady=false;      // after 回调触发后为 true
