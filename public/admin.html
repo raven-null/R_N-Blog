@@ -621,7 +621,6 @@
                     <div class="sidebar-item" onclick="switchTab('images')" data-tab="images"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><span>图片管理</span></div>
                     <div class="sidebar-item" onclick="switchTab('tags')" data-tab="tags"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg><span>标签管理</span></div>
                     <div class="sidebar-item" onclick="switchTab('excalidraw')" data-tab="excalidraw"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><path d="M7 12h10M12 7v10"/><path d="M9.5 9.5l5 5M14.5 9.5l-5 5"/></svg><span>白板管理</span></div>
-                    <div class="sidebar-item" onclick="switchTab('cards')" data-tab="cards"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M8 12h8M12 8v8"/></svg><span>卡片笔记</span></div>
                     <div class="sidebar-item" onclick="switchTab('settings')" data-tab="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span>博客设置</span></div>
                 </div>
             </div>
@@ -932,43 +931,10 @@
                         .exc-empty{color:var(--text-muted);text-align:center;padding:40px 0}
                     </style>
                     <div class="page-bar"><h2>白板管理</h2><div class="page-bar-actions">
-                        <a class="btn btn-ghost" href="/excalidraw.html?edit=1" target="_blank">新建白板</a>
                         <button class="btn btn-ghost" onclick="loadExcalidrawNotes()">刷新</button>
                     </div></div>
                     <div class="exc-mgmt-tip">白板可公开只读分享；编辑需口令或开放编辑；「改名 / 只读开关 / 口令 / 回滚 / 删除」在此管理（对应 /api/excalidraw 的 Admin 端点）。</div>
                     <div class="exc-mgmt-list" id="excalidrawNoteList"></div>
-                </div>
-
-                <!-- 卡片笔记 -->
-                <div id="tab-cards" style="display:none">
-                    <style>
-                        .card-form-wrap{max-width:720px;margin:0 20px 18px;padding:18px;border-radius:16px;background:var(--bg-card);border:1px solid var(--border)}
-                        .card-form-wrap input[type=text],.card-form-wrap textarea{width:100%;margin-bottom:10px;padding:9px 12px;border-radius:10px;background:var(--bg-tertiary);border:1px solid var(--border);color:var(--text-primary);font-size:13px;resize:vertical;box-sizing:border-box}
-                        .card-form-wrap textarea{font-family:inherit}
-                        .card-form-actions{display:flex;gap:8px;justify-content:flex-end}
-                        .card-list{padding:0 20px 20px}
-                        .card-item{display:flex;gap:12px;align-items:flex-start;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:10px}
-                        .card-item .ci-body{flex:1;min-width:0}
-                        .card-item .ci-text{font-size:13px;color:var(--text-primary);line-height:1.7;white-space:pre-wrap;word-break:break-word}
-                        .card-item .ci-meta{margin-top:6px;font-size:11px;color:var(--text-muted)}
-                        .card-item .ci-ops{display:flex;gap:6px;flex:none}
-                    </style>
-                    <div class="page-bar"><h2>卡片笔记</h2><div class="page-bar-actions">
-                        <a class="btn btn-ghost" href="/notes.html" target="_blank">预览卡片流</a>
-                        <button class="btn btn-ghost" onclick="toggleCardForm()">新建卡片</button>
-                        <button class="btn btn-ghost" onclick="loadCards()">刷新</button>
-                    </div></div>
-                    <div class="card-form-wrap" id="cardFormWrap" style="display:none">
-                        <input type="text" id="cardTitle" placeholder="标题（可选，留空自动取内容开头）" />
-                        <textarea id="cardContent" rows="4" placeholder="记录点什么… 支持 **粗体**、`行内代码`、[链接](https://…)"></textarea>
-                        <input type="text" id="cardTags" placeholder="标签（逗号分隔，可选）" />
-                        <div style="font-size:11px;color:var(--text-muted);margin:-6px 0 10px">固定标签「随记」会在保存时自动附加（用于首页导航分类，不可删除）。</div>
-                        <div class="card-form-actions">
-                            <button class="btn btn-ghost" onclick="toggleCardForm(false)">取消</button>
-                            <button class="btn" onclick="saveCard()">保存卡片</button>
-                        </div>
-                    </div>
-                    <div class="card-list" id="cardList"></div>
                 </div>
 
                 <!-- 博客设置 -->
@@ -1264,7 +1230,7 @@
         </div>
     </div>
 
-        <script src="js/admin-app.js?v=1.0.5"></script>
+        <script src="js/admin-app.js?v=1.0.6"></script>
 
     <!-- 前台预览抽屉（iframe 内嵌，零跳出） -->
     <style>

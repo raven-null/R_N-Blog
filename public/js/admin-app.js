@@ -3,7 +3,7 @@
  */
 
         let adminKey=localStorage.getItem('admin_key')||'';
-        let articles=[],editingId=null,cachedImages=[];
+        let articles=[],editingId=null,editingType=null,editingBoardId='',cachedImages=[];
         let allArticles=[]; // 全部文章（用于搜索过滤）
         let tagModalKey='',tagModalSelected=[];
         let classifyTag='',allImageData=[];
@@ -310,6 +310,9 @@
             const r=await apiFetch(`action=articles&id=${id}`);
             if(r.status==='success'){
                 const d=r.data;
+                // 记录原类型/画板（随记与白板文章保存时保留，不能变回普通文章）
+                editingType=d.type&&d.type!=='article'?d.type:null;
+                editingBoardId=d.boardId||'';
                 document.getElementById('edTitle').value=d.title||'';
                 document.getElementById('edExcerpt').value=d.excerpt||'';
                 document.getElementById('edImage').value=d.image||'';
@@ -354,6 +357,8 @@
         // ===== 写文章 =====
         function resetEditor(){
             editingId=null;
+            editingType=null;
+            editingBoardId='';
             document.getElementById('edTitle').value='';
             document.getElementById('edExcerpt').value='';
             document.getElementById('edImage').value='';
@@ -391,6 +396,9 @@
             }
             const body={title,excerpt,tags,content,status,image};
             if(editingId)body.id=editingId;
+            // 保留原内容类型（随记/白板文章不能被编辑器保存回退成普通文章）
+            if(editingType)body.type=editingType;
+            if(editingBoardId)body.boardId=editingBoardId;
             const r=await apiFetch('action=articles',{method:'POST',body:JSON.stringify(body)});
             if(r.status==='success'){
                 const meta=(r.data&&r.data.data)?r.data.data:(r.data||{});
@@ -1665,14 +1673,13 @@
         function switchTab(tab){
             document.querySelectorAll('.sidebar-item').forEach(el=>el.classList.toggle('active',el.dataset.tab===tab));
             document.querySelectorAll('.mobile-tab').forEach(el=>el.classList.toggle('active',el.dataset.tab===tab));
-            ['articles','write','comments','images','tags','excalidraw','cards','settings'].forEach(t=>document.getElementById('tab-'+t).style.display=t===tab?'block':'none');
+            ['articles','write','comments','images','tags','excalidraw','settings'].forEach(t=>document.getElementById('tab-'+t).style.display=t===tab?'block':'none');
             if(tab==='articles')loadArticles();
             if(tab==='comments')loadComments();
             if(tab==='settings')loadSettings();
             if(tab==='images'){loadData();loadTags()}
             if(tab==='tags'){loadTags();loadData()}
             if(tab==='excalidraw')loadExcalidrawNotes();
-            if(tab==='cards')loadCards();
             if(tab==='write'){ensureEditor();if(!editingId)resetEditor();loadArticleTagNames();setWriteMode(writeMode)}
         }
 
@@ -1768,72 +1775,6 @@
             const d=await excApi(`action=delete&id=${encodeURIComponent(id)}`,{method:'POST'});
             alert(d.status==='success'?`已删除（${d.removed} 个数据项）`:(d.message||'删除失败'));
             if(d.status==='success')loadExcalidrawNotes();
-        }
-
-        // ===== 卡片笔记（type=card 快速记录） =====
-        let editingCardId = null;
-        function toggleCardForm(show) {
-            const wrap = document.getElementById('cardFormWrap');
-            if (!wrap) return;
-            const willShow = (show === undefined) ? (wrap.style.display === 'none') : show;
-            wrap.style.display = willShow ? 'block' : 'none';
-            if (!willShow) editingCardId = null;
-        }
-        async function loadCards() {
-            const list = document.getElementById('cardList');
-            if (!list) return;
-            list.innerHTML = '<div class="exc-empty">加载中…</div>';
-            try {
-                const d = await apiFetch('action=articles');
-                const cards = (d.data || []).filter(a => a.type === 'card');
-                if (!cards.length) { list.innerHTML = '<div class="exc-empty">还没有卡片笔记。点「新建卡片」记一条，保存即发布。</div>'; return; }
-                list.innerHTML = cards.map(c => {
-                    const text = String(c.content || '');
-                    const snippet = text.length > 140 ? text.slice(0, 140) + '…' : text;
-                    return `<div class="card-item">
-                        <div class="ci-body">
-                            ${c.title ? '<div style="font-weight:600;margin-bottom:4px">' + escHtml(c.title) + '</div>' : ''}
-                            <div class="ci-text">${escHtml(snippet)}</div>
-                            <div class="ci-meta">${escHtml(c.date || '')}${c.update ? ' · 更新 ' + escHtml(c.update) : ''} · ${escHtml((c.tags || []).join(' / ') || '无标签')} · ${c.status === 'draft' ? '草稿' : '已发布'}</div>
-                        </div>
-                        <div class="ci-ops">
-                            <button class="btn btn-ghost btn-sm" onclick="editCard('${escJs(c.id)}','${escJs(c.title || '')}','${escJs(text)}','${escJs((c.tags || []).join(', '))}')">编辑</button>
-                            <button class="btn btn-danger btn-sm" onclick="deleteCard('${escJs(c.id)}','${escJs(c.title || text.slice(0, 20))}')">删除</button>
-                        </div>
-                    </div>`;
-                }).join('');
-            } catch (e) { list.innerHTML = '<div class="exc-empty">加载失败：' + escHtml(e.message) + '</div>'; }
-        }
-        function editCard(id, title, content, tags) {
-            editingCardId = id;
-            document.getElementById('cardTitle').value = title;
-            document.getElementById('cardContent').value = content;
-            document.getElementById('cardTags').value = tags || '';
-            document.getElementById('cardFormWrap').style.display = 'block';
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-        async function saveCard() {
-            const content = document.getElementById('cardContent').value;
-            if (!String(content || '').trim()) { showToast('内容不能为空', 'error'); return; }
-            const title = (document.getElementById('cardTitle').value || '').trim();
-            const tags = (document.getElementById('cardTags').value || '').split(',').map(s => s.trim()).filter(Boolean);
-            const finalTitle = title || String(content).replace(/\n/g, ' ').trim().slice(0, 20);
-            const body = { title: finalTitle, content, status: 'published', type: 'card', tags };
-            if (editingCardId) body.id = editingCardId;
-            try {
-                const d = await apiFetch('action=articles', { method: 'POST', body: JSON.stringify(body) });
-                if (d.status === 'success') { showToast('卡片已保存并发布', 'success'); toggleCardForm(false); loadCards(); }
-                else showToast(d.message || '保存失败', 'error');
-            } catch (e) { showToast('保存失败：' + e.message, 'error'); }
-        }
-        async function deleteCard(id, title) {
-            const ok = await showConfirm('删除卡片「' + (title || id) + '」？删除后不可恢复！', '删除卡片', '删除');
-            if (!ok) return;
-            try {
-                const r = await apiFetch('action=articles&id=' + encodeURIComponent(id), { method: 'DELETE' });
-                if (r.status === 'success') { showToast('已删除', 'success'); loadCards(); }
-                else showToast(r.message || '删除失败', 'error');
-            } catch (e) { showToast('删除失败：' + e.message, 'error'); }
         }
 
         // ===== 评论管理 =====
