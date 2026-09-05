@@ -79,9 +79,9 @@
             }
             const meta='<span>'+(a.wordCount||0)+' 字</span><span>'+esc(a.date||'')+'</span>'+(a.update?'<span class="up">更新 '+esc(a.update)+'</span>':'');
             const pubBtn=isPub
-                ? '<button class="btn btn-ghost btn-sm" onclick="toggleArticleStatus(\'+id+\',\'draft\')">下架</button>'
-                : '<button class="btn btn-sm" onclick="toggleArticleStatus(\'+id+\',\'published\')">发布</button>';
-            return '<div class="art-card" data-id="'+escAttr(a.id)+'" onclick="artCardClick(\'+id+\',event)">'+
+                ? '<button class="btn btn-ghost btn-sm" onclick="toggleArticleStatus(\''+id+'\',\'draft\')">下架</button>'
+                : '<button class="btn btn-sm" onclick="toggleArticleStatus(\''+id+'\',\'published\')">发布</button>';
+            return '<div class="art-card" data-id="'+escAttr(a.id)+'" onclick="artCardClick(\''+id+'\',event)">'+
                 cover+
                 '<div class="ac-body">'+
                 '<div class="ac-title"><span class="tt">'+esc(a.title||'(未命名)')+'</span></div>'+
@@ -90,14 +90,14 @@
                 '</div>'+
                 '<div class="ac-ops">'+pubBtn+
                 '<span class="sp"></span>'+
-                '<div class="ac-more"><button class="btn btn-ghost btn-sm" onclick="toggleArtMenu(event,\'+id+\')" title="更多操作">•••</button>'+
+                '<div class="ac-more"><button class="btn btn-ghost btn-sm" onclick="toggleArtMenu(event,\''+id+'\')" title="更多操作">•••</button>'+
                 '<div class="ac-menu" id="acMenu_'+escAttr(a.id)+'">'+
-                '<button onclick="artPreview(\'+id+\')">预览前台</button>'+
-                '<button onclick="artCopyLink(\'+id+\')">复制链接</button>'+
-                (isPub?'<button onclick="artTop(\'+id+\')">置顶</button>':'')+
-                '<button class="danger" onclick="artDeleteOne(\'+id+\')">删除</button>'+
+                '<button onclick="artPreview(\''+id+'\')">预览前台</button>'+
+                '<button onclick="artCopyLink(\''+id+'\')">复制链接</button>'+
+                (isPub?'<button onclick="artTop(\''+id+'\')">置顶</button>':'')+
+                '<button class="danger" onclick="artDeleteOne(\''+id+'\')">删除</button>'+
                 '</div></div>'+
-                '<input type="checkbox" class="ac-check" onchange="artToggleSel(\'+id+\',this.checked)">'+
+                '<input type="checkbox" class="ac-check" onchange="artToggleSel(\''+id+'\',this.checked)">'+
                 '</div></div>';
         }
         function artCardClick(id,e){
