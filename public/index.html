@@ -9,7 +9,7 @@
 
     <!-- Styles -->
     <link rel="stylesheet" href="css/style.css?v=3.16.3">
-    <link rel="stylesheet" href="css/glass.css?v=1.0.5">
+    <link rel="stylesheet" href="css/glass.css?v=1.0.6">
 
     <!-- Marked.js -->
     <script src="js/vendor/marked.min.js"></script>
@@ -89,8 +89,6 @@
 
                 <!-- 视图：博客 -->
                 <section class="view view-blog" id="view-blog">
-                    <!-- 卡片笔记（胶囊 + 点击原地展开；无卡片时隐藏） -->
-                    <section class="notes-pills" id="notesPills" hidden></section>
                     <div id="posts">
                         <div class="loading">
                             <div class="loading-spinner"></div>
@@ -721,6 +719,11 @@
 
     <!-- 不蒜子统计 -->
     <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+    <!-- 卡片笔记查看浮层（液态玻璃） -->
+    <div class="note-viewer-mask" id="noteViewerMask">
+        <div class="note-viewer" id="noteViewer"></div>
+    </div>
 </body>
 
 </html>

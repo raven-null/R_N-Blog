@@ -30,8 +30,6 @@ const BlogApp = {
         console.log('[BlogApp] 文章加载完成:', this.posts.length, '篇');
         this.render();
         console.log('[BlogApp] 渲染完成');
-        // 卡片笔记：首页胶囊区（独立加载，失败不影响主页）
-        this.renderNotesPills();
         this.setupEventListeners();
         this.handleRoute();
         this.startAutoRefresh();
@@ -62,8 +60,7 @@ const BlogApp = {
                     // 检查缓存是否过期（存有时间戳）
                     if (cached.t && Date.now() - cached.t < CACHE_TTL && Array.isArray(cached.posts)) {
                         console.log('[loadPosts] 使用缓存数据');
-                        // 旧缓存可能含卡片笔记（已改为首页胶囊区展示，瀑布只保留文章/白板）
-                        this.posts = cached.posts.filter(p => p.type !== 'card');
+                        this.posts = cached.posts;
                         this.filteredPosts = [...this.posts];
                         return;
                     }
@@ -124,7 +121,7 @@ const BlogApp = {
             const data = await res.json();
             if (data.status !== 'success' || !Array.isArray(data.data)) return [];
             return data.data
-                .filter(a => a.status === 'published' && a.type !== 'card') // 卡片笔记走首页胶囊区/灵感页
+                .filter(a => a.status === 'published')
                 .map(a => ({
                     id: a.id,
                     filename: a.filename || `${a.id}.md`,
@@ -229,76 +226,6 @@ const BlogApp = {
         this.renderPosts();
     },
 
-    // 首页「灵感」胶囊区：卡片笔记以胶囊呈现，点击原地展开（不跳转）
-    async renderNotesPills() {
-        const wrap = document.getElementById('notesPills');
-        if (!wrap) return;
-        try {
-            const res = await fetch('/api/admin?action=articles&filter=card&withContent=1', { cache: 'no-store' });
-            const d = await res.json();
-            if (!d || d.status !== 'success' || !Array.isArray(d.data)) return;
-            const cards = d.data
-                .filter(a => a.status === 'published' && a.type === 'card')
-                .sort((a, b) => String(b.date).localeCompare(String(a.date)))
-                .slice(0, 6);
-            if (!cards.length) return;
-
-            const esc = this.esc.bind(this);
-            const plain = (s) => String(s || '').replace(/`/g, '').replace(/\*\*/g, '').replace(/\[([^\]]+)\]\([^)]*\)/g, '$1').replace(/\s+/g, ' ').trim();
-            const miniMd = (s) => esc(s)
-                .replace(/`([^`]+)`/g, '<code>$1</code>')
-                .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-                .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
-                .replace(/\n/g, '<br>');
-            const hue = (t) => {
-                let h = 0;
-                for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) >>> 0;
-                return h % 360;
-            };
-            const accent = (tags) => 'hsl(' + hue((tags && tags[0]) || 'card') + ' 70% 62% / 0.75)';
-
-            wrap.innerHTML =
-                '<div class="np-list">' +
-                cards.map(c => {
-                    const ac = accent(c.tags);
-                    return '<div class="pill-item" data-id="' + c.id + '">' +
-                        '<button class="pill-row" style="--pc:' + ac + '">' +
-                        '<span class="pill-dot"></span>' +
-                        '<span class="pill-text">' + esc(plain(c.content || '')) + '</span>' +
-                        '<span class="pill-date">' + esc(String(c.date || '').slice(0, 10)) + '</span>' +
-                        '<span class="pill-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>' +
-                        '</button>' +
-                        '<div class="pill-panel"><div class="pp-inner"><div class="pp-card" style="--pc:' + ac + '">' +
-                        '<div class="pp-body">' + miniMd(c.content || '') + '</div>' +
-                        '<div class="pp-foot">' +
-                        (c.tags || []).slice(0, 4).map(t => '<span class="t">' + esc(t) + '</span>').join('') +
-                        '<span>' + esc(String(c.date || '').slice(0, 10)) + '</span>' +
-                        '<button class="pp-copy" data-text="' + esc(c.content || '') + '">复制内容</button>' +
-                        '</div></div></div></div>' +
-                        '</div>';
-                }).join('') +
-                '</div>';
-            wrap.hidden = false;
-
-            // 手风琴 + 复制
-            wrap.querySelectorAll('.pill-item').forEach(item => {
-                item.querySelector('.pill-row').addEventListener('click', () => {
-                    const isOpen = item.classList.contains('open');
-                    wrap.querySelectorAll('.pill-item.open').forEach(o => o.classList.remove('open'));
-                    if (!isOpen) item.classList.add('open');
-                });
-                const copyBtn = item.querySelector('.pp-copy');
-                if (copyBtn) copyBtn.addEventListener('click', () => {
-                    try {
-                        navigator.clipboard.writeText(copyBtn.dataset.text || '');
-                        copyBtn.textContent = '已复制';
-                        setTimeout(() => { copyBtn.textContent = '复制内容'; }, 1600);
-                    } catch (e) { /* ignore */ }
-                });
-            });
-        } catch (e) { /* 胶囊区加载失败不影响主页 */ }
-    },
-
     // 渲染文章瀑布流（一次性渲染全部）
     renderPosts() {
         const postsContainer = document.getElementById('posts');
@@ -346,6 +273,9 @@ const BlogApp = {
 
     // 渲染单个文章卡片
     renderPostCard(post) {
+        // 卡片笔记：胶囊形态融入瀑布（无封面，点击浮层展开全文，不跳转）
+        if (post.type === 'card') return this.renderNotePillCard(post);
+
         const gradientColors = this.getGradientColors(post.tags || []);
         const dateFormatted = this.formatDate(post.date);
         const avatarImg = this.getAuthorAvatar(post.author);
@@ -393,6 +323,98 @@ const BlogApp = {
                 </div>
             </div>
         `;
+    },
+
+    // 卡片笔记：瀑布流中的「胶囊卡」（无封面、标签色点、两行预览）
+    renderNotePillCard(post) {
+        const hue = this.tagHue((post.tags && post.tags[0]) || 'card');
+        const dateFormatted = this.formatDate(post.date);
+        const text = post.excerpt || post.title || '';
+        const id = this.escAttr(post.id || '');
+        return `
+            <div class="card note-pill-card" style="--np-hue:${hue}" onclick="BlogApp.openNotePill('${id}')">
+                <div class="npc-dot"></div>
+                <div class="npc-body">
+                    <div class="npc-head">
+                        <span class="npc-tags">${(post.tags || []).slice(0, 3).map(t => '<span>' + this.esc(t) + '</span>').join('') || '<span>随手记</span>'}</span>
+                        <span class="npc-date">${dateFormatted}</span>
+                    </div>
+                    <div class="npc-text">${this.esc(text)}</div>
+                </div>
+                <div class="npc-more">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                </div>
+            </div>`;
+    },
+
+    // 标签 → 固定色相（用于卡片主题色）
+    tagHue(t) {
+        let h = 0;
+        for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) >>> 0;
+        return h % 360;
+    },
+
+    // 打开卡片笔记浮层（点击时拉取全文，不跳转）
+    async openNotePill(id) {
+        const mask = document.getElementById('noteViewerMask');
+        const viewer = document.getElementById('noteViewer');
+        if (!mask || !viewer || !id) return;
+        mask.classList.add('show');
+        viewer.innerHTML = '<div class="nv-loading"><span class="loading-spinner"></span><span>加载中…</span></div>';
+        this._bindNoteViewerKeys();
+        try {
+            const r = await fetch('/api/admin?action=articles&id=' + encodeURIComponent(id), { cache: 'no-store' });
+            const d = await r.json();
+            if (!d || d.status !== 'success' || !d.data) throw new Error('加载失败');
+            const c = d.data;
+            const esc = this.esc.bind(this);
+            viewer.innerHTML =
+                '<div class="nv-head"><span class="nv-title">' + esc(c.title || '卡片笔记') + '</span>' +
+                '<button class="nv-close" id="nvClose" title="关闭"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>' +
+                '<div class="nv-body">' + this.miniMarkdown(c.content || '') + '</div>' +
+                '<div class="nv-foot">' +
+                (c.tags || []).map(t => '<span class="t">' + esc(t) + '</span>').join('') +
+                '<span class="nv-date">' + esc(String(c.date || '').slice(0, 10)) + '</span>' +
+                '<button class="nv-copy" id="nvCopy">复制内容</button></div>';
+            document.getElementById('nvClose').addEventListener('click', () => this.closeNotePill());
+            const copyBtn = document.getElementById('nvCopy');
+            if (copyBtn) copyBtn.addEventListener('click', () => {
+                try {
+                    navigator.clipboard.writeText(c.content || '');
+                    copyBtn.textContent = '已复制';
+                    setTimeout(() => { copyBtn.textContent = '复制内容'; }, 1600);
+                } catch (e) { /* ignore */ }
+            });
+        } catch (e) {
+            viewer.innerHTML = '<div class="nv-head"><span class="nv-title">加载失败</span>' +
+                '<button class="nv-close" id="nvClose">关闭</button></div>' +
+                '<div class="nv-err">内容加载失败，请重试</div>';
+            document.getElementById('nvClose').addEventListener('click', () => this.closeNotePill());
+        }
+    },
+
+    closeNotePill() {
+        const mask = document.getElementById('noteViewerMask');
+        if (mask) mask.classList.remove('show');
+    },
+
+    // 浮层 Esc 关闭（只绑定一次）
+    _bindNoteViewerKeys() {
+        if (this._nvKeyBound) return;
+        this._nvKeyBound = true;
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') this.closeNotePill();
+        });
+    },
+
+    // 卡片笔记的轻量 Markdown 渲染
+    miniMarkdown(s) {
+        const esc = this.esc.bind(this);
+        return esc(s)
+            .replace(/`([^`]+)`/g, '<code>$1</code>')
+            .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+            .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+            .replace(/\n/g, '<br>');
     },
 
     // 按标签筛选文章
