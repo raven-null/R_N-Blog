@@ -333,11 +333,11 @@ const BlogApp = {
             <div class="card note-plain-card" onclick="BlogApp.openNotePill('${id}')">
                 <div class="card-body">
                     <div class="card-title">${this.esc(post.title || '')}</div>
-                    <div class="card-tag">
-                        ${(post.tags || []).map(tag => '<span>' + this.esc(tag) + '</span>').join('') || '<span>随手记</span>'}
-                    </div>
-                    <div class="card-meta note-meta">
-                        <span class="card-date">${dateFormatted}</span>
+                    <div class="note-card-foot">
+                        <div class="card-tag">
+                            ${(post.tags || []).map(tag => '<span>' + this.esc(tag) + '</span>').join('') || '<span>随手记</span>'}
+                        </div>
+                        <span class="card-date note-date">${dateFormatted}</span>
                     </div>
                 </div>
             </div>`;

@@ -555,14 +555,24 @@ button:active,
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
-/* ===== 卡片笔记：瀑布流简约卡（与普通文章一致：标题/标签/时间，点击进阅读页） ===== */
-.note-plain-card { min-height: 118px; display: flex; }
+/* ===== 卡片笔记：瀑布流卡片（标题大号居中 / 标签左下 / 时间右下；点击弹窗） ===== */
+.note-plain-card { min-height: 140px; display: flex; }
 .note-plain-card .card-body {
     width: 100%; box-sizing: border-box;
     display: flex; flex-direction: column;
+    padding: 26px 22px 16px;
 }
-.note-plain-card .card-title { margin-bottom: 10px; }
-.note-plain-card .card-meta.note-meta { margin-top: auto; justify-content: flex-end; }
+.note-plain-card .card-title {
+    text-align: center; font-size: 17px; line-height: 1.55;
+    margin: 2px 0 20px; padding: 0;
+}
+.note-plain-card .note-card-foot {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    margin-top: auto;
+}
+.note-plain-card .card-tag { margin: 0; }
+.note-plain-card .note-date { flex: none; }
+
 /* ===== 卡片笔记弹窗（液态玻璃） ===== */
 .note-viewer-mask {
     position: fixed; inset: 0; z-index: 200;
