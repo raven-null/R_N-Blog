@@ -30,6 +30,8 @@ const BlogApp = {
         console.log('[BlogApp] 文章加载完成:', this.posts.length, '篇');
         this.render();
         console.log('[BlogApp] 渲染完成');
+        // 卡片笔记：首页胶囊区（独立加载，失败不影响主页）
+        this.renderNotesPills();
         this.setupEventListeners();
         this.handleRoute();
         this.startAutoRefresh();
@@ -60,7 +62,8 @@ const BlogApp = {
                     // 检查缓存是否过期（存有时间戳）
                     if (cached.t && Date.now() - cached.t < CACHE_TTL && Array.isArray(cached.posts)) {
                         console.log('[loadPosts] 使用缓存数据');
-                        this.posts = cached.posts;
+                        // 旧缓存可能含卡片笔记（已改为首页胶囊区展示，瀑布只保留文章/白板）
+                        this.posts = cached.posts.filter(p => p.type !== 'card');
                         this.filteredPosts = [...this.posts];
                         return;
                     }
@@ -121,7 +124,7 @@ const BlogApp = {
             const data = await res.json();
             if (data.status !== 'success' || !Array.isArray(data.data)) return [];
             return data.data
-                .filter(a => a.status === 'published')
+                .filter(a => a.status === 'published' && a.type !== 'card') // 卡片笔记走首页胶囊区/灵感页
                 .map(a => ({
                     id: a.id,
                     filename: a.filename || `${a.id}.md`,
@@ -224,6 +227,78 @@ const BlogApp = {
     // 渲染页面（文章）
     render() {
         this.renderPosts();
+    },
+
+    // 首页「灵感」胶囊区：卡片笔记以胶囊呈现，点击原地展开（不跳转）
+    async renderNotesPills() {
+        const wrap = document.getElementById('notesPills');
+        if (!wrap) return;
+        try {
+            const res = await fetch('/api/admin?action=articles', { cache: 'no-store' });
+            const d = await res.json();
+            if (!d || d.status !== 'success' || !Array.isArray(d.data)) return;
+            const cards = d.data
+                .filter(a => a.status === 'published' && a.type === 'card')
+                .sort((a, b) => String(b.date).localeCompare(String(a.date)))
+                .slice(0, 6);
+            if (!cards.length) return;
+
+            const esc = this.esc.bind(this);
+            const plain = (s) => String(s || '').replace(/`/g, '').replace(/\*\*/g, '').replace(/\[([^\]]+)\]\([^)]*\)/g, '$1').replace(/\s+/g, ' ').trim();
+            const miniMd = (s) => esc(s)
+                .replace(/`([^`]+)`/g, '<code>$1</code>')
+                .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+                .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+                .replace(/\n/g, '<br>');
+            const hue = (t) => {
+                let h = 0;
+                for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) >>> 0;
+                return h % 360;
+            };
+            const accent = (tags) => 'hsl(' + hue((tags && tags[0]) || 'card') + ' 70% 62% / 0.75)';
+
+            wrap.innerHTML =
+                '<div class="np-head"><strong>灵感</strong><span class="np-count">' + cards.length + ' 条</span>' +
+                '<a href="/notes.html">全部 →</a></div>' +
+                '<div class="np-list">' +
+                cards.map(c => {
+                    const ac = accent(c.tags);
+                    return '<div class="pill-item" data-id="' + c.id + '">' +
+                        '<button class="pill-row" style="--pc:' + ac + '">' +
+                        '<span class="pill-dot"></span>' +
+                        '<span class="pill-text">' + esc(plain(c.content || '')) + '</span>' +
+                        '<span class="pill-date">' + esc(String(c.date || '').slice(0, 10)) + '</span>' +
+                        '<span class="pill-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>' +
+                        '</button>' +
+                        '<div class="pill-panel"><div class="pp-inner"><div class="pp-card" style="--pc:' + ac + '">' +
+                        '<div class="pp-body">' + miniMd(c.content || '') + '</div>' +
+                        '<div class="pp-foot">' +
+                        (c.tags || []).slice(0, 4).map(t => '<span class="t">' + esc(t) + '</span>').join('') +
+                        '<span>' + esc(String(c.date || '').slice(0, 10)) + '</span>' +
+                        '<button class="pp-copy" data-text="' + esc(c.content || '') + '">复制内容</button>' +
+                        '</div></div></div></div>' +
+                        '</div>';
+                }).join('') +
+                '</div>';
+            wrap.hidden = false;
+
+            // 手风琴 + 复制
+            wrap.querySelectorAll('.pill-item').forEach(item => {
+                item.querySelector('.pill-row').addEventListener('click', () => {
+                    const isOpen = item.classList.contains('open');
+                    wrap.querySelectorAll('.pill-item.open').forEach(o => o.classList.remove('open'));
+                    if (!isOpen) item.classList.add('open');
+                });
+                const copyBtn = item.querySelector('.pp-copy');
+                if (copyBtn) copyBtn.addEventListener('click', () => {
+                    try {
+                        navigator.clipboard.writeText(copyBtn.dataset.text || '');
+                        copyBtn.textContent = '已复制';
+                        setTimeout(() => { copyBtn.textContent = '复制内容'; }, 1600);
+                    } catch (e) { /* ignore */ }
+                });
+            });
+        } catch (e) { /* 胶囊区加载失败不影响主页 */ }
     },
 
     // 渲染文章瀑布流（一次性渲染全部）
