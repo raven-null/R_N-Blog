@@ -748,6 +748,29 @@
         }
         .board-stage .board-canvas { position: absolute; inset: 0; }
         .board-stage .board-canvas .excalidraw { position: absolute; inset: 0; }
+        .board-stage .board-canvas .excalidraw-edit-host { position: absolute; inset: 0; }
+        /* 编辑态：隐藏舞台浮层，显示左上「完成」胶囊（编辑工具栏由组件自带） */
+        .board-stage.editing .board-topbar,
+        .board-stage.editing .board-navbtn,
+        .board-stage.editing .board-pop,
+        .board-stage.editing .board-scrim,
+        .board-stage.editing .board-drawer { display: none !important; }
+        .board-done {
+            position: absolute; top: 14px; left: 14px; z-index: 33; display: none;
+            align-items: center; gap: 6px; text-decoration: none;
+            color: #e8e8ea; font-size: 12.5px; padding: 7px 15px; border-radius: 999px; cursor: pointer;
+            background: linear-gradient(145deg, rgba(30, 30, 37, 0.85), rgba(20, 20, 26, 0.78));
+            backdrop-filter: blur(26px) saturate(180%); -webkit-backdrop-filter: blur(26px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.13);
+            box-shadow: 0 14px 44px -10px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s ease;
+            font-family: inherit;
+        }
+        .board-done svg { width: 14px; height: 14px; }
+        .board-done:hover { background: linear-gradient(145deg, rgba(48, 48, 58, 0.95), rgba(28, 28, 36, 0.85)); }
+        .board-stage.editing .board-done { display: inline-flex; }
+        .board-stage.editing .exc-shell .exc-bar { border-radius: 0; }
+        .board-stage.editing .exc-shell .exc-msg { margin: 6px 10px 8px; }
         /* 顶部悬浮胶囊 */
         .board-topbar {
             position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
@@ -2229,12 +2252,12 @@
                 const tagChips = (p.tags || []).map(t => '<span>' + escT(t) + '</span>').join('');
 
                 content.innerHTML =
-                    '<div class="board-stage" id="boardStage">' +
-                    '<div class="board-canvas" data-excalidraw data-note="' + boardId + '" data-mode="view"></div>' +
+                    '<div class="board-stage" id="boardStage" data-board="' + boardId + '">' +
+                    '<div class="board-canvas"><div id="boardCanvasHost" data-excalidraw data-note="' + boardId + '" data-mode="view"></div></div>' +
                     '<div class="board-topbar" id="boardTopbar">' +
                     '<a class="bt-btn" href="/" title="返回博客"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m3 10.5 9-7.5 9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg></a>' +
                     '<span class="bt-title">' + title + '</span>' +
-                    '<a class="bt-btn" href="/excalidraw.html?note=' + encodeURIComponent(boardId) + '&edit=1" target="_blank" title="在编辑器中打开此白板"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>编辑</a>' +
+                    '<button class="bt-btn" id="boardEditBtn" title="在当前页面直接编辑此白板"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>编辑</button>' +
                     '<button class="bt-btn" id="boardInfoBtn" title="白板信息"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="8" r=".4" fill="currentColor"/></svg>信息</button>' +
                     '<button class="bt-btn" id="boardCommentBtn" title="留言"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>留言</button>' +
                     '</div>' +
@@ -2246,6 +2269,7 @@
                     '<div class="bp-row"><span class="k">画板</span><span style="word-break:break-all">' + escT(boardId) + '</span></div>' +
                     '<div class="bp-tags">' + (tagChips || '<span style="opacity:.5">无标签</span>') + '</div>' +
                     '<div class="bp-actions">' +
+                    '<a class="bt-btn" style="background:rgba(255,255,255,.08)" href="/excalidraw.html?note=' + encodeURIComponent(boardId) + '&edit=1" target="_blank" title="在新窗口打开完整编辑器">完整编辑器</a>' +
                     '<button class="bt-btn" id="boardShareBtn" style="background:rgba(255,255,255,.08)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg>复制链接</button>' +
                     '</div></div>' +
                     '<div class="board-scrim" id="boardScrim"></div>' +
@@ -2253,6 +2277,7 @@
                     '<div class="board-drawer-head"><span class="dh-title">留言</span><button class="bt-btn" id="boardDrawerClose" title="关闭"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>关闭</button></div>' +
                     '<div class="board-drawer-body" id="boardDrawerBody"></div>' +
                     '</aside>' +
+                    '<button class="board-done" id="boardDoneBtn" title="保存改动后退出编辑（编辑工具栏在画布上方）"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>完成</button>' +
                     '<button class="board-navbtn prev" id="boardPrev" hidden title="上一篇"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>' +
                     '<button class="board-navbtn next" id="boardNext" hidden title="下一篇"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></button>' +
                     '</div>';
@@ -2312,6 +2337,43 @@
                         setTimeout(() => { shareBtn.textContent = '复制链接'; }, 1800);
                     } catch (e) { /* 剪贴板不可用时忽略 */ }
                 });
+
+                // 就地编辑：view ↔ edit 原地切换（不跳转；口令/保存/权限由编辑器组件自带）
+                const boardId = stage.dataset.board || '';
+                const mountBoardHost = (mode) => {
+                    const old = document.getElementById('boardCanvasHost');
+                    if (!old || !old.parentNode) return;
+                    const div = document.createElement('div');
+                    div.id = 'boardCanvasHost';
+                    div.dataset.excalidraw = '';
+                    div.dataset.note = boardId;
+                    div.dataset.mode = mode;
+                    old.parentNode.replaceChild(div, old);
+                    if (window.ExcalidrawMount) window.ExcalidrawMount();
+                    else this.loadExcalidrawBundle(); // bundle 未就绪：加载完成后会自动扫描当前容器
+                };
+                const enterEdit = () => {
+                    if (stage.dataset.editing === '1') return;
+                    stage.dataset.editing = '1';
+                    stage.classList.add('editing');
+                    mountBoardHost('edit');
+                };
+                const exitEdit = () => {
+                    if (stage.dataset.editing !== '1') return;
+                    // 先提示保存：未点「保存」的改动不会写入
+                    if (!window.confirm('退出编辑？\n提示：改动需点击画布上方工具栏的「保存」才会写入。')) return;
+                    stage.dataset.editing = '';
+                    stage.classList.remove('editing');
+                    mountBoardHost('view');
+                    // 恢复浮层可见性（idle 状态由鼠标唤醒）
+                    stage.classList.remove('idle');
+                };
+                const editBtn = document.getElementById('boardEditBtn');
+                if (editBtn) editBtn.addEventListener('click', enterEdit);
+                const doneBtn = document.getElementById('boardDoneBtn');
+                if (doneBtn) doneBtn.addEventListener('click', exitEdit);
+                // 分享链接带 &edit=1 时打开即进入编辑态（可编辑分享链接）
+                if (new URLSearchParams(location.search).get('edit') === '1') enterEdit();
 
                 // 画廊式上下篇（原隐藏导航卡中取 href）
                 const navHref = (sel) => {
