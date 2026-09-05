@@ -238,9 +238,13 @@ function NoteApp({ note, mode, bare }: { note: string; mode: "edit" | "view"; ba
         setNotFound(true)
         if (!silent) {
           setLoading(false)
-          // 编辑模式：给一块空画布直接画，保存时才创建
+          // 编辑模式：给一块空画布直接画，保存时才创建（文案区分管理员/访客）
           if (mode === "edit") {
-            setMsg("新笔记：直接开始画，点「保存」即创建（仅管理员可创建，请先登录 /admin.html）")
+            setMsg(
+              isAdmin
+                ? "新笔记：直接开始画，点「保存」即可创建"
+                : "新笔记：直接开始画，点「保存」即创建（仅管理员可创建，请先登录 /admin.html）",
+            )
           }
         }
         return
