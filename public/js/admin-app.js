@@ -433,17 +433,15 @@
         // ===== 全屏写作（隐藏后台框架，内容占满整个屏幕） =====
         let writeFull=false;
         const FS_ICON='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>';
+        function setFullBtn(){
+            const btn=document.getElementById('writeFullBtn');
+            if(btn)btn.innerHTML=writeFull?FS_ICON+'退出全屏':FS_ICON+'全屏写作';
+        }
         function toggleWriteFull(){
             writeFull=!writeFull;
             document.body.classList.toggle('admin-write-full',writeFull);
-            // 当前形态 pane 变为 flex 纵向（其余 pane 保持隐藏）
-            const paneId={article:'writeModeArticle',note:'writeModeNote',board:'writeModeBoard'}[writeMode];
-            const pane=paneId?document.getElementById(paneId):null;
-            if(pane)pane.classList.toggle('wm-pane-full',writeFull);
-            const btn=document.getElementById('writeFullBtn');
-            if(btn)btn.innerHTML=writeFull
-                ? FS_ICON+'退出全屏'
-                : FS_ICON+'全屏写作';
+            setFullBtn();
+            setTimeout(fitEditor,60);
             // 浏览器原生全屏（失败则保持布局级全屏，不影响使用）
             if(writeFull){
                 const de=document.documentElement;
@@ -458,29 +456,51 @@
         document.addEventListener('fullscreenchange',function(){
             if(!document.fullscreenElement&&document.body.classList.contains('admin-write-full')){
                 document.body.classList.remove('admin-write-full');
-                const pane=document.getElementById('writeModeArticle')||document.getElementById('writeModeNote')||document.getElementById('writeModeBoard');
-                const active={article:'writeModeArticle',note:'writeModeNote',board:'writeModeBoard'}[writeMode];
-                const cur=document.getElementById(active);
-                if(cur)cur.classList.remove('wm-pane-full');
-                if(pane&&!cur)pane.classList.remove('wm-pane-full');
                 writeFull=false;
-                const btn=document.getElementById('writeFullBtn');
-                if(btn)btn.innerHTML=FS_ICON+'全屏写作';
+                setFullBtn();
+                setTimeout(fitEditor,60);
             }
         });
 
+        // ===== 形态切换（文章/随记/白板）：顶部 tab + 右侧操作组 + 视图动画 =====
         let writeMode='article';
+        const WRITE_VIEWS={article:{view:'view-article',group:'rightGroupArticle'},note:{view:'view-note',group:'rightGroupNote'},board:{view:'view-board',group:'rightGroupBoard'}};
+        let writeSwitchTimer=null;
         function setWriteMode(mode){
             writeMode=mode;
-            const pane={article:'writeModeArticle',note:'writeModeNote',board:'writeModeBoard'};
-            document.querySelectorAll('#tab-write .wm-chip').forEach(function(b,i){b.classList.toggle('active',['article','note','board'][i]===mode)});
-            for(const k in pane){
-                const el=document.getElementById(pane[k]);
-                if(el)el.style.display=k===mode?'':'none';
+            // 顶部 tab：pill 高亮 + 底部指示条
+            document.querySelectorAll('#tab-write .tab-item').forEach(function(b){
+                b.classList.toggle('active',b.dataset.mode===mode);
+            });
+            document.querySelectorAll('#tab-write .tab-item-wrap').forEach(function(w){
+                w.classList.toggle('active-wrap',w.dataset.mode===mode);
+            });
+            // 视图切换（旧视图自然过渡回隐藏态，新视图滑入）
+            for(const k in WRITE_VIEWS){
+                const v=document.getElementById(WRITE_VIEWS[k].view);
+                if(v)v.classList.toggle('active',k===mode);
             }
-            if(mode==='article'){ensureEditor()}
+            // 右侧操作组按形态显隐
+            for(const k in WRITE_VIEWS){
+                const g=document.getElementById(WRITE_VIEWS[k].group);
+                if(g)g.style.display=k===mode?'':'none';
+            }
+            clearTimeout(writeSwitchTimer);
+            writeSwitchTimer=setTimeout(function(){
+                document.querySelectorAll('#tab-write .tab-view.leaving').forEach(function(v){v.classList.remove('leaving')});
+            },400);
+            if(mode==='article'){ensureEditor();setTimeout(fitEditor,100)}
             else if(mode==='note'){loadRecentNotes()}
             else if(mode==='board'){ensureExcBundle()}
+        }
+        function fitEditor(){
+            const host=document.getElementById('vditor');
+            const wrap=document.getElementById('writeModeArticle');
+            if(!host||!wrap)return;
+            if(host.classList.contains('vditor--fullscreen'))return;
+            const h=wrap.clientHeight;
+            if(h<240)return; // 布局未就绪（隐藏/动画中）时跳过，避免撑破
+            host.style.height=h+'px';
         }
         // 白板 bundle 懒加载（切到白板形态才加载 8MB）
         function ensureExcBundle(){
@@ -602,8 +622,10 @@
             // 防御：若此前某次初始化中断在 #vditor 内残留了编辑器 DOM，
             // 先清空再重建，避免页面上出现两份编辑器 DOM 上下堆叠
             if(host.querySelector('.vditor'))host.innerHTML='';
+            const wrapH=document.getElementById('writeModeArticle')?.clientHeight||0;
+            const initH=wrapH>=240?wrapH:Math.max(360,(document.querySelector('.content')?.offsetHeight||700)-300);
             vditorInstance=new Vditor('vditor',{
-                height:Math.max(360,document.querySelector('.content')?.offsetHeight-300||500),
+                height:initH,
                 // 注意：不带尾部斜杠，Vditor 内部按 cdn + '/dist/...' 拼接
                 cdn:'js/vendor/vditor',
                 mode:'wysiwyg',
@@ -614,7 +636,7 @@
                     'emoji','headings','bold','italic','strike','link',
                     '|','list','ordered-list','check','outdent','indent',
                     '|','quote','line','code','inline-code','table',
-                    '|','upload','edit-mode','fullscreen',
+                    '|','upload','edit-mode',
                     '|','undo','redo','more'
                 ],
                 upload:{
@@ -644,13 +666,12 @@
                     switchEditorTheme(currentEditorTheme);
                     if(!vditorResizeBound){
                         vditorResizeBound=true;
-                        // 窗口尺寸变化时同步编辑器高度，避免底部留白或超高溢出
+                        // 窗口/布局尺寸变化时让编辑器贴合剩余空间
                         window.addEventListener('resize',()=>{
-                            const el=vditorInstance&&vditorInstance.element;
-                            if(!el||el.classList.contains('vditor--fullscreen'))return;
-                            el.style.height=Math.max(360,(document.querySelector('.content')?.offsetHeight||700)-300)+'px';
+                            setTimeout(fitEditor,80);
                         });
                     }
+                    setTimeout(fitEditor,60);
                     if(vditorPendingMd!==null){
                         const md=vditorPendingMd;
                         vditorPendingMd=null;
@@ -695,22 +716,29 @@
             green:{bg:'rgba(199,237,204,0.9)',text:'#1a3a1a',preBg:'rgba(170,210,175,0.5)'},
             blue:{bg:'rgba(220,232,245,0.9)',text:'#1a2a3a',preBg:'rgba(190,205,225,0.5)'}
         };
-        let currentEditorTheme=localStorage.getItem('editor_theme')||'dark';
+        const EDITOR_THEME_CLASSES=['vditor-theme-dark','vditor-theme-light','vditor-theme-sepia','vditor-theme-green','vditor-theme-blue'];
+        let currentEditorTheme=localStorage.getItem('editor_theme')||'sepia';
         function switchEditorTheme(theme){
             currentEditorTheme=theme;
             localStorage.setItem('editor_theme',theme);
             const vditorEl=document.getElementById('vditor');
             if(vditorEl){
-                vditorEl.className='vditor-wrap vditor-theme-'+theme;
+                // 只增删主题类，保留 vditor 自身类（vditor/wysiwyg 等）
+                EDITOR_THEME_CLASSES.forEach(function(c){vditorEl.classList.remove(c)});
+                vditorEl.classList.add('vditor-theme-'+theme);
                 const t=editorThemes[theme];
-                vditorEl.style.setProperty('--editor-bg',t.bg);
-                vditorEl.style.setProperty('--editor-text',t.text);
-                vditorEl.style.setProperty('--editor-pre-bg',t.preBg);
+                if(t){
+                    vditorEl.style.setProperty('--editor-bg',t.bg);
+                    vditorEl.style.setProperty('--editor-text',t.text);
+                    vditorEl.style.setProperty('--editor-pre-bg',t.preBg);
+                }
             }
             document.querySelectorAll('.theme-dot').forEach(d=>{
                 d.classList.toggle('active',d.dataset.theme===theme);
             });
         }
+        // 初始同步主题点高亮（vditor 就绪后 after 回调里会再次调用）
+        switchEditorTheme(currentEditorTheme);
 
         // ===== 发布弹窗 =====
         function openPublishModal(){
@@ -1724,7 +1752,7 @@
         function switchTab(tab){
             document.querySelectorAll('.sidebar-item').forEach(el=>el.classList.toggle('active',el.dataset.tab===tab));
             document.querySelectorAll('.mobile-tab').forEach(el=>el.classList.toggle('active',el.dataset.tab===tab));
-            ['articles','write','comments','images','tags','excalidraw','settings'].forEach(t=>document.getElementById('tab-'+t).style.display=t===tab?'block':'none');
+            ['articles','write','comments','images','tags','excalidraw','settings'].forEach(t=>document.getElementById('tab-'+t).style.display=t===tab?(t==='write'?'flex':'block'):'none');
             if(tab==='articles')loadArticles();
             if(tab==='comments')loadComments();
             if(tab==='settings')loadSettings();
