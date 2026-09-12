@@ -1166,7 +1166,6 @@
             list.innerHTML=articleImages.map(img=>`
                 <div class="write-article-img-item" title="${esc(img.key)}" onclick="insertArticleImage('${escAttr(img.url)}')">
                     <img src="${displayUrl(img.url)}" loading="lazy">
-                    <button class="del" onclick="event.stopPropagation();deleteArticleImage('${escAttr(img.key)}')" title="删除图片">&times;</button>
                 </div>
             `).join('');
         }

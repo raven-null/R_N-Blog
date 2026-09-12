@@ -373,7 +373,6 @@
         .write-article-img-item{position:relative;aspect-ratio:1/1;border-radius:10px;overflow:hidden;border:1px solid var(--border);background:#0a0b10;cursor:pointer;transition:border-color .18s ease,transform .18s ease}
         .write-article-img-item:hover{border-color:var(--accent);transform:translateY(-2px)}
         .write-article-img-item img{width:100%;height:100%;object-fit:cover;display:block}
-        .write-article-img-item .del{position:absolute;top:4px;right:4px;width:20px;height:20px;border-radius:50%;border:none;background:rgba(0,0,0,.65);color:#fff;cursor:pointer;font-size:12px;line-height:1}
         .write-article-images-empty{grid-column:1/-1;color:var(--text-muted);font-size:12.5px;text-align:center;padding:24px 0}
 
         /* ===== 白板操作弹窗（替代原生 alert / prompt / confirm） ===== */
@@ -1477,7 +1476,7 @@
         <div class="aid-body">
             <div class="write-article-images" id="articleImagesList"></div>
         </div>
-        <div class="aid-foot">点击图片可插入到光标处；右上角 × 会从服务器删除该图片。</div>
+        <div class="aid-foot">点击图片可插入到光标处。</div>
     </aside>
 
     <div class="exc-modal" id="excModal">
@@ -1565,7 +1564,7 @@
         </div>
     </div>
 
-        <script src="js/admin-app.js?v=1.3.7"></script>
+        <script src="js/admin-app.js?v=1.3.8"></script>
 
     <!-- 前台预览抽屉（iframe 内嵌，零跳出） -->
     <style>
