@@ -130,6 +130,10 @@ body:not(.home-layout) .article-layout,
 }
 
 .search-dropdown::before {
+    background: var(--bg-secondary) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
 
 /* —— 文章卡片（瀑布流） —— */
 .card {
