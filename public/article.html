@@ -1763,6 +1763,25 @@
         }
     </style>
     <link rel="stylesheet" href="/css/scrollbar.css?v=1.0.1">
+    <style>
+        /* ===== 长文章分章阅读 ===== */
+        .article-chunk { margin-top: 48px; padding-top: 28px; border-top: 1px dashed rgba(255,255,255,.14); }
+        .article-chunk .chunk-title { font-size: 20px; line-height: 1.4; margin: 0 0 18px; color: #8ab4ff; font-weight: 600; }
+        .chunk-progress {
+            margin: 36px auto 24px; max-width: 760px; padding: 12px 16px; border-radius: 12px;
+            background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.1);
+            display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+            font-size: 12.5px; color: rgba(255,255,255,.66);
+        }
+        .chunk-actions { display: flex; gap: 8px; margin-left: auto; }
+        .chunk-btn {
+            padding: 6px 14px; border-radius: 999px; cursor: pointer; font-family: inherit;
+            border: 1px solid rgba(255,255,255,.16); background: rgba(255,255,255,.08); color: #e6ecff; font-size: 12.5px;
+            transition: background .18s ease;
+        }
+        .chunk-btn:hover { background: rgba(255,255,255,.16); }
+        .chunk-sentinel { height: 1px; width: 100%; }
+    </style>
 </head>
 <body>
     <!-- 图片灯箱 -->
@@ -1990,7 +2009,7 @@
     <script src="js/reader.js?v=3.13.6" defer></script>
     <script src="js/animations.js?v=3.14.0" defer></script>
 
-    <script src="js/article-app.js?v=1.1.0" defer></script>
+    <script src="js/article-app.js?v=1.2.0" defer></script>
 
 </body>
 </html>

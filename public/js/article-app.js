@@ -67,7 +67,8 @@
                     }
                 } catch (e) { /* 缓存不可用则忽略 */ }
 
-                if (cached) this.applyBlobArticle(cached.data, filename);
+                // 分章长文不走缓存预渲染（首章本身按需拉取，已经很快）
+                if (cached && !cached.data.chunked) this.applyBlobArticle(cached.data, filename);
 
                 try {
                     const res = await fetch(`/api/admin?action=articles&id=${blobId}`);
@@ -78,8 +79,11 @@
                         || cached.data.content !== d.content
                         || cached.data.title !== d.title
                         || cached.data.updatedAt !== d.updatedAt;
-                    try { sessionStorage.setItem(cacheKey, JSON.stringify({ t: Date.now(), data: d })); } catch (e) { /* 超配额忽略 */ }
-                    if (changed) this.applyBlobArticle(d, filename);
+                    if (!d.chunked) {
+                        try { sessionStorage.setItem(cacheKey, JSON.stringify({ t: Date.now(), data: d })); } catch (e) { /* 超配额忽略 */ }
+                    }
+                    if (d.chunked) this.loadChunkedArticle(d, filename);
+                    else if (changed) this.applyBlobArticle(d, filename);
                 } catch (error) {
                     console.error('加载Blobs文章失败:', error);
                     if (!cached) this.showError('文章加载失败');
@@ -105,6 +109,108 @@
                 document.title = `${this.currentPost.title} - 我的博客`;
             },
 
+            // ===== 长文章分章按需加载（首章秒开，向下滚动自动加载后续章节） =====
+            async loadChunkedArticle(d, filename) {
+                this._chunk = { id: d.id, total: d.chunkCount || 0, loaded: -1, chapters: [], loading: false };
+                try {
+                    const r = await fetch(`/api/admin?action=article-toc&id=${encodeURIComponent(d.id)}`).then(x => x.json());
+                    if (r && r.status === 'success' && r.data) {
+                        this._chunk.total = r.data.total || this._chunk.total;
+                        this._chunk.chapters = r.data.chapters || [];
+                    }
+                } catch (e) { /* 目录拉取失败不影响阅读 */ }
+                const first = await this.fetchChunk(d.id, 0);
+                this.applyBlobArticle(Object.assign({}, d, { content: (first && first.content) || '' }), filename);
+                this._chunk.loaded = 0;
+                this.setupChunkLoader();
+            },
+            async fetchChunk(id, i) {
+                try {
+                    const r = await fetch(`/api/admin?action=article-chunk&id=${encodeURIComponent(id)}&i=${i}`).then(x => x.json());
+                    return (r && r.status === 'success') ? r.data : null;
+                } catch (e) { return null; }
+            },
+            setupChunkLoader() {
+                const st = this._chunk;
+                if (!st) return;
+                let bar = document.getElementById('chunkProgress');
+                if (!bar) {
+                    bar = document.createElement('div');
+                    bar.id = 'chunkProgress';
+                    bar.className = 'chunk-progress';
+                    const host = document.getElementById('article-content');
+                    if (host && host.parentNode) host.parentNode.insertBefore(bar, host.nextSibling);
+                    else document.body.appendChild(bar);
+                }
+                const sentinel = document.createElement('div');
+                sentinel.className = 'chunk-sentinel';
+                bar.appendChild(sentinel);
+                st.sentinel = sentinel;
+                if ('IntersectionObserver' in window) {
+                    st.io = new IntersectionObserver((entries) => {
+                        if (entries.some(e => e.isIntersecting)) this.loadNextChunk();
+                    }, { rootMargin: '800px 0px' });
+                    st.io.observe(sentinel);
+                }
+                this.renderChunkProgress();
+            },
+            renderChunkProgress() {
+                const st = this._chunk;
+                const bar = document.getElementById('chunkProgress');
+                if (!st || !bar) return;
+                bar.querySelectorAll('.chunk-text,.chunk-actions').forEach(el => el.remove());
+                const loaded = st.loaded + 1;
+                const done = loaded >= st.total;
+                const text = document.createElement('div');
+                text.className = 'chunk-text';
+                text.textContent = done ? ('已加载全部 ' + st.total + ' 章')
+                    : ('已加载 ' + loaded + ' / ' + st.total + ' 章 · 继续向下滚动会自动加载');
+                const actions = document.createElement('div');
+                actions.className = 'chunk-actions';
+                if (!done) {
+                    const btn = document.createElement('button');
+                    btn.className = 'chunk-btn';
+                    btn.textContent = '加载下一章';
+                    btn.onclick = () => this.loadNextChunk();
+                    actions.appendChild(btn);
+                }
+                const top = document.createElement('button');
+                top.className = 'chunk-btn';
+                top.textContent = '回到顶部';
+                top.onclick = () => window.scrollTo({ top: 0, behavior: 'smooth' });
+                actions.appendChild(top);
+                bar.insertBefore(text, bar.firstChild);
+                bar.insertBefore(actions, bar.firstChild);
+            },
+            async loadNextChunk() {
+                const st = this._chunk;
+                if (!st || st.loading) return;
+                const next = st.loaded + 1;
+                if (next >= st.total) return;
+                st.loading = true;
+                try {
+                    const ch = await this.fetchChunk(st.id, next);
+                    if (!ch) return;
+                    const host = document.getElementById('article-content');
+                    if (!host) return;
+                    const html = await MarkdownParser.parseMarkdownAsync(ch.content);
+                    const wrap = document.createElement('section');
+                    wrap.className = 'article-chunk';
+                    wrap.dataset.chunk = String(next);
+                    const title = ch.title || ('第 ' + (next + 1) + ' 章');
+                    wrap.innerHTML = '<h2 class="chunk-title">' + title + '</h2>' + html;
+                    host.appendChild(wrap);
+                    st.loaded = next;
+                    this.enhanceImages(wrap);
+                    requestAnimationFrame(() => this.highlightVisibleBlocks(wrap));
+                    this.highlightRemainingBlocks(wrap);
+                    this.mountExcalidrawEmbeds(wrap);
+                    requestAnimationFrame(() => this.generateTableOfContents());
+                } finally {
+                    st.loading = false;
+                    this.renderChunkProgress();
+                }
+            },
             // 加载资讯正文（按 id 从 recommendations.json 匹配，按需解析）
             async loadNewsArticle(id) {
                 const res = await fetch('data/recommendations.json');

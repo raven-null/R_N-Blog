@@ -348,6 +348,13 @@
             return;
         }
         doc = r.data;
+        // 长文章主记录不存全文（分章存储）：编辑时取回拼好的全文
+        if (doc && doc.chunked && !doc.content) {
+            try {
+                var full = await api('action=article-full&id=' + encodeURIComponent(docId) + '&_=' + Date.now());
+                if (full && full.status === 'success' && full.data) doc = Object.assign({}, doc, full.data);
+            } catch (e) { /* 取全文失败时按空内容处理 */ }
+        }
         docType = doc.type === 'whiteboard' ? 'whiteboard' : (doc.type === 'card' ? 'card' : 'article');
         document.title = '编辑' + typeLabel(docType) + ' · ' + (doc.title || doc.id);
         $('eeTypeBadge').textContent = typeLabel(docType);
