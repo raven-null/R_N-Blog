@@ -1895,22 +1895,29 @@
                     list.innerHTML='<div class="exc-empty">还没有白板笔记。去 <a href="/excalidraw.html?edit=1" target="_blank">新建一个</a>（需管理员登录）</div>';
                     return;
                 }
+                // 关联文章映射：boardId → 白板文章（决定「发布/下架」与「编辑」的跳转目标）
+                let boardMap={};
+                try{
+                    const ar=await apiFetch('action=articles');
+                    if(ar.status==='success')(ar.data||[]).forEach(function(a){if(a.type==='whiteboard'&&a.boardId)boardMap[a.boardId]=a});
+                }catch(e){}
                 list.innerHTML=notes.map(n=>{
+                    const art=boardMap[n.id]||null;
                     const editBadge=n.editable===1?'<span class="exc-badge on">公开可编辑</span>':'<span class="exc-badge off">只读</span>';
                     const lockBadge=n.hasKey?'<span class="exc-badge">口令保护</span>':'';
+                    const artBadge=art?(art.status==='published'?'<span class="exc-badge on">文章已发布</span>':'<span class="exc-badge off">文章草稿</span>'):'<span class="exc-badge">未发布</span>';
                     const updated=(n.updatedAt||'').slice(0,16).replace('T',' ');
+                    const pubWord=art&&art.status==='published'?'下架':'发布';
                     return `<div class="exc-card">
                         <div style="min-width:150px">
                             <div class="exc-title">${escHtml(n.title||'(未命名)')}</div>
                         </div>
-                        <div class="exc-meta">${editBadge}${lockBadge}<span>rev ${n.rev}</span><span>更新 ${updated}</span></div>
+                        <div class="exc-meta">${editBadge}${lockBadge}${artBadge}<span>rev ${n.rev}</span><span>更新 ${updated}</span></div>
                         <div class="exc-ops">
-                            <a class="exc-btn" href="/excalidraw.html?note=${encodeURIComponent(n.id)}" target="_blank">打开</a>
-                            <a class="exc-btn" href="/excalidraw.html?note=${encodeURIComponent(n.id)}&edit=1" target="_blank">编辑</a>
-                            <button class="exc-btn" onclick="excRename('${n.id}')">改名</button>
+                            <button class="exc-btn" onclick="excOpenEditor('${n.id}','${escJs(art?art.id:'')}')" title="与文章管理里的编辑跳转一致">编辑</button>
                             <button class="exc-btn" onclick="excToggleEdit('${n.id}',${n.editable})">${n.editable===1?'设为只读':'开放编辑'}</button>
                             <button class="exc-btn" onclick="excSetKey('${n.id}')">${n.hasKey?'重设口令':'设口令'}</button>
-                            <button class="exc-btn" onclick="excPublish('${n.id}')" title="创建 type=whiteboard 的草稿文章（整页白板、无目录）">发布文章</button>
+                            <button class="exc-btn" onclick="excTogglePublish('${n.id}')">${pubWord}</button>
                             <button class="exc-btn" onclick="excRollback('${n.id}')">回滚</button>
                             <button class="exc-btn danger" onclick="excDelete('${n.id}')">删除</button>
                         </div>
@@ -1919,14 +1926,6 @@
             }catch(e){
                 list.innerHTML='<div class="exc-empty">加载出错：'+escHtml(e.message)+'</div>';
             }
-        }
-        async function excRename(id){
-            const cur=await excApi('action=list').then(d=>((d.data||[]).find(n=>n.id===id)||{}).title||'');
-            const t=prompt('设置标题（留空并确定 = 清除标题）：',cur);
-            if(t===null)return;
-            const d=await excApi(`action=meta&id=${encodeURIComponent(id)}`,{method:'POST',body:JSON.stringify({title:t.trim()})});
-            alert(d.status==='success'?'已保存':(d.message||'操作失败'));
-            if(d.status==='success')loadExcalidrawNotes();
         }
         async function excToggleEdit(id,cur){
             const d=await excApi(`action=meta&id=${encodeURIComponent(id)}`,{method:'POST',body:JSON.stringify({editable:cur===1?0:1})});
@@ -1952,25 +1951,38 @@
             alert(d.status==='success'?`已回滚到 rev ${n}`:(d.message||'回滚失败'));
             if(d.status==='success')loadExcalidrawNotes();
         }
-        // 发布为纯白板文章：该画板已有关联文章时更新同一篇，避免重复创建
-        async function excPublish(id){
-            let existing=null;
+        // 编辑：与文章管理跳转一致（白板文章 → 独立编辑页）；还没有文章时打开独立白板编辑器
+        function excOpenEditor(noteId,articleId){
+            if(articleId){location.href='/admin-edit.html?id='+encodeURIComponent(articleId);return}
+            showToast('该画板还没有文章，已在独立白板编辑器中打开','success');
+            window.open('/excalidraw.html?note='+encodeURIComponent(noteId)+'&edit=1','_blank');
+        }
+        // 发布 / 下架：按关联文章状态切换；还没有文章则创建一篇并直接发布
+        async function excTogglePublish(noteId){
+            let art=null;
             try{
                 const r=await apiFetch('action=articles');
-                if(r.status==='success')existing=(r.data||[]).find(function(a){return a.type==='whiteboard'&&a.boardId===id})||null;
+                if(r.status==='success')art=(r.data||[]).find(function(a){return a.type==='whiteboard'&&a.boardId===noteId})||null;
             }catch(e){}
-            const def=existing?(existing.title||('白板：'+id)):('白板：'+id);
-            const t=prompt(existing?'该画板已有关联文章，更新标题（留空保持不变）：':'将白板发布为纯白板文章。文章标题：',def);
-            if(t===null)return;
-            const title=(t||'').trim()||def;
-            const body={title,content:'',status:existing&&existing.status||'draft',type:'whiteboard',boardId:id,tags:(existing&&existing.tags)||[]};
-            if(existing)body.id=existing.id;
-            try{
-                const r=await fetch('/api/admin?action=articles',{method:'POST',headers:{'Content-Type':'application/json','X-Admin-Key':adminKey},body:JSON.stringify(body)});
-                const d=await r.json();
-                alert(d.status==='success'?(existing?'已更新关联的白板文章':'白板文章草稿已创建，去文章管理发布'):(d.message||'操作失败'));
-                if(d.status==='success')notifyArticlesChanged();
-            }catch(e){alert('操作失败：'+e.message)}
+            if(art){
+                const next=art.status==='published'?'draft':'published';
+                const action=next==='published'?'发布':'下架';
+                const ok=await showConfirm('确定'+action+'「'+(art.title||noteId)+'」？',action+'白板文章',action);
+                if(!ok)return;
+                const r=await apiFetch('action=articles',{method:'PATCH',body:JSON.stringify({id:art.id,status:next})});
+                if(r.status!=='success'){showToast(r.message||(action+'失败'),'error');return}
+                showToast('已'+action,'success');
+            }else{
+                const t=prompt('该画板还没有文章，发布会创建一篇白板文章。文章标题：','白板：'+noteId);
+                if(t===null)return;
+                const title=(t||'').trim()||('白板：'+noteId);
+                const r=await apiFetch('action=articles',{method:'POST',body:JSON.stringify({title,content:'',status:'published',type:'whiteboard',boardId:noteId,tags:[]})});
+                if(r.status!=='success'){showToast(r.message||'发布失败','error');return}
+                showToast('白板文章已发布','success');
+            }
+            loadExcalidrawNotes();
+            loadArticles();
+            notifyArticlesChanged();
         }
         async function excDelete(id){
             if(!confirm(`确定删除白板「${id}」？场景与全部历史快照将一并删除，不可恢复！`))return;
