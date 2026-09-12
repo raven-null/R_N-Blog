@@ -2576,11 +2576,11 @@
                 // 样式独立文件（Excalidraw 0.18 Vite 产物）：先注入 CSS 再注入 JS
                 const css = document.createElement('link');
                 css.rel = 'stylesheet';
-                css.href = '/js/vendor/excalidraw/excalidraw-editor.v12.css';
+                css.href = '/js/vendor/excalidraw/excalidraw-editor.v13.css';
                 css.dataset.excalidrawBundle = '1';
                 document.head.appendChild(css);
                 const s = document.createElement('script');
-                s.src = '/js/vendor/excalidraw/excalidraw-editor.v12.js';
+                s.src = '/js/vendor/excalidraw/excalidraw-editor.v13.js';
                 s.dataset.excalidrawBundle = '1';
                 s.onload = () => { if (window.ExcalidrawMount) window.ExcalidrawMount(); };
                 s.onerror = () => {

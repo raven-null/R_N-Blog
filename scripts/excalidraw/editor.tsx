@@ -576,12 +576,6 @@ function NoteApp({ note, mode, bare }: { note: string; mode: "edit" | "view"; ba
             <Ic p={ICONS.image} />
             PNG
           </button>
-          {isAdmin && (
-            <button className="exc-btn" onClick={() => setPubOpen(true)} disabled={saving} title="选择文章形态，生成草稿进入后台文章管理">
-              <Ic p={ICONS.send} />
-              发布为博文
-            </button>
-          )}
           <button className="exc-btn exc-btn-primary" onClick={() => save(false)} disabled={saving} title="保存到服务器（Ctrl+S）">
             <Ic p={ICONS.save} />
             {saving ? "保存中…" : "保存（Ctrl+S）"}
