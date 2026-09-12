@@ -10,6 +10,9 @@ const DOCUMENT_STORE = "blog-documents"
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024 // 10MB
 const MAX_DOCUMENT_BYTES = 20 * 1024 * 1024 // 20MB
 
+const CHUNK_STORE = "article-chunks" // 长文章分块存储
+const CHUNK_THRESHOLD = 30000 // 正文字符数超过此值则自动分章（阅读端按需加载）
+
 const ALLOWED_MIME: Record<string, string> = {
   "image/jpeg": "jpg",
   "image/png": "png",
@@ -31,6 +34,8 @@ interface ArticleMeta {
   wordCount: number
   status: "published" | "draft"
   type?: "article" | "whiteboard" | "card" // 内容形态（缺省 article）
+  chunked?: boolean // 长文章已分章存储（主记录不存全文）
+  chunkCount?: number // 分章数量
   boardId?: string // type=whiteboard 时关联的 Excalidraw 笔记 id
 }
 
@@ -65,6 +70,65 @@ async function getArticleIndexStrong(store: ReturnType<typeof getBlobStore>): Pr
   try { return JSON.parse(raw) } catch { return [] }
 }
 
+// ===================== 长文章分章 =====================
+
+/** 按 # / ## 标题切章；单章过大时按段落再切，保证每章体积可控 */
+function splitChapters(md: string): { title: string; content: string }[] {
+  const MAX = CHUNK_THRESHOLD
+  const lines = (md || "").split(/\r?\n/)
+  const out: { title: string; content: string }[] = []
+  let cur: string[] = []
+  let title = "开篇"
+
+  const flush = () => {
+    if (!cur.length) return
+    const body = cur.join("\n")
+    cur = []
+    if (!body.trim()) return
+    if (body.length <= MAX * 1.5) {
+      out.push({ title, content: body })
+      return
+    }
+    const parts = body.split(/\n{2,}/)
+    let buf: string[] = []
+    let size = 0
+    let seq = 1
+    for (const part of parts) {
+      if (size + part.length > MAX && buf.length) {
+        out.push({ title: seq === 1 ? title : `${title}（续 ${seq}）`, content: buf.join("\n\n") })
+        buf = []
+        size = 0
+        seq++
+      }
+      buf.push(part)
+      size += part.length + 2
+    }
+    if (buf.length) out.push({ title: seq === 1 ? title : `${title}（续 ${seq}）`, content: buf.join("\n\n") })
+  }
+
+  for (const line of lines) {
+    const m = line.match(/^(#{1,2})\s+(.+)$/)
+    if (m) {
+      flush()
+      title = m[2].trim().slice(0, 40) || "正文"
+    }
+    cur.push(line)
+  }
+  flush()
+  return out.length ? out : [{ title: "正文", content: md }]
+}
+
+/** 清理某篇文章的全部分块（重新分章或改回短文章时调用） */
+async function clearArticleChunks(id: string) {
+  try {
+    const store = getBlobStore(CHUNK_STORE, "strong")
+    const list = await store.list({ prefix: `${id}/` })
+    for (const b of list.blobs) {
+      try { await store.delete(b.key) } catch { /* ignore */ }
+    }
+  } catch { /* ignore */ }
+}
+
 // ===================== 主路由 =====================
 
 export default async (req: Request) => {
@@ -85,9 +149,60 @@ export default async (req: Request) => {
     return json(200, { status: "success", token: generateToken(key) }, req)
   }
 
+  // ===== 长文章分章读取（目录 / 单章 / 全文） =====
+  if (path === "article-toc" || path === "article-chunk" || path === "article-full") {
+    const id = (url.searchParams.get("id") || "").trim()
+    if (!id) return badRequest("id 必填", req)
+    const isAdminReq = !!req.headers.get("x-admin-key")
+    const cacheHeader = isAdminReq
+      ? "no-store"
+      : "public, max-age=0, s-maxage=5, stale-while-revalidate=120"
+    const chunkStore = getBlobStore(CHUNK_STORE, "strong")
+    const mainStore = getBlobStore(ARTICLE_STORE, "strong")
+
+    if (path === "article-toc") {
+      const raw = await chunkStore.get(`${id}/index`, { type: "text" })
+      if (!raw) return json(404, { status: "error", message: "该文章未分章" }, req)
+      return json(200, { status: "success", data: JSON.parse(raw) }, req, { "Cache-Control": cacheHeader })
+    }
+
+    if (path === "article-chunk") {
+      const i = Number(url.searchParams.get("i") || 0)
+      if (!Number.isInteger(i) || i < 0) return badRequest("i 非法", req)
+      const raw = await chunkStore.get(`${id}/${i}`, { type: "text" })
+      if (raw === null) return json(404, { status: "error", message: "章节不存在" }, req)
+      const idxRaw = await chunkStore.get(`${id}/index`, { type: "text" })
+      const idx = idxRaw ? JSON.parse(idxRaw) : { total: 0, chapters: [] }
+      const ch = (idx.chapters || [])[i] || {}
+      return json(200, {
+        status: "success",
+        data: { i, content: raw, title: ch.title || `第 ${i + 1} 章`, total: idx.total || 0 },
+      }, req, { "Cache-Control": cacheHeader })
+    }
+
+    // article-full：拼回全文（编辑器使用，不做缓存）
+    const idxRaw = await chunkStore.get(`${id}/index`, { type: "text" })
+    const mainRaw = await mainStore.get(id, { type: "text" })
+    if (!mainRaw && !idxRaw) return json(404, { status: "error", message: "文章不存在" }, req)
+    const main = mainRaw ? JSON.parse(mainRaw) : {}
+    if (idxRaw) {
+      const idx = JSON.parse(idxRaw)
+      const parts: string[] = []
+      for (let k = 0; k < (idx.total || 0); k++) {
+        const t = await chunkStore.get(`${id}/${k}`, { type: "text" })
+        if (t) parts.push(t)
+      }
+      return json(200, { status: "success", data: { ...main, content: parts.join("\n\n") } }, req, {
+        "Cache-Control": "no-store",
+      })
+    }
+    return json(200, { status: "success", data: main }, req, { "Cache-Control": "no-store" })
+  }
+
   // ===== 文章管理（公开读取） =====
 
   if (path === "articles") {
+    const chunkStore = getBlobStore(CHUNK_STORE, "strong")
     // 强一致性：写操作（发布/下架/编辑/删除）后立即读回最新索引，避免 Blobs 最终一致性造成列表滞后
     const store = getBlobStore(ARTICLE_STORE, "strong")
 
@@ -196,6 +311,31 @@ export default async (req: Request) => {
         updatedAt: now,
       }
 
+      // 长文章自动分章：主记录不再保存全文，阅读端按章加载（30k 字/章）
+      let chunkCount = 0
+      if (type === "article") {
+        if ((content || "").length > CHUNK_THRESHOLD) {
+          const chunks = splitChapters(content)
+          chunkCount = chunks.length
+          await clearArticleChunks(articleId)
+          for (let i = 0; i < chunks.length; i++) {
+            await chunkStore.set(`${articleId}/${i}`, chunks[i].content)
+          }
+          await chunkStore.set(`${articleId}/index`, JSON.stringify({
+            total: chunks.length,
+            threshold: CHUNK_THRESHOLD,
+            wordCount,
+            chapters: chunks.map((ch, i) => ({ i, title: ch.title, words: ch.content.length })),
+          }))
+          articleData.content = ""
+        } else {
+          // 短文章（或由长文改短）：清理历史分块
+          await clearArticleChunks(articleId)
+        }
+      }
+      ;(articleData as any).chunked = chunkCount > 0
+      ;(articleData as any).chunkCount = chunkCount
+
       // 保存文章内容
       await store.set(articleId, JSON.stringify(articleData))
 
@@ -226,6 +366,8 @@ export default async (req: Request) => {
         wordCount,
         status: status || "published",
         type: type as ArticleMeta["type"],
+        chunked: chunkCount > 0,
+        chunkCount,
         boardId,
       }
 
