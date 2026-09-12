@@ -363,7 +363,7 @@
         .exc-modal{display:none;position:fixed;inset:0;z-index:2100}
         .exc-modal.open{display:flex;align-items:center;justify-content:center}
         .exc-modal-overlay{position:absolute;inset:0;background:rgba(5,5,9,.55);backdrop-filter:blur(10px) saturate(140%);-webkit-backdrop-filter:blur(10px) saturate(140%);animation:excFade .25s ease}
-        .exc-modal-box{position:relative;width:min(430px,92vw);max-height:86vh;overflow-y:auto;padding:22px;
+        .exc-modal-box{position:relative;display:flex;flex-direction:column;width:min(440px,92vw);max-height:88vh;overflow:hidden;padding:22px;
             background:linear-gradient(145deg,rgba(34,34,42,.97),rgba(18,18,24,.96));
             border:1px solid rgba(255,255,255,.13);border-radius:20px;
             box-shadow:0 30px 90px -20px rgba(0,0,0,.8),inset 0 1px 0 rgba(255,255,255,.08);
@@ -379,7 +379,8 @@
         .exc-cover-preview img{width:100%;height:100%;object-fit:cover;display:block}
         .exc-cover-btns{display:flex;gap:6px;flex-wrap:wrap}
         .exc-modal-tip{font-size:11.5px;color:var(--text-muted);line-height:1.6;margin-top:6px}
-        .exc-modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+        .exc-modal-actions{flex:none;display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+        #excModalBody{flex:1;min-height:0;overflow-y:auto;padding-right:4px;overscroll-behavior:contain}
         @keyframes excFade{from{opacity:0}to{opacity:1}}
         @keyframes excPop{from{opacity:0;transform:translateY(16px) scale(.97)}to{opacity:1;transform:none}}
 
@@ -522,20 +523,20 @@
             animation:fadeIn 0.3s ease;
         }
         .publish-modal-box{
-            position:relative;
+            position:relative;display:flex;flex-direction:column;
             background:var(--glass-bg);
             backdrop-filter:blur(30px) saturate(180%);-webkit-backdrop-filter:blur(30px) saturate(180%);
             border:1px solid var(--glass-border);
             border-radius:16px;
             padding:28px;
-            width:520px;max-width:92vw;max-height:90vh;overflow-y:auto;
+            width:520px;max-width:92vw;max-height:88vh;overflow:hidden;
             box-shadow:0 24px 80px -12px rgba(0,0,0,0.7),inset 0 1px 0 var(--glass-hi);
             animation:modalSlideUp 0.4s var(--spring);
         }
         @keyframes fadeIn{from{opacity:0}to{opacity:1}}
         @keyframes modalSlideUp{from{opacity:0;transform:translateY(30px) scale(0.95)}to{opacity:1;transform:translateY(0) scale(1)}}
-        .publish-modal-box h3{font-size:20px;color:var(--accent);margin-bottom:24px;font-weight:700;letter-spacing:0.5px}
-        .publish-modal-body{display:flex;flex-direction:column;gap:18px}
+        .publish-modal-box h3{flex:none;font-size:20px;color:var(--accent);margin:0 0 18px;font-weight:700;letter-spacing:0.5px}
+        .publish-modal-body{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:18px;padding-right:4px;overscroll-behavior:contain}
         .publish-field label{display:block;font-size:13px;color:rgba(255,255,255,0.7);margin-bottom:8px;font-weight:500}
         .publish-field input[type="text"],
         .publish-field select,.publish-field textarea{
@@ -1379,7 +1380,7 @@
         </div>
     </div>
 
-        <script src="js/admin-app.js?v=1.3.1"></script>
+        <script src="js/admin-app.js?v=1.3.2"></script>
 
     <!-- 前台预览抽屉（iframe 内嵌，零跳出） -->
     <style>
