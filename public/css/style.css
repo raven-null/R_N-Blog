@@ -24,8 +24,6 @@
 
 html {
     scroll-behavior: smooth;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(255,255,255,.08) transparent;
 }
 
 body {
@@ -41,11 +39,6 @@ body.home-layout {
     height: 100vh;
 }
 
-::-webkit-scrollbar { width: 4px; height: 4px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(255,255,255,.08); border-radius: 2px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.15); }
-::-webkit-scrollbar-corner { background: transparent; }
 
 /* ===== HERO SECTION - Full Page ===== */
 
@@ -1927,15 +1920,6 @@ body.view-gallery-active .gallery-tag-btn {
     display: flex;
     flex-direction: column;
     gap: 16px;
-}
-
-.chat-messages::-webkit-scrollbar {
-    width: 4px;
-}
-
-.chat-messages::-webkit-scrollbar-thumb {
-    background: rgba(255,255,255,.08);
-    border-radius: 2px;
 }
 
 .chat-welcome {

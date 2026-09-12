@@ -1,0 +1,92 @@
+/* ============================================================
+   全站统一滚动条：细窄 + 跟随主题强调色
+   - 宽度：桌面 5px，窄屏 3px，代码块/表格/目录 4px
+   - 颜色：主题强调色 var(--accent) 淡化（首页=白，后台=浅蓝，编辑页=蓝紫）
+   - 覆盖范围：全局（含 Vditor / Excalidraw / 抽屉 iframe 内页面）
+   - 用 !important 是为了压过组件自带（Vditor、Excalidraw）与页面内联的高特异性规则
+   - 该文件必须在页面所有样式之后引入（放在 </head> 前）；改动后 bump 页面里的 ?v=
+   ============================================================ */
+:root {
+    --sb-size: 5px;
+    --sb-accent: var(--accent, #8ab4ff);
+    /* 兜底色：不支持 color-mix 的浏览器 */
+    --sb-thumb: rgba(255, 255, 255, 0.22);
+    --sb-thumb-hover: rgba(255, 255, 255, 0.42);
+    --sb-track: transparent;
+}
+
+@supports (color: color-mix(in srgb, red 50%, transparent)) {
+    :root {
+        --sb-thumb: color-mix(in srgb, var(--sb-accent) 38%, transparent);
+        --sb-thumb-hover: color-mix(in srgb, var(--sb-accent) 65%, transparent);
+    }
+}
+
+/* Firefox / 标准属性（不继承，需要逐元素声明） */
+* {
+    scrollbar-width: thin !important;
+    scrollbar-color: var(--sb-thumb) var(--sb-track) !important;
+}
+
+/* WebKit / Blink（Chrome、Edge、Safari） */
+*::-webkit-scrollbar {
+    width: var(--sb-size) !important;
+    height: var(--sb-size) !important;
+}
+*::-webkit-scrollbar-track {
+    background: var(--sb-track) !important;
+}
+*::-webkit-scrollbar-thumb {
+    background: var(--sb-thumb) !important;
+    border-radius: 99px !important;
+    background-clip: padding-box !important;
+}
+*::-webkit-scrollbar-thumb:hover {
+    background: var(--sb-thumb-hover) !important;
+    background-clip: padding-box !important;
+}
+*::-webkit-scrollbar-thumb:active {
+    background: var(--sb-thumb-hover) !important;
+    background-clip: padding-box !important;
+}
+*::-webkit-scrollbar-corner {
+    background: transparent !important;
+}
+
+/* 代码块 / 表格 / 目录等窄容器：再窄一档 */
+pre::-webkit-scrollbar,
+code::-webkit-scrollbar,
+table::-webkit-scrollbar,
+.vditor-preview::-webkit-scrollbar,
+.vditor-outline::-webkit-scrollbar,
+.vditor-emojis::-webkit-scrollbar,
+.toc-list-wrapper::-webkit-scrollbar,
+.toc-sidebar-inner::-webkit-scrollbar,
+.chat-messages::-webkit-scrollbar {
+    width: 4px !important;
+    height: 4px !important;
+}
+
+/* 原先被隐藏滚动条的容器（目录 / 代码块 / 表格）：改为显示细窄主题色滚动条 */
+.toc-sidebar-inner,
+.toc-list-wrapper,
+.article-content pre,
+.article-content table {
+    scrollbar-width: thin !important;
+    -ms-overflow-style: auto;
+}
+.toc-sidebar-inner::-webkit-scrollbar,
+.toc-list-wrapper::-webkit-scrollbar,
+.article-content pre::-webkit-scrollbar,
+.article-content table::-webkit-scrollbar {
+    display: block !important;
+    width: 4px !important;
+    height: 4px !important;
+}
+
+/* 窄屏：更窄 */
+@media (max-width: 768px) {
+    :root {
+        --sb-size: 3px;
+    }
+}
