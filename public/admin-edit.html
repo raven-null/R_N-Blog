@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>编辑内容 · 管理后台</title>
+<link rel="stylesheet" href="js/vendor/vditor/dist/index.css">
+<script src="js/vendor/vditor/dist/index.min.js"></script>
+<style>
+    :root{
+        --bg:#0d0e14;--bg-card:#16171f;--bg-input:rgba(255,255,255,.05);
+        --border:rgba(255,255,255,.09);--border-light:rgba(255,255,255,.16);
+        --text:#e8e9f2;--text-muted:#8c8fa8;--text-secondary:#b8b9c9;
+        --accent:#73aaff;--danger:#ef6a5e;--success:#7bd88f;
+        --radius:14px;--radius-sm:10px;
+        --glass-bg:linear-gradient(145deg,rgba(255,255,255,.09),rgba(255,255,255,.035));
+        --glass-border:rgba(255,255,255,.12);
+        --glass-blur:blur(22px) saturate(170%);
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;height:100%}
+    body{
+        background:var(--bg);color:var(--text);
+        font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+        display:flex;flex-direction:column;overflow:hidden;
+    }
+    /* ===== 顶部操作条 ===== */
+    .ee-top{
+        display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+        padding:10px 18px;border-bottom:1px solid var(--border);
+        background:rgba(22,23,31,.92);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);
+        flex-shrink:0;z-index:10;
+    }
+    .ee-left,.ee-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+    .ee-back{
+        padding:7px 14px;border-radius:99px;text-decoration:none;
+        background:rgba(255,255,255,.06);border:1px solid var(--border);
+        color:var(--text-secondary);font-size:13px;transition:all .2s ease;
+    }
+    .ee-back:hover{background:rgba(255,255,255,.12);color:#fff}
+    .ee-badge{
+        padding:4px 11px;border-radius:99px;font-size:12px;
+        background:rgba(115,170,255,.16);border:1px solid rgba(115,170,255,.32);color:#cfe2ff;
+    }
+    .ee-badge.status-pub{background:rgba(123,216,143,.14);border-color:rgba(123,216,143,.3);color:#c7f0d2}
+    .ee-badge.status-draft{background:rgba(255,176,32,.14);border-color:rgba(255,176,32,.3);color:#ffe0ac}
+    .ee-id{font-size:12px;color:var(--text-muted);font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+    .ee-btn{
+        padding:7px 14px;border-radius:99px;font-size:13px;font-family:inherit;cursor:pointer;
+        background:rgba(255,255,255,.08);border:1px solid var(--border);color:var(--text-secondary);
+        transition:all .2s ease;text-decoration:none;
+    }
+    .ee-btn:hover{background:rgba(255,255,255,.15);color:#fff}
+    .ee-btn:active{transform:scale(.97)}
+    .ee-btn.primary{
+        background:linear-gradient(135deg,rgba(59,130,246,.4),rgba(115,170,255,.3));
+        border-color:rgba(115,170,255,.45);color:#eaf2ff;font-weight:500;
+    }
+    .ee-btn.primary:hover{background:linear-gradient(135deg,rgba(59,130,246,.55),rgba(115,170,255,.45))}
+    .ee-btn.danger:hover{border-color:var(--danger);color:var(--danger)}
+    /* ===== 主体 ===== */
+    .ee-main{flex:1;min-height:0;display:flex;gap:12px;padding:12px 18px 16px;overflow:hidden}
+    .ee-editor-col{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column}
+    .ee-title-card{
+        background:linear-gradient(135deg,#252b48,#2e2240);border:1px solid rgba(255,255,255,.07);
+        border-radius:12px;padding:10px 18px;flex-shrink:0;transition:box-shadow .22s ease;
+    }
+    .ee-title-card:focus-within{box-shadow:0 0 0 1px rgba(115,170,255,.5)}
+    .ee-title{width:100%;background:transparent;border:none;outline:none;color:#e4e6f7;font-size:22px;font-weight:600;font-family:inherit}
+    .ee-title::placeholder{color:rgba(228,230,247,.35);font-weight:400}
+    .ee-editor-card{flex:1;min-height:0;margin-top:10px;display:flex;flex-direction:column}
+    .ee-editor-card .vditor{
+        display:flex;flex-direction:column;border-radius:12px!important;overflow:hidden;
+        border:1px solid var(--glass-border)!important;box-shadow:0 12px 32px -14px rgba(0,0,0,.55)!important;
+    }
+    .ee-editor-card .vditor-toolbar{flex:none;background:rgba(24,25,39,.95)!important;border-bottom:1px solid rgba(255,255,255,.07)!important;backdrop-filter:blur(12px)}
+    .ee-editor-card .vditor-toolbar__item{color:#fff!important;transition:all .2s ease}
+    .ee-editor-card .vditor-toolbar__item--current,.ee-editor-card .vditor-toolbar__item:hover{color:var(--accent)!important}
+    .ee-editor-card .vditor-toolbar [data-type="outline"]{display:none!important}
+    .ee-editor-card .vditor-content{flex:1;min-height:0;background:var(--editor-bg,rgba(26,26,26,.8))!important}
+    .ee-editor-card .vditor-ir,.ee-editor-card .vditor-wysiwyg,.ee-editor-card .vditor-sv{flex:1;min-width:1px;overflow-y:auto;overscroll-behavior:contain;color:var(--editor-text,#fff)!important}
+    .ee-editor-card .vditor-ir *,.ee-editor-card .vditor-wysiwyg *,.ee-editor-card .vditor-sv *{color:var(--editor-text,#fff)!important}
+    .ee-editor-card .vditor-ir pre,.ee-editor-card .vditor-wysiwyg pre,.ee-editor-card .vditor-sv pre{background:var(--editor-pre-bg,rgba(8,8,8,.6))!important}
+    .ee-editor-card .vditor-ir a,.ee-editor-card .vditor-wysiwyg a{color:var(--accent)!important}
+    /* 编辑器主题（与后台一致） */
+    .vditor-theme-dark{--editor-bg:rgba(26,26,26,.8);--editor-text:#fff;--editor-pre-bg:rgba(8,8,8,.6)}
+    .vditor-theme-light{--editor-bg:rgba(255,255,255,.95);--editor-text:#1a1a1a;--editor-pre-bg:#f0f0f0}
+    .vditor-theme-sepia{--editor-bg:rgba(244,236,216,.95);--editor-text:#3e332a;--editor-pre-bg:rgba(210,195,170,.5)}
+    .vditor-theme-green{--editor-bg:rgba(199,237,204,.9);--editor-text:#1a3a1a;--editor-pre-bg:rgba(170,210,175,.5)}
+    .vditor-theme-blue{--editor-bg:rgba(220,232,245,.9);--editor-text:#1a2a3a;--editor-pre-bg:rgba(190,205,225,.5)}
+    .ee-foot{
+        margin-top:10px;display:flex;align-items:center;gap:14px;flex-shrink:0;
+        background:rgba(25,27,44,.9);border:1px solid rgba(255,255,255,.07);border-radius:12px;
+        padding:8px 14px;font-size:12.5px;color:#999bb3;
+    }
+    .ee-foot .saved{margin-left:auto;color:var(--success)}
+    /* ===== 侧栏 ===== */
+    .ee-side{width:320px;flex-shrink:0;display:flex;flex-direction:column;gap:10px;overflow-y:auto;padding-right:2px}
+    .ee-card{
+        background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
+        padding:12px 14px;display:flex;flex-direction:column;gap:8px;
+    }
+    .ee-card label{font-size:12px;color:var(--text-muted)}
+    .ee-card input,.ee-card textarea,.ee-card select{
+        width:100%;padding:8px 11px;border-radius:var(--radius-sm);font-family:inherit;font-size:13px;
+        background:var(--bg-input);border:1px solid var(--border);color:var(--text);outline:none;resize:vertical;
+    }
+    .ee-card input:focus,.ee-card textarea:focus,.ee-card select:focus{border-color:var(--accent)}
+    .ee-cover{
+        height:96px;border-radius:var(--radius-sm);border:1px dashed var(--border);
+        background:#0a0b10 center/cover no-repeat;display:flex;align-items:center;justify-content:center;
+        font-size:11px;color:var(--text-muted);
+    }
+    .ee-meta-list{display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--text-muted)}
+    .ee-meta-list b{color:var(--text-secondary);font-weight:500}
+    /* ===== 白板 ===== */
+    .ee-board{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;gap:10px}
+    .ee-board-bar{
+        display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex-shrink:0;
+        background:linear-gradient(135deg,#252b48,#2e2240);border:1px solid rgba(255,255,255,.07);
+        border-radius:12px;padding:10px 16px;font-size:13px;color:var(--text-secondary);
+    }
+    .ee-board-bar .bid{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:#cfe2ff}
+    .ee-board-bar .sp{flex:1}
+    .ee-board-host{flex:1;min-height:0;background:#f7f7f9;border-radius:12px;overflow:hidden;position:relative;border:1px solid rgba(255,255,255,.07)}
+    .ee-board-host>[data-excalidraw]{height:100%}
+    .ee-hint{height:100%;display:flex;align-items:center;justify-content:center;color:#8a8fa3;font-size:13px}
+    /* ===== 提示 ===== */
+    .ee-toast{
+        position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(12px);
+        background:rgba(20,21,30,.96);border:1px solid var(--border-light);border-radius:12px;
+        padding:10px 18px;font-size:13px;color:var(--text);opacity:0;pointer-events:none;
+        transition:all .25s ease;z-index:60;box-shadow:0 16px 40px -14px rgba(0,0,0,.7);
+    }
+    .ee-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+    .ee-toast.error{border-color:rgba(239,106,94,.5);color:#ffd9d5}
+    .ee-toast.success{border-color:rgba(123,216,143,.45);color:#d7f5df}
+    @media(max-width:900px){
+        body{overflow:auto}
+        .ee-main{flex-direction:column;overflow:visible;height:auto}
+        .ee-side{width:100%;overflow:visible}
+        .ee-editor-col{min-height:70vh}
+        .ee-board{min-height:70vh}
+    }
+</style>
+</head>
+<body>
+    <header class="ee-top">
+        <div class="ee-left">
+            <a class="ee-back" href="/admin.html">← 返回后台</a>
+            <span class="ee-badge" id="eeTypeBadge">加载中</span>
+            <span class="ee-badge" id="eeStatusBadge">—</span>
+            <span class="ee-id" id="eeIdText"></span>
+        </div>
+        <div class="ee-right">
+            <button class="ee-btn" id="eeViewBtn" onclick="eeOpenFront()">前台查看</button>
+            <button class="ee-btn" id="eeToggleBtn" onclick="eeToggleStatus()">下架</button>
+            <button class="ee-btn danger" onclick="eeDelete()">删除</button>
+            <button class="ee-btn" onclick="eeSavePreview()">保存并预览</button>
+            <button class="ee-btn primary" id="eeSaveBtn" onclick="eeSave()">保存</button>
+        </div>
+    </header>
+
+    <main class="ee-main">
+        <!-- 文章 / 随记：编辑器 + 元信息 -->
+        <section class="ee-editor-col" id="eeEditorCol">
+            <div class="ee-title-card">
+                <input id="eeTitle" class="ee-title" placeholder="标题" maxlength="100" autocomplete="off">
+            </div>
+            <div class="ee-editor-card"><div id="eeVditor"></div></div>
+            <div class="ee-foot"><span id="eeInfo">0 字</span><span class="saved" id="eeSaved"></span></div>
+        </section>
+
+        <aside class="ee-side" id="eeSide">
+            <div class="ee-card">
+                <label>状态</label>
+                <select id="eeStatusSel" onchange="eeMarkDirty()">
+                    <option value="published">已发布</option>
+                    <option value="draft">草稿</option>
+                </select>
+            </div>
+            <div class="ee-card">
+                <label>标签（逗号分隔）</label>
+                <input id="eeTags" placeholder="如：技术, 随笔" oninput="eeMarkDirty()">
+            </div>
+            <div class="ee-card">
+                <label>摘要（留空自动提取）</label>
+                <textarea id="eeExcerpt" rows="3" oninput="eeMarkDirty()"></textarea>
+            </div>
+            <div class="ee-card">
+                <label>封面图 URL</label>
+                <input id="eeImage" placeholder="/images/g/xxx.webp" oninput="eeMarkDirty();eeRenderCover()">
+                <div class="ee-cover" id="eeCover">无封面</div>
+            </div>
+            <div class="ee-card">
+                <label>信息</label>
+                <div class="ee-meta-list" id="eeMeta"></div>
+            </div>
+        </aside>
+
+        <!-- 白板 -->
+        <section class="ee-board" id="eeBoard" style="display:none">
+            <div class="ee-board-bar">
+                <span>画板 ID</span><span class="bid" id="eeBoardId">—</span>
+                <span class="sp"></span>
+                <button class="ee-btn primary" onclick="eeSaveBoard()">保存画板</button>
+                <a class="ee-btn" id="eeBoardOpen" target="_blank" rel="noopener">独立窗口打开</a>
+            </div>
+            <div class="ee-board-host" id="eeBoardHost"><div class="ee-hint">正在加载白板…</div></div>
+        </section>
+    </main>
+
+    <div class="ee-toast" id="eeToast"></div>
+    <script src="js/admin-edit.js?v=1.0.0"></script>
+</body>
+</html>

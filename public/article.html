@@ -2030,12 +2030,12 @@
                         boardId: d.boardId || '',
                         frontmatter: {},
                     };
-                    // 管理员快捷入口：右下「后台管理」直达该篇编辑（仅本地登录过后台时显示）
+                    // 管理员快捷入口：右下「后台管理」直达该篇编辑（独立编辑页，仅本地登录过后台时显示）
                     try {
                         if (d.id && localStorage.getItem('admin_key')) {
                             const fab = document.getElementById('frontAdminFab');
                             if (fab) {
-                                fab.href = '/admin.html?edit=' + encodeURIComponent(d.id);
+                                fab.href = '/admin-edit.html?id=' + encodeURIComponent(d.id);
                                 fab.style.display = 'inline-flex';
                             }
                         }

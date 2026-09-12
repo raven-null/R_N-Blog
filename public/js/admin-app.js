@@ -24,9 +24,9 @@
             document.getElementById('adminApp').style.display='block';
             document.getElementById('sidebar').classList.add('collapsed');
             loadArticles();
-            // 支持前台快捷入口：/admin.html?edit=文章id → 自动进入该篇编辑
+            // 兼容旧入口：/admin.html?edit=xxx → 转到独立编辑页（不再占用写文章页）
             const editId=new URLSearchParams(location.search).get('edit');
-            if(editId)setTimeout(function(){editArticle(editId)},350);
+            if(editId){location.replace('/admin-edit.html?id='+encodeURIComponent(editId));return}
         }
         async function apiFetch(p,o={}){if(p.startsWith('action=images')&&(!o.method||o.method==='GET'))p+='&_='+Date.now();const r=await fetch(`/api/admin?${p}`,{...o,headers:{'Content-Type':'application/json','X-Admin-Key':adminKey,...(o.headers||{})}});return r.json()}
         // 图片显示 URL：附加管理员密钥参数（<img> 无法带 header，R18 图片需密钥参数才能加载）
@@ -317,25 +317,42 @@
         function notifyArticlesChanged(){
             try{const bc=new BroadcastChannel('blog-articles');bc.postMessage({type:'articles-changed'});bc.close()}catch(e){}
         }
-        async function deleteArticle(id,title){const confirmed=await showConfirm(`确定删除「${title}」？删除后不可恢复！`,'删除文章','删除');if(!confirmed)return;const r=await apiFetch(`action=articles&id=${id}`,{method:'DELETE'});if(r.status==='success'){showToast('已删除','success');loadArticles();notifyArticlesChanged()}else showToast(r.message||'删除失败','error')}
-        function editArticle(id){editingId=id;setWriteMode('article');switchTab('write');loadArticleForEdit(id)}
-        async function loadArticleForEdit(id){
-            const r=await apiFetch(`action=articles&id=${id}`);
-            if(r.status==='success'){
-                const d=r.data;
-                // 记录原类型/画板（随记与白板文章保存时保留，不能变回普通文章）
-                editingType=d.type&&d.type!=='article'?d.type:null;
-                editingBoardId=d.boardId||'';
-                document.getElementById('edTitle').value=d.title||'';
-                document.getElementById('edExcerpt').value=d.excerpt||'';
-                document.getElementById('edImage').value=d.image||'';
-                renderCoverPreview();
-                selectedArticleTags=[...(d.tags||[])];
-                renderTagPickerChips();
-                document.getElementById('edStatus').value=d.status||'published';
-                setEditorContent(d.content||'');
-            }
+        // ===== 数据刷新（侧边栏/顶栏刷新按钮；跨页面改动同步） =====
+        let currentAdminTab='articles';
+        async function reloadTabData(tab){
+            tab=tab||currentAdminTab;
+            if(tab==='articles')await loadArticles();
+            else if(tab==='comments')await loadComments();
+            else if(tab==='images'){await loadData();await loadTags()}
+            else if(tab==='tags'){await loadTags();await loadData()}
+            else if(tab==='excalidraw')await loadExcalidrawNotes();
+            else if(tab==='settings')await loadSettings();
+            else if(tab==='write')await loadArticleTagNames();
         }
+        async function refreshAdmin(ev){
+            if(ev&&ev.shiftKey){location.reload();return}
+            const btn=document.querySelector('.sidebar-refresh-btn');
+            if(btn)btn.classList.add('spinning');
+            try{
+                // 清掉本标签页的前台列表缓存，避免刷新后仍是旧数据
+                try{Object.keys(sessionStorage).filter(function(k){return k.indexOf('blog-posts-data-')===0}).forEach(function(k){sessionStorage.removeItem(k)})}catch(e){}
+                await reloadTabData();
+                notifyArticlesChanged();
+                showToast('后台数据已刷新','success');
+            }catch(e){showToast('刷新失败：'+(e.message||e),'error')}
+            setTimeout(function(){if(btn)btn.classList.remove('spinning')},500);
+        }
+        // 独立编辑页/其它标签页保存后，当前后台列表立即同步（无需手动刷新）
+        try{
+            const adminBc=new BroadcastChannel('blog-articles');
+            adminBc.onmessage=function(e){
+                if(e.data&&e.data.type==='articles-changed'&&(currentAdminTab==='articles'||currentAdminTab==='write'))loadArticles();
+            };
+        }catch(e){}
+        async function deleteArticle(id,title){const confirmed=await showConfirm(`确定删除「${title}」？删除后不可恢复！`,'删除文章','删除');if(!confirmed)return;const r=await apiFetch(`action=articles&id=${id}`,{method:'DELETE'});if(r.status==='success'){showToast('已删除','success');loadArticles();notifyArticlesChanged()}else showToast(r.message||'删除失败','error')}
+        // 编辑已有文章/随记/白板 → 直接跳独立编辑页（不再跳转写文章页）
+        function editArticle(id){location.href='/admin-edit.html?id='+encodeURIComponent(id)}
+
         function importAndEdit(f){
             if(!f)return;
             const r=new FileReader();
@@ -567,7 +584,7 @@
             if(!list.length){box.innerHTML='<div class="wm-hint">还没有随记，上面记一条吧</div>';return}
             box.innerHTML='<div class="wm-hint" style="margin-bottom:4px">最近随记：</div>'+list.map(function(a){
                 return '<div class="wm-recent-item">'+
-                    '<span class="txt" onclick="switchTab(\'articles\');setArtType(\'card\')" title="到文章管理查看">'+esc(String(a.title||'').slice(0,40))+'</span>'+
+                    '<span class="txt" onclick="editArticle(\''+escJs(a.id)+'\')" title="在新页面编辑这条随记">'+esc(String(a.title||'').slice(0,40))+'</span>'+
                     '<span class="date">'+esc(String(a.date||'').slice(0,10))+'</span>'+
                     '<button class="btn btn-ghost btn-sm" onclick="wmNoteDelete(\''+escJs(a.id)+'\')">删除</button></div>';
             }).join('');
@@ -1750,6 +1767,7 @@
 
         // ===== Tab =====
         function switchTab(tab){
+            currentAdminTab=tab;
             document.querySelectorAll('.sidebar-item').forEach(el=>el.classList.toggle('active',el.dataset.tab===tab));
             document.querySelectorAll('.mobile-tab').forEach(el=>el.classList.toggle('active',el.dataset.tab===tab));
             ['articles','write','comments','images','tags','excalidraw','settings'].forEach(t=>document.getElementById('tab-'+t).style.display=t===tab?(t==='write'?'flex':'block'):'none');

@@ -88,7 +88,8 @@ export default async (req: Request) => {
   // ===== 文章管理（公开读取） =====
 
   if (path === "articles") {
-    const store = getBlobStore(ARTICLE_STORE)
+    // 强一致性：写操作（发布/下架/编辑/删除）后立即读回最新索引，避免 Blobs 最终一致性造成列表滞后
+    const store = getBlobStore(ARTICLE_STORE, "strong")
 
     // GET: 列表或单篇（公开访问）
     if (req.method === "GET") {
@@ -193,7 +194,7 @@ export default async (req: Request) => {
 
       // 同步文章标签到注册表
       try {
-        const registryStore = getBlobStore("blog-tag-registry")
+        const registryStore = getBlobStore("blog-tag-registry", "strong")
         const rawReg = await registryStore.get("index", { type: "text" })
         const reg = rawReg ? JSON.parse(rawReg) : { article: [], image: [] }
         for (const tag of tagsArr) {
@@ -289,7 +290,7 @@ export default async (req: Request) => {
       // 标签注册表同步
       if (nextTags) {
         try {
-          const registryStore = getBlobStore("blog-tag-registry")
+          const registryStore = getBlobStore("blog-tag-registry", "strong")
           const rawReg = await registryStore.get("index", { type: "text" })
           const reg = rawReg ? JSON.parse(rawReg) : { article: [], image: [] }
           for (const t of nextTags) {
@@ -366,7 +367,7 @@ export default async (req: Request) => {
 
       // 同步图片标签到注册表
       try {
-        const registryStore = getBlobStore("blog-tag-registry")
+        const registryStore = getBlobStore("blog-tag-registry", "strong")
         const rawReg = await registryStore.get("index", { type: "text" })
         const reg = rawReg ? JSON.parse(rawReg) : { article: [], image: [] }
         for (const tag of newTags) {
@@ -439,7 +440,7 @@ export default async (req: Request) => {
 
         // 同步图片标签到注册表
         try {
-          const registryStore = getBlobStore("blog-tag-registry")
+          const registryStore = getBlobStore("blog-tag-registry", "strong")
           const rawReg = await registryStore.get("index", { type: "text" })
           const reg = rawReg ? JSON.parse(rawReg) : { article: [], image: [] }
           for (const tag of tagsArr) {
@@ -907,9 +908,9 @@ export default async (req: Request) => {
     const body = await req.json().catch(() => ({}))
     const { articles: migrateArticles, images: migrateImages } = body
 
-    const articleStore = getBlobStore(ARTICLE_STORE)
-    const imageStore = getBlobStore(IMAGE_STORE)
-    const tagStore = getBlobStore("blog-image-tags")
+    const articleStore = getBlobStore(ARTICLE_STORE, "strong")
+    const imageStore = getBlobStore(IMAGE_STORE, "strong")
+    const tagStore = getBlobStore("blog-image-tags", "strong")
 
     let articleCount = 0
     let imageCount = 0

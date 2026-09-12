@@ -104,7 +104,7 @@ export default async (req: Request) => {
   if (action === "list") {
     if (!isAdmin) return json(401, { status: "error", message: "未授权" }, req)
     try {
-      const store = getBlobStore(STORE)
+      const store = getBlobStore(STORE, "strong")
       const list = await store.list({ prefix: "notes/" })
       const out: any[] = []
       for (const item of list.blobs) {
@@ -130,7 +130,7 @@ export default async (req: Request) => {
       return badRequest("请求体不是合法 JSON", req)
     }
     try {
-      const store = getBlobStore(STORE)
+      const store = getBlobStore(STORE, "strong")
       const meta = await readMeta(store, id)
       if (!meta) return json(404, { status: "error", message: "笔记不存在" }, req)
 
@@ -159,7 +159,7 @@ export default async (req: Request) => {
     const rev = Number(params.get("rev"))
     if (!Number.isInteger(rev) || rev < 0) return badRequest("rev 非法（>=0）", req)
     try {
-      const store = getBlobStore(STORE)
+      const store = getBlobStore(STORE, "strong")
       const snap = await store.get(revKey(id, rev), { type: "text" })
       if (!snap) return json(404, { status: "error", message: `快照 rev ${rev} 不存在` }, req)
       await store.set(sceneKey(id), snap)
@@ -178,7 +178,7 @@ export default async (req: Request) => {
     if (!isAdmin) return json(401, { status: "error", message: "未授权" }, req)
     if (!ID_RE.test(id)) return badRequest("id 非法", req)
     try {
-      const store = getBlobStore(STORE)
+      const store = getBlobStore(STORE, "strong")
       const list = await store.list({ prefix: revPrefix(id) })
       const revs = list.blobs
         .map(b => Number(b.key.slice(revPrefix(id).length)))
@@ -195,7 +195,7 @@ export default async (req: Request) => {
     if (!isAdmin) return json(401, { status: "error", message: "未授权" }, req)
     if (!ID_RE.test(id)) return badRequest("id 非法", req)
     try {
-      const store = getBlobStore(STORE)
+      const store = getBlobStore(STORE, "strong")
       const list = await store.list({ prefix: `notes/${id}/` })
       for (const item of list.blobs) {
         await store.delete(item.key)
@@ -211,7 +211,7 @@ export default async (req: Request) => {
   if (!ID_RE.test(id)) return badRequest("id 非法（1-64 位字母 / 数字 / - / _）", req)
 
   try {
-    const store = getBlobStore(STORE)
+    const store = getBlobStore(STORE, "strong")
 
     if (req.method === "GET") {
       const meta = await readMeta(store, id)
