@@ -528,7 +528,7 @@
             border:1px solid var(--glass-border);
             border-radius:16px;
             padding:28px;
-            width:480px;max-width:90vw;max-height:85vh;overflow-y:auto;
+            width:520px;max-width:92vw;max-height:90vh;overflow-y:auto;
             box-shadow:0 24px 80px -12px rgba(0,0,0,0.7),inset 0 1px 0 var(--glass-hi);
             animation:modalSlideUp 0.4s var(--spring);
         }
@@ -549,7 +549,7 @@
         }
         .publish-field select:focus,.publish-field textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px rgba(79,195,247,0.15)}
         .publish-cover-area{display:flex;gap:16px;align-items:flex-start}
-        .publish-cover-preview{
+        .publish-cover-preview{max-height:110px;
             width:120px;height:68px;
             border-radius:var(--radius-sm);
             border:1px dashed var(--glass-border);
@@ -1339,6 +1339,21 @@
                         <option value="draft">草稿</option>
                     </select>
                 </div>
+                <div class="publish-field" id="publishCoverField">
+                    <label>封面图</label>
+                    <div class="publish-cover-area">
+                        <div class="publish-cover-preview" id="coverPreview">
+                            <img id="coverPreviewImg" alt="封面预览" style="display:none">
+                            <span id="coverPlaceholder">封面图</span>
+                        </div>
+                        <div class="publish-cover-actions">
+                            <label class="btn btn-ghost btn-sm" style="cursor:pointer">上传封面<input type="file" accept="image/*" style="display:none" onchange="setCoverImage(this.files[0])"></label>
+                            <button class="btn btn-ghost btn-sm" onclick="pickCoverFromGallery()">从图库选封面</button>
+                            <button class="btn btn-ghost btn-sm" onclick="clearCoverImage()" id="coverClearBtn" style="display:none">移除</button>
+                            <input type="hidden" id="edImage" value="">
+                        </div>
+                    </div>
+                </div>
                 <div class="publish-field">
                     <label>标签</label>
                     <div class="tag-picker-wrap">
@@ -1355,21 +1370,6 @@
                 <div class="publish-field" id="publishExcerptField">
                     <label>摘要（选填，不填自动提取正文前150字）</label>
                     <textarea id="edExcerpt" placeholder="输入文章摘要..." maxlength="200" rows="3"></textarea>
-                </div>
-                <div class="publish-field" id="publishCoverField">
-                    <label>封面图</label>
-                    <div class="publish-cover-area">
-                        <div class="publish-cover-preview" id="coverPreview">
-                            <img id="coverPreviewImg" alt="封面预览" style="display:none">
-                            <span id="coverPlaceholder">封面图</span>
-                        </div>
-                        <div class="publish-cover-actions">
-                            <label class="btn btn-ghost btn-sm" style="cursor:pointer">上传封面<input type="file" accept="image/*" style="display:none" onchange="setCoverImage(this.files[0])"></label>
-                            <button class="btn btn-ghost btn-sm" onclick="pickCoverFromGallery()">从图库选封面</button>
-                            <button class="btn btn-ghost btn-sm" onclick="clearCoverImage()" id="coverClearBtn" style="display:none">移除</button>
-                            <input type="hidden" id="edImage" value="">
-                        </div>
-                    </div>
                 </div>
             </div>
             <div class="publish-modal-footer">
