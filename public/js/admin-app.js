@@ -1967,7 +1967,7 @@
                         <div style="min-width:150px">
                             <div class="exc-title">${escHtml(n.title||'(未命名)')}</div>
                         </div>
-                        <div class="exc-meta">${editBadge}${lockBadge}${artBadge}<span>rev ${n.rev}</span><span>更新 ${updated}</span></div>
+                        <div class="exc-meta">${editBadge}${lockBadge}${artBadge}<span>更新 ${updated}</span></div>
                         <div class="exc-ops">
                             <button class="exc-btn" onclick="excOpenEditor('${n.id}','${escJs(art?art.id:'')}')" title="与文章管理里的编辑跳转一致">编辑</button>
                             <button class="exc-btn" onclick="excToggleEdit('${n.id}',${n.editable})">${n.editable===1?'设为只读':'开放编辑'}</button>
