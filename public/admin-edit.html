@@ -84,21 +84,55 @@
         --textarea-background-color:#14161d;
         --textarea-text-color:#f2f3f8;
     }
-    /* 面板必须完全不透明：Vditor 的 .vditor-panel--none 默认 opacity:.86，会让面板发灰看不清 */
-    .vditor-panel,.vditor-hint,.vditor-panel--none{
-        opacity:1!important;
-        background-color:#0f1118!important;
-        color:#f7f8fc!important;
-        border:1px solid rgba(255,255,255,.18)!important;
-        box-shadow:0 18px 44px -16px rgba(0,0,0,.9)!important;
+    /* 弹出面板：纯黑底 + 纯白字 + 完全不透明（用 html body 提高特异性，确保压过组件样式） */
+    html body .vditor{
+        --panel-background-color:#000;
+        --toolbar-icon-color:#fff;
+        --second-color:#aaa;
+        --border-color:#333;
+        --textarea-background-color:#000;
+        --textarea-text-color:#fff;
     }
-    .vditor-panel button,.vditor-hint button,.vditor-panel--none button{color:#f7f8fc!important;background-color:transparent!important}
-    .vditor-panel button:hover,.vditor-hint button:hover,.vditor-panel--none button:hover{background-color:rgba(255,255,255,.16)!important;color:#fff!important}
-    .vditor-menu--current{color:#8ab4ff!important;font-weight:600}
-    .vditor-menu--disabled{color:rgba(255,255,255,.4)!important}
-    .vditor-emojis__tip{color:rgba(255,255,255,.7)!important}
-    .vditor-panel--arrow:before{border-bottom-color:#0f1118!important}
-    .vditor-input{background-color:#161922!important;color:#f7f8fc!important;border:1px solid rgba(255,255,255,.16)!important}
+    html body .vditor-panel,
+    html body .vditor-hint,
+    html body .vditor-panel--none,
+    html body .vditor-emojis,
+    html body .vditor-tooltipped::after{
+        background:#000!important;
+        background-color:#000!important;
+        color:#fff!important;
+        opacity:1!important;
+        filter:none!important;
+        backdrop-filter:none!important;
+        -webkit-backdrop-filter:none!important;
+        text-shadow:none!important;
+        border:1px solid #3a3f4d!important;
+        box-shadow:0 18px 44px -16px rgba(0,0,0,.95)!important;
+        font-size:13px!important;
+    }
+    html body .vditor-panel button,
+    html body .vditor-hint button,
+    html body .vditor-panel--none button,
+    html body .vditor-emojis button{
+        color:#fff!important;
+        background:transparent!important;
+        opacity:1!important;
+        font-size:13px!important;
+    }
+    html body .vditor-panel button:hover,
+    html body .vditor-hint button:hover,
+    html body .vditor-panel--none button:hover{
+        background:#2c2f3a!important;
+        color:#fff!important;
+    }
+    html body .vditor-menu--current{color:#7fb2ff!important;font-weight:600}
+    html body .vditor-menu--disabled{color:#8b8f9c!important}
+    html body .vditor-emojis__tip{color:#cfd3df!important}
+    html body .vditor-panel--arrow:before{border-bottom-color:#000!important}
+    html body .vditor-panel--arrow:after{border-bottom-color:#000!important}
+    html body .vditor-input{background:#000!important;color:#fff!important;border:1px solid #3a3f4d!important}
+    /* 表情面板不要过高，避免被裁切或需要大幅滚动 */
+    html body .vditor-emojis{max-height:min(320px,48vh)!important;overflow:auto!important}
     .ee-editor-card .vditor{
         display:flex;flex-direction:column;border-radius:12px!important;overflow:hidden;
         border:1px solid var(--glass-border)!important;box-shadow:0 12px 32px -14px rgba(0,0,0,.55)!important;
