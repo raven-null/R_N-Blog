@@ -2084,39 +2084,34 @@
             showToast('该画板还没有文章，已在独立白板编辑器中打开','success');
             window.open('/excalidraw.html?note='+encodeURIComponent(noteId)+'&edit=1','_blank');
         }
-        // 发布 / 下架：已有关联文章 → 确认后切换状态；还没有文章 → 弹窗填写标题/状态/标签
+        // 发布 / 下架：统一打开发布弹窗（标题 / 状态 / 标签 / 封面），已有关联文章时更新同一篇
         async function excTogglePublish(noteId){
             let art=null;
             try{
                 const r=await apiFetch('action=articles');
                 if(r.status==='success')art=(r.data||[]).find(function(a){return a.type==='whiteboard'&&a.boardId===noteId})||null;
             }catch(e){}
-            if(art){
-                const next=art.status==='published'?'draft':'published';
-                const action=next==='published'?'发布':'下架';
-                const ok=await showConfirm('确定'+action+'「'+(art.title||noteId)+'」？',action+'白板文章',action);
-                if(!ok)return;
-                const r=await apiFetch('action=articles',{method:'PATCH',body:JSON.stringify({id:art.id,status:next})});
-                if(r.status!=='success'){showToast(r.message||(action+'失败'),'error');return}
-                showToast('已'+action,'success');
-                loadExcalidrawNotes();loadArticles();notifyArticlesChanged();
-                return;
-            }
+            const isPub=!!(art&&art.status==='published');
+            const name=(art&&art.title)||('白板：'+noteId);
+            const tags=((art&&art.tags)||[]).join(', ');
+            const cover=(art&&art.image)||'';
             openExcModal({
-                title:'发布白板文章',
-                sub:'该画板还没有文章。发布会创建一篇白板文章（前台整页白板展示，无封面与摘要）。',
-                okText:'发布',
-                body:'<div class="exc-field"><label>文章标题</label><input type="text" id="excPubTitle" maxlength="60" value="'+escAttr('白板：'+noteId)+'"></div>'+
-                     '<div class="exc-field"><label>状态</label><select id="excPubStatus"><option value="published">发布</option><option value="draft">草稿</option></select></div>'+
-                     '<div class="exc-field"><label>标签（逗号分隔，可选）</label><input type="text" id="excPubTags" placeholder="如：白板, 灵感"></div>'+
+                title:art?'更新白板文章':'发布白板文章',
+                sub:art?'选择「草稿」即为下架；可同时修改标题、标签与封面。':'该画板还没有文章，发布会创建一篇白板文章（前台整页白板展示）。',
+                okText:art?'保存':'发布',
+                body:'<div class="exc-field"><label>文章标题</label><input type="text" id="excPubTitle" maxlength="60" value="'+escAttr(name)+'"></div>'+
+                     '<div class="exc-field"><label>状态</label><select id="excPubStatus">'+
+                     '<option value="published"'+(isPub?' selected':'')+'>发布</option>'+
+                     '<option value="draft"'+(isPub?'':' selected')+'>草稿（下架）</option></select></div>'+
+                     '<div class="exc-field"><label>标签（逗号分隔，可选）</label><input type="text" id="excPubTags" value="'+escAttr(tags)+'" placeholder="如：白板, 灵感"></div>'+
                      '<div class="exc-field"><label>封面图（选填，不设则用白板风格卡片）</label>'+
                      '<div class="exc-cover-row">'+
-                     '<div class="exc-cover-preview" id="excPubCoverPreview"><span>未设置</span></div>'+
+                     '<div class="exc-cover-preview" id="excPubCoverPreview">'+(cover?'<img src="'+escAttr(cover)+'" alt="封面预览">':'<span>未设置</span>')+'</div>'+
                      '<div class="exc-cover-btns">'+
                      '<label class="btn btn-ghost btn-sm" style="cursor:pointer">上传<input type="file" accept="image/*" id="excPubCoverFile" style="display:none"></label>'+
                      '<button type="button" class="btn btn-ghost btn-sm" id="excPubCoverPick">从图库选</button>'+
                      '<button type="button" class="btn btn-ghost btn-sm" id="excPubCoverClear">移除</button>'+
-                     '</div></div><input type="hidden" id="excPubCover"></div>',
+                     '</div></div><input type="hidden" id="excPubCover" value="'+escAttr(cover)+'"></div>',
                 onReady:function(){
                     const setCover=function(url){
                         const el=document.getElementById('excPubCover');
@@ -2140,18 +2135,19 @@
                 onOk:async function(){
                     const title=(document.getElementById('excPubTitle').value||'').trim()||('白板：'+noteId);
                     const status=document.getElementById('excPubStatus').value;
-                    const tags=(document.getElementById('excPubTags').value||'').split(/[,，]/).map(function(s){return s.trim()}).filter(Boolean);
+                    const tagsArr=(document.getElementById('excPubTags').value||'').split(/[,，]/).map(function(s){return s.trim()}).filter(Boolean);
                     const coverEl=document.getElementById('excPubCover');
                     const image=coverEl?coverEl.value.trim():'';
-                    const r=await apiFetch('action=articles',{method:'POST',body:JSON.stringify({title,content:'',status,type:'whiteboard',boardId:noteId,tags,image})});
-                    if(r.status!=='success'){showToast(r.message||'发布失败','error');return false}
+                    const body={title,content:'',status,type:'whiteboard',boardId:noteId,tags:tagsArr,image};
+                    if(art)body.id=art.id;
+                    const r=await apiFetch('action=articles',{method:'POST',body:JSON.stringify(body)});
+                    if(r.status!=='success'){showToast(r.message||'操作失败','error');return false}
                     showToast(status==='draft'?'白板文章已存为草稿':'白板文章已发布','success');
                     loadExcalidrawNotes();loadArticles();notifyArticlesChanged();
                     return true;
                 }
             });
         }
-
         // ===== 评论管理 =====
         async function loadComments(){
             try{
