@@ -98,7 +98,7 @@
     }
     .ee-foot .saved{margin-left:auto;color:var(--success)}
     /* ===== 侧栏 ===== */
-    .ee-side{width:320px;flex-shrink:0;display:flex;flex-direction:column;gap:10px;overflow-y:auto;padding-right:2px}
+    .ee-side{width:clamp(220px,26vw,320px);flex-shrink:0;display:flex;flex-direction:column;gap:10px;overflow-y:auto;padding-right:2px;order:9}
     .ee-card{
         background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
         padding:12px 14px;display:flex;flex-direction:column;gap:8px;
@@ -153,12 +153,12 @@
     .ee-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
     .ee-toast.error{border-color:rgba(239,106,94,.5);color:#ffd9d5}
     .ee-toast.success{border-color:rgba(123,216,143,.45);color:#d7f5df}
+    /* 窄屏也保持「左编辑区 + 右功能区」的左右格式，只收缩尺寸不堆叠 */
     @media(max-width:900px){
-        body{overflow:auto}
-        .ee-main{flex-direction:column;overflow:visible;height:auto}
-        .ee-side{width:100%;overflow:visible}
-        .ee-editor-col{min-height:70vh}
-        .ee-board{min-height:70vh}
+        .ee-main{padding:10px 12px 12px;gap:10px}
+        .ee-side{width:clamp(190px,32vw,260px)}
+        .ee-title{font-size:19px}
+        .ee-cover{height:104px}
     }
 </style>
     <link rel="stylesheet" href="/css/scrollbar.css?v=1.0.1">
@@ -246,6 +246,6 @@
     </div>
 
     <div class="ee-toast" id="eeToast"></div>
-    <script src="js/admin-edit.js?v=1.0.7"></script>
+    <script src="js/admin-edit.js?v=1.0.8"></script>
 </body>
 </html>

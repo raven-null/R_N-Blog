@@ -347,8 +347,8 @@
             if (excerptCard) excerptCard.style.display = 'none';
         }
         if (docType === 'whiteboard') {
-            $('eeEditorCol').style.display = 'none';
-            $('eeSide').style.display = 'flex'; // 白板也要能改状态/标签（封面、摘要卡已按类型隐藏）
+            $('eeEditorCol').style.display = 'none'; // 白板不用富文本编辑器，画布直接占左侧编辑位
+            $('eeSide').style.display = 'flex';      // 右侧功能区（状态/标签/封面/信息）始终保持
             $('eeBoard').style.display = 'flex';
             mountBoard();
         } else {

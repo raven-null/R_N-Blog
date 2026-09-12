@@ -852,6 +852,16 @@
             const ok=await saver();
             if(!ok){showToast('画板保存未完成（口令/空画布/网络？），已中止发布','error');return}
             try{await excApi('action=meta&id='+encodeURIComponent(currentBoardId),{method:'POST',body:JSON.stringify({title:name})})}catch(e){}
+            // 若该画板已有关联文章（可能刚从白板页发布过），沿用同一篇
+            if(!currentBoardArticleId){
+                try{
+                    const ar=await apiFetch('action=articles');
+                    if(ar.status==='success'){
+                        const found=(ar.data||[]).find(function(a){return a.type==='whiteboard'&&a.boardId===currentBoardId});
+                        if(found)currentBoardArticleId=found.id;
+                    }
+                }catch(e){}
+            }
             const imgEl=document.getElementById('edImage');
             const image=imgEl?imgEl.value.trim():'';
             const body={title:name,content:'',status,type:'whiteboard',boardId:currentBoardId,tags,image};
