@@ -359,6 +359,23 @@
         .confirm-actions{display:flex;gap:8px;justify-content:center}
         .confirm-actions .btn{flex:1;min-width:88px;padding:8px 12px}
 
+        /* ===== 文中图片抽屉（右侧滑出） ===== */
+        .art-img-mask{position:fixed;inset:0;z-index:3000;background:rgba(5,5,9,.45);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);opacity:0;pointer-events:none;transition:opacity .3s ease}
+        .art-img-mask.show{opacity:1;pointer-events:auto}
+        .art-img-drawer{position:fixed;top:0;right:0;bottom:0;z-index:3001;width:min(360px,92vw);display:flex;flex-direction:column;background:var(--bg-card);border-left:1px solid var(--border-light);box-shadow:-24px 0 60px -20px rgba(0,0,0,.7);transform:translateX(103%);transition:transform .45s cubic-bezier(.22,1,.36,1)}
+        .art-img-drawer.open{transform:none}
+        .aid-head{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--border)}
+        .aid-title{flex:1;font-size:13.5px;font-weight:600;color:var(--text-primary)}
+        .aid-title b{color:var(--accent);margin-left:4px}
+        .aid-body{flex:1;min-height:0;overflow-y:auto;padding:12px}
+        .aid-foot{padding:10px 14px;border-top:1px solid var(--border);font-size:11.5px;color:var(--text-muted);line-height:1.6}
+        .write-article-images{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
+        .write-article-img-item{position:relative;aspect-ratio:1/1;border-radius:10px;overflow:hidden;border:1px solid var(--border);background:#0a0b10;cursor:pointer;transition:border-color .18s ease,transform .18s ease}
+        .write-article-img-item:hover{border-color:var(--accent);transform:translateY(-2px)}
+        .write-article-img-item img{width:100%;height:100%;object-fit:cover;display:block}
+        .write-article-img-item .del{position:absolute;top:4px;right:4px;width:20px;height:20px;border-radius:50%;border:none;background:rgba(0,0,0,.65);color:#fff;cursor:pointer;font-size:12px;line-height:1}
+        .write-article-images-empty{grid-column:1/-1;color:var(--text-muted);font-size:12.5px;text-align:center;padding:24px 0}
+
         /* ===== 白板操作弹窗（替代原生 alert / prompt / confirm） ===== */
         .exc-modal{display:none;position:fixed;inset:0;z-index:2100}
         .exc-modal.open{display:flex;align-items:center;justify-content:center}
@@ -1049,6 +1066,7 @@
                             <div class="action-group" style="display:flex;gap:6px;flex-wrap:wrap">
                                 <label class="glass-action-btn" style="cursor:pointer">导入<input type="file" accept=".md,.markdown" onchange="importAndEdit(this.files[0])" style="display:none"></label>
                                 <button class="glass-action-btn" onclick="exportMarkdown()">导出</button>
+                                <button class="glass-action-btn" onclick="openArticleImages()" title="查看文章中粘贴/上传的图片">文中图片 <span id="articleImgCount">0</span></button>
                                 <button class="glass-action-btn" onclick="saveArticlePreview()">保存并预览</button>
                                 <button class="glass-action-btn publish-btn" onclick="openPublishModal()">发布 ▾</button>
                                 <button class="glass-action-btn" id="writeFullBtn" onclick="toggleWriteFull()" title="全屏写作">全屏写作</button>
@@ -1449,6 +1467,19 @@
     </div>
 
     <!-- 白板操作弹窗（统一替代原生弹窗） -->
+    <!-- 文中图片抽屉（右侧滑出，展示当前文章里粘贴/上传的图片） -->
+    <div class="art-img-mask" id="artImgMask" onclick="closeArticleImages()"></div>
+    <aside class="art-img-drawer" id="artImgDrawer" aria-hidden="true">
+        <div class="aid-head">
+            <span class="aid-title">文中图片 <b id="articleImgCountDrawer">0</b></span>
+            <button class="glass-action-btn" onclick="closeArticleImages()">关闭</button>
+        </div>
+        <div class="aid-body">
+            <div class="write-article-images" id="articleImagesList"></div>
+        </div>
+        <div class="aid-foot">点击图片可插入到光标处；右上角 × 会从服务器删除该图片。</div>
+    </aside>
+
     <div class="exc-modal" id="excModal">
         <div class="exc-modal-overlay" onclick="closeExcModal()"></div>
         <div class="exc-modal-box">
@@ -1534,7 +1565,7 @@
         </div>
     </div>
 
-        <script src="js/admin-app.js?v=1.3.5"></script>
+        <script src="js/admin-app.js?v=1.3.6"></script>
 
     <!-- 前台预览抽屉（iframe 内嵌，零跳出） -->
     <style>

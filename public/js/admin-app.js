@@ -1138,19 +1138,39 @@
             renderArticleImages();
         }
         // 渲染文中图片列表
+        // 文中图片抽屉：点击「文中图片」按钮后从右侧滑出
+        function insertArticleImage(url){
+            if(!url)return;
+            insertAtCursor('![图片]('+url+')');
+            showToast('已插入到光标处','success');
+        }
+        function openArticleImages(){
+            scanArticleImagesFromContent(getEditorContent());
+            renderArticleImages();
+            const d=document.getElementById('artImgDrawer'),m=document.getElementById('artImgMask');
+            if(d){d.classList.add('open');d.setAttribute('aria-hidden','false')}
+            if(m)m.classList.add('show');
+        }
+        function closeArticleImages(){
+            const d=document.getElementById('artImgDrawer'),m=document.getElementById('artImgMask');
+            if(d){d.classList.remove('open');d.setAttribute('aria-hidden','true')}
+            if(m)m.classList.remove('show');
+        }
         function renderArticleImages(){
             const list=document.getElementById('articleImagesList');
             const count=document.getElementById('articleImgCount');
+            const countDrawer=document.getElementById('articleImgCountDrawer');
             if(!list)return;
             if(count)count.textContent=articleImages.length;
+            if(countDrawer)countDrawer.textContent=articleImages.length;
             if(!articleImages.length){
                 list.innerHTML='<span class="write-article-images-empty">暂无图片，上传或从图库插入后显示</span>';
                 return;
             }
             list.innerHTML=articleImages.map(img=>`
-                <div class="write-article-img-item" title="${esc(img.key)}">
+                <div class="write-article-img-item" title="${esc(img.key)}" onclick="insertArticleImage('${escAttr(img.url)}')">
                     <img src="${displayUrl(img.url)}" loading="lazy">
-                    <button class="del" onclick="deleteArticleImage('${escAttr(img.key)}')" title="删除图片">&times;</button>
+                    <button class="del" onclick="event.stopPropagation();deleteArticleImage('${escAttr(img.key)}')" title="删除图片">&times;</button>
                 </div>
             `).join('');
         }

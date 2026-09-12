@@ -56,24 +56,55 @@ export default async (req: Request) => {
   }
 
   if (req.method === "POST") {
-    let body: any = {}
-    try {
-      body = await req.json()
-    } catch {
-      return badRequest("请求体不是合法 JSON", req)
+    // 两种上传方式都支持：
+    //   1) multipart/form-data（Vditor 拖拽/粘贴/工具栏上传，字段名 file）
+    //   2) JSON { data: "<base64>", mime, name }（后台图库选择/封面上传等）
+    const contentType = req.headers.get("content-type") || ""
+    const name0 = ""
+    let buf: Buffer
+    let mime = ""
+    let name = name0
+
+    if (contentType.includes("multipart/form-data")) {
+      try {
+        const fd = await req.formData()
+        const file = fd.get("file")
+        if (!(file instanceof File)) return badRequest("file 字段必填", req)
+        mime = file.type || ""
+        name = file.name || ""
+        buf = Buffer.from(await file.arrayBuffer())
+      } catch {
+        return badRequest("表单解析失败", req)
+      }
+    } else {
+      let body: any = {}
+      try {
+        body = await req.json()
+      } catch {
+        return badRequest("请求体不是合法 JSON", req)
+      }
+      const data = typeof body.data === "string" ? body.data : ""
+      mime = typeof body.mime === "string" ? body.mime : ""
+      name = typeof body.name === "string" ? body.name : ""
+      if (!data) return badRequest("data 必填（base64 图片）", req)
+      try {
+        buf = Buffer.from(data, "base64")
+      } catch {
+        return badRequest("base64 解码失败", req)
+      }
     }
 
-    const data = typeof body.data === "string" ? body.data : ""
-    const mime = typeof body.mime === "string" ? body.mime : ""
-    const name = typeof body.name === "string" ? body.name : ""
-    if (!data) return badRequest("data 必填（base64 图片）", req)
-    if (!ALLOWED_MIME[mime]) return badRequest("仅支持 jpg / png / gif / webp / svg 图片", req)
-
-    let buf: Buffer
-    try {
-      buf = Buffer.from(data, "base64")
-    } catch {
-      return badRequest("base64 解码失败", req)
+    if (!mime) mime = "image/png"
+    if (!ALLOWED_MIME[mime]) {
+      // 剪贴板偶尔给出非常规 mime，按扩展名兜底
+      const lower = (name || "").toLowerCase()
+      const guess = lower.endsWith(".jpg") || lower.endsWith(".jpeg") ? "image/jpeg"
+        : lower.endsWith(".gif") ? "image/gif"
+          : lower.endsWith(".webp") ? "image/webp"
+            : lower.endsWith(".svg") ? "image/svg+xml"
+              : ""
+      if (guess) mime = guess
+      else return badRequest("仅支持 jpg / png / gif / webp / svg 图片", req)
     }
     if (buf.length === 0) return badRequest("图片内容为空", req)
     if (buf.length > MAX_IMAGE_BYTES) return badRequest("图片过大（限 10MB）", req)
