@@ -685,24 +685,20 @@
                     {name:'more',toolbar:['code-theme','content-theme','export','help']}
                 ],
                 upload:{
-                    url:'/api/article-image',
-                    fieldName:'file',
-                    max:10*1024*1024,
                     accept:'image/*',
-                    format:(files,responseText)=>{
-                        const resp=JSON.parse(responseText);
-                        if(resp.status==='success'&&resp.data){
-                            return JSON.stringify({
-                                msg:'',
-                                code:0,
-                                data:{src:[resp.data.url],alt:[files[0]?.name||'图片']}
-                            });
-                        }
-                        return JSON.stringify({msg:'上传失败',code:1,data:{src:[]}});
-                    },
-                    success:(editor,msg)=>{
-                        const resp=JSON.parse(msg);
-                        if(resp.data?.src?.[0])trackArticleImage(resp.data.src[0]);
+                    multiple:true,
+                    // 自定义上传：粘贴/拖拽/工具栏上传全部走已验证的 JSON 通道，
+                    // 前端先压缩再上传（避免 multipart 兼容与请求体过大问题）
+                    handler:(files)=>{
+                        (async()=>{
+                            for(const f of files){
+                                const url=await uploadArticleImageAndGetUrl(f);
+                                if(!url)continue;
+                                const ed=vditorInstance;
+                                if(ed)ed.insertValue('!['+(f.name||'图片')+']('+url+')');
+                                trackArticleImage(url);
+                            }
+                        })();
                     }
                 },
                 cache:{enable:true},

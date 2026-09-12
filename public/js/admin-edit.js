@@ -121,16 +121,17 @@
                 { name: 'more', toolbar: ['code-theme', 'content-theme', 'export', 'help'] }
             ],
             upload: {
-                url: '/api/article-image',
-                fieldName: 'file',
-                max: 10 * 1024 * 1024,
                 accept: 'image/*',
-                format: function (files, responseText) {
-                    var resp = JSON.parse(responseText);
-                    if (resp.status === 'success' && resp.data) {
-                        return JSON.stringify({ msg: '', code: 0, data: { src: [resp.data.url], alt: [files[0] ? files[0].name : '图片'] } });
-                    }
-                    return JSON.stringify({ msg: '上传失败', code: 1, data: { src: [] } });
+                multiple: true,
+                // 自定义上传：走 JSON 通道（与后台一致），前端先压缩
+                handler: function (files) {
+                    (async function () {
+                        for (var i = 0; i < files.length; i++) {
+                            var url = await eeUploadImage(files[i]);
+                            if (!url) continue;
+                            if (vditor) vditor.insertValue('![' + (files[i].name || '图片') + '](' + url + ')');
+                        }
+                    })();
                 }
             },
             cache: { enable: false },
@@ -233,6 +234,23 @@
             fr.onerror = function () { reject(new Error('读取文件失败')) };
             fr.readAsDataURL(file);
         });
+    }
+    // 文中图片上传（编辑器粘贴/拖拽/上传按钮共用）
+    async function eeUploadImage(file) {
+        try {
+            var d = await fileToBase64(file);
+            var res = await fetch('/api/article-image', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Admin-Key': adminKey },
+                body: JSON.stringify({ data: d.base64, mime: d.mime, name: file.name })
+            });
+            var r = await res.json();
+            if (r.status === 'success' && r.url) return r.url;
+            toast('图片上传失败：' + (r.message || '未知原因'), 'error');
+        } catch (e) {
+            toast('图片上传失败：' + (e.message || e), 'error');
+        }
+        return null;
     }
     async function eeUploadCover(file) {
         if (!file) return;
