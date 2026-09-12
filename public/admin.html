@@ -508,13 +508,21 @@
             --textarea-text-color:#f2f3f8;
             --panel-color:#f2f3f8;
         }
-        .vditor-panel,.vditor-hint{background-color:#14161d!important;color:#f2f3f8!important;border:1px solid rgba(255,255,255,.14)!important}
-        .vditor-panel button,.vditor-hint button{color:#f2f3f8!important}
-        .vditor-panel button:hover,.vditor-hint button:hover{background-color:rgba(255,255,255,.14)!important;color:#fff!important}
-        .vditor-menu--current{color:#73aaff!important}
-        .vditor-menu--disabled{color:rgba(255,255,255,.35)!important}
-        .vditor-emojis__tip{color:rgba(255,255,255,.6)!important}
-        .vditor-panel--arrow:before{border-bottom-color:#14161d!important}
+        /* 面板必须完全不透明：Vditor 的 .vditor-panel--none 默认 opacity:.86，会让面板发灰看不清 */
+        .vditor-panel,.vditor-hint,.vditor-panel--none{
+            opacity:1!important;
+            background-color:#0f1118!important;
+            color:#f7f8fc!important;
+            border:1px solid rgba(255,255,255,.18)!important;
+            box-shadow:0 18px 44px -16px rgba(0,0,0,.9)!important;
+        }
+        .vditor-panel button,.vditor-hint button,.vditor-panel--none button{color:#f7f8fc!important;background-color:transparent!important}
+        .vditor-panel button:hover,.vditor-hint button:hover,.vditor-panel--none button:hover{background-color:rgba(255,255,255,.16)!important;color:#fff!important}
+        .vditor-menu--current{color:#8ab4ff!important;font-weight:600}
+        .vditor-menu--disabled{color:rgba(255,255,255,.4)!important}
+        .vditor-emojis__tip{color:rgba(255,255,255,.7)!important}
+        .vditor-panel--arrow:before{border-bottom-color:#0f1118!important}
+        .vditor-input{background-color:#161922!important;color:#f7f8fc!important;border:1px solid rgba(255,255,255,.16)!important}
         .vditor-toolbar{
             /* 工具栏固定深蓝紫底（设计稿 #181927），不随编辑器主题变化 */
             background:rgba(24,25,39,.95)!important;
