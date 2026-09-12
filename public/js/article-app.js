@@ -823,7 +823,7 @@
                         '/images/a/' + key + '?w=800 800w, ' +
                         '/images/a/' + key + '?w=1200 1200w, ' +
                         '/images/a/' + key + '?w=1600 1600w');
-                    img.setAttribute('sizes', '(max-width: 820px) 100vw, 760px');
+                    img.setAttribute('sizes', '(max-width: 820px) 100vw, (min-width: 1500px) 1200px, 900px');
                 });
             },
 
