@@ -266,7 +266,8 @@
                 }
 
                 // 首屏代码块立即高亮
-                requestAnimationFrame(() => this.highlightVisibleBlocks(content));
+                this.enhanceImages(content);
+            requestAnimationFrame(() => this.highlightVisibleBlocks(content));
 
                 // 剩余段落用 requestIdleCallback 渐进追加
                 if (sections.length > 0) {
@@ -645,6 +646,27 @@
             },
 
             // 高亮视口内可见的代码块（首屏立即 + 滚动时按需）
+            // 正文图片：懒加载 + 响应式尺寸（/images/a/<key>?w=800|1200|1600 由后端按需生成变体）
+            enhanceImages(container) {
+                if (!container) return;
+                container.querySelectorAll('img').forEach(img => {
+                    if (!img.hasAttribute('loading')) img.setAttribute('loading', 'lazy');
+                    img.setAttribute('decoding', 'async');
+                    if (img.dataset.responsive === '1') return;
+                    const src = img.getAttribute('src') || '';
+                    const m = src.match(/^\/images\/a\/([^/?#]+)/);
+                    if (!m) return;
+                    const key = m[1];
+                    img.dataset.responsive = '1';
+                    img.setAttribute('src', '/images/a/' + key + '?w=1200');
+                    img.setAttribute('srcset',
+                        '/images/a/' + key + '?w=800 800w, ' +
+                        '/images/a/' + key + '?w=1200 1200w, ' +
+                        '/images/a/' + key + '?w=1600 1600w');
+                    img.setAttribute('sizes', '(max-width: 820px) 100vw, 760px');
+                });
+            },
+
             // 仅在正文确实包含代码块时才加载 highlight.js（119KB）
             ensureHighlight(container) {
                 if (this._hljsLoading || !container) return;

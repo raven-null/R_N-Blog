@@ -34,19 +34,71 @@ export default async (req: Request) => {
       ? decodeURIComponent(pathMatch[1])
       : params.get("key")
     if (!key) return badRequest("key 必填", req)
+
+    // 可选尺寸变体：?w=800 → 按需生成并写回 Blobs（variants/<key>@<w>.webp），
+    // 首次生成后长期命中，正文图片因此不必再下载原始大图。
+    const wRaw = Number(url.searchParams.get("w") || 0)
+    const wantW = Number.isFinite(wRaw) && wRaw > 0
+      ? Math.min(2000, Math.max(80, Math.round(wRaw)))
+      : 0
+
+    const mimeMap: Record<string, string> = {
+      jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png",
+      gif: "image/gif", webp: "image/webp", svg: "image/svg+xml",
+    }
+    const mimeOf = (k: string) => mimeMap[k.split(".").pop()?.toLowerCase() || "png"] || "application/octet-stream"
+
     try {
       const store = getBlobStore(IMAGE_STORE, "strong")
+
+      if (wantW) {
+        const vKey = `variants/${key}@${wantW}.webp`
+        try {
+          const cachedVariant = await store.get(vKey, { type: "text" })
+          if (cachedVariant) {
+            return new Response(Buffer.from(cachedVariant, "base64"), {
+              headers: {
+                "Content-Type": "image/webp",
+                "Cache-Control": "public, max-age=31536000, immutable",
+              },
+            })
+          }
+        } catch { /* 变体读取失败则现场生成 */ }
+
+        const raw0 = await store.get(key, { type: "text" })
+        if (!raw0) return new Response("Not found", { status: 404 })
+        const srcBuf = Buffer.from(raw0, "base64")
+        try {
+          const sharp = (await import("sharp")).default
+          const out = await sharp(srcBuf)
+            .resize({ width: wantW, withoutEnlargement: true })
+            .webp({ quality: 80 })
+            .toBuffer()
+          // 写回变体缓存（失败不影响本次返回）
+          try { await store.set(vKey, Buffer.from(out).toString("base64")) } catch { /* ignore */ }
+          return new Response(Buffer.from(out), {
+            headers: {
+              "Content-Type": "image/webp",
+              "Cache-Control": "public, max-age=31536000, immutable",
+            },
+          })
+        } catch {
+          // sharp 不可用（如本地未装依赖）或 svg/gif：回退原图
+          return new Response(srcBuf, {
+            headers: {
+              "Content-Type": mimeOf(key),
+              "Cache-Control": "public, max-age=31536000",
+            },
+          })
+        }
+      }
+
       const raw = await store.get(key, { type: "text" })
       if (!raw) return new Response("Not found", { status: 404 })
       const buf = Buffer.from(raw, "base64")
-      const ext = key.split(".").pop()?.toLowerCase() || "png"
-      const mimeMap: Record<string, string> = {
-        jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png",
-        gif: "image/gif", webp: "image/webp", svg: "image/svg+xml",
-      }
       return new Response(buf, {
         headers: {
-          "Content-Type": mimeMap[ext] || "application/octet-stream",
+          "Content-Type": mimeOf(key),
           "Cache-Control": "public, max-age=31536000",
         },
       })
