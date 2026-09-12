@@ -528,6 +528,26 @@
             box-sizing:border-box!important;
             transform:none!important;
         }
+        /* 面板文字：全部提到纯白（含嵌套元素），次要文字也调亮 */
+        html body .vditor-panel,
+        html body .vditor-hint,
+        html body .vditor-panel--none,
+        html body .vditor-panel *,
+        html body .vditor-hint *,
+        html body .vditor-panel--none *,
+        html body .vditor-emojis,
+        html body .vditor-emojis *{
+            color:#ffffff!important;
+            opacity:1!important;
+            text-shadow:none!important;
+        }
+        html body .vditor-menu--current,
+        html body .vditor-menu--current *{color:#a9c8ff!important;font-weight:700!important}
+        html body .vditor-menu--disabled,
+        html body .vditor-menu--disabled *{color:#c2c7d2!important}
+        html body .vditor-emojis__tip{color:#e8ebf3!important}
+        html body .vditor-panel button:hover,
+        html body .vditor-hint button:hover{color:#ffffff!important;background:#3b4152!important}
         /* 弹出面板（表情/标题/编辑模式/更多等）：黑底白字，保证清晰 */
         .vditor{
             --panel-background-color:#14161d;
