@@ -753,15 +753,14 @@
         /* 画布宿主（view/edit 共用的容器）必须占满舞台，否则高度塌陷不显示 */
         .board-stage .board-canvas #boardCanvasHost,
         .board-stage .board-canvas .excalidraw-edit-host { position: absolute; inset: 0; }
-        /* 编辑态：隐藏舞台浮层，显示左上「完成」胶囊（编辑工具栏由组件自带） */
-        .board-stage.editing .board-topbar,
-        .board-stage.editing .board-navbtn,
-        .board-stage.editing .board-pop,
-        .board-stage.editing .board-scrim,
-        .board-stage.editing .board-drawer { display: none !important; }
-        .board-done {
-            position: absolute; top: 14px; left: 14px; z-index: 33; display: none;
-            align-items: center; gap: 6px; text-decoration: none;
+        /* 编辑态工具条：底部居中，避开 Excalidraw 的左上菜单与顶部工具栏 */
+        .board-tools {
+            position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%);
+            z-index: 33; display: none; align-items: center; gap: 8px; font-family: inherit;
+        }
+        .board-stage.editing .board-tools { display: inline-flex; }
+        .board-done, .board-save {
+            display: inline-flex; align-items: center; gap: 6px;
             color: #e8e8ea; font-size: 12.5px; padding: 7px 15px; border-radius: 999px; cursor: pointer;
             background: linear-gradient(145deg, rgba(30, 30, 37, 0.85), rgba(20, 20, 26, 0.78));
             backdrop-filter: blur(26px) saturate(180%); -webkit-backdrop-filter: blur(26px) saturate(180%);
@@ -770,9 +769,30 @@
             transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s ease;
             font-family: inherit;
         }
-        .board-done svg { width: 14px; height: 14px; }
-        .board-done:hover { background: linear-gradient(145deg, rgba(48, 48, 58, 0.95), rgba(28, 28, 36, 0.85)); }
-        .board-stage.editing .board-done { display: inline-flex; }
+        .board-done svg, .board-save svg { width: 14px; height: 14px; }
+        .board-done:hover, .board-save:hover { background: linear-gradient(145deg, rgba(48, 48, 58, 0.95), rgba(28, 28, 36, 0.85)); }
+        .board-save {
+            color: #eaf2ff; border-color: rgba(115, 170, 255, 0.45);
+            background: linear-gradient(145deg, rgba(59, 130, 246, 0.42), rgba(115, 170, 255, 0.28));
+        }
+        .board-save:hover { background: linear-gradient(145deg, rgba(59, 130, 246, 0.6), rgba(115, 170, 255, 0.42)); }
+        .board-save[disabled] { opacity: 0.6; cursor: default; }
+        .board-tip {
+            position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%);
+            white-space: nowrap; font-size: 12px; color: #e8e8ea; padding: 6px 12px; border-radius: 999px;
+            background: rgba(20, 20, 26, 0.92); border: 1px solid rgba(255, 255, 255, 0.13);
+            opacity: 0; pointer-events: none; transition: opacity 0.2s ease;
+        }
+        .board-tip.show { opacity: 1; }
+        .board-tip.ok { border-color: rgba(123, 216, 143, 0.45); color: #d7f5df; }
+        .board-tip.err { border-color: rgba(239, 106, 94, 0.5); color: #ffd9d5; }
+        @media (max-width: 768px) {
+            /* 手机端：不提供保存键（保存时机由「完成」时的询问处理），只留「完成」且移到工具栏上方 */
+            .board-tools { left: auto; right: 12px; bottom: 86px; transform: none; flex-direction: column; }
+            .board-tools .board-save { display: none; }
+            .board-tip { left: auto; right: 0; transform: none; bottom: calc(100% + 6px); }
+        }
+        /* 编辑态：隐藏舞台浮层 */
         .board-stage.editing .exc-shell .exc-bar { border-radius: 0; }
         .board-stage.editing .exc-shell .exc-msg { margin: 6px 10px 8px; }
         /* 退出编辑确认弹层 */
@@ -2326,11 +2346,15 @@
                     '<div class="board-drawer-head"><span class="dh-title">留言</span><button class="bt-btn" id="boardDrawerClose" title="关闭"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>关闭</button></div>' +
                     '<div class="board-drawer-body" id="boardDrawerBody"></div>' +
                     '</aside>' +
-                    '<button class="board-done" id="boardDoneBtn" title="退出编辑"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>完成</button>' +
+                    '<div class="board-tools" id="boardTools">' +
+                    '<button class="board-save" id="boardSaveBtn" title="保存到服务器（桌面端 Ctrl / ⌘ + S）"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="m7 11 5 5 5-5"/><path d="M4 20h16"/></svg><span id="boardSaveLabel">保存</span></button>' +
+                    '<button class="board-done" id="boardDoneBtn" title="退出编辑（有改动会先问是否保存）"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>完成</button>' +
+                    '<span class="board-tip" id="boardTip"></span>' +
+                    '</div>' +
                     '<div class="board-dlg" id="boardDlg">' +
                     '<div class="bd-card">' +
                     '<div class="bd-title">退出编辑</div>' +
-                    '<div class="bd-sub">改动需要先写入服务器才会保留。随时可用 Ctrl / ⌘ + S 保存。</div>' +
+                    '<div class="bd-sub">改动需要先写入服务器才会保留。可点编辑界面下方的「保存」按钮，或按 Ctrl / ⌘ + S。</div>' +
                     '<div class="bd-btns">' +
                     '<button class="bd-btn primary" id="bdSaveExit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="m7 11 5 5 5-5"/><path d="M4 20h16"/></svg>保存并退出</button>' +
                     '<button class="bd-btn" id="bdDiscardExit">不保存，直接退出</button>' +
@@ -2455,6 +2479,28 @@
                     const dirty = !!(window.__excalidrawDirty && window.__excalidrawDirty());
                     if (dirty) showDlg(); else doExit();
                 });
+                const saveBtn = document.getElementById('boardSaveBtn');
+                const boardTip = document.getElementById('boardTip');
+                const showTip = (msg, ok) => {
+                    if (!boardTip) return;
+                    boardTip.textContent = msg;
+                    boardTip.className = 'board-tip show ' + (ok ? 'ok' : 'err');
+                    clearTimeout(boardTip._t);
+                    boardTip._t = setTimeout(() => { boardTip.className = 'board-tip'; }, 2800);
+                };
+                const doSave = async () => {
+                    if (!window.__excalidrawSave) { showTip('编辑器尚未就绪，请稍候', false); return; }
+                    const lbl = document.getElementById('boardSaveLabel');
+                    if (saveBtn) saveBtn.disabled = true;
+                    if (lbl) lbl.textContent = '保存中…';
+                    let saved = false;
+                    try { saved = await window.__excalidrawSave(); } catch (e) { saved = false; }
+                    if (saveBtn) saveBtn.disabled = false;
+                    if (lbl) lbl.textContent = saved ? '已保存' : '保存';
+                    showTip(saved ? '已保存到服务器' : '保存未完成（可能需要口令、画布为空或网络问题）', saved);
+                    if (saved) setTimeout(() => { if (lbl) lbl.textContent = '保存'; }, 1800);
+                };
+                if (saveBtn) saveBtn.addEventListener('click', doSave);
                 const bdSaveExit = document.getElementById('bdSaveExit');
                 if (bdSaveExit) bdSaveExit.addEventListener('click', doSaveAndExit);
                 const bdDiscard = document.getElementById('bdDiscardExit');
