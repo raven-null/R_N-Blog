@@ -2540,13 +2540,5 @@
             restoreSettingsOrder();
         });
 
-        // 应用网站图标 favicon（从设置读取）
-        fetch('/api/admin?action=settings').then(r=>r.json()).then(d=>{
-            if(d.status==='success'&&d.data&&d.data.favicon){
-                const icon=document.getElementById('siteFavicon');
-                if(icon)icon.setAttribute('href',d.data.favicon);
-            }
-        }).catch(()=>{});
-
         (function(){if(adminKey)apiFetch('action=login',{method:'POST',body:JSON.stringify({key:adminKey})}).then(r=>{if(r.status==='success')showAdmin();else doLogout()}).catch(()=>doLogout())})();
     
