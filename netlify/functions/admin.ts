@@ -93,11 +93,17 @@ export default async (req: Request) => {
 
     // GET: 列表或单篇（公开访问）
     if (req.method === "GET") {
+      // 前台读取允许 CDN 短缓存（s-maxage 5s + SWR）：首次/重复访问更快；
+      // 带管理密钥的后台请求始终 no-store，编辑后后台立刻看到最新内容。
+      const isAdminReq = !!req.headers.get("x-admin-key")
+      const cacheHeader = isAdminReq
+        ? "no-store"
+        : "public, max-age=0, s-maxage=5, stale-while-revalidate=120"
       const id = url.searchParams.get("id")
       if (id) {
         const raw = await store.get(id, { type: "text" })
         if (!raw) return json(404, { status: "error", message: "文章不存在" }, req)
-        return json(200, { status: "success", data: JSON.parse(raw) }, req, { "Cache-Control": "no-store" })
+        return json(200, { status: "success", data: JSON.parse(raw) }, req, { "Cache-Control": cacheHeader })
       }
       const index = await getArticleIndex(store)
 
@@ -118,8 +124,8 @@ export default async (req: Request) => {
         }
         list = out as any
       }
-      // 禁用缓存：确保后台增删改后，前端轮询/刷新能立即拿到最新列表
-      return json(200, { status: "success", data: list }, req, { "Cache-Control": "no-store" })
+      // 前台 CDN 短缓存（5 秒 + SWR），后台请求 no-store：既加速又不影响后台即时性
+      return json(200, { status: "success", data: list }, req, { "Cache-Control": cacheHeader })
     }
 
     // 以下写操作需要认证

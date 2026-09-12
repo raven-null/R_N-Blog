@@ -54,33 +54,55 @@
             },
 
             // 加载 Blobs 后台文章
+            // 加载 Blobs 后台文章：命中 sessionStorage 缓存则先渲染（秒开），
+            // 再拉取最新内容；内容有变化才重新渲染（避免评论/目录重复初始化）
             async loadBlobArticle(blobId, filename) {
+                const cacheKey = 'article-cache-' + blobId;
+                let cached = null;
+                try {
+                    const raw = sessionStorage.getItem(cacheKey);
+                    if (raw) {
+                        const c0 = JSON.parse(raw);
+                        if (c0 && c0.data && c0.t && (Date.now() - c0.t) < 30 * 60 * 1000) cached = c0;
+                    }
+                } catch (e) { /* 缓存不可用则忽略 */ }
+
+                if (cached) this.applyBlobArticle(cached.data, filename);
+
                 try {
                     const res = await fetch(`/api/admin?action=articles&id=${blobId}`);
                     const data = await res.json();
                     if (data.status !== 'success' || !data.data) throw new Error('文章不存在');
                     const d = data.data;
-
-                    const content = d.content || '';
-
-                    this.currentPost = {
-                        filename: filename,
-                        title: d.title,
-                        date: d.date || d.createdAt,
-                        update: d.updatedAt,
-                        tags: d.tags || [],
-                        author: d.author || '博主',
-                        content: content,
-                        type: d.type || 'article',
-                        boardId: d.boardId || '',
-                        frontmatter: {},
-                    };
-                    this.renderArticle();
-                    document.title = `${this.currentPost.title} - 我的博客`;
+                    const changed = !cached
+                        || cached.data.content !== d.content
+                        || cached.data.title !== d.title
+                        || cached.data.updatedAt !== d.updatedAt;
+                    try { sessionStorage.setItem(cacheKey, JSON.stringify({ t: Date.now(), data: d })); } catch (e) { /* 超配额忽略 */ }
+                    if (changed) this.applyBlobArticle(d, filename);
                 } catch (error) {
                     console.error('加载Blobs文章失败:', error);
-                    this.showError('文章加载失败');
+                    if (!cached) this.showError('文章加载失败');
                 }
+            },
+
+            // 用文章数据填充 currentPost 并渲染
+            applyBlobArticle(d, filename) {
+                const content = d.content || '';
+                this.currentPost = {
+                    filename: filename,
+                    title: d.title,
+                    date: d.date || d.createdAt,
+                    update: d.updatedAt,
+                    tags: d.tags || [],
+                    author: d.author || '博主',
+                    content: content,
+                    type: d.type || 'article',
+                    boardId: d.boardId || '',
+                    frontmatter: {},
+                };
+                this.renderArticle();
+                document.title = `${this.currentPost.title} - 我的博客`;
             },
 
             // 加载资讯正文（按 id 从 recommendations.json 匹配，按需解析）
@@ -623,8 +645,23 @@
             },
 
             // 高亮视口内可见的代码块（首屏立即 + 滚动时按需）
+            // 仅在正文确实包含代码块时才加载 highlight.js（119KB）
+            ensureHighlight(container) {
+                if (this._hljsLoading || !container) return;
+                if (!container.querySelector('pre code')) return;
+                this._hljsLoading = true;
+                const s = document.createElement('script');
+                s.src = 'js/vendor/highlight.min.js';
+                s.onload = () => {
+                    this.highlightVisibleBlocks(container);
+                    this.highlightRemainingBlocks(container);
+                };
+                s.onerror = () => { this._hljsLoading = false; };
+                document.head.appendChild(s);
+            },
+
             highlightVisibleBlocks(container) {
-                if (typeof hljs === 'undefined') return;
+                if (typeof hljs === 'undefined') { this.ensureHighlight(container); return; }
                 const blocks = container.querySelectorAll('pre code:not(.hljs)');
                 if (!blocks.length) return;
                 const observer = new IntersectionObserver((entries) => {
