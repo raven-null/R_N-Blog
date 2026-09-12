@@ -495,6 +495,24 @@
         .vditor-theme-blue{--editor-bg:rgba(220,232,245,0.9);--editor-text:#1a2a3a;--editor-pre-bg:rgba(190,205,225,0.5)}
 
         .vditor{border:1px solid var(--glass-border)!important;border-radius:var(--radius)!important;background:var(--editor-bg,rgba(26,26,26,0.8))!important;box-shadow:var(--glass-shadow)!important}
+        /* 面板不被容器裁切 + 层级最高：容器 overflow:hidden 会把弹出面板切掉一部分 */
+        html body .vditor-panel,
+        html body .vditor-hint,
+        html body .vditor-panel--none{
+            z-index:9999!important;
+            position:absolute!important;
+            overflow:visible!important;
+        }
+        /* 输入区平铺整个盒子：Vditor 会给内容区动态加超大左右内边距（实测 163px）用于居中行宽 */
+        html body .vditor-wysiwyg pre.vditor-reset,
+        html body .vditor-ir pre.vditor-reset,
+        html body .vditor-sv{
+            padding-left:20px!important;
+            padding-right:20px!important;
+            max-width:none!important;
+            margin:0!important;
+            box-sizing:border-box!important;
+        }
         /* 弹出面板（表情/标题/编辑模式/更多等）：黑底白字，保证清晰 */
         .vditor{
             --panel-background-color:#14161d;
@@ -875,10 +893,10 @@
                         .editor-wrap{display:flex;flex-direction:column;flex:1;min-height:0;margin-top:10px}
                         .editor-wrap .vditor{
                             display:flex;flex-direction:column;
-                            border-radius:12px!important;overflow:hidden;
+                            border-radius:12px!important;overflow:visible;
                             box-shadow:0 12px 32px -14px rgba(0,0,0,.55)!important;
                         }
-                        .editor-wrap .vditor-toolbar{flex:none;padding-left:2px!important}
+                        .editor-wrap .vditor-toolbar{flex:none;padding-left:2px!important;border-radius:12px 12px 0 0!important}
                         .editor-wrap .vditor-toolbar [data-type="outline"]{display:none!important}
                         .editor-wrap .vditor-content{flex:1;min-height:0}
                         .editor-wrap .vditor-ir,

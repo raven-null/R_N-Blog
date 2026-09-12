@@ -72,6 +72,24 @@
     .ee-title{width:100%;background:transparent;border:none;outline:none;color:#e4e6f7;font-size:22px;font-weight:600;font-family:inherit}
     .ee-title::placeholder{color:rgba(228,230,247,.35);font-weight:400}
     .ee-editor-card{flex:1;min-height:0;margin-top:10px;display:flex;flex-direction:column}
+    /* 面板不被容器裁切 + 层级最高：容器 overflow:hidden 会把弹出面板切掉一部分 */
+    html body .vditor-panel,
+    html body .vditor-hint,
+    html body .vditor-panel--none{
+        z-index:9999!important;
+        position:absolute!important;
+        overflow:visible!important;
+    }
+    /* 输入区平铺整个盒子：Vditor 会给内容区动态加超大左右内边距（实测 163px）用于居中行宽 */
+    html body .vditor-wysiwyg pre.vditor-reset,
+    html body .vditor-ir pre.vditor-reset,
+    html body .vditor-sv{
+        padding-left:20px!important;
+        padding-right:20px!important;
+        max-width:none!important;
+        margin:0!important;
+        box-sizing:border-box!important;
+    }
     /* 弹出面板黑底白字（表情/标题/编辑模式/更多） */
     .ee-editor-card .vditor{
         --panel-background-color:#14161d;
@@ -134,10 +152,10 @@
     /* 表情面板不要过高，避免被裁切或需要大幅滚动 */
     html body .vditor-emojis{max-height:min(320px,48vh)!important;overflow:auto!important}
     .ee-editor-card .vditor{
-        display:flex;flex-direction:column;border-radius:12px!important;overflow:hidden;
+        display:flex;flex-direction:column;border-radius:12px!important;overflow:visible;
         border:1px solid var(--glass-border)!important;box-shadow:0 12px 32px -14px rgba(0,0,0,.55)!important;
     }
-    .ee-editor-card .vditor-toolbar{flex:none;background:rgba(24,25,39,.95)!important;border-bottom:1px solid rgba(255,255,255,.07)!important;backdrop-filter:blur(12px)}
+    .ee-editor-card .vditor-toolbar{flex:none;background:rgba(24,25,39,.95)!important;border-bottom:1px solid rgba(255,255,255,.07)!important;backdrop-filter:blur(12px);border-radius:12px 12px 0 0!important}
     .ee-editor-card .vditor-toolbar__item{color:#fff!important;transition:all .2s ease}
     .ee-editor-card .vditor-toolbar__item--current,.ee-editor-card .vditor-toolbar__item:hover{color:var(--accent)!important}
     .ee-editor-card .vditor-toolbar [data-type="outline"]{display:none!important}
