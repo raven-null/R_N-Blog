@@ -829,9 +829,9 @@
         .board-dlg .bd-btn.primary:hover { background: linear-gradient(180deg, #fff, #e8e8f0); }
         .board-dlg .bd-err { display: none; margin-top: 12px; padding: 8px 12px; border-radius: 10px; font-size: 12px; color: #ff9f0a; background: rgba(255, 159, 10, 0.1); border: 1px solid rgba(255, 159, 10, 0.25); }
         .board-dlg .bd-err.show { display: block; }
-        /* 顶部悬浮胶囊 */
+        /* 底部悬浮胶囊（放页面下方，避免遮挡白板顶部工具条） */
         .board-topbar {
-            position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
+            position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
             z-index: 30; display: flex; align-items: center; gap: 2px;
             padding: 5px 6px; border-radius: 20px; max-width: 94vw;
             background: linear-gradient(145deg, rgba(30, 30, 37, 0.85), rgba(20, 20, 26, 0.78));
@@ -840,7 +840,7 @@
             box-shadow: 0 14px 44px -10px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.1);
             transition: opacity 0.45s ease, transform 0.45s ease;
         }
-        .board-stage.idle .board-topbar { opacity: 0; pointer-events: none; transform: translateX(-50%) translateY(-10px); }
+        .board-stage.idle .board-topbar { opacity: 0; pointer-events: none; transform: translateX(-50%) translateY(12px); }
         @media (hover: none) {
             .board-stage.idle .board-topbar { opacity: 1; pointer-events: auto; transform: translateX(-50%); }
         }
@@ -858,9 +858,14 @@
         .bt-btn svg { width: 14px; height: 14px; flex: none; }
         .bt-btn:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
         .bt-btn:active { transform: scale(0.94); }
+        @media (max-width: 768px) {
+            /* 窄屏：Excalidraw 底部工具条占位，胶囊再上移一档 */
+            .board-topbar { bottom: 74px; gap: 0; padding: 4px 5px; }
+            .board-topbar .bt-title { max-width: 26vw; font-size: 12.5px; }
+        }
         /* 信息浮层 */
         .board-pop {
-            position: absolute; top: 66px; right: 16px; z-index: 32; width: 300px; max-width: calc(100vw - 32px);
+            position: absolute; bottom: 72px; right: 16px; z-index: 32; width: 300px; max-width: calc(100vw - 32px);
             padding: 16px 18px; border-radius: 18px;
             background: linear-gradient(145deg, rgba(32, 32, 40, 0.92), rgba(20, 20, 26, 0.88));
             backdrop-filter: blur(28px) saturate(180%); -webkit-backdrop-filter: blur(28px) saturate(180%);
