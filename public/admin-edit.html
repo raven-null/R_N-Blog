@@ -117,6 +117,19 @@
     .ee-cover img{width:100%;height:100%;object-fit:cover;display:none}
     .ee-cover-actions{display:flex;gap:6px;flex-wrap:wrap}
     .ee-cover-actions .ee-btn{font-size:12.5px;padding:6px 12px}
+    /* 发布弹窗 */
+    .ee-modal{position:fixed;inset:0;z-index:2500;display:none}
+    .ee-modal.open{display:flex;align-items:center;justify-content:center}
+    .ee-modal-mask{position:absolute;inset:0;background:rgba(5,5,9,.6);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+    .ee-modal-box{position:relative;width:min(430px,92vw);max-height:88vh;overflow-y:auto;padding:22px;border-radius:20px;background:linear-gradient(145deg,rgba(34,34,42,.97),rgba(18,18,24,.96));border:1px solid rgba(255,255,255,.13);box-shadow:0 30px 90px -20px rgba(0,0,0,.8)}
+    .ee-modal-box h3{font-size:16px;font-weight:700;color:var(--accent);margin:0 0 6px}
+    .ee-modal-sub{font-size:12.5px;color:var(--text-muted);line-height:1.7;margin-bottom:14px}
+    .ee-modal-field{margin-bottom:12px}
+    .ee-modal-field label{display:block;font-size:12px;color:var(--text-muted);margin-bottom:6px}
+    .ee-modal-field input,.ee-modal-field select{width:100%;padding:9px 12px;border-radius:var(--radius-sm);background:var(--bg-input);border:1px solid var(--border);color:var(--text);font-size:13px;font-family:inherit}
+    .ee-modal-field input:focus,.ee-modal-field select:focus{outline:none;border-color:var(--accent)}
+    .ee-modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+    .ee-modal-tip{font-size:12px;color:#ffb4ad;min-height:16px;margin-top:8px;line-height:1.6}
     /* 图库选择弹窗 */
     .ee-picker{position:fixed;inset:0;z-index:2400;display:none}
     .ee-picker.open{display:flex;align-items:center;justify-content:center}
@@ -173,7 +186,7 @@
         </div>
         <div class="ee-right">
             <button class="ee-btn" id="eeViewBtn" onclick="eeOpenFront()">前台查看</button>
-            <button class="ee-btn" id="eeToggleBtn" onclick="eeToggleStatus()">下架</button>
+            <button class="ee-btn primary" id="eePublishBtn" onclick="eeOpenPublish()">发布</button>
             <button class="ee-btn danger" onclick="eeDelete()">删除</button>
             <button class="ee-btn" onclick="eeSavePreview()">保存并预览</button>
             <button class="ee-btn primary" id="eeSaveBtn" onclick="eeSave()">保存</button>
@@ -237,6 +250,42 @@
         </section>
     </main>
 
+    <div class="ee-modal" id="eePublishModal">
+        <div class="ee-modal-mask" onclick="eeClosePublish()"></div>
+        <div class="ee-modal-box">
+            <h3>发布</h3>
+            <div class="ee-modal-sub">确定后会保存当前内容；状态选「草稿」即为下架。</div>
+            <div class="ee-modal-field">
+                <label>状态</label>
+                <select id="eePubStatus">
+                    <option value="published">发布</option>
+                    <option value="draft">草稿（下架）</option>
+                </select>
+            </div>
+            <div class="ee-modal-field">
+                <label>标签（逗号分隔）</label>
+                <input type="text" id="eePubTags" placeholder="如：白板, 灵感">
+            </div>
+            <div class="ee-modal-field">
+                <label>封面图</label>
+                <div class="ee-cover" id="eePubCoverBox">
+                    <img id="eePubCoverImg" alt="封面预览">
+                    <span id="eePubCoverEmpty">未设置封面</span>
+                </div>
+                <div class="ee-cover-actions" style="margin-top:8px">
+                    <label class="ee-btn" style="cursor:pointer">上传封面<input type="file" accept="image/*" id="eePubCoverFile" style="display:none"></label>
+                    <button type="button" class="ee-btn" onclick="eePickCover()">从图库选封面</button>
+                    <button type="button" class="ee-btn danger" onclick="eeClearCover()">移除封面</button>
+                </div>
+            </div>
+            <div class="ee-modal-actions">
+                <button type="button" class="ee-btn" onclick="eeClosePublish()">取消</button>
+                <button type="button" class="ee-btn primary" id="eePubOk" onclick="eeConfirmPublish()">确定</button>
+            </div>
+            <div class="ee-modal-tip" id="eePubTip"></div>
+        </div>
+    </div>
+
     <div class="ee-picker" id="eePicker">
         <div class="ee-picker-mask" onclick="eeClosePicker()"></div>
         <div class="ee-picker-box">
@@ -246,6 +295,6 @@
     </div>
 
     <div class="ee-toast" id="eeToast"></div>
-    <script src="js/admin-edit.js?v=1.0.9"></script>
+    <script src="js/admin-edit.js?v=1.1.0"></script>
 </body>
 </html>

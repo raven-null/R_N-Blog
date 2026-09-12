@@ -201,9 +201,14 @@
     // 封面：缩略图预览 + 上传 / 从图库选 / 移除（页面上不展示 URL 文本）
     window.eeRenderCover = function () {
         var url = $('eeImage').value.trim();
+        // 右栏封面卡与发布弹窗内的封面预览同步
         var img = $('eeCoverImg');
         var empty = $('eeCoverEmpty');
         var clear = $('eeCoverClear');
+        var pImg = $('eePubCoverImg');
+        var pEmpty = $('eePubCoverEmpty');
+        if (pImg) { if (url) { pImg.src = url; pImg.style.display = 'block'; } else { pImg.removeAttribute('src'); pImg.style.display = 'none'; } }
+        if (pEmpty) pEmpty.style.display = url ? 'none' : '';
         if (url) {
             img.src = url;
             img.style.display = 'block';
@@ -311,7 +316,7 @@
         var badge = $('eeStatusBadge');
         badge.textContent = st === 'published' ? '已发布' : '草稿';
         badge.className = 'ee-badge ' + (st === 'published' ? 'status-pub' : 'status-draft');
-        $('eeToggleBtn').textContent = st === 'published' ? '下架' : '发布';
+        // 顶部按钮固定为「发布」（下拉里选草稿即为下架），不再随状态改文案
     }
 
     // ===== 加载 =====
@@ -419,6 +424,31 @@
     };
 
     // ===== 状态 / 删除 / 前台 =====
+    // 发布弹窗：状态 / 标签 / 封面，确认后保存
+    window.eeOpenPublish = function () {
+        var s = $('eePubStatus'), t = $('eePubTags');
+        if (s) s.value = ($('eeStatusSel').value || 'published');
+        if (t) t.value = ($('eeTags').value || '');
+        window.eeRenderCover();
+        var tip = $('eePubTip'); if (tip) tip.textContent = '';
+        var box = $('eePublishModal'); if (box) box.classList.add('open');
+    };
+    window.eeClosePublish = function () {
+        var box = $('eePublishModal'); if (box) box.classList.remove('open');
+    };
+    window.eeConfirmPublish = async function () {
+        var tip = $('eePubTip');
+        if (tip) tip.textContent = '';
+        var status = ($('eePubStatus') && $('eePubStatus').value) || 'published';
+        $('eeStatusSel').value = status;
+        if ($('eePubTags')) $('eeTags').value = $('eePubTags').value;
+        window.eeMarkDirty();
+        var ok = await doSave(true);
+        if (!ok) { if (tip) tip.textContent = '保存失败，请检查标题与内容后重试'; return; }
+        window.eeClosePublish();
+        renderStatusBadge();
+        toast(status === 'draft' ? '已存为草稿（下架）' : '已发布', 'success');
+    };
     window.eeToggleStatus = async function () {
         if (!doc) return;
         var cur = doc.status || 'published';
@@ -461,6 +491,11 @@
         if (t) t.addEventListener('input', window.eeMarkDirty);
         var coverFile = $('eeCoverFile');
         if (coverFile) coverFile.addEventListener('change', function () {
+            eeUploadCover(this.files && this.files[0]);
+            this.value = '';
+        });
+        var pubCoverFile = $('eePubCoverFile');
+        if (pubCoverFile) pubCoverFile.addEventListener('change', function () {
             eeUploadCover(this.files && this.files[0]);
             this.value = '';
         });

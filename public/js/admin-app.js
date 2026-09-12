@@ -2108,8 +2108,8 @@
                      '<div class="exc-cover-row">'+
                      '<div class="exc-cover-preview" id="excPubCoverPreview">'+(cover?'<img src="'+escAttr(cover)+'" alt="封面预览">':'<span>未设置</span>')+'</div>'+
                      '<div class="exc-cover-btns">'+
-                     '<label class="btn btn-ghost btn-sm" style="cursor:pointer">上传<input type="file" accept="image/*" id="excPubCoverFile" style="display:none"></label>'+
-                     '<button type="button" class="btn btn-ghost btn-sm" id="excPubCoverPick">从图库选</button>'+
+                     '<label class="btn btn-ghost btn-sm" style="cursor:pointer">上传封面<input type="file" accept="image/*" id="excPubCoverFile" style="display:none"></label>'+
+                     '<button type="button" class="btn btn-ghost btn-sm" id="excPubCoverPick">从图库选封面</button>'+
                      '<button type="button" class="btn btn-ghost btn-sm" id="excPubCoverClear">移除</button>'+
                      '</div></div><input type="hidden" id="excPubCover" value="'+escAttr(cover)+'"></div>',
                 onReady:function(){
