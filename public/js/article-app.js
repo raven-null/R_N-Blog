@@ -122,13 +122,61 @@
                 const first = await this.fetchChunk(d.id, 0);
                 this.applyBlobArticle(Object.assign({}, d, { content: (first && first.content) || '' }), filename);
                 this._chunk.loaded = 0;
+                this._chunk.current = 0;
                 this.setupChunkLoader();
+                this.renderChunkToc();
+                this.prefetchChunk(d.id, 1);
             },
             async fetchChunk(id, i) {
+                const st = this._chunk;
+                if (st && st.cache && st.cache[i]) return st.cache[i];
                 try {
                     const r = await fetch(`/api/admin?action=article-chunk&id=${encodeURIComponent(id)}&i=${i}`).then(x => x.json());
-                    return (r && r.status === 'success') ? r.data : null;
+                    const data = (r && r.status === 'success') ? r.data : null;
+                    if (data && st) { st.cache = st.cache || {}; st.cache[i] = data; }
+                    return data;
                 } catch (e) { return null; }
+            },
+            // 预取某章（读第一章时先把第二章拿到手，翻页更顺）
+            async prefetchChunk(id, i) {
+                const st = this._chunk;
+                if (!st || i >= st.total) return;
+                if (st.cache && st.cache[i]) return;
+                await this.fetchChunk(id, i);
+            },
+            // 右侧目录：列出全部章节，点击跳章（未加载的会依次加载）
+            renderChunkToc() {
+                const st = this._chunk;
+                const box = document.getElementById('tocChapters');
+                if (!st || !box || !st.chapters || !st.chapters.length) return;
+                box.style.display = '';
+                box.innerHTML = '<div class="toc-chapters-title">章节 · 共 ' + st.total + ' 章</div>' +
+                    st.chapters.map(ch => {
+                        const active = ch.i === st.current;
+                        const loaded = ch.i <= st.loaded;
+                        return '<button class="toc-chapter-item' + (active ? ' active' : '') + (loaded ? ' loaded' : '') +
+                            '" onclick="ArticleApp.jumpToChapter(' + ch.i + ')">' +
+                            '<span class="ci-idx">' + (ch.i + 1) + '</span>' +
+                            '<span class="ci-title">' + this.esc(ch.title || '') + '</span>' +
+                            '<span class="ci-words">' + Math.max(1, Math.round((ch.words || 0) / 1000)) + 'k</span>' +
+                            '</button>';
+                    }).join('');
+            },
+            async jumpToChapter(i) {
+                const st = this._chunk;
+                if (!st) return;
+                if (i > st.loaded) {
+                    for (let k = st.loaded + 1; k <= i; k++) {
+                        const ok = await this.loadNextChunk();
+                        if (!ok) break;
+                    }
+                }
+                st.current = i;
+                const target = i === 0
+                    ? document.getElementById('article-content')
+                    : document.querySelector('.article-chunk[data-chunk="' + i + '"]');
+                if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                this.renderChunkToc();
             },
             setupChunkLoader() {
                 const st = this._chunk;
@@ -184,15 +232,16 @@
             },
             async loadNextChunk() {
                 const st = this._chunk;
-                if (!st || st.loading) return;
+                if (!st || st.loading) return false;
                 const next = st.loaded + 1;
-                if (next >= st.total) return;
+                if (next >= st.total) return false;
                 st.loading = true;
+                let ok = false;
                 try {
                     const ch = await this.fetchChunk(st.id, next);
-                    if (!ch) return;
+                    if (!ch) return false;
                     const host = document.getElementById('article-content');
-                    if (!host) return;
+                    if (!host) return false;
                     const html = await MarkdownParser.parseMarkdownAsync(ch.content);
                     const wrap = document.createElement('section');
                     wrap.className = 'article-chunk';
@@ -201,6 +250,8 @@
                     wrap.innerHTML = '<h2 class="chunk-title">' + title + '</h2>' + html;
                     host.appendChild(wrap);
                     st.loaded = next;
+                    st.current = next;
+                    ok = true;
                     this.enhanceImages(wrap);
                     requestAnimationFrame(() => this.highlightVisibleBlocks(wrap));
                     this.highlightRemainingBlocks(wrap);
@@ -209,7 +260,10 @@
                 } finally {
                     st.loading = false;
                     this.renderChunkProgress();
+                    this.renderChunkToc();
                 }
+                this.prefetchChunk(st.id, next + 1);
+                return ok;
             },
             // 加载资讯正文（按 id 从 recommendations.json 匹配，按需解析）
             async loadNewsArticle(id) {

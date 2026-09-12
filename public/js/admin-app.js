@@ -76,6 +76,7 @@
             const type=a.type||'article';
             const tlabel=artTypeLabel(type);
             const badge=tlabel?'<span class="ac-badge">'+esc(tlabel)+'</span>':'';
+            const chunkBadge=a.chunked?'<span class="tt-b">分 '+(a.chunkCount||0)+' 章</span>':'';
             const dot='<span class="ac-status '+(isPub?'pub':'draft')+'"></span>';
             const id=escJs(a.id);
             let cover;
@@ -92,7 +93,7 @@
             return '<div class="art-card" data-id="'+escAttr(a.id)+'" onclick="artCardClick(\''+id+'\',event)">'+
                 cover+
                 '<div class="ac-body">'+
-                '<div class="ac-title"><span class="tt">'+esc(a.title||'(未命名)')+'</span></div>'+
+                '<div class="ac-title"><span class="tt">'+esc(a.title||'(未命名)')+'</span>'+chunkBadge+'</div>'+
                 (type==='article'?'<div class="ac-desc">'+esc(String(a.excerpt||'').slice(0,130))+'</div>':'')+
                 '<div class="ac-meta">'+meta+'</div>'+
                 '</div>'+
