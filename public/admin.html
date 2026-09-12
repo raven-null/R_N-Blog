@@ -377,7 +377,12 @@
         .exc-cover-row{display:flex;align-items:center;gap:12px}
         .exc-cover-preview{width:104px;height:64px;flex-shrink:0;border-radius:10px;border:1px dashed var(--border);background:#0a0b10;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text-muted);overflow:hidden}
         .exc-cover-preview img{width:100%;height:100%;object-fit:cover;display:block}
-        .exc-cover-btns{display:flex;gap:6px;flex-wrap:wrap}
+        .exc-cover-btns{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+        .exc-cover-btns .btn{height:28px;line-height:1;justify-content:center;margin:0}
+        .exc-field label.btn{
+            display:inline-flex;align-items:center;justify-content:center;
+            margin:0;padding:4px 10px;font-size:11px;font-weight:500;color:rgba(255,255,255,0.7);
+        }
         .exc-modal-tip{font-size:11.5px;color:var(--text-muted);line-height:1.6;margin-top:6px}
         .exc-modal-actions{flex:none;display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
         #excModalBody{flex:1;min-height:0;overflow-y:auto;padding-right:4px;overscroll-behavior:contain}
@@ -563,6 +568,12 @@
         .publish-cover-preview:hover{border-color:var(--accent);background:rgba(79,195,247,0.05)}
         .publish-cover-preview img{width:100%;height:100%;object-fit:cover}
         .publish-cover-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+/* 封面区三个按钮统一外观与高度（label 会被 .publish-field label 的 block/下边距影响） */
+.publish-cover-actions .btn{height:28px;line-height:1;justify-content:center;margin:0}
+.publish-field label.btn,.publish-cover-actions label.btn{
+    display:inline-flex;align-items:center;justify-content:center;
+    margin:0;padding:4px 10px;font-size:11px;font-weight:500;color:rgba(255,255,255,0.7);
+}
         .publish-modal-footer{
             display:flex;justify-content:flex-end;gap:12px;
             margin-top:24px;padding-top:16px;
