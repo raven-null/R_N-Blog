@@ -755,7 +755,7 @@
         .board-stage .board-canvas .excalidraw-edit-host { position: absolute; inset: 0; }
         /* 编辑态工具条：底部居中，避开 Excalidraw 的左上菜单与顶部工具栏 */
         .board-tools {
-            position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%);
+            /* 位置由统一的 .board-bottom 负责 */
             z-index: 33; display: none; align-items: center; gap: 8px; font-family: inherit;
         }
         .board-stage.editing .board-tools { display: inline-flex; }
@@ -830,8 +830,14 @@
         .board-dlg .bd-err { display: none; margin-top: 12px; padding: 8px 12px; border-radius: 10px; font-size: 12px; color: #ff9f0a; background: rgba(255, 159, 10, 0.1); border: 1px solid rgba(255, 159, 10, 0.25); }
         .board-dlg .bd-err.show { display: block; }
         /* 底部悬浮胶囊（放页面下方，避免遮挡白板顶部工具条） */
-        .board-topbar {
+        /* 统一底部工具条：查看态放胶囊，编辑态放「保存 / 完成」 */
+        .board-bottom {
             position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
+            z-index: 33; display: flex; align-items: center; justify-content: center;
+            transition: opacity 0.45s ease, transform 0.45s ease;
+        }
+        .board-topbar {
+            /* 位置由统一的 .board-bottom 负责 */
             z-index: 30; display: flex; align-items: center; gap: 2px;
             padding: 5px 6px; border-radius: 20px; max-width: 94vw;
             background: linear-gradient(145deg, rgba(30, 30, 37, 0.85), rgba(20, 20, 26, 0.78));
@@ -840,9 +846,9 @@
             box-shadow: 0 14px 44px -10px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.1);
             transition: opacity 0.45s ease, transform 0.45s ease;
         }
-        .board-stage.idle .board-topbar { opacity: 0; pointer-events: none; transform: translateX(-50%) translateY(12px); }
+        .board-stage.idle:not(.editing) .board-bottom { opacity: 0; pointer-events: none; transform: translateX(-50%) translateY(12px); }
         @media (hover: none) {
-            .board-stage.idle .board-topbar { opacity: 1; pointer-events: auto; transform: translateX(-50%); }
+            .board-stage.idle:not(.editing) .board-bottom { opacity: 1; pointer-events: auto; transform: translateX(-50%); }
         }
         .board-topbar .bt-title {
             max-width: 34vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -860,7 +866,8 @@
         .bt-btn:active { transform: scale(0.94); }
         @media (max-width: 768px) {
             /* 窄屏：Excalidraw 底部工具条占位，胶囊再上移一档 */
-            .board-topbar { bottom: 74px; gap: 0; padding: 4px 5px; }
+            .board-bottom { bottom: 74px; }
+            .board-topbar { gap: 0; padding: 4px 5px; }
             .board-topbar .bt-title { max-width: 26vw; font-size: 12.5px; }
         }
         /* 信息浮层 */
@@ -2328,6 +2335,7 @@
                 content.innerHTML =
                     '<div class="board-stage" id="boardStage" data-board="' + boardId + '">' +
                     '<div class="board-canvas"><div id="boardCanvasHost" data-excalidraw data-note="' + boardId + '" data-mode="view"></div></div>' +
+                    '<div class="board-bottom" id="boardBottom">' +
                     '<div class="board-topbar" id="boardTopbar">' +
                     '<a class="bt-btn" href="/" title="返回博客"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m3 10.5 9-7.5 9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg></a>' +
                     '<span class="bt-title">' + title + '</span>' +
@@ -2355,6 +2363,7 @@
                     '<button class="board-save" id="boardSaveBtn" title="保存到服务器（桌面端 Ctrl / ⌘ + S）"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="m7 11 5 5 5-5"/><path d="M4 20h16"/></svg><span id="boardSaveLabel">保存</span></button>' +
                     '<button class="board-done" id="boardDoneBtn" title="退出编辑（有改动会先问是否保存）"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>完成</button>' +
                     '<span class="board-tip" id="boardTip"></span>' +
+                    '</div>' +
                     '</div>' +
                     '<div class="board-dlg" id="boardDlg">' +
                     '<div class="bd-card">' +
