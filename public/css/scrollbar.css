@@ -67,21 +67,44 @@ table::-webkit-scrollbar,
     height: 4px !important;
 }
 
-/* 原先被隐藏滚动条的容器（目录 / 代码块 / 表格）：改为显示细窄主题色滚动条 */
+/* ===== 侧边栏 / 目录：不显示滚动条，并且禁止横向滚动 ===== */
+/* 目录侧栏、代码块、表格：保持原设计的「可滚动但不显示滚动条」 */
 .toc-sidebar-inner,
 .toc-list-wrapper,
 .article-content pre,
 .article-content table {
-    scrollbar-width: thin !important;
-    -ms-overflow-style: auto;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none;
+    overflow-x: hidden !important;
 }
 .toc-sidebar-inner::-webkit-scrollbar,
 .toc-list-wrapper::-webkit-scrollbar,
 .article-content pre::-webkit-scrollbar,
 .article-content table::-webkit-scrollbar {
-    display: block !important;
-    width: 4px !important;
-    height: 4px !important;
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+}
+
+/* 侧边栏容器：只允许纵向滚动，横向一律隐藏（不出现左右滚动条） */
+.sidebar-nav,
+.sidebar-foot,
+.toc-sidebar,
+.toc-sidebar-inner,
+.toc-list-wrapper {
+    overflow-x: hidden !important;
+}
+
+/* 折叠后的后台侧边栏：彻底没有滚动条，也不可横向滚动 */
+.sidebar.collapsed,
+.sidebar.collapsed * {
+    scrollbar-width: none !important;
+}
+.sidebar.collapsed::-webkit-scrollbar,
+.sidebar.collapsed *::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
 }
 
 /* 窄屏：更窄 */

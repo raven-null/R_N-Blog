@@ -16,7 +16,7 @@
     <style>
         *{margin:0;padding:0;box-sizing:border-box}
         :root{--bg:#080808;--bg-card:#111;--bg-input:#1a1a1a;--bg-hover:#1c1c1c;--bg-active:#1a2a3a;--text:#fff;--text-muted:rgba(255,255,255,.85);--accent:#4fc3f7;--accent-dim:rgba(79,195,247,.1);--border:#252525;--border-light:#333;--danger:#ef5350;--success:#66bb6a;--warning:#ffa726;--radius:10px;--radius-sm:6px;--shadow:0 8px 32px rgba(0,0,0,.5);--sidebar-w:220px;--sidebar-collapsed:52px}
-        body{font-family:-apple-system,'Segoe UI','PingFang SC',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+        body{font-family:-apple-system,'Segoe UI','PingFang SC',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
         .login-page{display:flex;align-items:center;justify-content:center;min-height:100vh;background:radial-gradient(ellipse at 30% 40%,#0d1520 0%,#080808 70%)}
         .login-box{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:48px 40px;width:380px;text-align:center;box-shadow:var(--shadow)}
         .login-box h1{font-size:24px;margin-bottom:6px;color:var(--accent);font-weight:700;letter-spacing:2px}
@@ -40,6 +40,13 @@
 
         .sidebar{width:var(--sidebar-w);background:var(--bg-card);border-right:1px solid var(--border);flex-shrink:0;transition:width .2s cubic-bezier(.4,0,.2,1);overflow:hidden;display:flex;flex-direction:column}
         .sidebar.collapsed{width:var(--sidebar-collapsed)}
+        /* 折叠态：不出现任何滚动条，且不允许横向滚动 */
+        .sidebar.collapsed .sidebar-nav,
+        .sidebar.collapsed .sidebar-top,
+        .sidebar.collapsed .sidebar-foot{overflow:hidden!important}
+        .sidebar.collapsed .sidebar-top{padding:12px 0;justify-content:center}
+        .sidebar.collapsed .sidebar-item{gap:0;overflow:hidden}
+        .sidebar.collapsed .sidebar-foot{padding:10px 0 14px}
         .sidebar.collapsed .sidebar-item span{opacity:0;width:0}
         .sidebar.collapsed .sidebar-item{padding:11px 0;justify-content:center}
         .sidebar.collapsed .sidebar-toggle svg{transform:rotate(180deg)}
@@ -49,7 +56,7 @@
         .sidebar-toggle{width:26px;height:26px;display:flex;align-items:center;justify-content:center;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;color:var(--text-muted);transition:all .15s;flex-shrink:0}
         .sidebar-toggle:hover{border-color:var(--accent);color:var(--accent)}
         .sidebar-toggle svg{width:13px;height:13px;transition:transform .2s}
-        .sidebar-nav{flex:1;padding:8px 0;overflow-y:auto}
+        .sidebar-nav{flex:1;padding:8px 0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain}
         .sidebar-item{display:flex;align-items:center;gap:12px;padding:10px 20px;cursor:pointer;color:var(--text-muted);font-size:13px;transition:all .12s;border-left:3px solid transparent;white-space:nowrap}
         .sidebar-item:hover{background:var(--bg-hover);color:var(--text)}
         .sidebar-item.active{background:var(--bg-active);color:var(--accent);border-left-color:var(--accent)}
@@ -61,7 +68,7 @@
         .sidebar-refresh-btn svg{width:15px;height:15px;flex-shrink:0}
         .sidebar-refresh-btn.spinning svg{animation:refreshSpin .7s linear infinite}
         @keyframes refreshSpin{to{transform:rotate(360deg)}}
-        .sidebar.collapsed .sidebar-foot{padding:10px 8px 14px}
+        .sidebar.collapsed .sidebar-foot{padding:10px 0 14px}
         .sidebar.collapsed .sidebar-refresh-btn{justify-content:center;padding:11px 0;gap:0}
         .sidebar.collapsed .sidebar-refresh-btn span{display:none}
 
@@ -537,7 +544,7 @@
         }
     </style>
     <link rel="stylesheet" href="css/glass.css?v=1.0.11">
-    <link rel="stylesheet" href="/css/scrollbar.css?v=1.0.0">
+    <link rel="stylesheet" href="/css/scrollbar.css?v=1.0.1">
 </head>
 <body>
     <div class="login-page" id="loginPage">
