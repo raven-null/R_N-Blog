@@ -194,16 +194,103 @@
 
     // ===== 渲染 =====
     function renderCover() {
+        window.eeRenderCover();
+    }
+    // 封面：缩略图预览 + 上传 / 从图库选 / 移除（页面上不展示 URL 文本）
+    window.eeRenderCover = function () {
         var url = $('eeImage').value.trim();
-        var box = $('eeCover');
+        var img = $('eeCoverImg');
+        var empty = $('eeCoverEmpty');
+        var clear = $('eeCoverClear');
         if (url) {
-            box.style.backgroundImage = 'url("' + url.replace(/"/g, '%22') + '")';
-            box.textContent = '';
+            img.src = url;
+            img.style.display = 'block';
+            if (empty) empty.style.display = 'none';
+            if (clear) clear.style.display = '';
         } else {
-            box.style.backgroundImage = '';
-            box.textContent = '无封面';
+            img.removeAttribute('src');
+            img.style.display = 'none';
+            if (empty) empty.style.display = '';
+            if (clear) clear.style.display = 'none';
+        }
+    };
+    function fileToBase64(file) {
+        return new Promise(function (resolve, reject) {
+            var fr = new FileReader();
+            fr.onload = function () {
+                var s = String(fr.result || '');
+                var i = s.indexOf(',');
+                resolve({ base64: i >= 0 ? s.slice(i + 1) : s, mime: file.type || 'image/png' });
+            };
+            fr.onerror = function () { reject(new Error('读取文件失败')) };
+            fr.readAsDataURL(file);
+        });
+    }
+    async function eeUploadCover(file) {
+        if (!file) return;
+        try {
+            var d = await fileToBase64(file);
+            var res = await fetch('/api/article-image', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Admin-Key': adminKey },
+                body: JSON.stringify({ data: d.base64, mime: d.mime, name: file.name })
+            });
+            var r = await res.json();
+            if (r.status === 'success' && r.url) {
+                $('eeImage').value = r.url;
+                window.eeRenderCover();
+                window.eeMarkDirty();
+                toast('封面已上传', 'success');
+            } else {
+                toast(r.message || '上传失败', 'error');
+            }
+        } catch (e) {
+            toast('上传失败：' + (e.message || e), 'error');
         }
     }
+    window.eeClearCover = function () {
+        $('eeImage').value = '';
+        window.eeRenderCover();
+        window.eeMarkDirty();
+        toast('封面已移除', 'success');
+    };
+    window.eePickCover = async function () {
+        var box = $('eePicker');
+        var grid = $('eePickerGrid');
+        if (!box || !grid) return;
+        grid.innerHTML = '<div class="ee-picker-empty">加载中…</div>';
+        box.classList.add('open');
+        try {
+            var r = await api('action=images&_=' + Date.now());
+            var list = (r && r.status === 'success' && Array.isArray(r.data)) ? r.data : [];
+            if (!list.length) {
+                grid.innerHTML = '<div class="ee-picker-empty">图库暂无图片，可到「图片管理」上传</div>';
+                return;
+            }
+            window.__eePickList = list;
+            grid.innerHTML = list.map(function (img, i) {
+                var thumb = img.thumb || img.url || '';
+                return '<div class="ee-picker-item" onclick="eeChooseCover(' + i + ')">' +
+                    '<img src="' + esc(thumb) + '" loading="lazy" alt="">' +
+                    '<span>' + esc(img.key || '') + '</span></div>';
+            }).join('');
+        } catch (e) {
+            grid.innerHTML = '<div class="ee-picker-empty">加载失败：' + esc(e.message || e) + '</div>';
+        }
+    };
+    window.eeClosePicker = function () {
+        var box = $('eePicker');
+        if (box) box.classList.remove('open');
+    };
+    window.eeChooseCover = function (i) {
+        var img = (window.__eePickList || [])[i];
+        if (!img) return;
+        $('eeImage').value = img.url || '';
+        window.eeRenderCover();
+        window.eeClosePicker();
+        window.eeMarkDirty();
+        toast('封面已设置', 'success');
+    };
     function renderMeta() {
         if (!doc) return;
         var rows = [
@@ -248,10 +335,12 @@
         renderMeta();
         renderStatusBadge();
         if (docType === 'card') $('eeViewBtn').textContent = '首页查看';
-        // 随记与白板没有封面图：隐藏封面卡片（保存时也不写 image，清掉存量随机封面）
-        if (docType !== 'article') {
+        // 随记没有封面图；摘要只有文章有（白板保留封面图）
+        if (docType === 'card') {
             var coverCard = $('eeCoverCard');
             if (coverCard) coverCard.style.display = 'none';
+        }
+        if (docType !== 'article') {
             var excerptCard = $('eeExcerptCard');
             if (excerptCard) excerptCard.style.display = 'none';
         }
@@ -280,7 +369,7 @@
             title: title,
             tags: tags,
             excerpt: docType === 'article' ? $('eeExcerpt').value.trim() : '',
-            image: docType === 'article' ? $('eeImage').value.trim() : '',
+            image: docType === 'card' ? '' : $('eeImage').value.trim(),
             status: $('eeStatusSel').value,
             type: docType,
             boardId: (doc && doc.boardId) || '',
@@ -368,6 +457,11 @@
         // 标题改动同样计入未保存状态
         var t = $('eeTitle');
         if (t) t.addEventListener('input', window.eeMarkDirty);
+        var coverFile = $('eeCoverFile');
+        if (coverFile) coverFile.addEventListener('change', function () {
+            eeUploadCover(this.files && this.files[0]);
+            this.value = '';
+        });
         load().then(function () { setTimeout(fitEditor, 120); });
     }
     window.addEventListener('resize', function () { setTimeout(fitEditor, 80); });

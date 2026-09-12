@@ -299,7 +299,7 @@ const BlogApp = {
 
         return `
             <div class="card" data-href="article.html?post=${this.escAttr(post.filename)}&blob=${this.escAttr(post.id || '')}" onclick="BlogApp.openPost('${this.escAttr(post.filename)}', '${this.escAttr(post.id || '')}')">
-                ${(post.image && post.type !== 'whiteboard') ? `
+                ${post.image ? `
                     <div class="card-img">
                         <img src="${this.escAttr(post.image)}" alt="${this.esc(post.title)}" class="img-placeholder" loading="lazy" decoding="async"
                              referrerpolicy="no-referrer"
@@ -329,6 +329,42 @@ const BlogApp = {
                 </div>
             </div>
         `;
+    },
+
+    // 白板文章卡片：网格底 / 封面图 + 交互白板标识（点击进入整页白板）
+    renderBoardCard(post) {
+        const dateFormatted = this.formatDate(post.date);
+        const avatarImg = this.getAuthorAvatar(post.author);
+        const authorName = this.getAuthorName(post.author);
+        const tags = (post.tags || []).map(tag => `<span>${this.esc(tag)}</span>`).join(' ');
+        const cover = post.image
+            ? `<div class="board-cover has-img">
+                    <img src="${this.escAttr(post.image)}" alt="${this.esc(post.title)}" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="BlogApp.handleCoverError(this)">
+                    <span class="board-chip">交互白板</span>
+               </div>`
+            : `<div class="board-cover">
+                    <svg class="board-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M7 12h10M12 7v10"/><path d="M9.5 9.5l5 5M14.5 9.5l-5 5"/></svg>
+                    <span class="board-chip">交互白板</span>
+               </div>`;
+        return `
+            <div class="card card-board" data-href="article.html?post=${this.escAttr(post.filename)}&blob=${this.escAttr(post.id || '')}" onclick="BlogApp.openPost('${this.escAttr(post.filename)}', '${this.escAttr(post.id || '')}')">
+                ${cover}
+                <div class="card-body">
+                    <div class="card-author">
+                        <div class="card-avatar" style="background-image:url('${avatarImg}');"></div>
+                        <span class="card-username">${authorName}</span>
+                    </div>
+                    <div class="card-tag">
+                        <span class="card-type-badge">白板</span>
+                        ${tags}
+                    </div>
+                    <div class="card-title">${post.title}</div>
+                    <div class="card-meta">
+                        <span class="card-date">${dateFormatted}</span>
+                        <span class="card-reading">可交互</span>
+                    </div>
+                </div>
+            </div>`;
     },
 
     // 卡片笔记：融入瀑布的简约卡（无封面；标题上、标签中下、时间右下；点击与普通文章一致进阅读页）
