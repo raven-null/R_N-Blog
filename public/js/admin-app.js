@@ -795,9 +795,15 @@
             const t=document.getElementById('publishModalTitle');
             if(t)t.textContent=({article:'发布文章',note:'发布随记',board:'发布白板'})[mode]||'发布';
             const isArticle=mode==='article';
-            const ex=document.getElementById('publishExcerptField');if(ex)ex.style.display=isArticle?'':'none';
-            const cv=document.getElementById('publishCoverField');if(cv)cv.style.display=mode==='note'?'':'none';
-            const bn=document.getElementById('publishBoardNameField');if(bn)bn.style.display=mode==='board'?'':'none';
+            // 字段显隐每次强制重置：先清掉任何残留的 inline display，再按当前形态设置
+            // 文章与白板都显示封面；只有随记没有封面
+            const ex=document.getElementById('publishExcerptField');
+            const cv=document.getElementById('publishCoverField');
+            const bn=document.getElementById('publishBoardNameField');
+            [ex,cv,bn].forEach(function(el){if(el)el.style.removeProperty('display')});
+            if(ex&&!isArticle)ex.style.display='none';
+            if(cv&&mode==='note')cv.style.display='none';
+            if(bn&&mode!=='board')bn.style.display='none';
             if(mode==='note'){
                 // 随记表单里已填的标签作为弹窗初值
                 const raw=(document.getElementById('wmNoteTags').value||'').split(/[,，]/).map(function(s){return s.trim()}).filter(Boolean);
