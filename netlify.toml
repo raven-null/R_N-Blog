@@ -98,3 +98,11 @@
   for = "/*.html"
   [headers.values]
     Cache-Control = "no-cache"
+
+# ===== 站点根图标 =====
+# 五个页面 head 已统一声明 favicon；/favicon.ico 也返回同一张图标，
+# 保证直接访问根路径图标、爬虫抓取、旧书签一致。
+[[redirects]]
+  from = "/favicon.ico"
+  to = "/images/Default/web-logo.webp"
+  status = 200
