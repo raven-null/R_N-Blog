@@ -535,6 +535,8 @@
         }
         // 当前白板形态正在编辑的画板（内部 id，不再让用户手动输入/查看）
         let currentBoardId='';
+        let currentBoardArticleId=''; // 已发布过的白板文章 id（再次发布会更新同一篇）
+        let currentBoardName='';      // 画板名称（同时作为白板文章标题）
         function wbMount(id){
             const host=document.getElementById('wbBoardHost');
             if(!host)return;
@@ -550,8 +552,10 @@
         }
         function wbNew(){
             currentBoardId='wb-'+Math.random().toString(36).slice(2,10);
+            currentBoardArticleId='';
+            currentBoardName='';
             wbMount(currentBoardId);
-            showToast('新画板已创建：直接开画，点「保存画板」保存','success');
+            showToast('新画板已创建：直接开画，点「发布」保存并发布','success');
         }
         async function wbSave(){
             const saver=window.__excalidrawSave;
@@ -757,13 +761,93 @@
         // 初始同步主题点高亮（vditor 就绪后 after 回调里会再次调用）
         switchEditorTheme(currentEditorTheme);
 
-        // ===== 发布弹窗 =====
+        // ===== 发布弹窗（文章 / 随记 / 白板共用，按形态显隐字段） =====
+        function defaultBoardName(){
+            const d=new Date();
+            const p=function(n){return String(n).padStart(2,'0')};
+            return '白板 '+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes());
+        }
         function openPublishModal(){
+            const mode=writeMode||'article';
+            const t=document.getElementById('publishModalTitle');
+            if(t)t.textContent=({article:'发布文章',note:'发布随记',board:'发布白板'})[mode]||'发布';
+            const isArticle=mode==='article';
+            const ex=document.getElementById('publishExcerptField');if(ex)ex.style.display=isArticle?'':'none';
+            const cv=document.getElementById('publishCoverField');if(cv)cv.style.display=isArticle?'':'none';
+            const bn=document.getElementById('publishBoardNameField');if(bn)bn.style.display=mode==='board'?'':'none';
+            if(mode==='note'){
+                // 随记表单里已填的标签作为弹窗初值
+                const raw=(document.getElementById('wmNoteTags').value||'').split(/[,，]/).map(function(s){return s.trim()}).filter(Boolean);
+                if(raw.length&&!selectedArticleTags.length){selectedArticleTags=raw;renderTagPickerChips()}
+            }
+            if(mode==='board'){
+                const el=document.getElementById('edBoardName');
+                if(el)el.value=currentBoardName||defaultBoardName();
+            }
             document.getElementById('publishModal').classList.add('open');
             loadArticleTagNames();
         }
         function closePublishModal(){
             document.getElementById('publishModal').classList.remove('open');
+        }
+        // 确认按钮按当前形态分派
+        function publishConfirm(){
+            if(writeMode==='note')return publishNote();
+            if(writeMode==='board')return publishBoard();
+            return saveArticle();
+        }
+        // 随记发布：标签与状态来自弹窗
+        async function publishNote(){
+            const content=document.getElementById('wmNoteContent').value;
+            if(!String(content||'').trim()){showToast('写点什么再发布','error');return}
+            const title=(document.getElementById('wmNoteTitle').value||'').trim();
+            const finalTitle=title||String(content).replace(/\n/g,' ').trim().slice(0,20);
+            const tags=selectedArticleTags.slice();
+            (document.getElementById('wmNoteTags').value||'').split(/[,，]/).map(function(s){return s.trim()}).filter(Boolean).forEach(function(t){if(!tags.includes(t))tags.push(t)});
+            const status=document.getElementById('edStatus').value;
+            const r=await apiFetch('action=articles',{method:'POST',body:JSON.stringify({title:finalTitle,content:String(content),status,type:'card',tags})});
+            if(r.status!=='success'){showToast(r.message||'发布失败','error');return}
+            showToast(status==='draft'?'随记已存为草稿':'随记已发布','success');
+            document.getElementById('wmNoteTitle').value='';
+            document.getElementById('wmNoteContent').value='';
+            document.getElementById('wmNoteTags').value='';
+            selectedArticleTags=[];
+            renderTagPickerChips();
+            closePublishModal();
+            loadRecentNotes();
+            notifyArticlesChanged();
+        }
+        // 白板发布：先保存画板 → 重命名画板 → 新建/更新白板文章
+        async function publishBoard(){
+            if(!currentBoardId){showToast('请先点「新建画板」创建画板','error');return}
+            const el=document.getElementById('edBoardName');
+            const name=((el&&el.value)||'').trim()||defaultBoardName();
+            const tags=selectedArticleTags.slice();
+            const status=document.getElementById('edStatus').value;
+            const saver=window.__excalidrawSave;
+            if(!saver){showToast('画板尚未初始化完成，请稍后再试','error');return}
+            const ok=await saver();
+            if(!ok){showToast('画板保存未完成（口令/空画布/网络？），已中止发布','error');return}
+            try{await excApi('action=meta&id='+encodeURIComponent(currentBoardId),{method:'POST',body:JSON.stringify({title:name})})}catch(e){}
+            const body={title:name,content:'',status,type:'whiteboard',boardId:currentBoardId,tags};
+            if(currentBoardArticleId)body.id=currentBoardArticleId;
+            const r=await apiFetch('action=articles',{method:'POST',body:JSON.stringify(body)});
+            if(r.status!=='success'){showToast(r.message||'发布失败','error');return}
+            currentBoardArticleId=(r.data&&r.data.id)||currentBoardArticleId;
+            currentBoardName=name;
+            closePublishModal();
+            notifyArticlesChanged();
+            showToast(status==='draft'?'白板已存为草稿':'白板已发布','success');
+        }
+        // 白板重命名（同步更新白板管理列表里的名称）
+        async function wbRename(){
+            if(!currentBoardId){showToast('请先点「新建画板」创建画板','error');return}
+            const t=prompt('画板名称（留空则使用默认名称）：',currentBoardName||'');
+            if(t===null)return;
+            const name=(t||'').trim()||defaultBoardName();
+            const d=await excApi('action=meta&id='+encodeURIComponent(currentBoardId),{method:'POST',body:JSON.stringify({title:name})});
+            if(d&&d.status==='success'){currentBoardName=name;showToast('画板已重命名为「'+name+'」','success')}
+            else showToast((d&&d.message)||'重命名失败','error');
         }
 
         // ===== 图片上传 =====
@@ -1855,16 +1939,25 @@
             alert(d.status==='success'?`已回滚到 rev ${n}`:(d.message||'回滚失败'));
             if(d.status==='success')loadExcalidrawNotes();
         }
-        // 发布为纯白板文章草稿（无封面；想要自动封面前往编辑器「发布为博文 → 纯白板文章」）
+        // 发布为纯白板文章：该画板已有关联文章时更新同一篇，避免重复创建
         async function excPublish(id){
-            const t=prompt(`将白板「${id}」发布为纯白板文章草稿。文章标题：`,'白板：'+id);
-            if(t===null)return;
-            const title=(t||'').trim()||('白板：'+id);
+            let existing=null;
             try{
-                const r=await fetch('/api/admin?action=articles',{method:'POST',headers:{'Content-Type':'application/json','X-Admin-Key':adminKey},body:JSON.stringify({title,content:'',status:'draft',type:'whiteboard',boardId:id,tags:[]})});
+                const r=await apiFetch('action=articles');
+                if(r.status==='success')existing=(r.data||[]).find(function(a){return a.type==='whiteboard'&&a.boardId===id})||null;
+            }catch(e){}
+            const def=existing?(existing.title||('白板：'+id)):('白板：'+id);
+            const t=prompt(existing?'该画板已有关联文章，更新标题（留空保持不变）：':'将白板发布为纯白板文章。文章标题：',def);
+            if(t===null)return;
+            const title=(t||'').trim()||def;
+            const body={title,content:'',status:existing&&existing.status||'draft',type:'whiteboard',boardId:id,tags:(existing&&existing.tags)||[]};
+            if(existing)body.id=existing.id;
+            try{
+                const r=await fetch('/api/admin?action=articles',{method:'POST',headers:{'Content-Type':'application/json','X-Admin-Key':adminKey},body:JSON.stringify(body)});
                 const d=await r.json();
-                alert(d.status==='success'?`白板文章草稿已创建（id: ${d.data&&d.data.id}），去文章管理发布`:(d.message||'创建失败'));
-            }catch(e){alert('创建失败：'+e.message)}
+                alert(d.status==='success'?(existing?'已更新关联的白板文章':'白板文章草稿已创建，去文章管理发布'):(d.message||'操作失败'));
+                if(d.status==='success')notifyArticlesChanged();
+            }catch(e){alert('操作失败：'+e.message)}
         }
         async function excDelete(id){
             if(!confirm(`确定删除白板「${id}」？场景与全部历史快照将一并删除，不可恢复！`))return;

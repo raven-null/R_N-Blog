@@ -257,7 +257,7 @@
         }
         if (docType === 'whiteboard') {
             $('eeEditorCol').style.display = 'none';
-            $('eeSide').style.display = 'none';
+            $('eeSide').style.display = 'flex'; // 白板也要能改状态/标签（封面、摘要卡已按类型隐藏）
             $('eeBoard').style.display = 'flex';
             mountBoard();
         } else {
