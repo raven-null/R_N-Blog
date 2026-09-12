@@ -147,6 +147,12 @@
         padding:6px 10px!important;
     }
     html body .vditor-tooltipped::before{display:none!important}
+    /* 隐藏图片点击后弹出的浮动操作条（上移 / 删除）——用 :has 精准匹配，不影响代码块语言面板等其它紧凑面板 */
+    html body .vditor-panel--none:has(button[data-type="remove"]),
+    html body .vditor-panel--none:has(button[data-type="up"]){display:none!important}
+    /* 浮层已隐藏，正文首行不再需要额外留白 */
+    html body .vditor-wysiwyg pre.vditor-reset,
+    html body .vditor-ir pre.vditor-reset{padding-top:10px!important}
     /* 弹出面板黑底白字（表情/标题/编辑模式/更多） */
     .ee-editor-card .vditor{
         --panel-background-color:#14161d;
