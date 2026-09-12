@@ -753,16 +753,7 @@
         /* 画布宿主（view/edit 共用的容器）必须占满舞台，否则高度塌陷不显示 */
         .board-stage .board-canvas #boardCanvasHost,
         .board-stage .board-canvas .excalidraw-edit-host { position: absolute; inset: 0; }
-        /* 编辑态工具条：底部居中，避开 Excalidraw 的左上菜单与顶部工具栏 */        /* 留言抽屉打开时，关闭按钮出现在同一条底部工具条里 */
-        /* 提高优先级（.bt-btn 也定义 display/背景），确保默认隐藏、仅抽屉打开时显示 */
-        .board-bottom .bb-close {
-            display: none; flex: none; align-items: center; gap: 6px;
-            padding: 6px 14px; border-radius: 999px; color: #e8e8ea;
-            background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.16);
-        }
-        .board-bottom .bb-close:hover { background: rgba(255, 255, 255, 0.18); color: #fff; }
-        .board-stage.drawer-open .board-bottom .bb-close { display: inline-flex; }
-        .board-tools {            /* 位置由统一的 .board-bottom 负责 */
+        /* 编辑态工具条：底部居中，避开 Excalidraw 的左上菜单与顶部工具栏 */        .board-tools {            /* 位置由统一的 .board-bottom 负责 */
             z-index: 33; display: none; align-items: center; gap: 8px; font-family: inherit;
         }
         .board-stage.editing .board-tools { display: inline-flex; }
@@ -854,9 +845,7 @@
             transition: opacity 0.45s ease, transform 0.45s ease;
         }
         .board-stage.idle:not(.editing) .board-bottom { opacity: 0; pointer-events: none; transform: translateX(-50%) translateY(12px); }
-        .board-stage.drawer-open .board-bottom { opacity: 1; pointer-events: auto; }
-        .board-stage.drawer-open .board-bottom .board-topbar,
-        .board-stage.drawer-open .board-bottom .board-tools { display: none; }
+        .board-stage.drawer-open .board-bottom { opacity: 0; pointer-events: none; }
         @media (hover: none) {
             .board-stage.idle:not(.editing) .board-bottom { opacity: 1; pointer-events: auto; transform: translateX(-50%); }
         }
@@ -2355,7 +2344,7 @@
                     '<div class="board-canvas"><div id="boardCanvasHost" data-excalidraw data-note="' + boardId + '" data-mode="view"></div></div>' +
                     '<div class="board-bottom" id="boardBottom">' +
                     '<div class="board-topbar" id="boardTopbar">' +
-                    '<a class="bt-btn" href="/" title="返回博客"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m3 10.5 9-7.5 9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg></a>' +
+                    '<button class="bt-btn" id="boardCloseBtn" title="关闭白板"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>关闭</button>' +
                     '<span class="bt-title">' + title + '</span>' +
                     '<button class="bt-btn" id="boardEditBtn" title="在当前页面直接编辑此白板"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>编辑</button>' +
                     '<button class="bt-btn" id="boardInfoBtn" title="白板信息"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="8" r=".4" fill="currentColor"/></svg>信息</button>' +
@@ -2366,7 +2355,6 @@
                     '<button class="board-done" id="boardDoneBtn" title="退出编辑（有改动会先问是否保存）"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>完成</button>' +
                     '<span class="board-tip" id="boardTip"></span>' +
                     '</div>' +
-                    '<button class="bt-btn bb-close" id="boardDrawerClose" title="关闭留言"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>关闭</button>' +
                     '</div>' +
                     '<div class="board-pop" id="boardInfoPop" hidden>' +
                     '<h4>' + title + '</h4>' +
@@ -2381,7 +2369,7 @@
                     '</div></div>' +
                     '<div class="board-scrim" id="boardScrim"></div>' +
                     '<aside class="board-drawer" id="boardDrawer" aria-hidden="true">' +
-                    '<div class="board-drawer-head"><span class="dh-title">留言</span></div>' +
+                    '<div class="board-drawer-head"><span class="dh-title">留言</span><button class="bt-btn" id="boardDrawerClose" title="关闭留言"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>关闭</button></div>' +
                     '<div class="board-drawer-body" id="boardDrawerBody"></div>' +
                     '</aside>' +
                     '<div class="board-dlg" id="boardDlg">' +
@@ -2437,6 +2425,14 @@
                     scrim.classList.remove('show');
                 };
                 const closeAll = () => { closeDrawer(); infoPop.hidden = true; };
+                // 关闭整个白板：优先关闭独立窗口，否则返回上一页/首页
+                const closeBoard = () => {
+                    try { if (window.opener && !window.opener.closed) { window.close(); return; } } catch (e) { }
+                    if (history.length > 1) history.back();
+                    else location.href = '/';
+                };
+                const closeBtn = document.getElementById('boardCloseBtn');
+                if (closeBtn) closeBtn.addEventListener('click', closeBoard);
                 const cb = document.getElementById('boardCommentBtn');
                 if (cb) cb.addEventListener('click', openDrawer);
                 const cbtn = document.getElementById('boardDrawerClose');
