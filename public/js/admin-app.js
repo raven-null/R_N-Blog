@@ -853,14 +853,23 @@
             showToast((status==='draft'?'白板已存为草稿':'白板已发布')+'，画布已清空；要再改它请到「文章管理」打开','success');
         }
         // 白板重命名（同步更新白板管理列表里的名称）
-        async function wbRename(){
+        // 画板重命名（与白板管理共用同一套弹窗）
+        function wbRename(){
             if(!currentBoardId){showToast('请先点「新建画板」创建画板','error');return}
-            const t=prompt('画板名称（留空则使用默认名称）：',currentBoardName||'');
-            if(t===null)return;
-            const name=(t||'').trim()||defaultBoardName();
-            const d=await excApi('action=meta&id='+encodeURIComponent(currentBoardId),{method:'POST',body:JSON.stringify({title:name})});
-            if(d&&d.status==='success'){currentBoardName=name;showToast('画板已重命名为「'+name+'」','success')}
-            else showToast((d&&d.message)||'重命名失败','error');
+            openExcModal({
+                title:'重命名画板',
+                sub:'名称会显示在白板管理的列表里，并作为白板文章的标题。',
+                okText:'保存名称',
+                body:'<div class="exc-field"><label>画板名称</label><input type="text" id="wbRenameInput" maxlength="60" value="'+escAttr(currentBoardName||'')+'" placeholder="'+escAttr(defaultBoardName())+'"></div>',
+                onOk:async function(){
+                    const name=(document.getElementById('wbRenameInput').value||'').trim()||defaultBoardName();
+                    const d=await excApi('action=meta&id='+encodeURIComponent(currentBoardId),{method:'POST',body:JSON.stringify({title:name})});
+                    if(!d||d.status!=='success'){showToast((d&&d.message)||'重命名失败','error');return false}
+                    currentBoardName=name;
+                    showToast('画板已重命名为「'+name+'」','success');
+                    return true;
+                }
+            });
         }
 
         // ===== 图片上传 =====
@@ -1916,7 +1925,7 @@
                         <div class="exc-ops">
                             <button class="exc-btn" onclick="excOpenEditor('${n.id}','${escJs(art?art.id:'')}')" title="与文章管理里的编辑跳转一致">编辑</button>
                             <button class="exc-btn" onclick="excToggleEdit('${n.id}',${n.editable})">${n.editable===1?'设为只读':'开放编辑'}</button>
-                            <button class="exc-btn" onclick="excSetKey('${n.id}')">${n.hasKey?'重设口令':'设口令'}</button>
+                            <button class="exc-btn" onclick="excSetKey('${n.id}',${n.hasKey?1:0})">${n.hasKey?'重设口令':'设口令'}</button>
                             <button class="exc-btn" onclick="excTogglePublish('${n.id}')">${pubWord}</button>
                             <button class="exc-btn" onclick="excRollback('${n.id}')">回滚</button>
                             <button class="exc-btn danger" onclick="excDelete('${n.id}')">删除</button>
@@ -1927,29 +1936,106 @@
                 list.innerHTML='<div class="exc-empty">加载出错：'+escHtml(e.message)+'</div>';
             }
         }
-        async function excToggleEdit(id,cur){
-            const d=await excApi(`action=meta&id=${encodeURIComponent(id)}`,{method:'POST',body:JSON.stringify({editable:cur===1?0:1})});
-            alert(d.status==='success'?'已更新':(d.message||'操作失败'));
-            if(d.status==='success')loadExcalidrawNotes();
+        // ===== 白板操作弹窗（统一替代原生 alert / prompt / confirm） =====
+        let excModalOkHandler=null;
+        function openExcModal(opts){
+            opts=opts||{};
+            document.getElementById('excModalTitle').textContent=opts.title||'白板操作';
+            const sub=document.getElementById('excModalSub');
+            sub.textContent=opts.sub||'';
+            sub.style.display=opts.sub?'':'none';
+            document.getElementById('excModalBody').innerHTML=opts.body||'';
+            const ok=document.getElementById('excModalOk');
+            ok.textContent=opts.okText||'确认';
+            ok.className='btn '+(opts.danger?'btn-danger':'btn-primary');
+            excModalOkHandler=opts.onOk||null;
+            document.getElementById('excModal').classList.add('open');
+            setTimeout(function(){const f=document.querySelector('#excModalBody input,#excModalBody select');if(f)f.focus()},60);
         }
-        async function excSetKey(id){
-            const t=prompt('设置编辑口令（至少 4 位；留空并确定 = 清除口令）：','');
-            if(t===null)return;
-            const d=await excApi(`action=meta&id=${encodeURIComponent(id)}`,{method:'POST',body:JSON.stringify({editKey:t.trim()})});
-            alert(d.status==='success'?'已更新':(d.message||'操作失败'));
-            if(d.status==='success')loadExcalidrawNotes();
+        function closeExcModal(){
+            document.getElementById('excModal').classList.remove('open');
+            excModalOkHandler=null;
         }
-        async function excRollback(id){
-            const h=await excApi(`action=history&id=${encodeURIComponent(id)}`);
-            if(h.status!=='success'){alert(h.message||'读取历史失败');return}
+        async function excModalConfirm(){
+            const h=excModalOkHandler;
+            if(!h){closeExcModal();return}
+            try{
+                const ok=await h();
+                if(ok!==false)closeExcModal();
+            }catch(e){showToast('操作失败：'+(e.message||e),'error')}
+        }
+        (function bindExcModalOnce(){
+            const box=document.getElementById('excModal');
+            if(!box||box.dataset.bound==='1')return;
+            box.dataset.bound='1';
+            box.querySelector('.exc-modal-overlay').addEventListener('click',closeExcModal);
+            document.getElementById('excModalOk').addEventListener('click',excModalConfirm);
+            document.addEventListener('keydown',function(e){
+                if(e.key==='Escape'&&box.classList.contains('open'))closeExcModal();
+            });
+        })();
+        // 设为只读 / 开放编辑
+        async function excToggleEdit(noteId,cur){
+            const toPublic=cur!==1;
+            const word=toPublic?'开放编辑':'设为只读';
+            const ok=await showConfirm(toPublic?'确定对所有人开放编辑？任何拿到链接的人都能修改并保存这块白板。':'确定设为只读？之后只有管理员可以编辑。',word,word);
+            if(!ok)return;
+            const d=await excApi('action=meta&id='+encodeURIComponent(noteId),{method:'POST',body:JSON.stringify({editable:toPublic?1:0})});
+            if(d.status!=='success'){showToast(d.message||'操作失败','error');return}
+            showToast(toPublic?'已开放编辑':'已设为只读','success');
+            loadExcalidrawNotes();
+        }
+        // 设置 / 清除编辑口令
+        function excSetKey(noteId,hasKey){
+            openExcModal({
+                title:hasKey?'重设编辑口令':'设置编辑口令',
+                sub:'设置后公开编辑与保存都需要该口令；留空并确认 = 清除口令。',
+                okText:hasKey?'保存口令':'设置口令',
+                body:'<div class="exc-field"><label>编辑口令</label><input type="text" id="excKeyInput" autocomplete="off" placeholder="'+(hasKey?'输入新口令（留空清除）':'至少 4 位')+'"></div>'+
+                     '<div class="exc-modal-tip">口令只作用于这块白板；忘记口令可在这里重设。</div>',
+                onOk:async function(){
+                    const v=(document.getElementById('excKeyInput').value||'').trim();
+                    const d=await excApi('action=meta&id='+encodeURIComponent(noteId),{method:'POST',body:JSON.stringify({editKey:v})});
+                    if(d.status!=='success'){showToast(d.message||'操作失败','error');return false}
+                    showToast(v?'口令已设置':'口令已清除','success');
+                    loadExcalidrawNotes();
+                    return true;
+                }
+            });
+        }
+        // 回滚到历史快照（版本用下拉选择，不再手输 rev）
+        async function excRollback(noteId){
+            const h=await excApi('action=history&id='+encodeURIComponent(noteId));
+            if(h.status!=='success'){showToast(h.message||'读取历史失败','error');return}
             const revs=[...(h.revs||[])].reverse();
-            const rev=prompt(`「${id}」可用快照版本：${revs.length?revs.join(', '):'（无）'}；当前 rev ${h.current}\n输入要恢复的 rev 数字（0 = 初始版）：`);
-            if(rev===null)return;
-            const n=Number(rev);
-            if(!Number.isInteger(n)||n<0){alert('rev 非法');return}
-            const d=await excApi(`action=rollback&id=${encodeURIComponent(id)}&rev=${n}`,{method:'POST'});
-            alert(d.status==='success'?`已回滚到 rev ${n}`:(d.message||'回滚失败'));
-            if(d.status==='success')loadExcalidrawNotes();
+            const cur=(h.current==null?'?':h.current);
+            const options='<option value="0">rev 0（初始版）</option>'+revs.map(function(r){return '<option value="'+r+'">rev '+r+'</option>'}).join('');
+            openExcModal({
+                title:'回滚白板',
+                sub:'当前版本 rev '+cur+'。回滚会用所选快照覆盖当前场景（回滚前的内容会自动存为新快照，可再回滚）。',
+                okText:'回滚',
+                danger:true,
+                body:'<div class="exc-field"><label>恢复到版本</label><select id="excRollbackRev">'+options+'</select></div>'+
+                     (revs.length?'<div class="exc-modal-tip">可用快照：'+revs.join('、')+'</div>':'<div class="exc-modal-tip">暂无历史快照，只能回到初始版。</div>'),
+                onOk:async function(){
+                    const n=Number(document.getElementById('excRollbackRev').value);
+                    if(!Number.isInteger(n)||n<0){showToast('版本号非法','error');return false}
+                    const d=await excApi('action=rollback&id='+encodeURIComponent(noteId)+'&rev='+n,{method:'POST'});
+                    if(d.status!=='success'){showToast(d.message||'回滚失败','error');return false}
+                    showToast('已回滚到 rev '+n,'success');
+                    loadExcalidrawNotes();
+                    return true;
+                }
+            });
+        }
+        // 删除白板（危险操作：二次确认后执行）
+        async function excDelete(noteId){
+            const ok=await showConfirm('确定删除白板「'+noteId+'」？场景与全部历史快照将一并删除，不可恢复！','删除白板','删除');
+            if(!ok)return;
+            const d=await excApi('action=delete&id='+encodeURIComponent(noteId),{method:'POST'});
+            if(d.status!=='success'){showToast(d.message||'删除失败','error');return}
+            showToast('已删除（'+(d.removed||0)+' 个数据项）','success');
+            loadExcalidrawNotes();
         }
         // 编辑：与文章管理跳转一致（白板文章 → 独立编辑页）；还没有文章时打开独立白板编辑器
         function excOpenEditor(noteId,articleId){
@@ -1957,7 +2043,7 @@
             showToast('该画板还没有文章，已在独立白板编辑器中打开','success');
             window.open('/excalidraw.html?note='+encodeURIComponent(noteId)+'&edit=1','_blank');
         }
-        // 发布 / 下架：按关联文章状态切换；还没有文章则创建一篇并直接发布
+        // 发布 / 下架：已有关联文章 → 确认后切换状态；还没有文章 → 弹窗填写标题/状态/标签
         async function excTogglePublish(noteId){
             let art=null;
             try{
@@ -1972,23 +2058,27 @@
                 const r=await apiFetch('action=articles',{method:'PATCH',body:JSON.stringify({id:art.id,status:next})});
                 if(r.status!=='success'){showToast(r.message||(action+'失败'),'error');return}
                 showToast('已'+action,'success');
-            }else{
-                const t=prompt('该画板还没有文章，发布会创建一篇白板文章。文章标题：','白板：'+noteId);
-                if(t===null)return;
-                const title=(t||'').trim()||('白板：'+noteId);
-                const r=await apiFetch('action=articles',{method:'POST',body:JSON.stringify({title,content:'',status:'published',type:'whiteboard',boardId:noteId,tags:[]})});
-                if(r.status!=='success'){showToast(r.message||'发布失败','error');return}
-                showToast('白板文章已发布','success');
+                loadExcalidrawNotes();loadArticles();notifyArticlesChanged();
+                return;
             }
-            loadExcalidrawNotes();
-            loadArticles();
-            notifyArticlesChanged();
-        }
-        async function excDelete(id){
-            if(!confirm(`确定删除白板「${id}」？场景与全部历史快照将一并删除，不可恢复！`))return;
-            const d=await excApi(`action=delete&id=${encodeURIComponent(id)}`,{method:'POST'});
-            alert(d.status==='success'?`已删除（${d.removed} 个数据项）`:(d.message||'删除失败'));
-            if(d.status==='success')loadExcalidrawNotes();
+            openExcModal({
+                title:'发布白板文章',
+                sub:'该画板还没有文章。发布会创建一篇白板文章（前台整页白板展示，无封面与摘要）。',
+                okText:'发布',
+                body:'<div class="exc-field"><label>文章标题</label><input type="text" id="excPubTitle" maxlength="60" value="'+escAttr('白板：'+noteId)+'"></div>'+
+                     '<div class="exc-field"><label>状态</label><select id="excPubStatus"><option value="published">发布</option><option value="draft">草稿</option></select></div>'+
+                     '<div class="exc-field"><label>标签（逗号分隔，可选）</label><input type="text" id="excPubTags" placeholder="如：白板, 灵感"></div>',
+                onOk:async function(){
+                    const title=(document.getElementById('excPubTitle').value||'').trim()||('白板：'+noteId);
+                    const status=document.getElementById('excPubStatus').value;
+                    const tags=(document.getElementById('excPubTags').value||'').split(/[,，]/).map(function(s){return s.trim()}).filter(Boolean);
+                    const r=await apiFetch('action=articles',{method:'POST',body:JSON.stringify({title,content:'',status,type:'whiteboard',boardId:noteId,tags})});
+                    if(r.status!=='success'){showToast(r.message||'发布失败','error');return false}
+                    showToast(status==='draft'?'白板文章已存为草稿':'白板文章已发布','success');
+                    loadExcalidrawNotes();loadArticles();notifyArticlesChanged();
+                    return true;
+                }
+            });
         }
 
         // ===== 评论管理 =====
