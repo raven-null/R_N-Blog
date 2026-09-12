@@ -754,13 +754,14 @@
         .board-stage .board-canvas #boardCanvasHost,
         .board-stage .board-canvas .excalidraw-edit-host { position: absolute; inset: 0; }
         /* 编辑态工具条：底部居中，避开 Excalidraw 的左上菜单与顶部工具栏 */        /* 留言抽屉打开时，关闭按钮出现在同一条底部工具条里 */
-        .bb-close {
+        /* 提高优先级（.bt-btn 也定义 display/背景），确保默认隐藏、仅抽屉打开时显示 */
+        .board-bottom .bb-close {
             display: none; flex: none; align-items: center; gap: 6px;
             padding: 6px 14px; border-radius: 999px; color: #e8e8ea;
             background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.16);
         }
-        .bb-close:hover { background: rgba(255, 255, 255, 0.18); color: #fff; }
-        .board-stage.drawer-open .bb-close { display: inline-flex; }
+        .board-bottom .bb-close:hover { background: rgba(255, 255, 255, 0.18); color: #fff; }
+        .board-stage.drawer-open .board-bottom .bb-close { display: inline-flex; }
         .board-tools {            /* 位置由统一的 .board-bottom 负责 */
             z-index: 33; display: none; align-items: center; gap: 8px; font-family: inherit;
         }
