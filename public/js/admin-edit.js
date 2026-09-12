@@ -252,6 +252,8 @@
         if (docType !== 'article') {
             var coverCard = $('eeCoverCard');
             if (coverCard) coverCard.style.display = 'none';
+            var excerptCard = $('eeExcerptCard');
+            if (excerptCard) excerptCard.style.display = 'none';
         }
         if (docType === 'whiteboard') {
             $('eeEditorCol').style.display = 'none';
@@ -277,7 +279,7 @@
             id: doc ? doc.id : docId,
             title: title,
             tags: tags,
-            excerpt: $('eeExcerpt').value.trim(),
+            excerpt: docType === 'article' ? $('eeExcerpt').value.trim() : '',
             image: docType === 'article' ? $('eeImage').value.trim() : '',
             status: $('eeStatusSel').value,
             type: docType,

@@ -321,7 +321,7 @@ const BlogApp = {
                         ${(post.tags || []).map(tag => `<span>${tag}</span>`).join(' ')}
                     </div>
                     <div class="card-title">${post.title}</div>
-                    <div class="card-desc">${post.excerpt}</div>
+                    ${(post.excerpt && post.type !== 'whiteboard') ? `<div class="card-desc">${post.excerpt}</div>` : ''}
                     <div class="card-meta">
                         <span class="card-date">${dateFormatted}</span>
                         <span class="card-reading">${readingLabel}</span>

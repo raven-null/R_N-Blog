@@ -93,7 +93,7 @@
                 cover+
                 '<div class="ac-body">'+
                 '<div class="ac-title"><span class="tt">'+esc(a.title||'(未命名)')+'</span></div>'+
-                '<div class="ac-desc">'+esc(String(a.excerpt||'').slice(0,130))+'</div>'+
+                (type==='article'?'<div class="ac-desc">'+esc(String(a.excerpt||'').slice(0,130))+'</div>':'')+
                 '<div class="ac-meta">'+meta+'</div>'+
                 '</div>'+
                 '<div class="ac-ops">'+pubBtn+

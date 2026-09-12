@@ -164,7 +164,8 @@ export default async (req: Request) => {
       if (type === "card" && !tagsArr.includes(FIXED_CARD_TAG)) tagsArr.unshift(FIXED_CARD_TAG)
 
       // 提取摘要（有内容时自动提取，否则用传入的 excerpt）
-      const autoExcerpt = content
+      const noExcerpt = type === "card" || type === "whiteboard" // 随记与白板没有摘要
+      const autoExcerpt = (!noExcerpt && content)
         ? content.replace(/#+\s+/g, "").replace(/\*\*(.*?)\*\*/g, "$1").replace(/\*(.*?)\*/g, "$1").replace(/\[([^\]]+)\]\([^)]+\)/g, "$1").replace(/!\[([^\]]*)\]\([^)]+\)/g, "").replace(/`([^`]+)`/g, "$1").replace(/\n/g, " ").trim().slice(0, 150)
         : ""
       const wordCount = (content || "").length
@@ -178,7 +179,7 @@ export default async (req: Request) => {
         title,
         tags: tagsArr,
         author: author || "渡鸦NULL",
-        excerpt: excerpt || autoExcerpt + "...",
+        excerpt: noExcerpt ? "" : (excerpt || autoExcerpt + "..."),
         image: image || "",
         content,
         wordCount,
