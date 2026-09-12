@@ -509,10 +509,9 @@
             if(mode==='article'){ensureEditor();setTimeout(fitEditor,100)}
             else if(mode==='note'){loadRecentNotes()}
             else if(mode==='board'){
-                ensureExcBundle();
                 const host=document.getElementById('wbBoardHost');
-                if(!currentBoardId)wbNew(true);                       // 没有画板：直接给一块空白画布
-                else if(host&&!host.querySelector('[data-excalidraw]'))wbMount(currentBoardId); // 有画板但未挂载：恢复
+                if(!currentBoardId)wbNew(true);                        // 没有画板：直接给一块空白画布
+                else if(host&&!host.querySelector('iframe.wb-frame'))wbMount(currentBoardId); // 有画板但未挂载：恢复
             }
         }
         function fitEditor(){
@@ -542,24 +541,32 @@
         let currentBoardId='';
         let currentBoardArticleId=''; // 已发布过的白板文章 id（再次发布会更新同一篇）
         let currentBoardName='';      // 画板名称（同时作为白板文章标题）
+        // 白板编辑器用 iframe 内嵌独立白板页：与后台样式/布局完全隔离，避免相互干扰
         function wbMount(id){
             const host=document.getElementById('wbBoardHost');
             if(!host)return;
             const bid=(id||currentBoardId||'').trim();
             if(!/^[A-Za-z0-9_-]{1,64}$/.test(bid)){
-                host.innerHTML='<div style="height:100%;display:flex;align-items:center;justify-content:center;color:#888;font-size:13px;padding:0 20px;text-align:center;line-height:1.8">点「新建画板」开始绘制；已有画板可在「白板管理」中打开</div>';
+                host.innerHTML='<div class="wb-hint">点「新建画板」开始绘制；已有画板可在「白板管理」中打开</div>';
                 return;
             }
             currentBoardId=bid;
-            host.innerHTML='<div style="height:100%" data-excalidraw data-note="'+escAttr(bid)+'" data-mode="edit"></div>';
-            if(window.ExcalidrawMount)window.ExcalidrawMount();
-            else ensureExcBundle();
+            host.innerHTML='<iframe class="wb-frame" title="白板编辑器" src="/excalidraw.html?note='+encodeURIComponent(bid)+'&edit=1"></iframe>';
+        }
+        // 取 iframe 内编辑器的保存钩子（同源可直接访问）
+        function boardSaver(){
+            const f=document.querySelector('#wbBoardHost iframe.wb-frame');
+            try{
+                const w=f&&f.contentWindow;
+                if(w&&typeof w.__excalidrawSave==='function')return w.__excalidrawSave;
+            }catch(e){}
+            return null;
         }
         // 清空当前画板编辑区（发布后 / 想重新开始时使用），回到未创建状态
         function wbReset(){
             const host=document.getElementById('wbBoardHost');
-            // 真正卸载编辑实例（否则旧实例的 window 级 Ctrl+S 监听会残留）
-            try{if(window.ExcalidrawUnmount)window.ExcalidrawUnmount(host||undefined)}catch(e){}
+            // iframe 内是独立页面：直接清空即彻底卸载编辑器，无残留监听
+            if(host)host.innerHTML='';
             currentBoardId='';
             currentBoardArticleId='';
             currentBoardName='';
@@ -574,8 +581,8 @@
             if(!silent)showToast('新画板已创建：直接开画，点「发布」保存并发布','success');
         }
         async function wbSave(){
-            const saver=window.__excalidrawSave;
-            if(!saver){showToast('画板尚未初始化，请先新建或载入','error');return}
+            const saver=boardSaver();
+            if(!saver){showToast('白板编辑器还在加载，请稍候','error');return}
             const ok=await saver();
             showToast(ok?'画板已保存':'保存未完成（口令/空画布/网络？）',ok?'success':'error');
         }
@@ -840,8 +847,8 @@
             const name=((el&&el.value)||'').trim()||defaultBoardName();
             const tags=selectedArticleTags.slice();
             const status=document.getElementById('edStatus').value;
-            const saver=window.__excalidrawSave;
-            if(!saver){showToast('画板尚未初始化完成，请稍后再试','error');return}
+            const saver=boardSaver();
+            if(!saver){showToast('白板编辑器还在加载，请稍候再发布','error');return}
             const ok=await saver();
             if(!ok){showToast('画板保存未完成（口令/空画布/网络？），已中止发布','error');return}
             try{await excApi('action=meta&id='+encodeURIComponent(currentBoardId),{method:'POST',body:JSON.stringify({title:name})})}catch(e){}

@@ -181,12 +181,14 @@
             return;
         }
         $('eeBoardOpen').href = '/excalidraw.html?note=' + encodeURIComponent(bid) + '&edit=1';
-        host.innerHTML = '<div style="height:100%" data-excalidraw data-note="' + esc(bid) + '" data-mode="edit"></div>';
-        loadExcBundle();
+        // iframe 内嵌独立白板页：与编辑页样式/布局隔离，避免相互干扰
+        host.innerHTML = '<iframe class="ee-frame" title="白板编辑器" src="/excalidraw.html?note=' + encodeURIComponent(bid) + '&edit=1"></iframe>';
     }
     window.eeSaveBoard = async function () {
-        var saver = window.__excalidrawSave;
-        if (!saver) { toast('画板尚未初始化完成', 'error'); return; }
+        var frame = document.querySelector('#eeBoardHost iframe.ee-frame');
+        var saver = null;
+        try { saver = frame && frame.contentWindow && frame.contentWindow.__excalidrawSave; } catch (e) { saver = null; }
+        if (typeof saver !== 'function') { toast('白板编辑器还在加载，请稍候', 'error'); return; }
         var ok = await saver();
         toast(ok ? '画板已保存' : '画板保存未完成（口令/空画布/网络？）', ok ? 'success' : 'error');
         if (ok) notifyChanged();
