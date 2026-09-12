@@ -1,0 +1,84 @@
+/**
+ * 全站响应式兜底 —— 任意窗口宽度下都不出现横向溢出 / 元素撑破布局
+ *
+ * 各页面的精细断点仍写在各自文件里，这里只补三层安全网：
+ *   1) 防横向溢出（用 overflow-x: clip，不创建滚动容器，不影响 position: sticky）
+ *   2) 媒体元素、浮层、弹窗的宽度上限
+ *   3) 极窄屏（<=360px）的横向外边距收紧
+ *
+ * 引入方式：放在各页面 head 末尾（页面自身样式之后），保证同特异性时优先生效。
+ */
+
+/* ============ 1. 防横向溢出 ============ */
+html {
+    overflow-x: clip;
+}
+
+/* 连续长串（长英文单词、URL、哈希）不撑破容器 */
+body {
+    overflow-wrap: break-word;
+}
+
+/* ============ 2. 媒体与嵌入元素 ============ */
+img,
+svg,
+video,
+canvas {
+    max-width: 100%;
+}
+
+img,
+video {
+    height: auto;
+}
+
+/* 白板/视频类嵌入容器不超出视口 */
+.article-embed,
+.excalidraw-embed,
+iframe {
+    max-width: 100%;
+}
+
+/* ============ 3. 浮层与弹窗宽度上限 ============ */
+/* 底图：所有固定像素宽的浮层在极窄屏最多占满视口，留 16px 边距 */
+.search-dropdown,
+.tags-dropdown,
+.image-picker-panel,
+.confirm-box,
+.login-box,
+.rename-box,
+.tag-modal-box,
+.publish-modal-box,
+.art-img-drawer,
+.exc-modal-box,
+.ee-modal-box,
+.ee-picker-box,
+#fpDrawer {
+    max-width: calc(100vw - 16px);
+}
+
+/* 聊天窗已在各断点用 min() 收缩，去掉最小宽度限制，极窄屏可继续变小 */
+.chat-window {
+    min-width: 0;
+}
+
+/* ============ 4. 极窄屏收尾（<=360px） ============ */
+@media (max-width: 360px) {
+    .search-dropdown,
+    .tags-dropdown {
+        width: calc(100vw - 24px);
+    }
+
+    .article-layout,
+    .content,
+    .container {
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+
+    .article-content,
+    .article-header {
+        padding-left: 14px;
+        padding-right: 14px;
+    }
+}

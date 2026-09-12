@@ -33,7 +33,7 @@
     /* 液态玻璃顶栏 */
     .site-header {
       position: relative; z-index: 2; flex: none;
-      display: flex; align-items: center; gap: 12px;
+      display: flex; align-items: center; flex-wrap: wrap; gap: 8px 10px;
       padding: 9px 18px; background: rgba(16, 16, 19, 0.58);
       backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
       border-bottom: 1px solid rgba(255, 255, 255, 0.10);
@@ -54,8 +54,8 @@
     .nav-pill svg { width: 14px; height: 14px; }
     .nav-pill.primary { color: #0b0b10; background: linear-gradient(180deg, #fff, #d9d9e3); border-color: rgba(255, 255, 255, 0.55); }
     .site-header .title {
-      color: #fff; font-weight: 600; font-size: 14px;
-      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 40vw;
+      color: #fff; font-weight: 600; font-size: 14px; min-width: 0; flex: 1;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
     .site-header .spacer { flex: 1; }
     #excalidraw-root { position: relative; z-index: 1; flex: 1; min-height: 0; }
@@ -66,7 +66,8 @@
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #aaa;
     }
     .empty-tip .card {
-      display: flex; flex-direction: column; gap: 6px; padding: 36px 46px;
+      display: flex; flex-direction: column; gap: 6px; padding: 28px 24px;
+      max-width: calc(100vw - 32px); box-sizing: border-box;
       border-radius: 26px; background: var(--glass-bg);
       backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
       border: 1px solid var(--glass-border);
@@ -76,8 +77,17 @@
     .empty-tip .t { font-size: 17px; color: #fff; font-weight: 600; margin-bottom: 8px; }
     .empty-tip .row { font-size: 13px; color: rgba(255, 255, 255, 0.5); line-height: 1.9; }
     .empty-tip code { background: rgba(255, 255, 255, 0.1); padding: 2px 7px; border-radius: 6px; color: #bcd0ff; font-size: 12px; }
+
+    /* 极窄屏：顶栏信息换行展示，不再挤压按钮 */
+    @media (max-width: 560px) {
+      .site-header { padding: 8px 10px; }
+      .site-header .title { flex: 1 1 100%; order: 3; font-size: 13px; }
+      .empty-tip .t { font-size: 15px; }
+      .empty-tip .row { font-size: 12px; line-height: 1.7; }
+    }
   </style>
     <link rel="stylesheet" href="/css/scrollbar.css?v=1.0.1">
+    <link rel="stylesheet" href="/css/responsive.css?v=1.0.0">
 </head>
 <body>
   <!--

@@ -325,8 +325,22 @@
         .ee-title{font-size:19px}
         .ee-cover{height:104px}
     }
+
+    /* 窄屏：编辑区与侧栏改为纵向堆叠，操作按钮不再挤压 */
+    @media(max-width:640px){
+        .ee-main{flex-direction:column;padding:8px 10px 12px;gap:10px}
+        .ee-side{width:100%;flex:0 0 auto;overflow:visible}
+        .ee-editor-card{margin-top:6px}
+        .ee-top{padding:8px 10px;gap:8px}
+        .ee-right{width:100%}
+        .ee-btn{padding:7px 12px;font-size:12.5px}
+        .ee-chapter-bar{padding:8px 10px}
+        .ee-chapter-bar select{min-width:0;width:100%}
+        .ee-title{font-size:18px}
+    }
 </style>
     <link rel="stylesheet" href="/css/scrollbar.css?v=1.0.1">
+    <link rel="stylesheet" href="/css/responsive.css?v=1.0.0">
 </head>
 <body>
     <header class="ee-top">

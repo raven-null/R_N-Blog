@@ -258,7 +258,7 @@ body.home-layout {
     position: absolute;
     top: calc(100% + 12px);
     right: 0;
-    width: 320px;
+    width: min(320px, calc(100vw - 32px));
     background: var(--bg-secondary);
     border: 1px solid var(--border);
     border-radius: 12px;
@@ -382,7 +382,7 @@ body.home-layout {
     position: absolute;
     top: calc(100% + 12px);
     right: 0;
-    width: 320px;
+    width: min(320px, calc(100vw - 32px));
     max-height: 340px;
     overflow-y: auto;
     background: var(--bg-secondary);
@@ -1830,7 +1830,7 @@ body.view-gallery-active .gallery-tag-btn {
     top: auto;
     width: min(380px, calc(100vw - 48px));
     height: min(520px, calc(100vh - 160px));
-    min-width: 280px;
+    min-width: min(280px, calc(100vw - 32px));
     min-height: 300px;
     max-width: 90vw;
     max-height: 90vh;
@@ -2504,7 +2504,7 @@ body.view-gallery-active .gallery-tag-btn {
         top: auto;
         width: min(340px, calc(100vw - 32px));
         height: min(460px, calc(100vh - 160px));
-        min-width: 260px;
+        min-width: min(260px, calc(100vw - 32px));
         min-height: 280px;
         border-radius: 16px;
         z-index: 1001;
