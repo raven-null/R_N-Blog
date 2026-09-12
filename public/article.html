@@ -2433,8 +2433,6 @@
                 if (closeBtn) closeBtn.addEventListener('click', closeBoard);
                 const cb = document.getElementById('boardCommentBtn');
                 if (cb) cb.addEventListener('click', openDrawer);
-                const cbtn = document.getElementById('boardDrawerClose');
-                if (cbtn) cbtn.addEventListener('click', closeDrawer);
                 if (scrim) scrim.addEventListener('click', closeAll);
                 // 抽屉/浮层没有关闭按钮后：点遮罩或按 Esc 关闭
                 document.addEventListener('keydown', (e) => {
