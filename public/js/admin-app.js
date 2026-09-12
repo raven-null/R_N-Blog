@@ -681,7 +681,8 @@
                     '|','list','ordered-list','check','outdent','indent',
                     '|','quote','line','code','inline-code','table',
                     '|','upload','edit-mode',
-                    '|','undo','redo','more'
+                    '|','undo','redo',
+                    {name:'more',toolbar:['code-theme','content-theme','export','help']}
                 ],
                 upload:{
                     url:'/api/article-image',
