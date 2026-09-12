@@ -348,12 +348,22 @@
             return;
         }
         doc = r.data;
-        // 长文章主记录不存全文（分章存储）：编辑时取回拼好的全文
-        if (doc && doc.chunked && !doc.content) {
+        // 长文章（分章存储）：按章加载编辑，避免一次把全文塞进编辑器
+        if (doc && doc.chunked) {
             try {
-                var full = await api('action=article-full&id=' + encodeURIComponent(docId) + '&_=' + Date.now());
-                if (full && full.status === 'success' && full.data) doc = Object.assign({}, doc, full.data);
-            } catch (e) { /* 取全文失败时按空内容处理 */ }
+                var toc = await api('action=article-toc&id=' + encodeURIComponent(docId) + '&_=' + Date.now());
+                if (toc && toc.status === 'success' && toc.data) {
+                    chunkEdit = {
+                        total: toc.data.total || 0,
+                        chapters: toc.data.chapters || [],
+                        current: 0,
+                        chunks: []
+                    };
+                    var c0 = await fetchChunkText(0);
+                    chunkEdit.chunks[0] = c0 || '';
+                    doc.content = chunkEdit.chunks[0];
+                }
+            } catch (e) { chunkEdit = null; }
         }
         docType = doc.type === 'whiteboard' ? 'whiteboard' : (doc.type === 'card' ? 'card' : 'article');
         document.title = '编辑' + typeLabel(docType) + ' · ' + (doc.title || doc.id);
@@ -386,6 +396,8 @@
             $('eeBoard').style.display = 'none';
             $('eeEditorCol').style.display = 'flex';
             $('eeSide').style.display = 'flex';
+
+            if (chunkEdit) renderChapterBar();
             setEditorContent(doc.content || '');
         }
         dirty = false;
@@ -393,8 +405,61 @@
         $('eeSaved').style.color = '#7bd88f';
     }
 
+    // ===== 长文章按章编辑（避免一次载入全文） =====
+    var chunkEdit = null; // { total, chapters, current, chunks }
+    async function fetchChunkText(i) {
+        try {
+            var r = await api('action=article-chunk&id=' + encodeURIComponent(docId) + '&i=' + i + '&_=' + Date.now());
+            if (r && r.status === 'success' && r.data) return r.data.content || '';
+        } catch (e) { /* 拉取失败返回 null，由调用方兜底 */ }
+        return null;
+    }
+    function renderChapterBar() {
+        var bar = $('eeChapterBar');
+        var sel = $('eeChapterSel');
+        if (!bar || !sel || !chunkEdit) return;
+        bar.style.display = '';
+        sel.innerHTML = (chunkEdit.chapters || []).map(function (ch) {
+            var k = Math.max(1, Math.round((ch.words || 0) / 1000));
+            return '<option value="' + ch.i + '">' + (ch.i + 1) + '. ' + esc(ch.title || '') + '（约 ' + k + 'k 字）</option>';
+        }).join('');
+        sel.value = String(chunkEdit.current);
+    }
+    async function refreshChunkToc() {
+        if (!chunkEdit) return;
+        try {
+            var toc = await api('action=article-toc&id=' + encodeURIComponent(docId) + '&_=' + Date.now());
+            if (toc && toc.status === 'success' && toc.data) {
+                chunkEdit.total = toc.data.total || chunkEdit.total;
+                chunkEdit.chapters = toc.data.chapters || chunkEdit.chapters;
+                // 分章结构可能变化：未在编辑的章节缓存作废，重新按需拉取
+                for (var i = 0; i < chunkEdit.chunks.length; i++) {
+                    if (i !== chunkEdit.current) chunkEdit.chunks[i] = null;
+                }
+                renderChapterBar();
+            }
+        } catch (e) { /* 忽略 */ }
+    }
+    window.eeSwitchChapter = async function (i) {
+        if (!chunkEdit) return;
+        i = Number(i);
+        if (!Number.isInteger(i) || i === chunkEdit.current) return;
+        // 切换前把当前章内容暂存内存（保存时统一提交）
+        chunkEdit.chunks[chunkEdit.current] = getEditorContent();
+        var text = chunkEdit.chunks[i];
+        if (text == null) {
+            setEditorContent('');
+            text = await fetchChunkText(i);
+            chunkEdit.chunks[i] = text || '';
+        }
+        setEditorContent(text || '');
+        chunkEdit.current = i;
+        $('eeChapterSel').value = String(i);
+        toast('已切换到第 ' + (i + 1) + ' 章（原内容已暂存）', 'success');
+    };
+
     // ===== 保存 =====
-    function collect() {
+    async function collect() {
         var title = $('eeTitle').value.trim();
         var tags = $('eeTags').value.split(/[,，]/).map(function (s) { return s.trim(); }).filter(Boolean);
         var body = {
@@ -409,12 +474,28 @@
             author: (doc && doc.author) || ''
         };
         // 白板文章的正文不是编辑器内容：原样回传，避免保存元信息时清空
-        if (docType !== 'whiteboard') body.content = getEditorContent();
-        else body.content = (doc && doc.content) || '';
+        if (docType === 'whiteboard') {
+            body.content = (doc && doc.content) || '';
+        } else if (chunkEdit) {
+            // 分章文章：把已编辑的章节与未加载的章节按顺序拼成全文提交（后端会重新分章）
+            chunkEdit.chunks[chunkEdit.current] = getEditorContent();
+            var parts = [];
+            for (var i = 0; i < chunkEdit.total; i++) {
+                var text = chunkEdit.chunks[i];
+                if (text == null) {
+                    text = await fetchChunkText(i);
+                    chunkEdit.chunks[i] = text || '';
+                }
+                parts.push(text || '');
+            }
+            body.content = parts.join('\n\n');
+        } else {
+            body.content = getEditorContent();
+        }
         return body;
     }
     async function doSave(silent) {
-        var body = collect();
+        var body = await collect();
         if (!body.title) { toast('请填写标题', 'error'); return false; }
         if (docType !== 'whiteboard' && !body.content) { toast('请填写正文内容', 'error'); return false; }
         var btn = $('eeSaveBtn');
@@ -434,6 +515,7 @@
             renderMeta();
         }
         dirty = false;
+        if (chunkEdit) refreshChunkToc();
         var now = new Date().toLocaleTimeString();
         $('eeSaved').textContent = '已保存 ' + now;
         $('eeSaved').style.color = '#7bd88f';
