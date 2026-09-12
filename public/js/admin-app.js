@@ -524,11 +524,11 @@
             if(window.ExcalidrawMount)return;
             if(document.querySelector('script[data-excalidraw-bundle-admin]'))return;
             const css=document.createElement('link');
-            css.rel='stylesheet';css.href='/js/vendor/excalidraw/excalidraw-editor.v11.css';
+            css.rel='stylesheet';css.href='/js/vendor/excalidraw/excalidraw-editor.v12.css';
             css.dataset.excalidrawBundleAdmin='1';
             document.head.appendChild(css);
             const s=document.createElement('script');
-            s.src='/js/vendor/excalidraw/excalidraw-editor.v11.js';
+            s.src='/js/vendor/excalidraw/excalidraw-editor.v12.js';
             s.dataset.excalidrawBundleAdmin='1';
             s.onerror=function(){showToast('白板组件加载失败','error')};
             document.head.appendChild(s);
@@ -549,6 +549,17 @@
             host.innerHTML='<div style="height:100%" data-excalidraw data-note="'+escAttr(bid)+'" data-mode="edit"></div>';
             if(window.ExcalidrawMount)window.ExcalidrawMount();
             else ensureExcBundle();
+        }
+        // 清空当前画板编辑区（发布后 / 想重新开始时使用），回到未创建状态
+        function wbReset(){
+            const host=document.getElementById('wbBoardHost');
+            // 真正卸载编辑实例（否则旧实例的 window 级 Ctrl+S 监听会残留）
+            try{if(window.ExcalidrawUnmount)window.ExcalidrawUnmount(host||undefined)}catch(e){}
+            currentBoardId='';
+            currentBoardArticleId='';
+            currentBoardName='';
+            if(host)host.innerHTML='<div class="wb-hint">点「新建画板」开始绘制；已有画板可在「白板管理」中打开</div>';
+            try{delete window.__excalidrawSave;delete window.__excalidrawDirty}catch(e){}
         }
         function wbNew(){
             currentBoardId='wb-'+Math.random().toString(36).slice(2,10);
@@ -833,11 +844,13 @@
             if(currentBoardArticleId)body.id=currentBoardArticleId;
             const r=await apiFetch('action=articles',{method:'POST',body:JSON.stringify(body)});
             if(r.status!=='success'){showToast(r.message||'发布失败','error');return}
-            currentBoardArticleId=(r.data&&r.data.id)||currentBoardArticleId;
-            currentBoardName=name;
             closePublishModal();
+            // 发布后刷新列表并清空画布（准备画下一块白板）
+            wbReset();
+            loadExcalidrawNotes();
+            loadArticles();
             notifyArticlesChanged();
-            showToast(status==='draft'?'白板已存为草稿':'白板已发布','success');
+            showToast((status==='draft'?'白板已存为草稿':'白板已发布')+'，画布已清空；要再改它请到「文章管理」打开','success');
         }
         // 白板重命名（同步更新白板管理列表里的名称）
         async function wbRename(){

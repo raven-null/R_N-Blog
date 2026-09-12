@@ -691,11 +691,41 @@ function mountAll() {
     const note = (el.dataset.note || "").trim()
     const mode = el.dataset.mode === "edit" ? "edit" : "view"
     const bare = el.dataset.bare === "1"
-    createRoot(el).render(<NoteApp note={note} mode={mode} bare={bare} />)
+    const root = createRoot(el)
+    // 记住 root，便于宿主清空/换画板时真正卸载（否则旧实例的 window 级监听会残留）
+    ;(el as any).__excRoot = root
+    root.render(<NoteApp note={note} mode={mode} bare={bare} />)
   })
 }
 
+/**
+ * 卸载编辑器实例：传元素只卸载该容器，不传则卸载全部。
+ * 卸载后容器会被清空、mounted 标记被移除，宿主可安全重建 DOM 或再次 ExcalidrawMount()。
+ */
+function unmountAll(target?: HTMLElement) {
+  const els = target ? [target] : Array.from(document.querySelectorAll<HTMLElement>("[data-excalidraw]"))
+  els.forEach(el => {
+    const root = (el as any).__excRoot
+    if (root) {
+      try {
+        root.unmount()
+      } catch {
+        /* 已经卸载过 */
+      }
+      delete (el as any).__excRoot
+    }
+    delete el.dataset.mounted
+    el.innerHTML = ""
+  })
+  // 没有挂载中的实例时，清掉全局保存钩子，避免宿主误用已卸载的实例
+  if (!document.querySelector("[data-excalidraw][data-mounted]")) {
+    delete (window as any).__excalidrawSave
+    delete (window as any).__excalidrawDirty
+  }
+}
+
 ;(window as any).ExcalidrawMount = mountAll
+;(window as any).ExcalidrawUnmount = unmountAll
 
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", mountAll)
