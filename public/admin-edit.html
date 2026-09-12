@@ -125,6 +125,12 @@
     html body .vditor-emojis__tip{color:#e8ebf3!important}
     html body .vditor-panel button:hover,
     html body .vditor-hint button:hover{color:#ffffff!important;background:#3b4152!important}
+    /* 正文首行留白：图片/表格/链接的浮动操作条在元素上方弹出，首行时会被内容滚动区裁掉 */
+    html body .vditor-wysiwyg pre.vditor-reset,
+    html body .vditor-ir pre.vditor-reset{padding-top:38px!important}
+    /* 浮层本身：确保在最上层且不被裁切 */
+    html body .vditor-reset .vditor-panel,
+    html body .vditor-reset .vditor-panel--none{z-index:2147483000!important;overflow:visible!important}
     /* 弹出面板黑底白字（表情/标题/编辑模式/更多） */
     .ee-editor-card .vditor{
         --panel-background-color:#14161d;
