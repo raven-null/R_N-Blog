@@ -884,9 +884,7 @@
 
                         <!-- 白板：ID + 新建/载入/保存/管理 -->
                         <div class="header-right-group" id="rightGroupBoard" style="display:none">
-                            <input class="dot-light-input" id="wbNoteId" placeholder="画板 ID">
                             <button class="glass-action-btn" onclick="wbNew()">新建画板</button>
-                            <button class="glass-action-btn" onclick="wbMount()">载入</button>
                             <button class="glass-action-btn publish-btn" onclick="wbSave()">保存画板</button>
                             <button class="glass-action-btn" onclick="switchTab('excalidraw')">白板管理 →</button>
                         </div>
@@ -928,7 +926,7 @@
                         <div id="view-board" class="tab-view">
                             <div class="canvas-wrap" id="writeModeBoard">
                                 <div class="wm-board-host" id="wbBoardHost">
-                                    <div class="wb-hint">点击「新建画板」或输入已有画板 ID 后「载入」</div>
+                                    <div class="wb-hint">点击「新建画板」开始绘制，画完点「保存画板」；已有画板可在「白板管理」中打开</div>
                                 </div>
                             </div>
                         </div>
@@ -1336,7 +1334,7 @@
         </div>
     </div>
 
-        <script src="js/admin-app.js?v=1.1.1"></script>
+        <script src="js/admin-app.js?v=1.1.3"></script>
 
     <!-- 前台预览抽屉（iframe 内嵌，零跳出） -->
     <style>

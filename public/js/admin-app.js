@@ -79,7 +79,7 @@
             const dot='<span class="ac-status '+(isPub?'pub':'draft')+'"></span>';
             const id=escJs(a.id);
             let cover;
-            if(a.image){
+            if(a.image&&type==='article'){
                 cover='<div class="ac-cover" style="background-image:url('+escAttr(a.image)+')">'+badge+dot+'</div>';
             }else{
                 const ph=type==='whiteboard'?'白':(type==='card'?'记':'文');
@@ -533,25 +533,25 @@
             s.onerror=function(){showToast('白板组件加载失败','error')};
             document.head.appendChild(s);
         }
-        function wbMount(){
+        // 当前白板形态正在编辑的画板（内部 id，不再让用户手动输入/查看）
+        let currentBoardId='';
+        function wbMount(id){
             const host=document.getElementById('wbBoardHost');
-            const input=document.getElementById('wbNoteId');
             if(!host)return;
-            const id=(input&&input.value||'').trim();
-            if(!/^[A-Za-z0-9_-]{1,64}$/.test(id)){
-                host.innerHTML='<div style="height:100%;display:flex;align-items:center;justify-content:center;color:#888;font-size:13px">请输入有效画板 ID，或点「新建画板」</div>';
+            const bid=(id||currentBoardId||'').trim();
+            if(!/^[A-Za-z0-9_-]{1,64}$/.test(bid)){
+                host.innerHTML='<div style="height:100%;display:flex;align-items:center;justify-content:center;color:#888;font-size:13px;padding:0 20px;text-align:center;line-height:1.8">点「新建画板」开始绘制；已有画板可在「白板管理」中打开</div>';
                 return;
             }
-            host.innerHTML='<div style="height:100%" data-excalidraw data-note="'+escAttr(id)+'" data-mode="edit"></div>';
+            currentBoardId=bid;
+            host.innerHTML='<div style="height:100%" data-excalidraw data-note="'+escAttr(bid)+'" data-mode="edit"></div>';
             if(window.ExcalidrawMount)window.ExcalidrawMount();
             else ensureExcBundle();
         }
         function wbNew(){
-            const d=document.getElementById('wbNoteId');
-            const id='wb-'+Math.random().toString(36).slice(2,10);
-            if(d)d.value=id;
-            wbMount();
-            showToast('新画板 '+id+'：直接开画，保存需管理员','success');
+            currentBoardId='wb-'+Math.random().toString(36).slice(2,10);
+            wbMount(currentBoardId);
+            showToast('新画板已创建：直接开画，点「保存画板」保存','success');
         }
         async function wbSave(){
             const saver=window.__excalidrawSave;
@@ -1805,7 +1805,6 @@
                     return `<div class="exc-card">
                         <div style="min-width:150px">
                             <div class="exc-title">${escHtml(n.title||'(未命名)')}</div>
-                            <div class="exc-id">${escHtml(n.id)}</div>
                         </div>
                         <div class="exc-meta">${editBadge}${lockBadge}<span>rev ${n.rev}</span><span>更新 ${updated}</span></div>
                         <div class="exc-ops">

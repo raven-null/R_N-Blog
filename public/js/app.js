@@ -299,7 +299,7 @@ const BlogApp = {
 
         return `
             <div class="card" data-href="article.html?post=${this.escAttr(post.filename)}&blob=${this.escAttr(post.id || '')}" onclick="BlogApp.openPost('${this.escAttr(post.filename)}', '${this.escAttr(post.id || '')}')">
-                ${post.image ? `
+                ${(post.image && post.type !== 'whiteboard') ? `
                     <div class="card-img">
                         <img src="${this.escAttr(post.image)}" alt="${this.esc(post.title)}" class="img-placeholder" loading="lazy" decoding="async"
                              referrerpolicy="no-referrer"

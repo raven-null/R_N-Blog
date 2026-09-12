@@ -123,7 +123,6 @@
         background:linear-gradient(135deg,#252b48,#2e2240);border:1px solid rgba(255,255,255,.07);
         border-radius:12px;padding:10px 16px;font-size:13px;color:var(--text-secondary);
     }
-    .ee-board-bar .bid{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:#cfe2ff}
     .ee-board-bar .sp{flex:1}
     .ee-board-host{flex:1;min-height:0;background:#f7f7f9;border-radius:12px;overflow:hidden;position:relative;border:1px solid rgba(255,255,255,.07)}
     .ee-board-host>[data-excalidraw]{height:100%}
@@ -191,7 +190,7 @@
                 <label>摘要（留空自动提取）</label>
                 <textarea id="eeExcerpt" rows="3" oninput="eeMarkDirty()"></textarea>
             </div>
-            <div class="ee-card">
+            <div class="ee-card" id="eeCoverCard">
                 <label>封面图 URL</label>
                 <input id="eeImage" placeholder="/images/g/xxx.webp" oninput="eeMarkDirty();eeRenderCover()">
                 <div class="ee-cover" id="eeCover">无封面</div>
@@ -205,7 +204,7 @@
         <!-- 白板 -->
         <section class="ee-board" id="eeBoard" style="display:none">
             <div class="ee-board-bar">
-                <span>画板 ID</span><span class="bid" id="eeBoardId">—</span>
+                <span>画板内容独立保存，前台以整页白板展示</span>
                 <span class="sp"></span>
                 <button class="ee-btn primary" onclick="eeSaveBoard()">保存画板</button>
                 <a class="ee-btn" id="eeBoardOpen" target="_blank" rel="noopener">独立窗口打开</a>
@@ -215,6 +214,6 @@
     </main>
 
     <div class="ee-toast" id="eeToast"></div>
-    <script src="js/admin-edit.js?v=1.0.0"></script>
+    <script src="js/admin-edit.js?v=1.0.2"></script>
 </body>
 </html>

@@ -176,9 +176,8 @@
     function mountBoard() {
         var host = $('eeBoardHost');
         var bid = (doc && doc.boardId) || '';
-        $('eeBoardId').textContent = bid || '（该文章没有绑定画板）';
         if (!bid) {
-            host.innerHTML = '<div class="ee-hint">这篇文章没有绑定画板 ID，无法在内嵌模式编辑。可到白板管理中新建并发布。</div>';
+            host.innerHTML = '<div class="ee-hint">这篇文章还没有绑定画板，无法内嵌编辑；可到「白板管理」新建画板后发布文章。</div>';
             return;
         }
         $('eeBoardOpen').href = '/excalidraw.html?note=' + encodeURIComponent(bid) + '&edit=1';
@@ -214,7 +213,6 @@
             ['创建', esc(doc.createdAt || '')],
             ['更新', esc(doc.updatedAt || doc.update || '')]
         ];
-        if (docType === 'whiteboard') rows.splice(2, 0, ['画板 ID', esc(doc.boardId || '（无）')]);
         $('eeMeta').innerHTML = rows.map(function (r) {
             return '<span>' + r[0] + '：<b>' + r[1] + '</b></span>';
         }).join('');
@@ -250,6 +248,11 @@
         renderMeta();
         renderStatusBadge();
         if (docType === 'card') $('eeViewBtn').textContent = '首页查看';
+        // 随记与白板没有封面图：隐藏封面卡片（保存时也不写 image，清掉存量随机封面）
+        if (docType !== 'article') {
+            var coverCard = $('eeCoverCard');
+            if (coverCard) coverCard.style.display = 'none';
+        }
         if (docType === 'whiteboard') {
             $('eeEditorCol').style.display = 'none';
             $('eeSide').style.display = 'none';
@@ -275,7 +278,7 @@
             title: title,
             tags: tags,
             excerpt: $('eeExcerpt').value.trim(),
-            image: $('eeImage').value.trim(),
+            image: docType === 'article' ? $('eeImage').value.trim() : '',
             status: $('eeStatusSel').value,
             type: docType,
             boardId: (doc && doc.boardId) || '',
