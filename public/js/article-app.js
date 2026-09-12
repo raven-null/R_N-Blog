@@ -1557,20 +1557,33 @@
         // 移动端菜单功能
         window.menuVisible = false;
 
+        // 收起移动端功能汇总菜单（菜单项点击后、切回桌面宽度时都会用到）
+        function closeMobileMenu() {
+            var popup = document.getElementById('mobileMenuPopup');
+            var ball = document.getElementById('mobileFloatBall');
+            if (popup) {
+                popup.style.setProperty('display', 'none', 'important');
+                popup.classList.remove('show');
+            }
+            if (ball) ball.classList.remove('active');
+            window.menuVisible = false;
+        }
+
         function toggleMobileMenu() {
             var popup = document.getElementById('mobileMenuPopup');
             var ball = document.getElementById('mobileFloatBall');
-            window.menuVisible = !window.menuVisible;
-            
+
             if (window.menuVisible) {
+                closeMobileMenu();
+                return;
+            }
+
+            window.menuVisible = true;
+            if (popup) {
                 popup.style.setProperty('display', 'flex', 'important');
                 popup.classList.add('show');
-                ball.classList.add('active');
-            } else {
-                popup.style.setProperty('display', 'none', 'important');
-                popup.classList.remove('show');
-                ball.classList.remove('active');
             }
+            if (ball) ball.classList.add('active');
         }
 
         // 显示侧边栏（目录）
@@ -1581,12 +1594,7 @@
             overlay.classList.add('show');
             document.body.style.overflow = 'hidden';
             // 关闭菜单
-            var popup = document.getElementById('mobileMenuPopup');
-            var ball = document.getElementById('mobileFloatBall');
-            popup.style.setProperty('display', 'none', 'important');
-            popup.classList.remove('show');
-            ball.classList.remove('active');
-            window.menuVisible = false;
+            closeMobileMenu();
         }
 
         // 关闭侧边栏
@@ -1611,14 +1619,7 @@
         // 切换AI聊天
         function toggleChat() {
             // 关闭菜单
-            var popup = document.getElementById('mobileMenuPopup');
-            var ball = document.getElementById('mobileFloatBall');
-            if (popup) {
-                popup.style.setProperty('display', 'none', 'important');
-                popup.classList.remove('show');
-            }
-            if (ball) ball.classList.remove('active');
-            window.menuVisible = false;
+            closeMobileMenu();
 
             // 打开聊天窗口
             var chatWin = document.getElementById('chatWindow');
@@ -1633,17 +1634,11 @@
         // 检测屏幕尺寸，显示/隐藏移动端元素
         function checkMobileView() {
             const width = window.innerWidth;
-            const floatBall = document.getElementById('mobileFloatBall');
-            const menuPopup = document.getElementById('mobileMenuPopup');
             const tocSidebar = document.getElementById('tocSidebar');
 
-            // 当侧边栏隐藏时（宽度<773），显示悬浮球
-            if (width < 773) {
-                floatBall.style.setProperty('display', 'flex', 'important');
-            } else {
-                floatBall.style.setProperty('display', 'none', 'important');
-                menuPopup.style.setProperty('display', 'none', 'important');
-                menuPopup.classList.remove('show');
+            // 悬浮球显隐交给 CSS（窄屏或触摸设备），这里只回收移动端菜单状态
+            if (width >= 773) {
+                closeMobileMenu();
                 closeSidebar();
                 if (tocSidebar) tocSidebar.style.display = '';
             }

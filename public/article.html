@@ -9,7 +9,7 @@
     <script src="/js/site-icon.js?v=1.0.0"></script>
     
     <!-- 主样式 -->
-    <link rel="stylesheet" href="css/style.css?v=3.16.3">
+    <link rel="stylesheet" href="css/style.css?v=3.16.4">
     <link rel="stylesheet" href="css/glass.css?v=1.0.11">
     
     <!-- Marked.js -->
@@ -388,6 +388,44 @@
             width: 100%;
             max-width: 1250px;
             min-width: 0;
+        }
+
+        /* ===== 移动端功能汇总悬浮球 =====
+           基础样式放全局、默认隐藏，窄屏或触屏设备才显示。
+           不再由 JS 按窗口宽度写内联 display，避免手机上不出现。 */
+        .mobile-float-ball {
+            position: fixed;
+            right: 16px;
+            bottom: 100px;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 150;
+            box-shadow: 0 4px 16px var(--shadow);
+            transition: all 0.3s;
+        }
+
+        /* 窄屏或触摸设备（含手机「桌面版网站」模式）显示悬浮球 */
+        @media (max-width: 773px), (hover: none) and (pointer: coarse) {
+            .mobile-float-ball {
+                display: flex;
+            }
+        }
+
+        .mobile-menu-btn.active {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        /* 专注模式下目录侧栏是隐藏的，菜单里的目录入口一并收起 */
+        html.reader-focus .mobile-menu-btn[data-focus-hide] {
+            display: none;
         }
 
         /* 移动端返回按钮（侧边栏隐藏时显示在主内容区） */
@@ -1510,8 +1548,6 @@
                 padding: 24px;
             }
 
-            }
-
             .article-content {
                 padding: 24px;
             }
@@ -1651,6 +1687,7 @@
             .mobile-menu-popup.show .mobile-menu-btn:nth-child(3) { transition-delay: 0.1s; }
             .mobile-menu-popup.show .mobile-menu-btn:nth-child(4) { transition-delay: 0.15s; }
             .mobile-menu-popup.show .mobile-menu-btn:nth-child(5) { transition-delay: 0.2s; }
+            .mobile-menu-popup.show .mobile-menu-btn:nth-child(6) { transition-delay: 0.25s; }
 
             .mobile-menu-btn:hover {
                 border-color: var(--accent);
@@ -1805,7 +1842,7 @@
 
     <!-- 移动端弹出菜单 -->
     <div class="mobile-menu-popup" id="mobileMenuPopup">
-        <button class="mobile-menu-btn" onclick="showSidebar()" title="目录">
+        <button class="mobile-menu-btn" data-focus-hide onclick="showSidebar()" title="目录">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <line x1="3" y1="12" x2="21" y2="12"></line>
                 <line x1="3" y1="6" x2="21" y2="6"></line>
@@ -1834,6 +1871,14 @@
                 <line x1="21" y1="12" x2="23" y2="12"></line>
                 <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
                 <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+            </svg>
+        </button>
+        <button class="mobile-menu-btn" id="mobileFocusToggle" onclick="toggleReaderFocus()" title="专注阅读">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="15 3 21 3 21 9"></polyline>
+                <polyline points="9 21 3 21 3 15"></polyline>
+                <line x1="21" y1="3" x2="14" y2="10"></line>
+                <line x1="3" y1="21" x2="10" y2="14"></line>
             </svg>
         </button>
         <button class="mobile-menu-btn" id="mobileChatToggle" onclick="toggleChat()" title="AI 助手">
@@ -2008,10 +2053,10 @@
     <script src="js/theme.js?v=3.13.6"></script>
     <script src="js/markdown.js?v=3.14.2" defer></script>
     <script src="js/chat.js?v=3.16.1" defer></script>
-    <script src="js/reader.js?v=3.13.6" defer></script>
+    <script src="js/reader.js?v=3.13.7" defer></script>
     <script src="js/animations.js?v=3.14.0" defer></script>
 
-    <script src="js/article-app.js?v=1.3.1" defer></script>
+    <script src="js/article-app.js?v=1.3.2" defer></script>
 
 </body>
 </html>

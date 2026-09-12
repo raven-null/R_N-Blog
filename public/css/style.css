@@ -2811,7 +2811,6 @@ html.reader-serif .article-content {
 
 /* 专注阅读模式：文章铺满整页 */
 html.reader-focus .toc-sidebar,
-html.reader-focus .mobile-float-ball,
 html.reader-focus .mobile-top-bar,
 html.reader-focus .reader-toolbar {
     display: none !important;

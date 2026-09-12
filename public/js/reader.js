@@ -77,7 +77,23 @@
 
     function toggleFocus() {
         root.classList.toggle('reader-focus');
+        syncFocusUi();
     }
+
+    // 同步移动端悬浮球菜单里的专注按钮状态
+    function syncFocusUi() {
+        const btn = document.getElementById('mobileFocusToggle');
+        if (!btn) return;
+        const on = root.classList.contains('reader-focus');
+        btn.classList.toggle('active', on);
+        btn.title = on ? '退出专注' : '专注阅读';
+    }
+
+    // 供移动端功能汇总菜单调用，点完顺手收起菜单
+    window.toggleReaderFocus = function () {
+        toggleFocus();
+        if (typeof window.closeMobileMenu === 'function') window.closeMobileMenu();
+    };
 
     function init() {
         // 阅读进度条
@@ -129,6 +145,7 @@
         }
 
         apply();
+        syncFocusUi();
     }
 
     if (document.readyState === 'loading') {
