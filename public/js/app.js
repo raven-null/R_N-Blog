@@ -292,10 +292,8 @@ const BlogApp = {
             ? '<span class="card-type-badge">白板</span>'
             : (post.type === 'card' ? '<span class="card-type-badge">卡片</span>' : '');
 
-        // 预计阅读时长（按每 300 字约 1 分钟估算）；白板文章以交互形态替代
-        const wordCount = post.wordCount || 0;
-        const readTime = Math.max(1, Math.round(wordCount / 300));
-        const readingLabel = post.type === 'whiteboard' ? '交互白板' : `${readTime} 分钟`;
+        // 卡片右下角形态文字：白板文章显示「交互白板」，普通博客文章显示「博客文章」
+        const readingLabel = post.type === 'whiteboard' ? '交互白板' : '博客文章';
 
         return `
             <div class="card" data-href="article.html?post=${this.escAttr(post.filename)}&blob=${this.escAttr(post.id || '')}" onclick="BlogApp.openPost('${this.escAttr(post.filename)}', '${this.escAttr(post.id || '')}')">
