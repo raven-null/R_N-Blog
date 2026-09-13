@@ -199,6 +199,16 @@ body.home-layout {
     display: flex;
     align-items: center;
     gap: 40px;
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+    /* 留出空间给 .nav-link::after 下划线，避免被滚动容器裁掉 */
+    padding-bottom: 4px;
+}
+
+.nav-links::-webkit-scrollbar {
+    display: none;
 }
 
 .nav-link {

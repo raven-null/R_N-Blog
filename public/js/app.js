@@ -16,6 +16,7 @@ const BlogApp = {
     filteredPosts: [],
     // 当前选中的标签
     currentTag: null,
+    currentType: null, // 内容形态筛选：null | 'board'（白板）| 'card'（随记）
     // 当前视图（博客 / 图库 / 仪表盘）
     currentView: 'blog',
     // 图库图片清单缓存
@@ -467,30 +468,44 @@ const BlogApp = {
 
     // 按标签筛选文章
     filterByTag(tag) {
-        this.currentTag = tag;
+        this.currentTag = tag || null;
+        if (this.currentTag) this.currentType = null; // 标签与形态互斥
+        this.applyFilter();
+    },
 
-        if (tag) {
-            this.filteredPosts = this.posts.filter(post => (post.tags || []).includes(tag));
-        } else {
-            this.filteredPosts = [...this.posts];
-        }
+    // 按内容形态筛选（白板 / 随记）
+    filterByType(type) {
+        this.currentType = type || null;
+        if (this.currentType) this.currentTag = null;
+        this.applyFilter();
+    },
 
+    // 统一应用筛选条件并重绘
+    applyFilter() {
+        let list = [...this.posts];
+        if (this.currentType === 'board') list = list.filter(post => post.type === 'whiteboard');
+        else if (this.currentType === 'card') list = list.filter(post => post.type === 'card');
+        if (this.currentTag) list = list.filter(post => (post.tags || []).includes(this.currentTag));
+
+        this.filteredPosts = list;
         this.renderPosts();
         this.updateNavActive();
         this.updateURL();
         this.closeTagsPanel();
     },
 
-    // 更新导航栏静态标签链接的激活状态
+    // 更新导航栏链接的激活状态（形态 / 标签 / 全部）
     updateNavActive() {
-        document.querySelectorAll('.nav-link').forEach(link => {
-            link.classList.remove('active');
-        });
+        const type = this.currentType;
         const tag = this.currentTag;
         document.querySelectorAll('.nav-link').forEach(link => {
+            link.classList.remove('active');
             const onclick = link.getAttribute('onclick') || '';
-            if (tag && onclick.includes(`'${tag}'`)) link.classList.add('active');
-            if (!tag && onclick.includes('null')) link.classList.add('active');
+            if (type && onclick.includes(`filterByType('${type}')`)) { link.classList.add('active'); return; }
+            if (!type && tag && onclick.includes(`'${tag}'`)) { link.classList.add('active'); return; }
+            if (!type && !tag && (onclick.includes('filterByTag(null)') || onclick.includes('filterByType(null)'))) {
+                link.classList.add('active');
+            }
         });
     },
 
@@ -1262,13 +1277,16 @@ const BlogApp = {
     // 处理 URL 路由（标签）
     handleRoute() {
         const urlParams = new URLSearchParams(window.location.search);
+        const type = urlParams.get('type');
         const tag = urlParams.get('tag');
+        if (type === 'board' || type === 'card') { this.filterByType(type); return; }
         if (tag) this.filterByTag(tag);
     },
 
     // 更新 URL 参数
     updateURL() {
         const params = new URLSearchParams();
+        if (this.currentType) params.set('type', this.currentType);
         if (this.currentTag) params.set('tag', this.currentTag);
         const queryString = params.toString();
         const newURL = queryString ? `?${queryString}` : window.location.pathname;
