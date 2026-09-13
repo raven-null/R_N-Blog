@@ -294,14 +294,14 @@ const BlogApp = {
         return `
             <div class="card" data-href="article.html?post=${this.escAttr(post.filename)}&blob=${this.escAttr(post.id || '')}" onclick="BlogApp.openPost('${this.escAttr(post.filename)}', '${this.escAttr(post.id || '')}')">
                 ${post.image ? `
-                    <div class="card-img">
+                    <div class="card-img" style="height: ${this.getCardHeight(post)}px;">
                         <img src="${this.escAttr(post.image)}" alt="${this.esc(post.title)}" class="img-placeholder" loading="lazy" decoding="async"
                              referrerpolicy="no-referrer"
                              data-g1="${gradientColors[0]}" data-g2="${gradientColors[1]}" data-icon="${this.getCardIcon(post.tags || [])}"
                              onerror="BlogApp.handleCoverError(this)">
                     </div>
                 ` : `
-                    <div class="card-img" style="height: ${this.getRandomHeight()}px; background: linear-gradient(145deg, ${gradientColors[0]}, ${gradientColors[1]});">
+                    <div class="card-img" style="height: ${this.getCardHeight(post)}px; background: linear-gradient(145deg, ${gradientColors[0]}, ${gradientColors[1]});">
                         <div class="big-text">${this.getCardIcon(post.tags || [])}</div>
                     </div>
                 `}
@@ -1286,9 +1286,14 @@ const BlogApp = {
     },
 
     // 获取随机卡片高度（用于瀑布流）
-    getRandomHeight() {
-        const heights = [160, 180, 200, 220, 240, 260, 280, 300];
-        return heights[Math.floor(Math.random() * heights.length)];
+    // 卡片封面高度：由文章 id / 文件名决定，同一篇文章每次渲染都是同一高度。
+    // 这样图片懒加载完成时容器高度不会变化，CSS 多列瀑布流不会重排（否则卡片会不断位移）。
+    getCardHeight(post) {
+        const heights = [180, 200, 220, 240, 260, 280];
+        const key = String((post && (post.id || post.filename || post.title)) || '');
+        let h = 0;
+        for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) % 100000;
+        return heights[h % heights.length];
     },
 
     // 根据标签获取渐变颜色

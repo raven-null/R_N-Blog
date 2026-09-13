@@ -1157,6 +1157,8 @@ body.home-layout {
 .card-img {
     width: 100%;
     min-height: 160px;
+    /* 未加载完成时的占位底色，避免闪白/闪黑 */
+    background: var(--bg-tertiary);
     display: flex;
     align-items: center;
     justify-content: center;
