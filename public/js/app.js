@@ -822,6 +822,22 @@ const BlogApp = {
         if (panel) panel.classList.remove('show');
     },
 
+    // 图库图片：加载完成后把真实宽高比写回卡片。
+    // 服务端没有记录图片尺寸，所以卡片先用 CSS 的 4:3 占位；比例写回后多列布局基本稳定，不再因图片撑开而大幅重排。
+    syncGalleryRatios(grid) {
+        if (!grid) return;
+        grid.querySelectorAll('.gallery-item img').forEach(img => {
+            const apply = () => {
+                const w = img.naturalWidth, h = img.naturalHeight;
+                if (!w || !h) return;
+                const item = img.closest('.gallery-item');
+                if (item) item.style.aspectRatio = w + ' / ' + h;
+            };
+            if (img.complete) apply();
+            else img.addEventListener('load', apply, { once: true });
+        });
+    },
+
     // 根据当前分类渲染图库
     renderGalleryByTag() {
         const grid = document.getElementById('galleryGrid');
@@ -851,6 +867,7 @@ const BlogApp = {
                      onclick="openGalleryLightbox('${img.url}', ${i})">
             </figure>`;
         }).join('');
+        this.syncGalleryRatios(grid);
     },
 
     // 切换图库分类面板
