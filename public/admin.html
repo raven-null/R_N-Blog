@@ -37,7 +37,8 @@
         .admin-actions .sidebar-item{padding:9px 12px;border-radius:var(--radius-sm);text-decoration:none}
         .admin-actions .sidebar-item .switch{margin-left:auto;transform:scale(.85);transform-origin:right center}
         .admin-actions .refresh-item.spinning svg{animation:refreshSpin .7s linear infinite}
-        .sidebar.collapsed .sidebar-foot .admin-actions{display:none}
+        /* 折叠时底部按钮组同样只留图标（文字由 .sidebar-item 的折叠规则隐藏），开关收起 */
+        .sidebar.collapsed .admin-actions .sidebar-item .switch{display:none}
         /* 窄屏：按钮组回到顶栏，横向紧凑排列 */
         .admin-header-right .admin-actions{flex-direction:row;align-items:center;gap:2px}
         .admin-header-right .admin-actions .sidebar-item{padding:6px 10px;font-size:12px;border-left:none}
@@ -70,7 +71,6 @@
         /* 侧边栏底部：刷新后台 */
         .sidebar-foot{flex-shrink:0;padding:10px 12px 14px;border-top:1px solid var(--border)}
         @keyframes refreshSpin{to{transform:rotate(360deg)}}
-        .sidebar.collapsed .sidebar-foot{padding:10px 0 14px}
 
         .content{flex:1;overflow-y:auto;padding:24px 28px}
         /* 移动端导航（默认隐藏） */
