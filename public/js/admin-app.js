@@ -339,9 +339,21 @@
             else if(tab==='settings')await loadSettings();
             else if(tab==='write')await loadArticleTagNames();
         }
+        // 顶栏三个按钮（刷新 / 首页 / 退出）：宽屏放侧边栏底部，窄屏（侧边栏隐藏）回到顶栏
+        function placeAdminActions(){
+            const box=document.getElementById('adminActions');
+            const side=document.getElementById('sidebarFoot');
+            const hdr=document.getElementById('adminActionsHost');
+            if(!box||!side||!hdr)return;
+            const target=window.innerWidth<=1024?hdr:side;
+            if(box.parentElement!==target)target.appendChild(box);
+        }
+        window.addEventListener('resize',placeAdminActions);
+        if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',placeAdminActions)}else{placeAdminActions()}
+
         async function refreshAdmin(ev){
             if(ev&&ev.shiftKey){location.reload();return}
-            const btn=document.querySelector('.sidebar-refresh-btn');
+            const btn=document.querySelector('#adminActions .hdr-refresh-btn');
             if(btn)btn.classList.add('spinning');
             try{
                 // 清掉本标签页的前台列表缓存，避免刷新后仍是旧数据
