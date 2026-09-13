@@ -216,6 +216,10 @@
         .tags-info{font-size:11px;color:var(--text-muted);margin-bottom:14px;padding:8px 12px;background:var(--bg-input);border-radius:var(--radius-sm)}
         .tags-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(280px,100%),1fr));gap:12px}
 
+        /* 下拉框统一黑底白字（发布弹窗、白板弹窗、设置等所有 select） */
+        select{background:#000 !important;color:#fff !important;border-color:rgba(255,255,255,.2) !important}
+        select option{background:#000;color:#fff}
+
         /* 标签选择器（液态玻璃） */
         .tag-picker-wrap{position:relative}
         .tag-picker-input{
@@ -1116,7 +1120,7 @@
                                     <textarea id="wmNoteContent" class="note-input note-textarea" placeholder="记录点什么… 支持 **粗体**、`行内代码`、[链接](https://…)"></textarea>
                                 </div>
                                 <div class="note-input-item">
-                                    <input id="wmNoteTags" class="note-input" placeholder="标签（逗号分隔，可选）">
+                                    <div id="wmNoteTagsPicker"></div>
                                 </div>
                                 <div class="wm-recent" id="wmRecentNotes"></div>
                             </div>
@@ -1565,7 +1569,8 @@
         </div>
     </div>
 
-        <script src="js/admin-app.js?v=1.4.0"></script>
+        <script src="js/tag-picker.js?v=1.0.0"></script>
+        <script src="js/admin-app.js?v=1.5.0"></script>
 
     <!-- 前台预览抽屉（iframe 内嵌，零跳出） -->
     <style>

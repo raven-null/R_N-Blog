@@ -53,6 +53,35 @@
         return t === 'whiteboard' ? '白板' : (t === 'card' ? '随记' : '文章');
     }
 
+    // ===== 标签选择器（与后台写文章页同款：chips + 下拉建议 + 回车确认）=====
+    var tagPicker = null;      // 侧栏标签
+    var pubTagPicker = null;   // 发布弹窗标签
+
+    function currentTags() { return tagPicker ? tagPicker.getTags() : []; }
+
+    function initTagPickers() {
+        if (!window.TagPicker) return;
+        if (!tagPicker && $('eeTagsPicker')) {
+            tagPicker = window.TagPicker.create($('eeTagsPicker'), {
+                placeholder: '添加标签，回车确认…',
+                onChange: function () { window.eeMarkDirty(); }
+            });
+        }
+        if (!pubTagPicker && $('eePubTagsPicker')) {
+            pubTagPicker = window.TagPicker.create($('eePubTagsPicker'), { placeholder: '添加标签，回车确认…' });
+        }
+    }
+
+    // 已有标签作为下拉建议（失败时忽略，不影响自由输入）
+    function loadTagSuggestions() {
+        api('action=tags').then(function (r) {
+            if (!r || r.status !== 'success') return;
+            var names = (r.data || []).map(function (t) { return t.name; }).filter(Boolean);
+            if (tagPicker) tagPicker.setSuggestions(names);
+            if (pubTagPicker) pubTagPicker.setSuggestions(names);
+        }).catch(function () { /* 忽略 */ });
+    }
+
     // ===== 未保存提示 =====
     window.eeMarkDirty = function () {
         dirty = true;
@@ -505,7 +534,9 @@
         $('eeTypeBadge').textContent = typeLabel(docType);
         $('eeIdText').textContent = doc.id || '';
         $('eeTitle').value = doc.title || '';
-        $('eeTags').value = (doc.tags || []).join(', ');
+        initTagPickers();
+        if (tagPicker) tagPicker.setTags(doc.tags || [], true);
+        loadTagSuggestions();
         $('eeExcerpt').value = doc.excerpt || '';
         $('eeImage').value = doc.image || '';
         $('eeStatusSel').value = doc.status || 'published';
@@ -597,7 +628,7 @@
     // ===== 保存 =====
     async function collect() {
         var title = $('eeTitle').value.trim();
-        var tags = $('eeTags').value.split(/[,，]/).map(function (s) { return s.trim(); }).filter(Boolean);
+        var tags = currentTags();
         var body = {
             id: doc ? doc.id : docId,
             title: title,
@@ -647,7 +678,7 @@
             doc.excerpt = body.excerpt;
             doc.image = body.image;
             doc.updatedAt = r.data.update || doc.updatedAt;
-            $('eeTags').value = (doc.tags || []).join(', ');
+            if (tagPicker) tagPicker.setTags(doc.tags || [], true);
             renderMeta();
         }
         dirty = false;
@@ -670,9 +701,9 @@
     // ===== 状态 / 删除 / 前台 =====
     // 发布弹窗：状态 / 标签 / 封面，确认后保存
     window.eeOpenPublish = function () {
-        var s = $('eePubStatus'), t = $('eePubTags');
+        var s = $('eePubStatus');
         if (s) s.value = ($('eeStatusSel').value || 'published');
-        if (t) t.value = ($('eeTags').value || '');
+        if (pubTagPicker) pubTagPicker.setTags(currentTags(), true);
         window.eeRenderCover();
         var tip = $('eePubTip'); if (tip) tip.textContent = '';
         var box = $('eePublishModal'); if (box) box.classList.add('open');
@@ -685,7 +716,7 @@
         if (tip) tip.textContent = '';
         var status = ($('eePubStatus') && $('eePubStatus').value) || 'published';
         $('eeStatusSel').value = status;
-        if ($('eePubTags')) $('eeTags').value = $('eePubTags').value;
+        if (pubTagPicker && tagPicker) tagPicker.setTags(pubTagPicker.getTags(), true);
         window.eeMarkDirty();
         var ok = await doSave(true);
         if (!ok) { if (tip) tip.textContent = '保存失败，请检查标题与内容后重试'; return; }

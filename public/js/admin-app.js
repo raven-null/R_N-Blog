@@ -11,6 +11,24 @@
         let articleTagNames=[];
         let selectedArticleTags=[];
         let tagPickerOpen=false;
+
+        // ===== 标签选择器（后台各处统一：chips + 下拉建议 + 回车确认）=====
+        let wmTagPicker=null;    // 写随记弹窗
+        let excTagPicker=null;   // 白板发布弹窗
+        function initWmTagPicker(){
+            if(wmTagPicker||!window.TagPicker)return wmTagPicker;
+            const host=document.getElementById('wmNoteTagsPicker');
+            if(!host)return null;
+            wmTagPicker=window.TagPicker.create(host,{placeholder:'添加标签，回车确认…',suggestions:articleTagNames});
+            return wmTagPicker;
+        }
+        function initExcTagPicker(){
+            if(excTagPicker||!window.TagPicker)return excTagPicker;
+            const host=document.getElementById('excPubTagsPicker');
+            if(!host)return null;
+            excTagPicker=window.TagPicker.create(host,{placeholder:'添加标签，回车确认…',suggestions:articleTagNames});
+            return excTagPicker;
+        }
         let selectedImageKeys=new Set();
         let batchMode=false;
         let batchSide=''; // 'left' 或 'right'
@@ -604,14 +622,15 @@
             const content=document.getElementById('wmNoteContent').value;
             if(!String(content||'').trim()){showToast('写点什么再保存','error');return}
             const title=(document.getElementById('wmNoteTitle').value||'').trim();
-            const tags=(document.getElementById('wmNoteTags').value||'').split(/[,，]/).map(function(s){return s.trim()}).filter(Boolean);
+            const wmP=initWmTagPicker();
+            const tags=wmP?wmP.getTags():[];
             const finalTitle=title||String(content).replace(/\n/g,' ').trim().slice(0,20);
             const r=await apiFetch('action=articles',{method:'POST',body:JSON.stringify({title:finalTitle,content:String(content),status:'published',type:'card',tags})});
             if(r.status==='success'){
                 showToast('随记已发布','success');
                 document.getElementById('wmNoteTitle').value='';
                 document.getElementById('wmNoteContent').value='';
-                document.getElementById('wmNoteTags').value='';
+                if(wmP)wmP.setTags([],true);
                 loadRecentNotes();
                 notifyArticlesChanged();
             }else showToast(r.message||'保存失败','error');
@@ -816,7 +835,8 @@
             if(bn&&mode!=='board')bn.style.display='none';
             if(mode==='note'){
                 // 随记表单里已填的标签作为弹窗初值
-                const raw=(document.getElementById('wmNoteTags').value||'').split(/[,，]/).map(function(s){return s.trim()}).filter(Boolean);
+                const wmP=initWmTagPicker();
+                const raw=wmP?wmP.getTags():[];
                 if(raw.length&&!selectedArticleTags.length){selectedArticleTags=raw;renderTagPickerChips()}
             }
             if(mode==='board'){
@@ -842,14 +862,15 @@
             const title=(document.getElementById('wmNoteTitle').value||'').trim();
             const finalTitle=title||String(content).replace(/\n/g,' ').trim().slice(0,20);
             const tags=selectedArticleTags.slice();
-            (document.getElementById('wmNoteTags').value||'').split(/[,，]/).map(function(s){return s.trim()}).filter(Boolean).forEach(function(t){if(!tags.includes(t))tags.push(t)});
+            const wmP=initWmTagPicker();
+            (wmP?wmP.getTags():[]).forEach(function(t){if(!tags.includes(t))tags.push(t)});
             const status=document.getElementById('edStatus').value;
             const r=await apiFetch('action=articles',{method:'POST',body:JSON.stringify({title:finalTitle,content:String(content),status,type:'card',tags})});
             if(r.status!=='success'){showToast(r.message||'发布失败','error');return}
             showToast(status==='draft'?'随记已存为草稿':'随记已发布','success');
             document.getElementById('wmNoteTitle').value='';
             document.getElementById('wmNoteContent').value='';
-            document.getElementById('wmNoteTags').value='';
+            if(wmP)wmP.setTags([],true);
             selectedArticleTags=[];
             renderTagPickerChips();
             closePublishModal();
@@ -2142,7 +2163,7 @@
             }catch(e){}
             const isPub=!!(art&&art.status==='published');
             const name=(art&&art.title)||('白板：'+noteId);
-            const tags=((art&&art.tags)||[]).join(', ');
+            const tagList=((art&&art.tags)||[]).slice();
             const cover=(art&&art.image)||'';
             openExcModal({
                 title:art?'更新白板文章':'发布白板文章',
@@ -2152,7 +2173,7 @@
                      '<div class="exc-field"><label>状态</label><select id="excPubStatus">'+
                      '<option value="published"'+(isPub?' selected':'')+'>发布</option>'+
                      '<option value="draft"'+(isPub?'':' selected')+'>草稿（下架）</option></select></div>'+
-                     '<div class="exc-field"><label>标签（逗号分隔，可选）</label><input type="text" id="excPubTags" value="'+escAttr(tags)+'" placeholder="如：白板, 灵感"></div>'+
+                     '<div class="exc-field"><label>标签</label><div id="excPubTagsPicker"></div></div>'+
                      '<div class="exc-field"><label>封面图（选填，不设则用白板风格卡片）</label>'+
                      '<div class="exc-cover-row">'+
                      '<div class="exc-cover-preview" id="excPubCoverPreview">'+(cover?'<img src="'+escAttr(cover)+'" alt="封面预览">':'<span>未设置</span>')+'</div>'+
@@ -2162,6 +2183,10 @@
                      '<button type="button" class="btn btn-ghost btn-sm" id="excPubCoverClear">移除</button>'+
                      '</div></div><input type="hidden" id="excPubCover" value="'+escAttr(cover)+'"></div>',
                 onReady:function(){
+                    // 标签选择器：弹窗 DOM 每次重建，先销毁旧实例再创建
+                    if(excTagPicker){try{excTagPicker.destroy()}catch(e){} excTagPicker=null;}
+                    const tp=initExcTagPicker();
+                    if(tp)tp.setTags(tagList,true);
                     const setCover=function(url){
                         const el=document.getElementById('excPubCover');
                         if(el)el.value=url||'';
@@ -2184,7 +2209,7 @@
                 onOk:async function(){
                     const title=(document.getElementById('excPubTitle').value||'').trim()||('白板：'+noteId);
                     const status=document.getElementById('excPubStatus').value;
-                    const tagsArr=(document.getElementById('excPubTags').value||'').split(/[,，]/).map(function(s){return s.trim()}).filter(Boolean);
+                    const tagsArr=excTagPicker?excTagPicker.getTags():[];
                     const coverEl=document.getElementById('excPubCover');
                     const image=coverEl?coverEl.value.trim():'';
                     const body={title,content:'',status,type:'whiteboard',boardId:noteId,tags:tagsArr,image};

@@ -330,16 +330,12 @@
         box-shadow:0 0 0 1px rgba(115,170,255,.35),0 0 12px rgba(115,170,255,.25);
     }
     .ee-btn.active:hover{background:linear-gradient(135deg,rgba(59,130,246,.68),rgba(115,170,255,.55))}
-    /* 下拉框统一黑底白字（含历史版本、状态、章节等） */
-    .ee-card select,
-    .ee-chapter-bar select,
-    .ee-modal-field select{
+    /* 下拉框统一黑底白字（侧栏、章节条、发布弹窗及其它所有 select） */
+    select{
         background:#000 !important;color:#fff !important;
         border-color:rgba(255,255,255,.2) !important;
     }
-    .ee-card select option,
-    .ee-chapter-bar select option,
-    .ee-modal-field select option{
+    select option{
         background:#000;color:#fff;
     }
 
@@ -400,8 +396,8 @@
                 </select>
             </div>
             <div class="ee-card">
-                <label>标签（逗号分隔）</label>
-                <input id="eeTags" placeholder="如：技术, 随笔" oninput="eeMarkDirty()">
+                <label>标签</label>
+                <div id="eeTagsPicker"></div>
             </div>
             <div class="ee-card" id="eeExcerptCard">
                 <label>摘要（留空自动提取）</label>
@@ -469,8 +465,8 @@
                 </select>
             </div>
             <div class="ee-modal-field">
-                <label>标签（逗号分隔）</label>
-                <input type="text" id="eePubTags" placeholder="如：白板, 灵感">
+                <label>标签</label>
+                <div id="eePubTagsPicker"></div>
             </div>
             <div class="ee-modal-field">
                 <label>封面图</label>
@@ -501,6 +497,7 @@
     </div>
 
     <div class="ee-toast" id="eeToast"></div>
-    <script src="js/admin-edit.js?v=1.3.2"></script>
+    <script src="js/tag-picker.js?v=1.0.0"></script>
+    <script src="js/admin-edit.js?v=1.4.0"></script>
 </body>
 </html>
