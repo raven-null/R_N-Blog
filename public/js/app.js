@@ -466,17 +466,18 @@ const BlogApp = {
         }, { passive: true });
     },
 
-    // 按标签筛选文章
+    // 按标签筛选文章（tag 传 null 即「全部」：标签与形态一起清空）
     filterByTag(tag) {
         this.currentTag = tag || null;
-        if (this.currentTag) this.currentType = null; // 标签与形态互斥
+        this.currentType = null; // 走标签入口（含「全部」）一律清掉形态筛选，否则「全部」看不出效果
         this.applyFilter();
     },
 
     // 按内容形态筛选（白板 / 随记 / 文章）
     filterByType(type) {
         this.currentType = type || null;
-        if (this.currentType) this.currentTag = null;
+        if (!this.currentType) this.currentTag = null; // 形态传 null 时同样回到全部
+        else this.currentTag = null;
         this.applyFilter();
     },
 
