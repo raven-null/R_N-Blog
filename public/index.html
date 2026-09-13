@@ -52,9 +52,6 @@
                     <a href="#" class="nav-link active" onclick="BlogApp.filterByTag(null); return false;">全部</a>
                     <a href="#" class="nav-link" onclick="BlogApp.filterByType('board'); return false;">白板</a>
                     <a href="#" class="nav-link" onclick="BlogApp.filterByType('card'); return false;">随记</a>
-                    <a href="#" class="nav-link" onclick="BlogApp.filterByTag('技术'); return false;">技术</a>
-                    <a href="#" class="nav-link" onclick="BlogApp.filterByTag('生活'); return false;">生活</a>
-                    <a href="#" class="nav-link" onclick="BlogApp.filterByTag('AI'); return false;">AI</a>
                 </div>
                 <div class="nav-tools">
                     <div class="nav-tools-item">
@@ -542,24 +539,10 @@
                 activeViewBtn.style.display = '';
             }
 
-            // 5. 导航标签
-            const navTags = blogSettings.navTags || [];
+            // 5. 导航栏只保留内容形态入口（全部 / 白板 / 随记）
+            //    不再按后台设置的 navTags 生成标签链接；按标签筛选仍可用右上角「标签」按钮
             const navLinks = document.querySelector('.nav-links');
-            if (navLinks && navTags.length) {
-                // 保留「全部」，重建其余标签链接
-                const existing = navLinks.querySelector('a[onclick*="filterByTag(null)"]');
-                // 「白板 / 随记」已由形态入口承担，标签里同名的不再重复出现
-                const tagLinks = navTags.filter(t => t !== '白板' && t !== '随记').map(tag => `
-                    <a href="#" class="nav-link" onclick="BlogApp.filterByTag('${tag.replace(/'/g,"\\'")}'); return false;">${tag}</a>
-                `).join('');
-                // 「白板 / 随记」是固定的内容形态筛选入口，重建标签时始终保留
-                const typeLinks = `
-                    <a href="#" class="nav-link" onclick="BlogApp.filterByType('board'); return false;">白板</a>
-                    <a href="#" class="nav-link" onclick="BlogApp.filterByType('card'); return false;">随记</a>
-                `;
-                navLinks.innerHTML = (existing ? existing.outerHTML : '<a href="#" class="nav-link active" onclick="BlogApp.filterByTag(null); return false;">全部</a>') + typeLinks + tagLinks;
-                BlogApp.updateNavActive();
-            }
+            if (navLinks) BlogApp.updateNavActive();
 
             // 6. 关于信息
             const about = blogSettings.about || {};
