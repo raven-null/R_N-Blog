@@ -40,12 +40,6 @@ import { Excalidraw, exportToBlob } from "@excalidraw/excalidraw"
 // ===== 液态玻璃 UI 样式（幂等注入一次） =====
 const UI_CSS = `
 .exc-shell{display:flex;flex-direction:column;height:100%;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;color:#eee}
-.exc-bar{display:flex;align-items:center;gap:10px;padding:8px 14px;flex-wrap:wrap;background:rgba(16,16,19,.62);backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%);border-bottom:1px solid rgba(255,255,255,.1);box-shadow:inset 0 1px 0 rgba(255,255,255,.07);font-size:13px;color:#e8e8ea;position:relative;z-index:6}
-.exc-bar-title{display:inline-flex;align-items:center;gap:7px;font-weight:600;color:#fff;min-width:0}
-.exc-bar-title svg{width:15px;height:15px;flex:none;color:#9aa0ff}
-.exc-bar-title span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:34vw}
-.exc-bar-id{color:rgba(255,255,255,.38);font-size:12px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
-.exc-bar-spacer{flex:1}
 .exc-btn{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:999px;cursor:pointer;font-size:13px;color:#e8e8ea;background:linear-gradient(145deg,rgba(255,255,255,.10),rgba(255,255,255,.04));border:1px solid rgba(255,255,255,.14);box-shadow:inset 0 1px 0 rgba(255,255,255,.10),0 2px 10px -3px rgba(0,0,0,.5);transition:transform .25s cubic-bezier(.34,1.56,.64,1),background .2s ease,border-color .2s ease,box-shadow .2s ease,opacity .2s ease;white-space:nowrap;user-select:none;text-decoration:none}
 .exc-btn:hover{background:linear-gradient(145deg,rgba(255,255,255,.17),rgba(255,255,255,.07));border-color:rgba(255,255,255,.26)}
 .exc-btn:active{transform:scale(.95)}
@@ -555,35 +549,9 @@ function NoteApp({ note, mode, bare }: { note: string; mode: "edit" | "view"; ba
 
   return (
     <div className="exc-shell" style={{ position: "relative" }}>
-      {mode === "edit" && !bare && (
-        <div className="exc-bar">
-          <span className="exc-bar-title">
-            <Ic p={ICONS.pencil} />
-            <span>{title}</span>
-          </span>
-          <span className="exc-bar-id">id: {note}</span>
-          <span className="exc-bar-spacer" />
-          {meta?.hasKey && !isAdmin && (
-            <input
-              className="exc-input"
-              value={editKey}
-              onChange={e => setEditKey(e.target.value)}
-              type="password"
-              placeholder="编辑口令"
-            />
-          )}
-          <button className="exc-btn" onClick={exportPng} title="导出当前画布为 PNG 图片">
-            <Ic p={ICONS.image} />
-            PNG
-          </button>
-          <button className="exc-btn exc-btn-primary" onClick={() => save(false)} disabled={saving} title="保存到服务器（Ctrl+S）">
-            <Ic p={ICONS.save} />
-            {saving ? "保存中…" : "保存（Ctrl+S）"}
-          </button>
-        </div>
-      )}
+      {/* 编辑模式不再显示顶栏：保存用 Ctrl+S，需要口令时由下方浮动条输入 */}
       {/* bare 模式（前台舞台）：无工具条，仅口令输入浮条；保存用 Ctrl+S / 宿主「完成」询问 */}
-      {mode === "edit" && bare && meta?.hasKey && !isAdmin && (
+      {mode === "edit" && meta?.hasKey && !isAdmin && (
         <div className="exc-bare-key">
           <Ic p={ICONS.lock} />
           <input

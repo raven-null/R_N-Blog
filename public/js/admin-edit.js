@@ -6,7 +6,7 @@
 (function () {
     'use strict';
 
-    var EXC_BUNDLE_VERSION = 'v13'; // 与 scripts/build-excalidraw.mjs 的 BUNDLE_VERSION 保持一致
+    var EXC_BUNDLE_VERSION = 'v14'; // 与 scripts/build-excalidraw.mjs 的 BUNDLE_VERSION 保持一致
     var adminKey = localStorage.getItem('admin_key') || '';
     var params = new URLSearchParams(location.search);
     var docId = params.get('id') || '';
@@ -189,14 +189,25 @@
         host.innerHTML = '<iframe class="ee-frame" title="白板编辑器" src="/excalidraw.html?note=' + encodeURIComponent(bid) + '&edit=1"></iframe>';
     }
     // ===== 白板管理（移植自后台「白板管理」：权限 / 口令 / 名称 / 历史回滚）=====
-    function excApi(query, opts) {
+    function excApi(query, opts, retry) {
         opts = opts || {};
+        if (retry === undefined) retry = 1; // 网络层失败（部署中 / 连接被关闭）自动重试一次
         return fetch('/api/excalidraw?' + query, {
             method: opts.method || 'GET',
             headers: { 'Content-Type': 'application/json', 'X-Admin-Key': adminKey },
             body: opts.body,
             cache: 'no-store'
-        }).then(function (r) { return r.json(); });
+        }).then(function (r) {
+            if (r.status >= 500) throw new Error('HTTP ' + r.status);
+            return r.json();
+        }).catch(function (err) {
+            if (retry > 0) {
+                return new Promise(function (res) { setTimeout(res, 700); }).then(function () {
+                    return excApi(query, opts, retry - 1);
+                });
+            }
+            throw err;
+        });
     }
     function boardId() { return (doc && doc.boardId) || ''; }
 
@@ -234,7 +245,11 @@
                 $('eeBaKey').textContent = '—';
             }
         } catch (e) {
-            toast('读取白板信息失败', 'error');
+            // 接口不可用（部署中 / 连接被关闭）时降级显示，不抛未捕获异常
+            $('eeBaEditable').textContent = '读取失败';
+            $('eeBaKey').textContent = '—';
+            $('eeBaRev').textContent = '接口暂时不可用';
+            toast('白板信息读取失败（网络或部署中），可点「刷新历史」重试', 'error');
         }
         window.eeLoadBoardHistory();
     };
