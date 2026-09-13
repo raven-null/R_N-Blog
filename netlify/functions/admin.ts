@@ -280,9 +280,8 @@ export default async (req: Request) => {
         ? body.boardId.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 64)
         : ""
 
-      const FIXED_CARD_TAG = "随记" // 卡片笔记的固定标签（自动附加、不可删除，用于首页导航分类）
+      // 标签完全按传入内容保存，不再自动附加「随记」等固定标签
       const tagsArr = Array.isArray(tags) ? tags : (tags || "").split(",").map((t: string) => t.trim()).filter(Boolean)
-      if (type === "card" && !tagsArr.includes(FIXED_CARD_TAG)) tagsArr.unshift(FIXED_CARD_TAG)
 
       // 提取摘要（有内容时自动提取，否则用传入的 excerpt）
       const noExcerpt = type === "card" || type === "whiteboard" // 随记与白板没有摘要
@@ -435,12 +434,10 @@ export default async (req: Request) => {
       if (!raw) return json(404, { status: "error", message: "文章不存在" }, req)
       const article = JSON.parse(raw)
 
-      // 固定标签约束：卡片（随记）强制包含「随记」
-      const FIXED_CARD_TAG = "随记"
+      // 标签完全按传入内容保存（不再强制附加「随记」）
       let nextTags: string[] | null = null
       if (tags !== undefined) {
         const clean = tags.map((t: unknown) => String(t).trim()).filter(Boolean)
-        if (article.type === "card" && !clean.includes(FIXED_CARD_TAG)) clean.unshift(FIXED_CARD_TAG)
         article.tags = clean
         nextTags = clean
       }
