@@ -1260,7 +1260,12 @@ body.home-layout {
     gap: 4px;
 }
 
-/* 卡片上的所有标签共用这一套样式（含「白板 / 卡片」形态徽标，不再单独定义） */
+/* 卡片标签行为空时不占位（文章没有任何标签时不留空隙） */
+.card-tag:empty {
+    display: none;
+}
+
+/* 卡片上的所有标签共用这一套样式 */
 .card-tag span {
     padding: 2px 8px;
     border-radius: 4px;

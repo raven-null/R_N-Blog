@@ -288,11 +288,6 @@ const BlogApp = {
         const avatarImg = this.getAuthorAvatar(post.author);
         const authorName = this.getAuthorName(post.author);
 
-        // 内容形态徽标（白板/卡片）
-        const typeBadge = post.type === 'whiteboard'
-            ? '<span class="card-type-badge">白板</span>'
-            : (post.type === 'card' ? '<span class="card-type-badge">卡片</span>' : '');
-
         // 卡片右下角形态文字：白板文章显示「交互白板」，普通博客文章显示「博客文章」
         const readingLabel = post.type === 'whiteboard' ? '交互白板' : '博客文章';
 
@@ -315,10 +310,7 @@ const BlogApp = {
                         <div class="card-avatar" style="background-image:url('${avatarImg}');"></div>
                         <span class="card-username">${authorName}</span>
                     </div>
-                    <div class="card-tag">
-                        ${typeBadge}
-                        ${(post.tags || []).map(tag => `<span>${tag}</span>`).join(' ')}
-                    </div>
+                    <div class="card-tag">${(post.tags || []).map(tag => `<span>${tag}</span>`).join(' ')}</div>
                     <div class="card-title">${post.title}</div>
                     ${(post.excerpt && post.type !== 'whiteboard') ? `<div class="card-desc">${post.excerpt}</div>` : ''}
                     <div class="card-meta">
@@ -353,10 +345,7 @@ const BlogApp = {
                         <div class="card-avatar" style="background-image:url('${avatarImg}');"></div>
                         <span class="card-username">${authorName}</span>
                     </div>
-                    <div class="card-tag">
-                        <span class="card-type-badge">白板</span>
-                        ${tags}
-                    </div>
+                    <div class="card-tag">${tags}</div>
                     <div class="card-title">${post.title}</div>
                     <div class="card-meta">
                         <span class="card-date">${dateFormatted}</span>
