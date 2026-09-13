@@ -583,6 +583,7 @@
             }
             currentBoardId=bid;
             host.innerHTML='<iframe class="wb-frame" title="白板编辑器" src="/excalidraw.html?note='+encodeURIComponent(bid)+'&edit=1"></iframe>';
+            loadBoardMeta();
         }
         // 取 iframe 内编辑器的保存钩子（同源可直接访问）
         function boardSaver(){
@@ -601,6 +602,8 @@
             currentBoardId='';
             currentBoardArticleId='';
             currentBoardName='';
+            boardMeta=null;
+            syncBoardPermBtns();
             if(host)host.innerHTML='<div class="wb-hint">点「新建画板」开始绘制；已有画板可在「白板管理」中打开</div>';
             try{delete window.__excalidrawSave;delete window.__excalidrawDirty}catch(e){}
         }
@@ -617,6 +620,67 @@
             const ok=await saver();
             showToast(ok?'画板已保存':'保存未完成（口令/空画布/网络？）',ok?'success':'error');
         }
+        // ===== 当前画板的权限与口令（与「白板管理」共用同一套接口）=====
+        let boardMeta=null;   // 当前画板 meta：{ editable, hasKey, title }
+        function syncBoardPermBtns(){
+            const e=document.getElementById('wbEditToggleBtn');
+            const k=document.getElementById('wbSetKeyBtn');
+            if(e)e.textContent=(boardMeta&&boardMeta.editable===0)?'开放编辑':'设为只读';
+            if(k)k.textContent=(boardMeta&&boardMeta.hasKey)?'重设口令':'设口令';
+        }
+        async function loadBoardMeta(){
+            if(!currentBoardId){boardMeta=null;syncBoardPermBtns();return}
+            try{
+                const r=await fetch('/api/excalidraw?id='+encodeURIComponent(currentBoardId)+'&metaOnly=1',{cache:'no-store'});
+                const d=await r.json();
+                boardMeta=(d&&d.status==='success')?d.meta:null;
+            }catch(e){boardMeta=null}
+            syncBoardPermBtns();
+        }
+        async function boardMetaSet(body,okMsg){
+            if(!currentBoardId){showToast('请先点「新建画板」创建画板','error');return false}
+            const d=await excApi('action=meta&id='+encodeURIComponent(currentBoardId),{method:'POST',body:JSON.stringify(body)});
+            if(!d||d.status!=='success'){showToast((d&&d.message)||'操作失败','error');return false}
+            if(okMsg)showToast(okMsg,'success');
+            await loadBoardMeta();
+            return true;
+        }
+        // 设为只读 / 开放编辑（按钮文案随当前权限变化）
+        async function wbToggleEditable(){
+            if(!currentBoardId){showToast('请先点「新建画板」创建画板','error');return}
+            await loadBoardMeta();
+            const isReadOnly=!!(boardMeta&&boardMeta.editable===0);
+            const word=isReadOnly?'开放编辑':'设为只读';
+            const ok=await showConfirm(isReadOnly?'确定对所有人开放编辑？任何拿到链接的人都能修改并保存这块白板。':'确定设为只读？之后只有管理员可以编辑。',word,word);
+            if(!ok)return;
+            await boardMetaSet({editable:isReadOnly?1:0},isReadOnly?'已开放编辑':'已设为只读');
+        }
+        // 设置 / 重设 / 清除编辑口令
+        async function wbSetKey(){
+            if(!currentBoardId){showToast('请先点「新建画板」创建画板','error');return}
+            await loadBoardMeta();
+            const hasKey=!!(boardMeta&&boardMeta.hasKey);
+            openExcModal({
+                title:hasKey?'重设编辑口令':'设置编辑口令',
+                sub:'设置后访客需输入口令才能编辑（查看不受影响），口令至少 4 位。',
+                okText:'保存口令',
+                body:'<div class="exc-field"><label>编辑口令</label><input type="text" id="wbKeyInput" maxlength="40" autocomplete="off" placeholder="至少 4 位"></div>'+
+                     (hasKey?'<div style="margin-top:10px"><button type="button" class="btn btn-danger btn-sm" id="wbKeyClear">清除口令</button></div>':''),
+                onReady:function(){
+                    const btn=document.getElementById('wbKeyClear');
+                    if(btn)btn.addEventListener('click',async function(){
+                        const done=await boardMetaSet({editKey:''},'口令已清除');
+                        if(done)closeExcModal();
+                    });
+                },
+                onOk:async function(){
+                    const v=(document.getElementById('wbKeyInput').value||'').trim();
+                    if(v.length<4){showToast('口令至少 4 位','error');return false}
+                    return await boardMetaSet({editKey:v},'口令已设置');
+                }
+            });
+        }
+
         // 随记快速记录
         async function wmNoteSave(){
             const content=document.getElementById('wmNoteContent').value;

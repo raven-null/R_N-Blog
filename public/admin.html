@@ -1088,6 +1088,8 @@
                         <!-- 白板：ID + 新建/载入/保存/管理 -->
                         <div class="header-right-group" id="rightGroupBoard" style="display:none">
                             <button class="glass-action-btn" onclick="wbNew()">新建画板</button>
+                            <button class="glass-action-btn" id="wbEditToggleBtn" onclick="wbToggleEditable()">设为只读</button>
+                            <button class="glass-action-btn" id="wbSetKeyBtn" onclick="wbSetKey()">设口令</button>
                             <button class="glass-action-btn publish-btn" onclick="openPublishModal()">发布</button>
                             <button class="glass-action-btn" onclick="switchTab('excalidraw')">白板管理 →</button>
                         </div>
@@ -1569,7 +1571,7 @@
     </div>
 
         <script src="js/tag-picker.js?v=1.0.0"></script>
-        <script src="js/admin-app.js?v=1.5.0"></script>
+        <script src="js/admin-app.js?v=1.6.0"></script>
 
     <!-- 前台预览抽屉（iframe 内嵌，零跳出） -->
     <style>
