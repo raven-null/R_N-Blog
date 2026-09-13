@@ -253,7 +253,7 @@
         }
         function artDeleteOne(id){
             const a=allArticles.find(function(x){return x.id===id});
-            deleteArticle(id,a?escJs(a.title||''):'');
+            deleteArticle(id,a?escJs(a.title||''):'',a?a.type:'');
         }
         async function artTop(id){
             const pubs=allArticles.filter(function(a){return a.status==='published'});
@@ -350,7 +350,19 @@
                 if(e.data&&e.data.type==='articles-changed'&&(currentAdminTab==='articles'||currentAdminTab==='write'))loadArticles();
             };
         }catch(e){}
-        async function deleteArticle(id,title){const confirmed=await showConfirm(`确定删除「${title}」？删除后不可恢复！`,'删除文章','删除');if(!confirmed)return;const r=await apiFetch(`action=articles&id=${id}`,{method:'DELETE'});if(r.status==='success'){showToast('已删除','success');loadArticles();notifyArticlesChanged()}else showToast(r.message||'删除失败','error')}
+        async function deleteArticle(id,title,type){
+            const isBoard=type==='whiteboard';
+            const tip=isBoard?'删除后不可恢复，关联的白板数据（场景与全部历史快照）会一并删除！':'删除后不可恢复！';
+            const confirmed=await showConfirm(`确定删除「${title}」？${tip}`,'删除文章','删除');
+            if(!confirmed)return;
+            const r=await apiFetch(`action=articles&id=${id}`,{method:'DELETE'});
+            if(r.status==='success'){
+                showToast(r.removedBoard?`已删除（同时清理白板 ${r.removedBoard} 个数据项）`:isBoard?'已删除（该白板已不存在）':'已删除','success');
+                loadArticles();
+                if(document.getElementById('excalidrawNoteList'))loadExcalidrawNotes();
+                notifyArticlesChanged();
+            }else showToast(r.message||'删除失败','error');
+        }
         // 编辑已有文章/随记/白板 → 直接跳独立编辑页（不再跳转写文章页）
         function editArticle(id){location.href='/admin-edit.html?id='+encodeURIComponent(id)}
 
@@ -1955,6 +1967,8 @@
             return r.json();
         }
         function escHtml(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+        // boardId → 关联白板文章（白板管理删除时用于同步删除文章）
+        let excBoardMap={};
         async function loadExcalidrawNotes(){
             const list=document.getElementById('excalidrawNoteList');
             if(!list)return;
@@ -1973,6 +1987,7 @@
                     const ar=await apiFetch('action=articles');
                     if(ar.status==='success')(ar.data||[]).forEach(function(a){if(a.type==='whiteboard'&&a.boardId)boardMap[a.boardId]=a});
                 }catch(e){}
+                excBoardMap=boardMap;
                 list.innerHTML=notes.map(n=>{
                     const art=boardMap[n.id]||null;
                     const editBadge=n.editable===1?'<span class="exc-badge on">公开可编辑</span>':'<span class="exc-badge off">只读</span>';
@@ -2094,12 +2109,23 @@
         }
         // 删除白板（危险操作：二次确认后执行）
         async function excDelete(noteId){
-            const ok=await showConfirm('确定删除白板「'+noteId+'」？场景与全部历史快照将一并删除，不可恢复！','删除白板','删除');
+            const art=excBoardMap[noteId]||null;
+            const tip=art?'场景与全部历史快照将一并删除，关联文章「'+(art.title||art.id)+'」也会一起删除，不可恢复！':'场景与全部历史快照将一并删除，不可恢复！';
+            const ok=await showConfirm('确定删除白板「'+noteId+'」？'+tip,'删除白板','删除');
             if(!ok)return;
             const d=await excApi('action=delete&id='+encodeURIComponent(noteId),{method:'POST'});
             if(d.status!=='success'){showToast(d.message||'删除失败','error');return}
-            showToast('已删除（'+(d.removed||0)+' 个数据项）','success');
+            // 关联文章一并删除，避免前台残留一篇打不开的白板文章
+            let removedArticle=false;
+            if(art){
+                try{
+                    const r=await apiFetch('action=articles&id='+encodeURIComponent(art.id),{method:'DELETE'});
+                    removedArticle=r.status==='success';
+                }catch(e){}
+            }
+            showToast('已删除（'+(d.removed||0)+' 个数据项'+(removedArticle?'，关联文章已一并删除':'')+'）','success');
             loadExcalidrawNotes();
+            if(removedArticle){loadArticles();notifyArticlesChanged()}
         }
         // 编辑：与文章管理跳转一致（白板文章 → 独立编辑页）；还没有文章时打开独立白板编辑器
         function excOpenEditor(noteId,articleId){

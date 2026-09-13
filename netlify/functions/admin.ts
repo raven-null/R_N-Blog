@@ -386,13 +386,41 @@ export default async (req: Request) => {
       const id = url.searchParams.get("id")
       if (!id) return badRequest("id 必填", req)
 
+      // 先读出原记录：白板文章要连带清理白板数据，长文章要清理分块
+      let record: any = null
+      try {
+        const raw = await store.get(id, { type: "text" })
+        if (raw) record = JSON.parse(raw)
+      } catch {
+        record = null
+      }
+
       await store.delete(id)
+
+      // 长文章：清掉全部分块，避免分块数据残留
+      if (record && (record as any).chunked) await clearArticleChunks(id)
+
+      // 白板文章：同步删除关联白板（场景 + 全部历史快照），使白板管理页一并消失
+      let removedBoard = 0
+      const boardId = record && (record as any).type === "whiteboard" && typeof (record as any).boardId === "string"
+        ? String((record as any).boardId)
+        : ""
+      if (boardId) {
+        try {
+          const boardStore = getBlobStore("excalidraw", "strong")
+          const list = await boardStore.list({ prefix: `notes/${boardId}/` })
+          for (const item of list.blobs) {
+            try { await boardStore.delete(item.key) } catch { /* ignore */ }
+          }
+          removedBoard = list.blobs.length
+        } catch { /* 白板清理失败不阻断删文章 */ }
+      }
 
       const index = await getArticleIndex(store)
       const next = index.filter(a => a.id !== id)
       await saveArticleIndex(store, next)
 
-      return json(200, { status: "success", message: "已删除" }, req)
+      return json(200, { status: "success", message: "已删除", removedBoard }, req)
     }
 
     // PATCH: 修改文章（status 发布/下架；tags 改标签，可选同传）
