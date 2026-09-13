@@ -1,6 +1,7 @@
 /**
  * 独立编辑页脚本（admin-edit.html）
  * 用途：对已发布/草稿的文章、随记、白板进行再次编辑，不再占用后台「写文章」页
+ * 白板文章额外提供白板管理：访问权限 / 编辑口令 / 白板名称 / 历史版本回滚（v1.3.0）
  */
 (function () {
     'use strict';
@@ -186,6 +187,114 @@
         // iframe 内嵌独立白板页：与编辑页样式/布局隔离，避免相互干扰
         host.innerHTML = '<iframe class="ee-frame" title="白板编辑器" src="/excalidraw.html?note=' + encodeURIComponent(bid) + '&edit=1"></iframe>';
     }
+    // ===== 白板管理（移植自后台「白板管理」：权限 / 口令 / 名称 / 历史回滚）=====
+    function excApi(query, opts) {
+        opts = opts || {};
+        return fetch('/api/excalidraw?' + query, {
+            method: opts.method || 'GET',
+            headers: { 'Content-Type': 'application/json', 'X-Admin-Key': adminKey },
+            body: opts.body,
+            cache: 'no-store'
+        }).then(function (r) { return r.json(); });
+    }
+    function boardId() { return (doc && doc.boardId) || ''; }
+
+    // 修改白板 meta（标题 / 权限 / 口令）
+    async function boardMetaSet(body, okMsg) {
+        var bid = boardId();
+        if (!bid) { toast('该文章还没有绑定画板', 'error'); return false; }
+        var d = await excApi('action=meta&id=' + encodeURIComponent(bid), {
+            method: 'POST',
+            body: JSON.stringify(body)
+        });
+        if (d.status !== 'success') { toast(d.message || '操作失败', 'error'); return false; }
+        if (okMsg) toast(okMsg, 'success');
+        window.eeLoadBoardAdmin();
+        notifyChanged();
+        return true;
+    }
+
+    window.eeLoadBoardAdmin = async function () {
+        var card = $('eeBoardAdminCard');
+        if (!card) return;
+        var bid = boardId();
+        if (docType !== 'whiteboard' || !bid) { card.style.display = 'none'; return; }
+        card.style.display = '';
+        $('eeBaId').textContent = bid;
+        try {
+            var d = await excApi('id=' + encodeURIComponent(bid) + '&metaOnly=1');
+            if (d.status === 'success' && d.meta) {
+                $('eeBaTitle').value = d.meta.title || '';
+                $('eeBaEditable').textContent = d.meta.editable === 1 ? '公开可编辑' : '只读';
+                $('eeBaKey').textContent = d.meta.hasKey ? '已设置' : '未设置';
+            } else {
+                $('eeBaTitle').value = '';
+                $('eeBaEditable').textContent = '画板不存在';
+                $('eeBaKey').textContent = '—';
+            }
+        } catch (e) {
+            toast('读取白板信息失败', 'error');
+        }
+        window.eeLoadBoardHistory();
+    };
+
+    window.eeSetBoardEditable = function (v) {
+        boardMetaSet({ editable: v }, v === 1 ? '已开放编辑' : '已设为只读');
+    };
+
+    window.eeSaveBoardTitle = function () {
+        var t = ($('eeBaTitle').value || '').trim();
+        boardMetaSet({ title: t }, t ? '白板名称已保存' : '白板名称已清空');
+    };
+
+    window.eeSaveBoardKey = async function () {
+        var k = ($('eeBaKeyInput').value || '').trim();
+        if (k.length < 4) { toast('口令至少 4 位', 'error'); return; }
+        var ok = await boardMetaSet({ editKey: k }, '口令已设置');
+        if (ok) $('eeBaKeyInput').value = '';
+    };
+
+    window.eeClearBoardKey = function () {
+        boardMetaSet({ editKey: '' }, '口令已清除');
+    };
+
+    window.eeLoadBoardHistory = async function () {
+        var bid = boardId();
+        var sel = $('eeBaRevSel');
+        if (!sel || !bid) return;
+        sel.innerHTML = '<option value="">加载中…</option>';
+        try {
+            var d = await excApi('action=history&id=' + encodeURIComponent(bid));
+            if (d.status !== 'success') { sel.innerHTML = '<option value="">读取失败</option>'; return; }
+            var revs = d.revs || [];
+            if (!revs.length) {
+                sel.innerHTML = '<option value="">暂无历史版本</option>';
+                $('eeBaRev').textContent = '当前 rev ' + (d.current || 0) + ' · 暂无快照';
+                return;
+            }
+            sel.innerHTML = revs.map(function (r) {
+                return '<option value="' + r + '">rev ' + r + (r === d.current ? '（当前）' : '') + '</option>';
+            }).join('');
+            $('eeBaRev').textContent = '当前 rev ' + (d.current || 0) + ' · 共 ' + revs.length + ' 个快照';
+        } catch (e) {
+            sel.innerHTML = '<option value="">读取失败</option>';
+        }
+    };
+
+    window.eeRollbackBoard = async function () {
+        var bid = boardId();
+        var sel = $('eeBaRevSel');
+        var rev = sel ? sel.value : '';
+        if (!bid || rev === '') { toast('请先选择要回滚到的版本', 'error'); return; }
+        if (!window.confirm('确定把画布回滚到 rev ' + rev + '？当前画布会被该快照覆盖，当前版本仍保留在历史中。')) return;
+        var d = await excApi('action=rollback&id=' + encodeURIComponent(bid) + '&rev=' + encodeURIComponent(rev), { method: 'POST' });
+        if (d.status !== 'success') { toast(d.message || '回滚失败', 'error'); return; }
+        toast('已回滚到 rev ' + rev, 'success');
+        mountBoard();          // 重建 iframe，载入回滚后的画布
+        window.eeLoadBoardAdmin();
+        notifyChanged();
+    };
+
     window.eeSaveBoard = async function () {
         var frame = document.querySelector('#eeBoardHost iframe.ee-frame');
         var saver = null;
@@ -392,6 +501,7 @@
             $('eeSide').style.display = 'flex';      // 右侧功能区（状态/标签/封面/信息）始终保持
             $('eeBoard').style.display = 'flex';
             mountBoard();
+            window.eeLoadBoardAdmin();
         } else {
             $('eeBoard').style.display = 'none';
             $('eeEditorCol').style.display = 'flex';

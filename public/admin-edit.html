@@ -326,6 +326,10 @@
         .ee-cover{height:104px}
     }
 
+    /* 白板管理卡片 */
+    .ee-ba-row{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;color:var(--text-muted)}
+    .ee-ba-value{color:var(--text);font-size:12px}
+
     /* 窄屏：编辑区与侧栏改为纵向堆叠，操作按钮不再挤压 */
     @media(max-width:640px){
         .ee-main{flex-direction:column;padding:8px 10px 12px;gap:10px}
@@ -407,6 +411,30 @@
                 <label>信息</label>
                 <div class="ee-meta-list" id="eeMeta"></div>
             </div>
+            <div class="ee-card" id="eeBoardAdminCard" style="display:none">
+                <label>白板管理</label>
+                <div class="ee-ba-row"><span>画板 ID</span><span class="ee-ba-value" id="eeBaId">—</span></div>
+                <input id="eeBaTitle" placeholder="白板名称（后台白板管理列表显示）">
+                <div class="ee-ba-row"><span>访问权限</span><span class="ee-ba-value" id="eeBaEditable">—</span></div>
+                <div class="ee-cover-actions">
+                    <button class="ee-btn" onclick="eeSetBoardEditable(1)">开放编辑</button>
+                    <button class="ee-btn" onclick="eeSetBoardEditable(0)">设为只读</button>
+                    <button class="ee-btn" onclick="eeSaveBoardTitle()">保存名称</button>
+                </div>
+                <div class="ee-ba-row"><span>编辑口令</span><span class="ee-ba-value" id="eeBaKey">—</span></div>
+                <input id="eeBaKeyInput" type="password" placeholder="新口令（至少 4 位）">
+                <div class="ee-cover-actions">
+                    <button class="ee-btn" onclick="eeSaveBoardKey()">保存口令</button>
+                    <button class="ee-btn danger" onclick="eeClearBoardKey()">清除口令</button>
+                </div>
+                <div class="ee-ba-row"><span>历史版本</span><span class="ee-ba-value" id="eeBaRev">—</span></div>
+                <select id="eeBaRevSel"><option value="">点「刷新历史」加载</option></select>
+                <div class="ee-cover-actions">
+                    <button class="ee-btn" onclick="eeLoadBoardHistory()">刷新历史</button>
+                    <button class="ee-btn danger" onclick="eeRollbackBoard()">回滚到所选版本</button>
+                </div>
+                <div class="ee-hint">权限、口令、名称改动即时生效；回滚会用所选快照覆盖当前画布，当前版本仍保留在历史中。</div>
+            </div>
         </aside>
 
         <!-- 白板 -->
@@ -466,6 +494,6 @@
     </div>
 
     <div class="ee-toast" id="eeToast"></div>
-    <script src="js/admin-edit.js?v=1.2.0"></script>
+    <script src="js/admin-edit.js?v=1.3.0"></script>
 </body>
 </html>
