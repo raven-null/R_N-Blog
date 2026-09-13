@@ -473,7 +473,7 @@ const BlogApp = {
         this.applyFilter();
     },
 
-    // 按内容形态筛选（白板 / 随记）
+    // 按内容形态筛选（白板 / 随记 / 文章）
     filterByType(type) {
         this.currentType = type || null;
         if (this.currentType) this.currentTag = null;
@@ -485,6 +485,8 @@ const BlogApp = {
         let list = [...this.posts];
         if (this.currentType === 'board') list = list.filter(post => post.type === 'whiteboard');
         else if (this.currentType === 'card') list = list.filter(post => post.type === 'card');
+        // 普通文章：既非白板也非随记（后端 type 缺省即 article，这里一并兼容）
+        else if (this.currentType === 'article') list = list.filter(post => post.type !== 'whiteboard' && post.type !== 'card');
         if (this.currentTag) list = list.filter(post => (post.tags || []).includes(this.currentTag));
 
         this.filteredPosts = list;
@@ -1279,7 +1281,7 @@ const BlogApp = {
         const urlParams = new URLSearchParams(window.location.search);
         const type = urlParams.get('type');
         const tag = urlParams.get('tag');
-        if (type === 'board' || type === 'card') { this.filterByType(type); return; }
+        if (type === 'board' || type === 'card' || type === 'article') { this.filterByType(type); return; }
         if (tag) this.filterByTag(tag);
     },
 
