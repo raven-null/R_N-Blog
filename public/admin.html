@@ -28,10 +28,6 @@
         .login-error{color:var(--danger);font-size:13px;margin-bottom:12px;display:none}
 
         .admin{display:none;height:100vh}
-        .admin-header{display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:52px;background:var(--bg-card);border-bottom:1px solid var(--border)}
-        .admin-header h1{font-size:15px;color:var(--accent);font-weight:600;letter-spacing:1px}
-        /* 顶栏右侧：窄屏时按钮组的落点（宽屏按钮在侧边栏底部） */
-        .admin-header-right{display:flex;gap:8px;align-items:center}
         /* 侧边栏底部按钮组（刷新 / 首页 / 退出）：与上方导航项同款样式（图标 + 文字 + 左对齐 + 同款 hover） */
         .admin-actions{display:flex;flex-direction:column;gap:2px}
         .admin-actions .sidebar-item{padding:9px 12px;border-radius:var(--radius-sm);text-decoration:none}
@@ -39,11 +35,17 @@
         .admin-actions .refresh-item.spinning svg{animation:refreshSpin .7s linear infinite}
         /* 折叠时底部按钮组同样只留图标（文字由 .sidebar-item 的折叠规则隐藏），开关收起 */
         .sidebar.collapsed .admin-actions .sidebar-item .switch{display:none}
-        /* 窄屏：按钮组回到顶栏，横向紧凑排列 */
-        .admin-header-right .admin-actions{flex-direction:row;align-items:center;gap:2px}
-        .admin-header-right .admin-actions .sidebar-item{padding:6px 10px;font-size:12px;border-left:none}
-        .admin-header-right .admin-actions .sidebar-item .switch{display:none}
-        .admin-body{display:flex;height:calc(100vh - 52px)}
+        /* 窄屏：按钮组浮动在右下角（侧边栏此时是隐藏的） */
+        .admin-actions.mobile-float{
+            position:fixed;right:12px;bottom:12px;z-index:160;
+            flex-direction:row;align-items:center;gap:4px;
+            padding:6px;border-radius:14px;
+            background:var(--bg-card);border:1px solid var(--border);
+            box-shadow:0 12px 32px -10px rgba(0,0,0,.6);
+        }
+        .admin-actions.mobile-float .sidebar-item{padding:6px 10px;font-size:12px;border-left:none;border-radius:10px}
+        .admin-actions.mobile-float .sidebar-item .switch{display:none}
+        .admin-body{display:flex;height:100vh}
 
         .sidebar{width:var(--sidebar-w);background:var(--bg-card);border-right:1px solid var(--border);flex-shrink:0;transition:width .2s cubic-bezier(.4,0,.2,1);overflow:hidden;display:flex;flex-direction:column}
         .sidebar.collapsed{width:var(--sidebar-collapsed)}
@@ -433,10 +435,8 @@
         @media(max-width:768px){
             /* 布局：隐藏侧边栏，显示移动导航 */
             .sidebar{display:none}
-            .admin-header{height:44px;padding:0 14px}
-            .admin-header h1{font-size:14px}
             .mobile-tabs{display:flex}
-            .admin-body{display:block;height:calc(100vh - 44px);padding-top:56px}
+            .admin-body{display:block;height:100vh;padding-top:56px}
             .content{padding:16px 12px 80px}
             .admin{height:auto;min-height:100vh}
             /* 登录页 */
@@ -488,8 +488,7 @@
             .content{padding:12px 10px 72px}
             .mobile-tab{font-size:9px}
             .mobile-tab svg{width:18px;height:18px}
-            .admin-header-right a{font-size:11px}
-            .classify-card img{height:70px}
+                        .classify-card img{height:70px}
             .tags-card{flex-direction:column;align-items:flex-start;gap:10px}
             .tags-card .tc-actions{margin-left:0}
             .tags-card .tc-actions button{opacity:1}
@@ -752,8 +751,7 @@
         <div class="login-box"><h1>管理后台</h1><p>博客管理</p><div class="login-error" id="loginError">密钥错误</div><input type="password" id="adminKeyInput" placeholder="输入管理密钥" onkeydown="if(event.key==='Enter')doLogin()"><button onclick="doLogin()">进入后台</button></div>
     </div>
     <div class="admin" id="adminApp">
-        <div class="admin-header"><h1>管理后台</h1><div class="admin-header-right" id="adminActionsHost"></div></div>
-        <!-- 移动端顶部导航 -->
+                <!-- 移动端顶部导航 -->
         <nav class="mobile-tabs" id="mobileTabs">
             <button class="mobile-tab active" data-tab="articles" onclick="switchTab('articles')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span>文章</span></button>
             <button class="mobile-tab" data-tab="write" onclick="switchTab('write')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg><span>写文章</span></button>
@@ -1041,9 +1039,9 @@
                         }
                         /* ===== 全屏写作（隐藏后台框架，内容占满） ===== */
                         body.admin-write-full{overflow:hidden}
-                        body.admin-write-full .admin-header,
                         body.admin-write-full .sidebar,
                         body.admin-write-full .mobile-tabs{display:none!important}
+body.admin-write-full .admin-actions.mobile-float{display:none}
                         body.admin-write-full .admin-body{height:100vh;height:100dvh}
                         body.admin-write-full .content{padding:0;overflow:hidden}
                         body.admin-write-full #tab-write{display:flex!important;flex-direction:column;height:100vh;height:100dvh;margin:0;padding:12px 24px 14px;box-sizing:border-box}
@@ -1558,7 +1556,7 @@
     </div>
 
         <script src="js/tag-picker.js?v=1.0.0"></script>
-        <script src="js/admin-app.js?v=1.7.3"></script>
+        <script src="js/admin-app.js?v=1.7.4"></script>
 
     <!-- 前台预览抽屉（iframe 内嵌，零跳出） -->
     <style>

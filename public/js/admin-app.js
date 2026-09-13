@@ -343,10 +343,15 @@
         function placeAdminActions(){
             const box=document.getElementById('adminActions');
             const side=document.getElementById('sidebarFoot');
-            const hdr=document.getElementById('adminActionsHost');
-            if(!box||!side||!hdr)return;
-            const target=window.innerWidth<=1024?hdr:side;
-            if(box.parentElement!==target)target.appendChild(box);
+            if(!box||!side)return;
+            // 宽屏：挂在侧边栏底部；窄屏（侧边栏隐藏）：浮动在右下角
+            if(window.innerWidth<=1024){
+                box.classList.add('mobile-float');
+                if(box.parentElement!==document.body)document.body.appendChild(box);
+            }else{
+                box.classList.remove('mobile-float');
+                if(box.parentElement!==side)side.appendChild(box);
+            }
         }
         window.addEventListener('resize',placeAdminActions);
         if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',placeAdminActions)}else{placeAdminActions()}
