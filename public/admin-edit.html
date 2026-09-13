@@ -323,6 +323,25 @@
     /* 白板管理卡片 */
     .ee-ba-row{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;color:var(--text-muted)}
     .ee-ba-value{color:var(--text);font-size:12px}
+    /* 当前生效的那一项亮起（如白板权限的「开放编辑 / 设为只读」） */
+    .ee-btn.active{
+        background:linear-gradient(135deg,rgba(59,130,246,.55),rgba(115,170,255,.42));
+        border-color:rgba(115,170,255,.75);color:#fff;font-weight:600;
+        box-shadow:0 0 0 1px rgba(115,170,255,.35),0 0 12px rgba(115,170,255,.25);
+    }
+    .ee-btn.active:hover{background:linear-gradient(135deg,rgba(59,130,246,.68),rgba(115,170,255,.55))}
+    /* 下拉框统一黑底白字（含历史版本、状态、章节等） */
+    .ee-card select,
+    .ee-chapter-bar select,
+    .ee-modal-field select{
+        background:#000 !important;color:#fff !important;
+        border-color:rgba(255,255,255,.2) !important;
+    }
+    .ee-card select option,
+    .ee-chapter-bar select option,
+    .ee-modal-field select option{
+        background:#000;color:#fff;
+    }
 
     /* 窄屏：编辑区与侧栏改为纵向堆叠，操作按钮不再挤压 */
     @media(max-width:640px){
@@ -411,8 +430,8 @@
                 <input id="eeBaTitle" placeholder="白板名称（后台白板管理列表显示）">
                 <div class="ee-ba-row"><span>访问权限</span><span class="ee-ba-value" id="eeBaEditable">—</span></div>
                 <div class="ee-cover-actions">
-                    <button class="ee-btn" onclick="eeSetBoardEditable(1)">开放编辑</button>
-                    <button class="ee-btn" onclick="eeSetBoardEditable(0)">设为只读</button>
+                    <button class="ee-btn" id="eeBaEditOn" onclick="eeSetBoardEditable(1)">开放编辑</button>
+                    <button class="ee-btn" id="eeBaEditOff" onclick="eeSetBoardEditable(0)">设为只读</button>
                     <button class="ee-btn" onclick="eeSaveBoardTitle()">保存名称</button>
                 </div>
                 <div class="ee-ba-row"><span>编辑口令</span><span class="ee-ba-value" id="eeBaKey">—</span></div>
@@ -482,6 +501,6 @@
     </div>
 
     <div class="ee-toast" id="eeToast"></div>
-    <script src="js/admin-edit.js?v=1.3.1"></script>
+    <script src="js/admin-edit.js?v=1.3.2"></script>
 </body>
 </html>

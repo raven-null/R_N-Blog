@@ -211,6 +211,13 @@
     }
     function boardId() { return (doc && doc.boardId) || ''; }
 
+    // 同步「开放编辑 / 设为只读」按钮的选中高亮（-1 表示未知/读取失败，两个都不亮）
+    function markEditableButtons(state) {
+        var on = $('eeBaEditOn'), off = $('eeBaEditOff');
+        if (on) on.classList.toggle('active', state === 1);
+        if (off) off.classList.toggle('active', state === 0);
+    }
+
     // 修改白板 meta（标题 / 权限 / 口令）
     async function boardMetaSet(body, okMsg) {
         var bid = boardId();
@@ -239,16 +246,19 @@
                 $('eeBaTitle').value = d.meta.title || '';
                 $('eeBaEditable').textContent = d.meta.editable === 1 ? '公开可编辑' : '只读';
                 $('eeBaKey').textContent = d.meta.hasKey ? '已设置' : '未设置';
+                markEditableButtons(d.meta.editable === 1 ? 1 : 0);
             } else {
                 $('eeBaTitle').value = '';
                 $('eeBaEditable').textContent = '画板不存在';
                 $('eeBaKey').textContent = '—';
+                markEditableButtons(-1);
             }
         } catch (e) {
             // 接口不可用（部署中 / 连接被关闭）时降级显示，不抛未捕获异常
             $('eeBaEditable').textContent = '读取失败';
             $('eeBaKey').textContent = '—';
             $('eeBaRev').textContent = '接口暂时不可用';
+            markEditableButtons(-1);
             toast('白板信息读取失败（网络或部署中），可点「刷新历史」重试', 'error');
         }
         window.eeLoadBoardHistory();
