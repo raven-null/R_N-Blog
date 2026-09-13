@@ -183,7 +183,8 @@
             host.innerHTML = '<div class="ee-hint">这篇文章还没有绑定画板，无法内嵌编辑；可到「白板管理」新建画板后发布文章。</div>';
             return;
         }
-        $('eeBoardOpen').href = '/excalidraw.html?note=' + encodeURIComponent(bid) + '&edit=1';
+        var openBtn = $('eeBoardOpen'); // 顶部条已移除，元素可能不存在
+        if (openBtn) openBtn.href = '/excalidraw.html?note=' + encodeURIComponent(bid) + '&edit=1';
         // iframe 内嵌独立白板页：与编辑页样式/布局隔离，避免相互干扰
         host.innerHTML = '<iframe class="ee-frame" title="白板编辑器" src="/excalidraw.html?note=' + encodeURIComponent(bid) + '&edit=1"></iframe>';
     }
