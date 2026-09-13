@@ -353,7 +353,7 @@
 
         async function refreshAdmin(ev){
             if(ev&&ev.shiftKey){location.reload();return}
-            const btn=document.querySelector('#adminActions .hdr-refresh-btn');
+            const btn=document.querySelector('#adminActions .refresh-item');
             if(btn)btn.classList.add('spinning');
             try{
                 // 清掉本标签页的前台列表缓存，避免刷新后仍是旧数据

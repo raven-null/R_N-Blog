@@ -32,17 +32,16 @@
         .admin-header h1{font-size:15px;color:var(--accent);font-weight:600;letter-spacing:1px}
         /* 顶栏右侧：窄屏时按钮组的落点（宽屏按钮在侧边栏底部） */
         .admin-header-right{display:flex;gap:8px;align-items:center}
-        /* 按钮组（刷新 / 首页 / 退出）：默认在侧边栏底部竖排，窄屏回到顶栏横排 */
-        .admin-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
-        .admin-actions a{color:var(--text-muted);font-size:12px;text-decoration:none;transition:color .2s}
-        .admin-actions a:hover{color:var(--accent)}
-        .admin-actions button{padding:5px 12px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-muted);cursor:pointer;font-size:12px;transition:all .15s;font-family:inherit}
-        .admin-actions button:hover{border-color:var(--danger);color:var(--danger)}
-        .admin-actions .hdr-refresh-btn:hover{border-color:var(--accent);color:var(--accent)}
-        .sidebar-foot .admin-actions{flex-direction:column;align-items:stretch;gap:6px}
-        .sidebar-foot .admin-actions button,
-        .sidebar-foot .admin-actions a{text-align:center}
+        /* 侧边栏底部按钮组（刷新 / 首页 / 退出）：与上方导航项同款样式（图标 + 文字 + 左对齐 + 同款 hover） */
+        .admin-actions{display:flex;flex-direction:column;gap:2px}
+        .admin-actions .sidebar-item{padding:9px 12px;border-radius:var(--radius-sm);text-decoration:none}
+        .admin-actions .sidebar-item .switch{margin-left:auto;transform:scale(.85);transform-origin:right center}
+        .admin-actions .refresh-item.spinning svg{animation:refreshSpin .7s linear infinite}
         .sidebar.collapsed .sidebar-foot .admin-actions{display:none}
+        /* 窄屏：按钮组回到顶栏，横向紧凑排列 */
+        .admin-header-right .admin-actions{flex-direction:row;align-items:center;gap:2px}
+        .admin-header-right .admin-actions .sidebar-item{padding:6px 10px;font-size:12px;border-left:none}
+        .admin-header-right .admin-actions .sidebar-item .switch{display:none}
         .admin-body{display:flex;height:calc(100vh - 52px)}
 
         .sidebar{width:var(--sidebar-w);background:var(--bg-card);border-right:1px solid var(--border);flex-shrink:0;transition:width .2s cubic-bezier(.4,0,.2,1);overflow:hidden;display:flex;flex-direction:column}
@@ -70,9 +69,6 @@
         .sidebar-item svg{width:15px;height:15px;flex-shrink:0}
         /* 侧边栏底部：刷新后台 */
         .sidebar-foot{flex-shrink:0;padding:10px 12px 14px;border-top:1px solid var(--border)}
-        .admin-actions .hdr-refresh-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px}
-        .admin-actions .hdr-refresh-btn svg{width:13px;height:13px;flex:none}
-        .admin-actions .hdr-refresh-btn.spinning svg{animation:refreshSpin .7s linear infinite}
         @keyframes refreshSpin{to{transform:rotate(360deg)}}
         .sidebar.collapsed .sidebar-foot{padding:10px 0 14px}
 
@@ -779,12 +775,22 @@
                 </div>
                 <div class="sidebar-foot" id="sidebarFoot">
                     <div class="admin-actions" id="adminActions">
-                        <button class="hdr-refresh-btn" onclick="refreshAdmin(event)" title="刷新后台数据（Shift+点击 = 重载页面）">
+                        <div class="sidebar-item refresh-item" onclick="refreshAdmin(event)" title="刷新后台数据（Shift+点击 = 重载页面）">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-3.5-7.1"/><polyline points="21 3 21 9 15 9"/></svg>
                             <span>刷新后台</span>
-                        </button>
-                        <a href="/" target="_blank">首页 ↗</a>
-                        <button onclick="doLogout()">退出</button>
+                        </div>
+                        <a class="sidebar-item" href="/" target="_blank" rel="noopener" title="打开博客首页（新窗口）">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                            <span>首页</span>
+                        </a>
+                        <div class="sidebar-item" title="关闭开关即退出登录" onclick="doLogout()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v9"/><path d="M18.4 6.6a9 9 0 1 1-12.8 0"/></svg>
+                            <span>退出</span>
+                            <label class="switch admin-logout-switch" title="关闭即退出登录" onclick="event.stopPropagation();doLogout()">
+                                <input type="checkbox" checked aria-label="退出登录">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1552,7 +1558,7 @@
     </div>
 
         <script src="js/tag-picker.js?v=1.0.0"></script>
-        <script src="js/admin-app.js?v=1.7.2"></script>
+        <script src="js/admin-app.js?v=1.7.3"></script>
 
     <!-- 前台预览抽屉（iframe 内嵌，零跳出） -->
     <style>
