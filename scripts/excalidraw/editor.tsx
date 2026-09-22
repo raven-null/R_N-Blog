@@ -353,28 +353,50 @@ function NoteApp({ note, mode, bare }: { note: string; mode: "edit" | "view"; ba
     /* 内嵌图片逐张上传（v15）：整个场景一起传会超过服务器 6MB 请求体上限 → 保存 413 */
     const filesObj = (api.getFiles() || {}) as Record<string, any>
     const fileIds = Object.keys(filesObj)
-    for (const fid of fileIds) {
+    // 只上传有变化的图片（指纹判定），并按并发 3 上传：串行会让多图场景慢十几秒
+    const pending = fileIds.filter((fid) => {
       const f = filesObj[fid]
-      const dataURL = f && f.dataURL
-      if (!dataURL) continue
-      const sig = fileSigOf(dataURL)
-      if (filesSigRef.current[fid] === sig) continue // 未变化，跳过
-      setMsg(`上传画布图片（${fileIds.indexOf(fid) + 1}/${fileIds.length}）…`)
-      const fr = await apiFetch(
-        `/api/excalidraw?action=file&id=${encodeURIComponent(note)}&fid=${encodeURIComponent(fid)}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ dataURL, mimeType: f.mimeType || "" }),
-        },
-      )
-      if (!fr.ok) {
-        const fd = await fr.json().catch(() => ({}))
+      return !!(f && f.dataURL) && filesSigRef.current[fid] !== fileSigOf(f.dataURL)
+    })
+    const pendingChars = pending.reduce((n, fid) => n + (filesObj[fid].dataURL.length || 0), 0)
+    let done = 0
+    let failed: string | null = null
+    if (pending.length) {
+      setMsg(`上传画布图片 0/${pending.length}（约 ${(pendingChars / 1048576).toFixed(1)}MB）…`)
+      const queue = pending.slice()
+      const worker = async (): Promise<void> => {
+        while (queue.length && !failed) {
+          const fid = queue.shift() as string
+          const f = filesObj[fid]
+          try {
+            const fr = await apiFetch(
+              `/api/excalidraw?action=file&id=${encodeURIComponent(note)}&fid=${encodeURIComponent(fid)}`,
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ dataURL: f.dataURL, mimeType: f.mimeType || "" }),
+              },
+            )
+            if (!fr.ok) {
+              const fd = await fr.json().catch(() => ({}))
+              failed = fd.message || `画布图片上传失败（${fr.status}）：单张图片过大或网络问题`
+              return
+            }
+            filesSigRef.current[fid] = fileSigOf(f.dataURL)
+          } catch (e: any) {
+            failed = e?.message || "画布图片上传失败：网络错误"
+            return
+          }
+          done++
+          setMsg(`上传画布图片 ${done}/${pending.length}…`)
+        }
+      }
+      await Promise.all([worker(), worker(), worker()])
+      if (failed) {
         setSaving(false)
-        setMsg(fd.message || `画布图片上传失败（${fr.status}）：单张图片过大或网络问题`)
+        setMsg(failed)
         return false
       }
-      filesSigRef.current[fid] = sig
     }
     const scenePayload: any = {
       type: "excalidraw",
