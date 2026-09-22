@@ -5,6 +5,7 @@ import { getBlobStore } from "./_shared/blob"
 import { checkAuth } from "./_shared/auth"
 
 const STORE = "excalidraw"
+const MAX_FILE_CHARS = 5.2 * 1024 * 1024 // 单张内嵌图片 dataURL 上限（字符），低于服务器 6MB 请求体上限
 const ID_RE = /^[A-Za-z0-9_-]{1,64}$/
 const MAX_SCENE_CHARS = 8 * 1024 * 1024 // 未压缩场景文本上限 8MB
 const MAX_COMPRESSED_CHARS = 16 * 1024 * 1024 // 压缩（gzip+base64）传输上限 16MB
@@ -188,6 +189,45 @@ export default async (req: Request) => {
       return json(200, { status: "success", id, revs, current: meta?.rev ?? 0 }, req)
     } catch (err: any) {
       return json(500, { status: "error", message: err?.message || "读取历史失败" }, req)
+    }
+  }
+
+  // 画布内嵌图片（Excalidraw files）：逐张单独存储
+  // 目的：大画布的内嵌图片会让整个场景 JSON 超过服务器单次请求体上限（约 6MB）导致保存 413，
+  // 拆成每张一个请求后，单次请求体积很小；场景本体只保留 fileIds 列表。
+  if (action === "file") {
+    const fid = (params.get("fid") || "").replace(/[^A-Za-z0-9_-]/g, "").slice(0, 64)
+    if (!ID_RE.test(id) || !fid) return badRequest("id / fid 非法", req)
+    try {
+      const store = getBlobStore(STORE, "strong")
+      const key = `notes/${id}/files/${fid}`
+      if (req.method === "GET") {
+        const raw = await store.get(key, { type: "text" })
+        if (!raw) return json(404, { status: "error", message: "文件不存在" }, req)
+        return json(200, { status: "success", file: JSON.parse(raw) }, req, { "Cache-Control": "no-store" })
+      }
+      // 写权限与场景保存保持一致：管理员，或笔记对外可编辑且未设口令
+      const meta = await readMeta(store, id)
+      const canWrite = isAdmin || (!!meta && meta.editable === 1 && !meta.editKeyHash)
+      if (!canWrite) return json(403, { status: "error", message: "无权限写入画板图片" }, req)
+      if (req.method === "DELETE") {
+        await store.delete(key)
+        return json(200, { status: "success", id: fid }, req)
+      }
+      const body: any = await req.json().catch(() => ({}))
+      const dataURL = typeof body.dataURL === "string" ? body.dataURL : ""
+      if (!dataURL || !dataURL.startsWith("data:")) return badRequest("dataURL 非法", req)
+      if (dataURL.length > MAX_FILE_CHARS) {
+        return badRequest(`单张图片过大（上限 ${Math.round(MAX_FILE_CHARS / 1048576)}MB 字符）`, req)
+      }
+      await store.set(key, JSON.stringify({ id: fid, mimeType: body.mimeType || "", dataURL, created: Date.now() }))
+      if (meta) {
+        meta.updatedAt = new Date().toISOString()
+        await store.set(metaKey(id), JSON.stringify(meta))
+      }
+      return json(200, { status: "success", id: fid }, req)
+    } catch (err: any) {
+      return json(500, { status: "error", message: err?.message || "画板图片读写失败" }, req)
     }
   }
 

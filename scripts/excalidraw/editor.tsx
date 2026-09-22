@@ -181,6 +181,9 @@ async function gzipEncode(text: string): Promise<string | null> {
   }
 }
 
+/** 内嵌图片指纹（长度 + 末尾片段）：用于跳过未变化的图片重复上传 */
+const fileSigOf = (dataURL: string) => `${dataURL.length}:${dataURL.slice(-32)}`
+
 /** 场景轻量指纹：元素数 + versionNonce 混合（判断是否有未保存改动，O(n) 开销极小） */
 function sceneFp(elements: readonly any[]): number {
   let h = (elements.length * 2654435761) >>> 0
@@ -193,6 +196,7 @@ function sceneFp(elements: readonly any[]): number {
 
 function NoteApp({ note, mode, bare }: { note: string; mode: "edit" | "view"; bare?: boolean }) {
   const apiRef = useRef<any>(null)
+  const filesSigRef = useRef<Record<string, string>>({}) // 已上传图片指纹（避免重复上传）
   const loadedRev = useRef<number | null>(null)
   // 未保存改动检测：画布指纹基准
   const fpRef = useRef(0)
@@ -250,8 +254,33 @@ function NoteApp({ note, mode, bare }: { note: string; mode: "edit" | "view"; ba
         }
         return
       }
-      const sc = data.scene as SceneData
+      let sc = data.scene as SceneData
       const api = apiRef.current
+      // 内嵌图片改为逐张存储（v15）：按 scene.fileIds 逐张拉回后合并；旧数据仍带 files 时直接用
+      const fids: string[] = Array.isArray((sc as any).fileIds) ? (sc as any).fileIds : []
+      if (fids.length) {
+        const got: Record<string, any> = {}
+        await Promise.all(
+          fids.map(async (fid) => {
+            try {
+              const r = await apiFetch(
+                `/api/excalidraw?action=file&id=${encodeURIComponent(note)}&fid=${encodeURIComponent(fid)}`,
+              )
+              const d = await r.json().catch(() => ({}))
+              if (d && d.file && d.file.dataURL) got[fid] = d.file
+            } catch {
+              /* 单张失败不影响整体 */
+            }
+          }),
+        )
+        fids.forEach((fid) => {
+          const f = got[fid]
+          if (f && f.dataURL) filesSigRef.current[fid] = fileSigOf(f.dataURL)
+        })
+        sc = { ...sc, files: got }
+      }
+      // 注意：旧格式（图片内嵌在 scene.files 里）不记录指纹——那些图片还没单独存到服务端，
+      // 首次保存时必须上传，否则场景里只剩 fileIds 而图片实际缺失。
       if (api) {
         // 已有实例：增量替换元素与文件（不重置视图），避免整页闪烁
         api.updateScene({ elements: sc.elements || [], files: sc.files || undefined })
@@ -321,17 +350,44 @@ function NoteApp({ note, mode, bare }: { note: string; mode: "edit" | "view"; ba
       return false
     }
     const appState = api.getAppState()
-    const scenePayload: SceneData = {
+    /* 内嵌图片逐张上传（v15）：整个场景一起传会超过服务器 6MB 请求体上限 → 保存 413 */
+    const filesObj = (api.getFiles() || {}) as Record<string, any>
+    const fileIds = Object.keys(filesObj)
+    for (const fid of fileIds) {
+      const f = filesObj[fid]
+      const dataURL = f && f.dataURL
+      if (!dataURL) continue
+      const sig = fileSigOf(dataURL)
+      if (filesSigRef.current[fid] === sig) continue // 未变化，跳过
+      setMsg(`上传画布图片（${fileIds.indexOf(fid) + 1}/${fileIds.length}）…`)
+      const fr = await apiFetch(
+        `/api/excalidraw?action=file&id=${encodeURIComponent(note)}&fid=${encodeURIComponent(fid)}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ dataURL, mimeType: f.mimeType || "" }),
+        },
+      )
+      if (!fr.ok) {
+        const fd = await fr.json().catch(() => ({}))
+        setSaving(false)
+        setMsg(fd.message || `画布图片上传失败（${fr.status}）：单张图片过大或网络问题`)
+        return false
+      }
+      filesSigRef.current[fid] = sig
+    }
+    const scenePayload: any = {
       type: "excalidraw",
       version: 2,
       elements,
-      files: api.getFiles(),
+      files: {}, // 图片数据已单独存储，这里只留 id 列表
+      fileIds,
       appState: { viewBackgroundColor: appState.viewBackgroundColor },
     }
-    // 大场景（>400KB）自动 gzip 压缩传输，服务端透明解压存储
+    // 大场景自动 gzip 压缩传输，服务端透明解压存储
     const sceneText = JSON.stringify(scenePayload)
     const body: any = { baseRev: loadedRev.current ?? 0 }
-    if (sceneText.length > 400 * 1024) {
+    if (sceneText.length > 64 * 1024) {
       const gz = await gzipEncode(sceneText)
       if (gz) {
         body.scene = gz
@@ -341,6 +397,15 @@ function NoteApp({ note, mode, bare }: { note: string; mode: "edit" | "view"; ba
       }
     } else {
       body.scene = scenePayload
+    }
+    // 体积预检：压缩后仍超过服务器请求上限时提前给出明确提示（避免直接 413）
+    const finalChars = typeof body.scene === "string" ? body.scene.length : sceneText.length
+    if (finalChars > 5.2 * 1024 * 1024) {
+      setSaving(false)
+      setMsg(
+        `画布数据过大（约 ${(finalChars / 1048576).toFixed(1)}MB），服务器单次请求上限约 6MB，保存会被拒绝。请拆分画板或减少元素后重试。`,
+      )
+      return false
     }
     if (meta?.hasKey && !isAdmin) body.editKey = editKey
     if (force) body.force = 1
@@ -598,11 +663,11 @@ function NoteApp({ note, mode, bare }: { note: string; mode: "edit" | "view"; ba
               : {
                   welcomeScreen: false,
                   canvasActions: {
-                    // 编辑模式：功能由本站顶栏承担，隐藏库内同功能入口与无关项
-                    export: false,
-                    saveToActiveFile: false,
+                    // 编辑模式：顶栏已移除，恢复库内导出/另存入口，便于导出 .excalidraw 备份
+                    export: {}, // ExportOpts：启用库内导出菜单（顶栏已移除，便于导出备份）
+                    saveToActiveFile: true,
                     loadScene: false,
-                    saveAsImage: false,
+                    saveAsImage: true,
                     toggleTheme: false,
                   },
                 }
