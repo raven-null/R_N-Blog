@@ -6,6 +6,16 @@ import { checkAuth } from "./_shared/auth"
 
 const STORE = "excalidraw"
 const MAX_FILE_CHARS = 5.2 * 1024 * 1024 // 单张内嵌图片 dataURL 上限（字符），低于服务器 6MB 请求体上限
+const MAX_FILE_BYTES = 5.2 * 1024 * 1024 // 单张图片二进制上限（字节）
+
+/** 图片类型嗅探（压缩后基本都是 WebP；兼容旧数据的 png/jpeg/gif） */
+function sniffImageMime(buf: Buffer): string {
+  if (buf.length > 12 && buf.toString("ascii", 0, 4) === "RIFF" && buf.toString("ascii", 8, 12) === "WEBP") return "image/webp"
+  if (buf.length > 8 && buf[0] === 0x89 && buf[1] === 0x50) return "image/png"
+  if (buf.length > 3 && buf[0] === 0xff && buf[1] === 0xd8) return "image/jpeg"
+  if (buf.length > 3 && buf.toString("ascii", 0, 3) === "GIF") return "image/gif"
+  return "application/octet-stream"
+}
 const ID_RE = /^[A-Za-z0-9_-]{1,64}$/
 const MAX_SCENE_CHARS = 8 * 1024 * 1024 // 未压缩场景文本上限 8MB
 const MAX_COMPRESSED_CHARS = 16 * 1024 * 1024 // 压缩（gzip+base64）传输上限 16MB
@@ -202,9 +212,23 @@ export default async (req: Request) => {
       const store = getBlobStore(STORE, "strong")
       const key = `notes/${id}/files/${fid}`
       if (req.method === "GET") {
-        const raw = await store.get(key, { type: "text" })
-        if (!raw) return json(404, { status: "error", message: "文件不存在" }, req)
-        return json(200, { status: "success", file: JSON.parse(raw) }, req, { "Cache-Control": "no-store" })
+        const text = await store.get(key, { type: "text" })
+        if (!text) return json(404, { status: "error", message: "文件不存在" }, req)
+        // 旧格式是 JSON（{ dataURL }）；新格式是图片二进制的 base64 文本
+        if (text.startsWith("{")) {
+          try {
+            return json(200, { status: "success", file: JSON.parse(text) }, req, { "Cache-Control": "no-store" })
+          } catch {
+            /* 继续按 base64 处理 */
+          }
+        }
+        const mime = sniffImageMime(Buffer.from(text, "base64"))
+        return json(
+          200,
+          { status: "success", file: { id: fid, mimeType: mime, dataURL: `data:${mime};base64,${text}` } },
+          req,
+          { "Cache-Control": "no-store" },
+        )
       }
       // 写权限与场景保存保持一致：管理员，或笔记对外可编辑且未设口令
       const meta = await readMeta(store, id)
@@ -214,18 +238,27 @@ export default async (req: Request) => {
         await store.delete(key)
         return json(200, { status: "success", id: fid }, req)
       }
-      const body: any = await req.json().catch(() => ({}))
-      const dataURL = typeof body.dataURL === "string" ? body.dataURL : ""
-      if (!dataURL || !dataURL.startsWith("data:")) return badRequest("dataURL 非法", req)
-      if (dataURL.length > MAX_FILE_CHARS) {
-        return badRequest(`单张图片过大（上限 ${Math.round(MAX_FILE_CHARS / 1048576)}MB 字符）`, req)
+      // 支持两种上传方式：二进制直传（推荐，省 base64 开销）与旧的 JSON { dataURL }
+      const ctype = (req.headers.get("content-type") || "").toLowerCase()
+      let bytes: Buffer
+      if (ctype.startsWith("image/") || ctype === "application/octet-stream") {
+        bytes = Buffer.from(await req.arrayBuffer())
+        if (bytes.length > MAX_FILE_BYTES) {
+          return badRequest(`单张图片过大（上限 ${Math.round(MAX_FILE_BYTES / 1048576)}MB）`, req)
+        }
+      } else {
+        const body: any = await req.json().catch(() => ({}))
+        const dataURL = typeof body.dataURL === "string" ? body.dataURL : ""
+        if (!dataURL || !dataURL.startsWith("data:")) return badRequest("dataURL 非法", req)
+        if (dataURL.length > MAX_FILE_CHARS) {
+          return badRequest(`单张图片过大（上限 ${Math.round(MAX_FILE_CHARS / 1048576)}MB 字符）`, req)
+        }
+        bytes = Buffer.from(dataURL.slice(dataURL.indexOf(",") + 1), "base64")
       }
-      await store.set(key, JSON.stringify({ id: fid, mimeType: body.mimeType || "", dataURL, created: Date.now() }))
-      if (meta) {
-        meta.updatedAt = new Date().toISOString()
-        await store.set(metaKey(id), JSON.stringify(meta))
-      }
-      return json(200, { status: "success", id: fid }, req)
+      // 以 base64 文本存储（与项目其它图片存储一致）：读取时按 magic bytes 判断类型；
+      // 不再更新笔记 meta，省掉每张一次的 Blob 读写
+      await store.set(key, bytes.toString("base64"))
+      return json(200, { status: "success", id: fid, bytes: bytes.length }, req)
     } catch (err: any) {
       return json(500, { status: "error", message: err?.message || "画板图片读写失败" }, req)
     }

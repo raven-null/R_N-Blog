@@ -182,8 +182,8 @@ async function gzipEncode(text: string): Promise<string | null> {
 }
 
 /** 画布内嵌图片压缩参数：最长边限制 + WebP 质量（可用时显著减小保存体积） */
-const MAX_IMAGE_EDGE = 2000
-const IMAGE_WEBP_QUALITY = 0.85
+const MAX_IMAGE_EDGE = 1600
+const IMAGE_WEBP_QUALITY = 0.8
 const SHRINK_MIN_BYTES = 200 * 1024 // 小于 200KB 且已是 WebP 的图片不动，避免无谓的质量损失
 
 function loadImageEl(src: string): Promise<HTMLImageElement> {
@@ -204,7 +204,7 @@ function loadImageEl(src: string): Promise<HTMLImageElement> {
 async function shrinkImageDataURL(
   dataURL: string,
   mimeType?: string,
-): Promise<{ dataURL: string; mimeType: string } | null> {
+): Promise<{ blob: Blob; mimeType: string } | null> {
   const mime = String(mimeType || (dataURL.match(/^data:([^;]+)/) || [])[1] || "").toLowerCase()
   if (!mime.startsWith("image/")) return null
   if (mime.includes("gif") || mime.includes("svg")) return null
@@ -226,9 +226,26 @@ async function shrinkImageDataURL(
     const ctx = canvas.getContext("2d")
     if (!ctx) return null
     ctx.drawImage(img, 0, 0, cw, ch)
-    const outURL = canvas.toDataURL("image/webp", IMAGE_WEBP_QUALITY)
-    if (!outURL || outURL.length >= dataURL.length) return null // 没变小就不换
-    return { dataURL: outURL, mimeType: "image/webp" }
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/webp", IMAGE_WEBP_QUALITY))
+    if (!blob || blob.size >= approxBytes) return null // 没变小就不换
+    return { blob, mimeType: "image/webp" }
+  } catch {
+    return null
+  }
+}
+
+function blobToDataURL(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const fr = new FileReader()
+    fr.onload = () => resolve(String(fr.result || ""))
+    fr.onerror = () => reject(new Error("blob→dataURL 失败"))
+    fr.readAsDataURL(blob)
+  })
+}
+
+async function dataURLToBlob(dataURL: string): Promise<Blob | null> {
+  try {
+    return await (await fetch(dataURL)).blob()
   } catch {
     return null
   }
@@ -412,45 +429,58 @@ function NoteApp({ note, mode, bare }: { note: string; mode: "edit" | "view"; ba
       return !!(f && f.dataURL) && filesSigRef.current[fid] !== fileSigOf(f.dataURL)
     })
     const pendingChars = pending.reduce((n, fid) => n + (filesObj[fid].dataURL.length || 0), 0)
-    // 上传前先压缩：最长边 2000px + WebP（GIF/SVG 与小图跳过），压缩后回写画布，fileId 不变
+    /* ---- 第一步：压缩（最长边 1600 + WebP；GIF/SVG 与小图跳过）并准备二进制 ---- */
+    const tShrinkStart = performance.now()
+    const uploads: Array<{ fid: string; blob: Blob; mime: string; bytes: number }> = []
     let shrunkCount = 0
     let shrunkSaved = 0
+    let prepError: string | null = null
     for (let i = 0; i < pending.length; i++) {
-      const f = filesObj[pending[i]]
+      const fid = pending[i]
+      const f = filesObj[fid]
       if (pending.length > 1) setMsg(`压缩画布图片 ${i + 1}/${pending.length}…`)
-      const before = f.dataURL.length
+      const beforeChars = f.dataURL.length
       const shrunk = await shrinkImageDataURL(f.dataURL, f.mimeType)
       if (shrunk) {
-        f.dataURL = shrunk.dataURL
+        const dataURL = await blobToDataURL(shrunk.blob) // 画布内部仍需 dataURL
+        f.dataURL = dataURL
         f.mimeType = shrunk.mimeType
         shrunkCount++
-        shrunkSaved += Math.max(0, before - shrunk.dataURL.length)
+        shrunkSaved += Math.max(0, beforeChars - dataURL.length)
+        uploads.push({ fid, blob: shrunk.blob, mime: shrunk.mimeType, bytes: shrunk.blob.size })
+      } else {
+        const blob = await dataURLToBlob(f.dataURL)
+        if (!blob) prepError = "画布图片读取失败（可能是跨域或损坏的图片）"
+        uploads.push({ fid, blob: (blob || new Blob([])) as Blob, mime: f.mimeType || "application/octet-stream", bytes: blob ? blob.size : 0 })
       }
     }
     if (shrunkCount) {
       try {
-        api.updateScene({ files: filesObj }) // 让画布用上压缩后的数据，避免下次保存重传原图
+        api.updateScene({ files: filesObj }) // 画布用上压缩后的数据，避免下次保存重传原图
       } catch {
         /* 忽略 */
       }
-      setMsg(`已压缩 ${shrunkCount} 张图片，减少约 ${(shrunkSaved / 1048576).toFixed(1)}MB`)
     }
+    const tShrink = (performance.now() - tShrinkStart) / 1000
+    const totalBytes = uploads.reduce((n, u) => n + u.bytes, 0)
+
+    /* ---- 第二步：并发 3 直传二进制 ---- */
+    const tUploadStart = performance.now()
     let done = 0
-    let failed: string | null = null
-    if (pending.length) {
-      setMsg(`上传画布图片 0/${pending.length}（约 ${(pendingChars / 1048576).toFixed(1)}MB）…`)
-      const queue = pending.slice()
+    let failed: string | null = prepError
+    if (uploads.length && !failed) {
+      setMsg(`上传画布图片 0/${uploads.length}（${(totalBytes / 1048576).toFixed(1)}MB）…`)
+      const queue = uploads.slice()
       const worker = async (): Promise<void> => {
         while (queue.length && !failed) {
-          const fid = queue.shift() as string
-          const f = filesObj[fid]
+          const item = queue.shift() as { fid: string; blob: Blob; mime: string; bytes: number }
           try {
             const fr = await apiFetch(
-              `/api/excalidraw?action=file&id=${encodeURIComponent(note)}&fid=${encodeURIComponent(fid)}`,
+              `/api/excalidraw?action=file&id=${encodeURIComponent(note)}&fid=${encodeURIComponent(item.fid)}`,
               {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ dataURL: f.dataURL, mimeType: f.mimeType || "" }),
+                headers: { "Content-Type": item.mime || "application/octet-stream" },
+                body: item.blob,
               },
             )
             if (!fr.ok) {
@@ -458,13 +488,13 @@ function NoteApp({ note, mode, bare }: { note: string; mode: "edit" | "view"; ba
               failed = fd.message || `画布图片上传失败（${fr.status}）：单张图片过大或网络问题`
               return
             }
-            filesSigRef.current[fid] = fileSigOf(f.dataURL)
+            filesSigRef.current[item.fid] = fileSigOf(filesObj[item.fid].dataURL)
           } catch (e: any) {
             failed = e?.message || "画布图片上传失败：网络错误"
             return
           }
           done++
-          setMsg(`上传画布图片 ${done}/${pending.length}…`)
+          setMsg(`上传画布图片 ${done}/${uploads.length}…`)
         }
       }
       await Promise.all([worker(), worker(), worker()])
@@ -473,6 +503,12 @@ function NoteApp({ note, mode, bare }: { note: string; mode: "edit" | "view"; ba
         setMsg(failed)
         return false
       }
+    }
+    const tUpload = (performance.now() - tUploadStart) / 1000
+    if (shrunkCount || uploads.length) {
+      console.log(
+        `[白板] 图片处理：压缩 ${tShrink.toFixed(1)}s（${shrunkCount}/${uploads.length} 张，省 ${(shrunkSaved / 1048576).toFixed(1)}MB）· 上传 ${tUpload.toFixed(1)}s（${(totalBytes / 1048576).toFixed(1)}MB）`,
+      )
     }
     const scenePayload: any = {
       type: "excalidraw",
@@ -510,6 +546,7 @@ function NoteApp({ note, mode, bare }: { note: string; mode: "edit" | "view"; ba
 
     setSaving(true)
     setMsg("保存中…")
+    const tSceneStart = performance.now()
     try {
       const res = await apiFetch(`/api/excalidraw?id=${encodeURIComponent(note)}`, {
         method: "PUT",
@@ -552,12 +589,16 @@ function NoteApp({ note, mode, bare }: { note: string; mode: "edit" | "view"; ba
       // 保存成功：更新指纹基准与脏标记
       fpRef.current = sceneFp(elements)
       dirtyRef.current = false
+      const tScene = (performance.now() - tSceneStart) / 1000
+      console.log(
+        `[白板] 保存完成 rev ${data.rev}：压缩 ${(typeof tShrink === "number" ? tShrink : 0).toFixed(1)}s · 上传 ${(typeof tUpload === "number" ? tUpload : 0).toFixed(1)}s · 场景 ${tScene.toFixed(1)}s`,
+      )
       setMsgOk(
         bare
           ? force
             ? "已保存（他人更新的较新版本已被覆盖，旧版已存快照）"
             : "已保存"
-          : `已保存 rev ${data.rev}（${new Date().toLocaleTimeString()}）`,
+          : `已保存 rev ${data.rev} · 压缩 ${(typeof tShrink === "number" ? tShrink : 0).toFixed(1)}s · 图片 ${(typeof tUpload === "number" ? tUpload : 0).toFixed(1)}s · 场景 ${tScene.toFixed(1)}s`,
       )
       return true
     } catch (e: any) {
