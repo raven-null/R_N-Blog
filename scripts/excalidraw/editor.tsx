@@ -181,6 +181,59 @@ async function gzipEncode(text: string): Promise<string | null> {
   }
 }
 
+/** 画布内嵌图片压缩参数：最长边限制 + WebP 质量（可用时显著减小保存体积） */
+const MAX_IMAGE_EDGE = 2000
+const IMAGE_WEBP_QUALITY = 0.85
+const SHRINK_MIN_BYTES = 200 * 1024 // 小于 200KB 且已是 WebP 的图片不动，避免无谓的质量损失
+
+function loadImageEl(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.onload = () => resolve(img)
+    img.onerror = () => reject(new Error("image decode failed"))
+    img.src = src
+  })
+}
+
+/**
+ * 把内嵌图片压成 WebP 并限制最长边。
+ * - 跳过 GIF（动图会被压成静态）与 SVG（矢量，canvas 处理不可靠）
+ * - 已经足够小且本就是 WebP 的图片直接返回 null（保持原样）
+ * - 压完反而更大时返回 null
+ */
+async function shrinkImageDataURL(
+  dataURL: string,
+  mimeType?: string,
+): Promise<{ dataURL: string; mimeType: string } | null> {
+  const mime = String(mimeType || (dataURL.match(/^data:([^;]+)/) || [])[1] || "").toLowerCase()
+  if (!mime.startsWith("image/")) return null
+  if (mime.includes("gif") || mime.includes("svg")) return null
+  const comma = dataURL.indexOf(",")
+  if (comma < 0) return null
+  const approxBytes = Math.floor((dataURL.length - comma - 1) * 0.75) // base64 → 字节的粗略换算
+  if (approxBytes <= SHRINK_MIN_BYTES && mime.includes("webp")) return null
+  try {
+    const img = await loadImageEl(dataURL)
+    const w = img.naturalWidth || img.width
+    const h = img.naturalHeight || img.height
+    if (!w || !h) return null
+    const scale = Math.min(1, MAX_IMAGE_EDGE / Math.max(w, h))
+    const cw = Math.max(1, Math.round(w * scale))
+    const ch = Math.max(1, Math.round(h * scale))
+    const canvas = document.createElement("canvas")
+    canvas.width = cw
+    canvas.height = ch
+    const ctx = canvas.getContext("2d")
+    if (!ctx) return null
+    ctx.drawImage(img, 0, 0, cw, ch)
+    const outURL = canvas.toDataURL("image/webp", IMAGE_WEBP_QUALITY)
+    if (!outURL || outURL.length >= dataURL.length) return null // 没变小就不换
+    return { dataURL: outURL, mimeType: "image/webp" }
+  } catch {
+    return null
+  }
+}
+
 /** 内嵌图片指纹（长度 + 末尾片段）：用于跳过未变化的图片重复上传 */
 const fileSigOf = (dataURL: string) => `${dataURL.length}:${dataURL.slice(-32)}`
 
@@ -359,6 +412,29 @@ function NoteApp({ note, mode, bare }: { note: string; mode: "edit" | "view"; ba
       return !!(f && f.dataURL) && filesSigRef.current[fid] !== fileSigOf(f.dataURL)
     })
     const pendingChars = pending.reduce((n, fid) => n + (filesObj[fid].dataURL.length || 0), 0)
+    // 上传前先压缩：最长边 2000px + WebP（GIF/SVG 与小图跳过），压缩后回写画布，fileId 不变
+    let shrunkCount = 0
+    let shrunkSaved = 0
+    for (let i = 0; i < pending.length; i++) {
+      const f = filesObj[pending[i]]
+      if (pending.length > 1) setMsg(`压缩画布图片 ${i + 1}/${pending.length}…`)
+      const before = f.dataURL.length
+      const shrunk = await shrinkImageDataURL(f.dataURL, f.mimeType)
+      if (shrunk) {
+        f.dataURL = shrunk.dataURL
+        f.mimeType = shrunk.mimeType
+        shrunkCount++
+        shrunkSaved += Math.max(0, before - shrunk.dataURL.length)
+      }
+    }
+    if (shrunkCount) {
+      try {
+        api.updateScene({ files: filesObj }) // 让画布用上压缩后的数据，避免下次保存重传原图
+      } catch {
+        /* 忽略 */
+      }
+      setMsg(`已压缩 ${shrunkCount} 张图片，减少约 ${(shrunkSaved / 1048576).toFixed(1)}MB`)
+    }
     let done = 0
     let failed: string | null = null
     if (pending.length) {

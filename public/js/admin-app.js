@@ -566,11 +566,11 @@
             if(window.ExcalidrawMount)return;
             if(document.querySelector('script[data-excalidraw-bundle-admin]'))return;
             const css=document.createElement('link');
-            css.rel='stylesheet';css.href='/js/vendor/excalidraw/excalidraw-editor.v16.css';
+            css.rel='stylesheet';css.href='/js/vendor/excalidraw/excalidraw-editor.v17.css';
             css.dataset.excalidrawBundleAdmin='1';
             document.head.appendChild(css);
             const s=document.createElement('script');
-            s.src='/js/vendor/excalidraw/excalidraw-editor.v16.js';
+            s.src='/js/vendor/excalidraw/excalidraw-editor.v17.js';
             s.dataset.excalidrawBundleAdmin='1';
             s.onerror=function(){showToast('白板组件加载失败','error')};
             document.head.appendChild(s);
