@@ -111,7 +111,6 @@ function boot(el: HTMLElement) {
   }
 
   if (mode === "edit") {
-    btn("大纲", "", () => toggleOutline())
     btn("保存", "primary", () => void save(false))
     btn("导出 PNG", "", () => void exportImage("png"))
     btn("导出 SVG", "", () => void exportImage("svg"))
@@ -274,6 +273,32 @@ function boot(el: HTMLElement) {
     setTimeout(() => URL.revokeObjectURL(a.href), 4000)
   }
 
+  /* ---------------- 大纲按钮：图标形式，与库左下工具栏并列 ---------------- */
+  function mountOutlineButton() {
+    if (mode !== "edit") return
+    const ltBar = el.querySelector(".mind-elixir-toolbar.lt")
+    if (!ltBar || ltBar.querySelector(".mm-outline-btn")) return
+    const b = document.createElement("button") as HTMLButtonElement
+    b.type = "button"
+    b.className = "mm-outline-btn"
+    b.title = "大纲（左侧写大纲，右侧实时成图）"
+    b.innerHTML =
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+      '<line x1="9" y1="6" x2="21" y2="6"></line>' +
+      '<line x1="9" y1="12" x2="21" y2="12"></line>' +
+      '<line x1="9" y1="18" x2="21" y2="18"></line>' +
+      '<circle cx="4" cy="6" r="1.2" fill="currentColor" stroke="none"></circle>' +
+      '<circle cx="4" cy="12" r="1.2" fill="currentColor" stroke="none"></circle>' +
+      '<circle cx="4" cy="18" r="1.2" fill="currentColor" stroke="none"></circle>' +
+      "</svg>"
+    b.addEventListener("click", (e) => {
+      e.stopPropagation()
+      toggleOutline()
+    })
+    ltBar.appendChild(b)
+    outlineBtnEl = b
+  }
+
   /* ---------------- 视野适配：内容自适应铺满可视区 ---------------- */
   // 内容较小时导图会缩在中间显得"没铺满"，这里在关键时机自动居中并缩放到合适大小
   function fitView() {
@@ -415,10 +440,15 @@ function boot(el: HTMLElement) {
     })
   }
 
+  let outlineBtnEl: HTMLButtonElement | null = null
   function setOutlineOpen(open: boolean) {
     buildOutline()
     panelOpen = open
     outlineEl!.classList.toggle("open", open)
+    if (outlineBtnEl) {
+      outlineBtnEl.classList.toggle("active", open)
+      outlineBtnEl.title = open ? "关闭大纲（左侧写大纲，右侧实时成图）" : "大纲（左侧写大纲，右侧实时成图）"
+    }
     // 导图区让出左侧空间（右侧实时成图）
     canvasHost.classList.toggle("outline-open", open)
     scheduleFit(320) // 可用宽度变了，重新居中并缩放
@@ -457,6 +487,7 @@ function boot(el: HTMLElement) {
   ;(window as any).__mindmapDirty = () => dirty
   ;(window as any).MindMapInstance = mind
 
+  mountOutlineButton()
   void load()
   // 面板默认关闭；上次开着则恢复（仅编辑模式）
   if (mode === "edit") {
