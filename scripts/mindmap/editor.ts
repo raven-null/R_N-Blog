@@ -1589,6 +1589,22 @@ function boot(el: HTMLElement) {
      折叠、拖拽、多选都建立在"行"之上；文字用 contenteditable 单行编辑，
      回车/Tab 在行之间操作，不依赖任何富文本解析。 */
 
+  /**
+   * 调试开关：默认安静，排查问题时在网址后面加 ?mmdebug=1 才会往控制台打这些日志。
+   * （之前为定位折叠/按键/图片那几个 bug 留了不少日志，平时不该打扰使用）
+   */
+  const MM_DEBUG = (() => {
+    try {
+      const q = new URLSearchParams(window.location.search)
+      return q.get("mmdebug") === "1"
+    } catch {
+      return false
+    }
+  })()
+  const dbg = (...args: any[]) => {
+    if (MM_DEBUG) console.log(...args)
+  }
+
   type OutlineRow = {
     id: string
     level: number
@@ -1923,7 +1939,7 @@ function boot(el: HTMLElement) {
         const id = row?.dataset.node || ""
         const willCollapse = !t.classList.contains("collapsed")
         try {
-          console.log("[mm] 点了折叠三角", { id, willCollapse, rows: outlineRows.length, editable: (mind as any).editable })
+          dbg("[mm] 点了折叠三角", { id, willCollapse, rows: outlineRows.length, editable: (mind as any).editable })
         } catch {
           /* 忽略 */
         }
@@ -1932,7 +1948,7 @@ function boot(el: HTMLElement) {
           const after = mind.getData() as any
           const n = nodeByIdInData(id)
           void after
-          console.log("[mm] 折叠后节点 expanded =", n?.expanded)
+          dbg("[mm] 折叠后节点 expanded =", n?.expanded)
         } catch {
           /* 忽略 */
         }
@@ -2490,7 +2506,7 @@ function boot(el: HTMLElement) {
     if (e.key !== "Tab" && e.key !== "Enter") return
     if (e.key === "Enter" && e.shiftKey) return // Shift+Enter 留给行内换行
     try {
-      console.log("[mm] 拦下按键", { key: e.key, shift: e.shiftKey, composing: e.isComposing, inOutline: caretInOutline() })
+      dbg("[mm] 拦下按键", { key: e.key, shift: e.shiftKey, composing: e.isComposing, inOutline: caretInOutline() })
     } catch {
       /* 忽略 */
     }
@@ -2668,14 +2684,14 @@ function boot(el: HTMLElement) {
       const idx = outlineRows.findIndex((r) => r.id === id)
       try {
         if (["Tab", "Enter", "Backspace", "Delete"].includes(e.key)) {
-          console.log("[mm] 大纲按键", { key: e.key, shift: e.shiftKey, alt: e.altKey, ctrl: e.ctrlKey, idx, id, level: outlineRows[idx]?.level, selected: selectedRows.size })
+          dbg("[mm] 大纲按键", { key: e.key, shift: e.shiftKey, alt: e.altKey, ctrl: e.ctrlKey, idx, id, level: outlineRows[idx]?.level, selected: selectedRows.size })
         }
       } catch {
         /* 忽略 */
       }
       if (idx < 0) {
         try {
-          console.warn("[mm] 按键时找不到当前行（光标不在大纲行里）", { key: e.key, 光标在大纲内: caretInOutline() })
+          dbg("[mm] 按键时找不到当前行（光标不在大纲行里）", { key: e.key, 光标在大纲内: caretInOutline() })
         } catch {
           /* 忽略 */
         }
@@ -2729,7 +2745,7 @@ function boot(el: HTMLElement) {
         const next = rowEls()[idx + 1]?.querySelector(".mm-oline-topic") as HTMLElement | null
         if (next) caretToTextEnd(next)
         try {
-          console.log("[mm] 回车建了新行", { idx, 新行数: outlineRows.length, 光标落到新行: !!next })
+          dbg("[mm] 回车建了新行", { idx, 新行数: outlineRows.length, 光标落到新行: !!next })
         } catch {
           /* 忽略 */
         }
@@ -3099,7 +3115,7 @@ function boot(el: HTMLElement) {
       导图可编辑: (mind as any).editable,
       数据里的折叠状态: outlineRows.map((r) => ({ id: r.id, kids: r.kids, expanded: r.expanded })),
     }
-    console.log("[mm] 折叠诊断", out)
+    dbg("[mm] 折叠诊断", out)
     return out
   }
   // 图片专项诊断：控制台执行 __mmImgDiag()
@@ -3143,7 +3159,7 @@ function boot(el: HTMLElement) {
       大纲面板是否打开: panelOpen,
       当前模式: mode,
     }
-    console.log("[mm] 图片诊断", out)
+    dbg("[mm] 图片诊断", out)
     return out
   }
 
@@ -3151,17 +3167,17 @@ function boot(el: HTMLElement) {
   ;(window as any).__mmFoldTest = () => {
     const tri = document.querySelector(".mm-outline-tree .mm-tri:not(.empty)") as HTMLElement | null
     if (!tri) {
-      console.warn("[mm] 没有可折叠的三角：当前大纲里所有节点都没有子项")
+      dbg("[mm] 没有可折叠的三角：当前大纲里所有节点都没有子项")
       return null
     }
     const row = tri.closest(".mm-oline") as HTMLElement | null
     const id = row?.dataset.node || ""
     const before = outlineRows.find((r) => r.id === id)
-    console.log("[mm] 折叠前", { id, expanded: before?.expanded, kids: before?.kids })
+    dbg("[mm] 折叠前", { id, expanded: before?.expanded, kids: before?.kids })
     const btn = tri as HTMLElement
     btn.click()
     const after = outlineRows.find((r) => r.id === id)
-    console.log("[mm] 折叠后", { id, expanded: after?.expanded, rows: outlineRows.length })
+    dbg("[mm] 折叠后", { id, expanded: after?.expanded, rows: outlineRows.length })
     return { id, before: before?.expanded, after: after?.expanded, rows: outlineRows.length }
   }
 
