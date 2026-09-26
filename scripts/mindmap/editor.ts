@@ -813,11 +813,21 @@ function boot(el: HTMLElement) {
     if (failed.length) {
       const strip = (n: any) => {
         const u = n?.image?.url
-        if (typeof u === "string" && failed.includes(u)) n.image.url = ""
+        if (typeof u === "string" && failed.includes(u)) {
+          // 留个占位，让缺图的位置看得出来，而不是一片空白或裂图
+          n.image.url = "data:image/svg+xml;utf8," + encodeURIComponent(
+            '<svg xmlns="http://www.w3.org/2000/svg" width="240" height="90">' +
+            '<rect width="240" height="90" rx="10" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.18)"/>' +
+            '<text x="120" y="42" text-anchor="middle" fill="rgba(255,255,255,0.55)" font-size="13">图片未找到</text>' +
+            '<text x="120" y="62" text-anchor="middle" fill="rgba(255,255,255,0.35)" font-size="10">' +
+            String(u).slice(0, 30) + "</text></svg>",
+          )
+          imageUrls.set(u, n.image.url)
+        }
         ;(n?.children || []).forEach(strip)
       }
       strip(data?.nodeData || data)
-      setMsg(`有 ${failed.length} 张图片没能取回（${failed.join(", ")}），可能没上传成功`)
+      setMsg(`有 ${failed.length} 张图片没取到（导图 ${note}）：${failed.join(", ")}`)
     }
     return changed
   }
