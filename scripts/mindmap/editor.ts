@@ -152,6 +152,16 @@ function boot(el: HTMLElement) {
     if (meta && meta.hasKey && !isAdmin()) mountKeyBar()
   }
 
+  /** 后台登录后 localStorage 里存有 admin_key，带上它服务端才认管理员身份 */
+  function authHeaders(): Record<string, string> {
+    try {
+      const k = localStorage.getItem("admin_key") || ""
+      return k ? { "X-Admin-Key": k } : {}
+    } catch {
+      return {}
+    }
+  }
+
   function isAdmin(): boolean {
     try {
       return !!localStorage.getItem("admin_key")
@@ -164,7 +174,10 @@ function boot(el: HTMLElement) {
   async function load() {
     setMsg("加载中…", true)
     try {
-      const res = await fetch(`/api/mindmap?id=${encodeURIComponent(note)}`, { cache: "no-store" })
+      const res = await fetch(`/api/mindmap?id=${encodeURIComponent(note)}`, {
+        cache: "no-store",
+        headers: authHeaders(),
+      })
       const d = await res.json().catch(() => ({}))
       const missing = !res.ok || d.status !== "success" || d.code === "not_found"
       if (missing) {
@@ -216,7 +229,7 @@ function boot(el: HTMLElement) {
 
       const res = await fetch(`/api/mindmap?id=${encodeURIComponent(note)}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify(body),
       })
       const d = await res.json().catch(() => ({}))

@@ -227,6 +227,18 @@
         select option{background:#000;color:#fff}
 
         /* 标签选择器（液态玻璃） */
+        /* 标签下拉：深色毛玻璃（背景够实，条目清晰） */
+        .tag-picker-dropdown{
+            background: rgba(14, 14, 18, 0.94) !important;
+            backdrop-filter: blur(24px) saturate(170%) !important;
+            -webkit-backdrop-filter: blur(24px) saturate(170%) !important;
+            border: 1px solid rgba(255, 255, 255, 0.16) !important;
+            box-shadow: 0 18px 44px -14px rgba(0, 0, 0, 0.9) !important;
+        }
+        .tag-picker-dropdown .tp-item{ color: #e8e8ea !important; }
+        .tag-picker-dropdown .tp-item:hover{ background: rgba(255, 255, 255, 0.12) !important; color: #fff !important; }
+        .tag-picker-dropdown .tp-item.selected{ color: var(--accent) !important; background: rgba(255, 159, 10, 0.14) !important; }
+
         .tag-picker-wrap{position:relative}
         .tag-picker-input{
             display:flex;flex-wrap:wrap;gap:4px;padding:8px 12px;
@@ -1631,7 +1643,7 @@ body.admin-write-full .admin-actions.mobile-float{display:none}
     </div>
 
         <script src="js/tag-picker.js?v=1.0.0"></script>
-        <script src="js/admin-app.js?v=1.8.2"></script>
+        <script src="js/admin-app.js?v=1.8.3"></script>
 
     <!-- 前台预览抽屉（iframe 内嵌，零跳出） -->
     <style>

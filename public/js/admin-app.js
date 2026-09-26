@@ -67,7 +67,7 @@
         }
         function setArtType(t){
             artType=t;
-            document.querySelectorAll('#artTypeSeg .art-chip').forEach(function(b,i){b.classList.toggle('active',['all','article','whiteboard','card'][i]===t)});
+            document.querySelectorAll('#artTypeSeg .art-chip').forEach(function(b){b.classList.toggle('active',(b.dataset.type||'')===t)});
             renderArticles();
         }
         function filterArticles(){
@@ -80,7 +80,7 @@
             if(i)i.value='';
             filterArticles();
         }
-        function artTypeLabel(t){if(t==='whiteboard')return '白板';if(t==='card')return '随记';return ''}
+        function artTypeLabel(t){if(t==='whiteboard')return '白板';if(t==='card')return '随记';if(t==='mindmap')return '导图';return ''}
         function artCardHtml(a){
             const isPub=a.status==='published';
             const type=a.type||'article';
@@ -1085,13 +1085,13 @@
             }
             if(mode==='board'){
                 const el=document.getElementById('edBoardName');
-                if(el)el.value=currentBoardName||defaultBoardName();
+                if(el){el.value=currentBoardName||defaultBoardName();el.placeholder='给这块白板起个名字（同时作为文章标题）';}
                 const lb=document.querySelector('#publishBoardNameField>label');
                 if(lb)lb.textContent='画板名称';
             }
             if(mode==='mindmap'){
                 const el=document.getElementById('edBoardName');
-                if(el)el.value=currentMapName||'';
+                if(el){el.value=currentMapName||'';el.placeholder='给这张导图起个名字（同时作为文章标题）';}
                 const lb=document.querySelector('#publishBoardNameField>label');
                 if(lb)lb.textContent='导图名称';
             }
