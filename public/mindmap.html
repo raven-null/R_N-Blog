@@ -134,8 +134,8 @@
       document.title = (edit ? '编辑导图' : '思维导图') + ' - ' + note;
     })();
   </script>
-  <link rel="stylesheet" href="/js/vendor/mindmap/mindmap-editor.v11.css">
-  <script src="/js/vendor/mindmap/mindmap-editor.v11.js"></script>
+  <link rel="stylesheet" href="/js/vendor/mindmap/mindmap-editor.v12.css">
+  <script src="/js/vendor/mindmap/mindmap-editor.v12.js"></script>
   <script>
     // 兜底诊断：bundle 加载失败时给出可见提示，而不是空白页
     window.addEventListener('load', function () {
@@ -145,7 +145,7 @@
           root.innerHTML =
             '<div class="mm-empty"><div class="card">' +
             '<div class="t">导图组件未能加载</div>' +
-            '<div class="row">脚本 mindmap-editor.v11.js 加载失败（404 / 部署未完成 / 被拦截）。<br>' +
+            '<div class="row">脚本 mindmap-editor.v12.js 加载失败（404 / 部署未完成 / 被拦截）。<br>' +
             '请 Ctrl+F5 强制刷新；若仍失败，检查 Netlify 最近一次部署是否成功。</div>' +
             '</div></div>';
         }

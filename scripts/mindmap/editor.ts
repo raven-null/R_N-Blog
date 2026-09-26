@@ -364,55 +364,183 @@ function boot(el: HTMLElement) {
   let uid = 0
   const nextId = () => "n" + ++uid
 
-  /** 大纲文本 → 导图数据：支持「# 标题」与「缩进的 - / * / 纯文本」两种写法 */
+  /**
+   * 大纲解析：把每一行折算成「相对层级」（根 0、一级分支 1……）
+   * 三种写法都认：缩进（2 空格或 Tab 一级）、Markdown 列表符（- * + 1.）、# 标题。
+   * 层级跳级也安全（逐级找父节点），不会丢行。
+   */
+  const OUTLINE_INDENT = "  "
+  const BULLET_RE = /^\s*(?:[-*+]|\d+[.)])\s+/
+
   function outlineToData(text: string): any {
     const root: any = { id: "root", topic: "", children: [] }
     const stack: Array<{ level: number; node: any }> = []
     let isFirst = true
-    const push = (level: number, topic: string) => {
-      const node = { id: nextId(), topic, children: [] }
+
+    const add = (level: number, topic: string) => {
+      if (!topic) return
       if (isFirst) {
+        // 第一行永远是中心主题，无论是否带缩进 / 列表符
         root.topic = topic
         isFirst = false
-        stack.length = 0
-        stack.push({ level: 0, node: root })
         return
       }
+      const node = { id: nextId(), topic, children: [] }
       while (stack.length > 1 && stack[stack.length - 1].level >= level) stack.pop()
       const parent = stack.length ? stack[stack.length - 1].node : root
       parent.children.push(node)
       stack.push({ level, node })
     }
+
     for (const rawLine of text.split(/\r?\n/)) {
       const line = rawLine.replace(/\s+$/, "")
       if (!line.trim()) continue
-      const heading = line.match(/^(#{1,6})\s*(.+)$/)
+
+      const heading = line.match(/^\s*#{1,6}\s*(.+)$/)
       if (heading) {
-        push(heading[1].length, heading[2].trim())
+        const level = Math.max(0, (line.match(/^\s*(#{1,6})/) as RegExpMatchArray)[1].length - 1)
+        add(level, heading[1].trim())
         continue
       }
-      const indentMatch = line.match(/^(\s*)/)
-      const indent = (indentMatch ? indentMatch[1].replace(/\t/g, "  ") : "").length
-      const topic = line.trim().replace(/^([-*+]\s+)+/, "").trim()
-      if (!topic) continue
-      push(Math.floor(indent / 2) + 2, topic)
+
+      const indent = (line.match(/^[\t ]*/) as RegExpMatchArray)[0].replace(/\t/g, OUTLINE_INDENT).length
+      // 去掉所有前导列表符，方便「- - 内容」这类手滑输入
+      let topic = line.trim()
+      while (BULLET_RE.test(topic)) topic = topic.replace(BULLET_RE, "")
+      add(Math.floor(indent / 2), topic.trim())
     }
+
     if (!root.topic) root.topic = "中心主题"
     if (!root.children.length) root.children.push({ id: nextId(), topic: "分支主题", children: [] })
     return { nodeData: root }
   }
 
-  /** 导图 → 大纲文本（用缩进列表，方便直接编辑；也兼容 Markdown 列表） */
+  /** 导图 → 大纲文本：根行不带列表符，其余行「2 空格 × 层级 + - 」 */
   function dataToOutline(data: any): string {
     const lines: string[] = []
     const walk = (node: any, depth: number) => {
       const topic = String(node?.topic ?? "").replace(/\r?\n/g, " ")
-      if (depth === 0) lines.push(topic)
-      else lines.push("  ".repeat(depth - 1) + "- " + topic)
+      lines.push(depth === 0 ? topic : OUTLINE_INDENT.repeat(depth - 1) + "- " + topic)
       ;(node?.children || []).forEach((c: any) => walk(c, depth + 1))
     }
     walk(data?.nodeData ?? data, 0)
     return lines.join("\n")
+  }
+
+  /* ---------------- 大纲编辑手感 ---------------- */
+  /** 当前行的缩进空格数（Tab 视为一级缩进） */
+  function lineIndent(text: string, pos: number): number {
+    const start = text.lastIndexOf("\n", Math.max(0, pos - 1)) + 1
+    const seg = text.slice(start, pos)
+    const ws = (seg.match(/^[\t ]*/) as RegExpMatchArray)[0]
+    return ws.replace(/\t/g, OUTLINE_INDENT).length
+  }
+
+  /** 该行是否已经带列表符（空行不算） */
+  function hasBullet(text: string, pos: number): boolean {
+    const start = text.lastIndexOf("\n", Math.max(0, pos - 1)) + 1
+    const line = text.slice(start)
+    return BULLET_RE.test(line) && line.trim() !== ""
+  }
+
+  /**
+   * 替换选区并把光标放到指定位置，同时抛一次 input 让实时成图生效
+   * （textarea 上用 setRangeText 会保持撤销栈，手动改 value 不会）
+   */
+  function replaceRange(ta: HTMLTextAreaElement, from: number, to: number, text: string, caret: number) {
+    try {
+      ta.setRangeText(text, from, to, "end")
+      ta.selectionStart = ta.selectionEnd = caret
+    } catch {
+      const v = ta.value
+      ta.value = v.slice(0, from) + text + v.slice(to)
+      ta.selectionStart = ta.selectionEnd = from + text.length
+    }
+    ta.dispatchEvent(new Event("input", { bubbles: true }))
+  }
+
+  /** 行尾位置（不含行尾空白） */
+  function lineEnd(text: string, pos: number): number {
+    const nl = text.indexOf("\n", pos)
+    return nl === -1 ? text.length : nl
+  }
+
+  /** 把某行整行改写（保持光标偏移尽量不变） */
+  function rewriteLine(ta: HTMLTextAreaElement, deltaIndent: number) {
+    const text = ta.value
+    const pos = ta.selectionStart
+    const lineStart = text.lastIndexOf("\n", Math.max(0, pos - 1)) + 1
+    const end = lineEnd(text, pos)
+    let line = text.slice(lineStart, end)
+    const bullet = (line.match(/^[\t ]*(?:[-*+]|\d+[.)])\s+/) as RegExpMatchArray | null)?.[0] ?? ""
+    const wsLen = (line.match(/^[\t ]*/) as RegExpMatchArray)[0].replace(/\t/g, OUTLINE_INDENT).length
+    const level = Math.floor(wsLen / 2)
+    const next = Math.max(0, level + deltaIndent)
+    const bodyStart = lineStart + bullet.length
+    const body = line.trim() === "" ? "" : text.slice(bodyStart, end)
+    const prefix = next === 0 ? "" : OUTLINE_INDENT.repeat(next) + "- "
+    const caretInBody = Math.max(0, pos - bodyStart)
+    const newLine = prefix + body
+    replaceRange(ta, lineStart, end, newLine, lineStart + Math.min(caretInBody, body.length) + prefix.length)
+  }
+
+  function onOutlineKeyDown(e: KeyboardEvent) {
+    const ta = outlineText
+    if (!ta) return
+    const text = ta.value
+    const pos = ta.selectionStart
+
+    // Tab / Shift+Tab：降级 / 升级
+    if (e.key === "Tab") {
+      e.preventDefault()
+      rewriteLine(ta, e.shiftKey ? -1 : 1)
+      return
+    }
+
+    // Enter：自动补「- 」前缀与同级缩进；在空节点上回车则回到上一级
+    if (e.key === "Enter" && !e.shiftKey && ta.selectionStart === ta.selectionEnd) {
+      e.preventDefault()
+      const lineStart = text.lastIndexOf("\n", Math.max(0, pos - 1)) + 1
+      const end = lineEnd(text, pos)
+      const line = text.slice(lineStart, end)
+      const indent = lineIndent(text, pos)
+      const body = line.replace(/^\s*(?:[-*+]|\d+[.)])\s+/, "").trim()
+
+      if (body === "" && hasBullet(text, pos)) {
+        // 空项目回车 → 清掉列表符并退回上一级（连续两次回车可快速退出列表）
+        const next = Math.max(0, Math.floor(indent / 2) - 1)
+        const prefix = next === 0 ? "" : OUTLINE_INDENT.repeat(next)
+        replaceRange(ta, lineStart, end, prefix, lineStart + prefix.length)
+        return
+      }
+      const prefix = "\n" + OUTLINE_INDENT.repeat(Math.floor(indent / 2)) + "- "
+      replaceRange(ta, pos, pos, prefix, pos + prefix.length)
+      return
+    }
+
+    // Backspace：光标在「- 」末尾（节点为空）时删掉整段前缀
+    if (e.key === "Backspace" && ta.selectionStart === ta.selectionEnd) {
+      const lineStart = text.lastIndexOf("\n", Math.max(0, pos - 1)) + 1
+      const before = text.slice(lineStart, pos)
+      if (/^[\t ]*(?:[-*+]|\d+[.)])\s+$/.test(before)) {
+        e.preventDefault()
+        replaceRange(ta, lineStart, pos, "", lineStart)
+      }
+    }
+  }
+
+  /** 输入「-」后自动补空格，省得敲 "- 内容" */
+  function onOutlineInput() {
+    const ta = outlineText
+    if (!ta) return
+    const pos = ta.selectionStart
+    if (pos !== ta.selectionEnd) return
+    const text = ta.value
+    const lineStart = text.lastIndexOf("\n", Math.max(0, pos - 1)) + 1
+    const before = text.slice(lineStart, pos)
+    if (/^[\t ]*[-*+]$/.test(before)) {
+      replaceRange(ta, pos, pos, " ", pos + 1)
+    }
   }
 
   let flushTimer: number | null = null
@@ -446,14 +574,18 @@ function boot(el: HTMLElement) {
     outlineEl.innerHTML =
       '<div class="mm-outline-head">' +
       '<span class="mm-outline-title">大纲</span>' +
-      '<span class="mm-outline-tip">每行一项，缩进表示层级；改动实时成图</span>' +
+      '<span class="mm-outline-tip">回车自动接下一项 · Tab 降级 · Shift+Tab 升级 · 改动实时成图</span>' +
       '<button class="mm-btn" data-act="sync" title="用当前导图内容覆盖大纲">从导图刷新</button>' +
       '<button class="mm-btn" data-act="close">关闭</button>' +
       "</div>" +
-      '<textarea class="mm-outline-text" spellcheck="false" placeholder="中心主题&#10;- 分支一&#10;  - 子节点"></textarea>'
+      '<textarea class="mm-outline-text" spellcheck="false" placeholder="中心主题&#10;- 分支一&#10;  - 子节点&#10;    - 孙节点"></textarea>'
     el.appendChild(outlineEl)
     outlineText = outlineEl.querySelector(".mm-outline-text") as HTMLTextAreaElement
-    outlineText.addEventListener("input", scheduleApply)
+    outlineText.addEventListener("input", () => {
+      onOutlineInput()
+      scheduleApply()
+    })
+    outlineText.addEventListener("keydown", onOutlineKeyDown)
     outlineText.addEventListener("blur", flushOutline)
     outlineEl.addEventListener("click", (e) => {
       const t = e.target as HTMLElement
