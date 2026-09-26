@@ -1526,6 +1526,8 @@ function boot(el: HTMLElement) {
   }
 
   let outlineRows: OutlineRow[] = []
+  /** 多选：被选中的行 id（空 = 没有多选） */
+  const selectedRows = new Set<string>()
   let outlineHost: HTMLElement | null = null
   let outlineEditing = false
 
@@ -1792,6 +1794,14 @@ function boot(el: HTMLElement) {
     setMsg("已调整层级")
   }
 
+  /** 把多选状态画到行上 */
+  function paintRowSelection() {
+    rowEls().forEach((el) => {
+      const id = el.dataset.node || ""
+      el.classList.toggle("selected-row", selectedRows.size > 0 && selectedRows.has(id))
+    })
+  }
+
   function bindRowDrag(host: HTMLElement) {
     let dragId: string | null = null
     const clearMarks = () =>
@@ -1856,9 +1866,29 @@ function boot(el: HTMLElement) {
       if (t?.classList.contains("mm-tri") || t?.classList.contains("mm-oline-img")) return
       const row = t?.closest?.(".mm-oline") as HTMLElement | null
       if (!row) return
+
+      // 按住 Shift / Ctrl → 多选（切换选中，不进编辑）
+      if (e.shiftKey || e.ctrlKey || e.metaKey) {
+        e.preventDefault()
+        if (String(row.dataset.line) === "0") {
+          setMsg("中心主题不能参与多选")
+          return
+        }
+        const id = row.dataset.node || ""
+        if (selectedRows.has(id)) selectedRows.delete(id)
+        else selectedRows.add(id)
+        paintRowSelection()
+        setMsg(selectedRows.size ? `已选 ${selectedRows.size} 项（Delete 批量删除、Tab 批量调级）` : "已取消多选")
+        return
+      }
+
+      if (selectedRows.size) {
+        selectedRows.clear()
+        paintRowSelection()
+      }
       const topic = row.querySelector(".mm-oline-topic") as HTMLElement | null
       if (!topic) return
-      e.preventDefault() // 自己放光标，避免浏览器把选区放到整个行容器上
+      e.preventDefault()
       caretToTextEnd(topic)
     })
 
@@ -1921,6 +1951,45 @@ function boot(el: HTMLElement) {
         renderOutlineTree()
         const next = rowEls()[idx + 1]?.querySelector(".mm-oline-topic") as HTMLElement | null
         if (next) caretToTextEnd(next)
+        return
+      }
+
+      // 多选状态：Delete/Backspace 批量删除
+      if ((e.key === "Backspace" || e.key === "Delete") && selectedRows.size) {
+        e.preventDefault()
+        e.stopPropagation()
+        const before = outlineRows.length
+        outlineRows = outlineRows.filter((r) => !selectedRows.has(r.id))
+        const removed = before - outlineRows.length
+        selectedRows.clear()
+        applyRowsToData(outlineRows)
+        renderOutlineTree()
+        setMsg(`已删除 ${removed} 项`)
+        return
+      }
+
+      // 多选状态：Tab / Shift+Tab 批量调级
+      if (e.key === "Tab" && selectedRows.size) {
+        e.preventDefault()
+        e.stopPropagation()
+        const sign = e.shiftKey ? -1 : 1
+        outlineRows = outlineRows.map((r) =>
+          selectedRows.has(r.id) ? { ...r, level: Math.max(1, r.level + sign) } : r,
+        )
+        // 修正越级
+        const fixed: OutlineRow[] = []
+        outlineRows.forEach((r, i) => {
+          if (i === 0) {
+            fixed.push({ ...r, level: 0 })
+            return
+          }
+          fixed.push({ ...r, level: Math.min(r.level, (fixed[i - 1]?.level ?? 0) + 1) })
+        })
+        outlineRows = fixed
+        applyRowsToData(outlineRows)
+        renderOutlineTree()
+        paintRowSelection()
+        setMsg(`${selectedRows.size} 项已${sign > 0 ? "降级" : "升级"}`)
         return
       }
 
