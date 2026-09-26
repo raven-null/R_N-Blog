@@ -1665,7 +1665,8 @@ function boot(el: HTMLElement) {
         const img = r.imgUrl
           ? '<img class="mm-oline-img" src="' + r.imgUrl + '" alt="" draggable="false" data-node="' + r.id + '">'
           : ""
-        const text = r.topic.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+        // 编辑态显示纯文本（标记可见，方便改），非编辑态渲染成样式
+        const text = editing ? plainInline(r.topic) : renderInline(r.topic)
         // 有备注的行尾挂一个小方块；没有备注时极淡，鼠标划过才显形，方便随时添加
         const note =
           '<span class="mm-oline-note' +
@@ -1700,12 +1701,98 @@ function boot(el: HTMLElement) {
       .join("")
   }
 
+  /* ---------------- 行内样式标记：**加粗** ==高亮== ~~删除线~~ __下划线__ ---------------- */
+  const escapeHtml = (s: string) =>
+    s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+
+  type InlineSeg = { text: string; mark: string }
+
+  /** 把一行文字按标记切成片段；没闭合的标记按普通文字处理 */
+  function scanInline(text: string): InlineSeg[] {
+    const out: InlineSeg[] = []
+    const marks = ["**", "==", "~~", "__"]
+    let buf = ""
+    let i = 0
+    while (i < text.length) {
+      const mk = marks.find((m) => text.startsWith(m, i))
+      if (mk) {
+        const end = text.indexOf(mk, i + mk.length)
+        const inner = end >= 0 ? text.slice(i + mk.length, end) : ""
+        if (end > i + mk.length && !inner.includes("\n")) {
+          if (buf) {
+            out.push({ text: buf, mark: "" })
+            buf = ""
+          }
+          out.push({ text: inner, mark: mk })
+          i = end + mk.length
+          continue
+        }
+      }
+      buf += text[i]
+      i++
+    }
+    if (buf) out.push({ text: buf, mark: "" })
+    return out
+  }
+
+  const MARK_CLASS: Record<string, string> = {
+    "**": "mm-b",
+    "==": "mm-mark",
+    "~~": "mm-del",
+    "__": "mm-u",
+  }
+
+  /** 标记文本 → HTML（<br> 表示换行） */
+  function renderInline(text: string): string {
+    return scanInline(text)
+      .map((seg) => {
+        const html = escapeHtml(seg.text).replace(/\n/g, "<br>")
+        return seg.mark ? '<span class="' + MARK_CLASS[seg.mark] + '">' + html + "</span>" : html
+      })
+      .join("")
+  }
+
+  /** 反过来：把打字时带标记的纯文本显示出来（让标记本身可见） */
+  function plainInline(text: string): string {
+    return escapeHtml(text).replace(/\n/g, "<br>")
+  }
+
+  /** 从行的 DOM 里读回文字：把样式 span 还原成标记，<br> 还原成换行 */
+  function readTopic(root: HTMLElement): string {
+    let out = ""
+    const walk = (node: Node) => {
+      for (const child of Array.from(node.childNodes)) {
+        if (child.nodeType === Node.TEXT_NODE) {
+          out += child.nodeValue || ""
+          continue
+        }
+        if (!(child instanceof HTMLElement)) continue
+        if (child.tagName === "BR") {
+          out += "\n"
+          continue
+        }
+        if (child.tagName === "IMG") continue
+        const cls = child.className || ""
+        const mark = cls.includes("mm-mark") ? "==" : cls.includes("mm-b") ? "**" : cls.includes("mm-del") ? "~~" : cls.includes("mm-u") ? "__" : ""
+        if (!mark) {
+          walk(child)
+          continue
+        }
+        const inner = (child.textContent || "").replace(/\s+/g, " ").trim()
+        if (inner) out += mark + inner + mark
+      }
+    }
+    walk(root)
+    return out
+  }
+
   /** 行内容改回数据：只改文字（图片、层级、顺序由各自的操作负责） */
   function commitRowText(rowEl: HTMLElement) {
     const id = rowEl.dataset.node || ""
     const textEl = rowEl.querySelector(".mm-oline-topic") as HTMLElement | null
     if (!id || !textEl) return
-    const text = (textEl.textContent || "").replace(/\s+/g, " ").trim()
+    // 用 readTopic 而不是 textContent：样式 span 要还原成 ** == 之类的标记
+    const text = readTopic(textEl).replace(/[ \t\u00a0]+/g, " ").trim()
     const node = nodeByIdInData(id)
     const data = mind.getData() as any
     const target = findNodeIn(data?.nodeData, id)
@@ -2530,6 +2617,9 @@ function boot(el: HTMLElement) {
       e.preventDefault()
       // 顺序很重要：先聚焦、再放光标。反过来（放完光标再 focus）某些浏览器会把光标
       // 重置掉，currentRow() 就找不到行，回车建行、Tab 调级这些按光标定位的功能会全失效。
+      // 带样式的行：先还原成纯文本标记再放光标，否则光标会落在 span 里改不动标记
+      const plain = readTopic(topic)
+      if (topic.innerHTML !== plainInline(plain)) topic.innerHTML = plainInline(plain)
       try {
         topic.focus({ preventScroll: true })
       } catch {
@@ -2560,6 +2650,11 @@ function boot(el: HTMLElement) {
         const row = target?.closest?.(".mm-oline") as HTMLElement | null
         if (!row) return
         settlePendingRowText(row)
+        // 提交完把这一行从「显示标记」换成「渲染样式」
+        const topic = row.querySelector(".mm-oline-topic") as HTMLElement | null
+        if (topic) {
+          topic.innerHTML = renderInline(readTopic(topic).replace(/[ \t\u00a0]+/g, " ").trim())
+        }
       },
       true,
     )
