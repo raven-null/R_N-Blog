@@ -560,7 +560,6 @@ const ArticleApp = {
                     '<div class="bp-row"><span class="k">导图</span><span style="word-break:break-all">' + escT(mapId) + '</span></div>' +
                     '<div class="bp-tags">' + (tagChips || '<span style="opacity:.5">无标签</span>') + '</div>' +
                     '<div class="bp-actions">' +
-                    '<a class="bt-btn" style="background:rgba(255,255,255,.08)" href="/mindmap.html?note=' + encodeURIComponent(mapId) + '&edit=1" target="_blank" title="在新窗口打开完整编辑器">独立打开</a>' +
                     '<button class="bt-btn" id="mmShareBtn" style="background:rgba(255,255,255,.08)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg>复制链接</button>' +
                     '</div></div>' +
                     '</div>';

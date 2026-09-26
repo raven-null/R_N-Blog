@@ -130,6 +130,7 @@ function boot(el: HTMLElement) {
   const ICON_COMMENT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>'
   const ICON_INFO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="8" r=".4" fill="currentColor"/></svg>'
   const ICON_KEY = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10.5" width="16" height="10" rx="2.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg>'
+  const ICON_OUTLINE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="9" y1="6" x2="21" y2="6"/><line x1="9" y1="12" x2="21" y2="12"/><line x1="9" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1.3" fill="currentColor" stroke="none"/><circle cx="4" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="4" cy="18" r="1.3" fill="currentColor" stroke="none"/></svg>'
 
   // 返回博客：放胶囊最左边（最不容易被挤掉），除后台内嵌外无条件出现。
   // 文章页嵌入 → 通知父页面回首页；独立打开 → 直接跳首页。
@@ -142,6 +143,8 @@ function boot(el: HTMLElement) {
   // 导出：多个格式收进一个「导出」按钮，点开小菜单选择
   const exportBtn = capBtn("cap-export", "导出导图", ICON_DL, "导出", () => toggleExportMenu())
   capBtn("bb-view-only", "在当前位置编辑这张导图", ICON_EDIT, "编辑", () => setMode("edit"))
+  // 大纲：库工具条上那个图标万一没挂上/看不见，这里也有一条入口
+  const capOutlineBtn = capBtn("bb-edit-only cap-outline", "大纲（左侧写大纲，右侧实时成图）", ICON_OUTLINE, "大纲", () => toggleOutline())
   capBtn("bb-edit-only", "退出编辑，回到只读浏览", ICON_DONE, "完成", () => setMode("view"))
   // 只有「这张导图真的设了口令」才显形，所以单独持有引用
   const capKeyBtn = capBtn("cap-key", "输入编辑口令", ICON_KEY, "口令", () => toggleKeyBar())
@@ -298,6 +301,8 @@ function boot(el: HTMLElement) {
     if (editing) mountKeyBar()
     applyEditable()
     if (editing) {
+      // 切到编辑：工具条这时才显示，大纲图标要补挂一次（库工具条只在 init 时创建）
+      mountOutlineButton()
       if (locked() && !editKey) {
         // 加密导图：先要口令。可以浏览，但改不了，提示说清楚
         setMsg("此导图已加密：请先输入编辑口令")
@@ -307,7 +312,7 @@ function boot(el: HTMLElement) {
     } else {
       setMsg("已切换到只读浏览")
     }
-    // 大纲面板只在编辑态可用；退出时先收起
+    // 大纲面板只在编辑态可用；退出时先收起，回来时恢复
     if (!editing && outlineEl?.classList.contains("open")) {
       outlineWasOpen = true
       setOutlineOpen(false)
@@ -800,6 +805,9 @@ function boot(el: HTMLElement) {
       outlineBtnEl.classList.toggle("active", open)
       outlineBtnEl.title = open ? "关闭大纲（左侧写大纲，右侧实时成图）" : "大纲（左侧写大纲，右侧实时成图）"
     }
+    // 胶囊里的大纲入口也同步状态
+    capOutlineBtn.classList.toggle("active", open)
+    capOutlineBtn.title = open ? "关闭大纲" : "大纲（左侧写大纲，右侧实时成图）"
     // 导图区让出左侧空间（右侧实时成图）
     canvasHost.classList.toggle("outline-open", open)
     scheduleFit(320) // 可用宽度变了，重新居中并缩放

@@ -762,6 +762,15 @@
             syncMapPermBtns();
             if(host)host.innerHTML='<div class="wb-hint">点「新建导图」开始，或在文章管理里打开已有导图</div>';
         }
+        // 新窗口打开当前导图：编辑区更大，适合内容多的导图
+        function mmOpenWindow(){
+            const mid=(currentMapId||'').trim();
+            if(!/^[A-Za-z0-9_-]{1,64}$/.test(mid)){
+                alert('请先新建或打开一张导图');
+                return;
+            }
+            window.open('/mindmap.html?note='+encodeURIComponent(mid)+'&edit=1','_blank','noopener');
+        }
         function mmNew(silent){
             currentMapId='mm-'+Math.random().toString(36).slice(2,10);
             currentMapArticleId='';
