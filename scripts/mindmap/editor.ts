@@ -2281,6 +2281,23 @@ function boot(el: HTMLElement) {
     console.log("[mm] 折叠诊断", out)
     return out
   }
+  // 直接跑一次折叠（不经过点击），用来区分「点击没生效」还是「折叠本身没生效」
+  ;(window as any).__mmFoldTest = () => {
+    const tri = document.querySelector(".mm-outline-tree .mm-tri:not(.empty)") as HTMLElement | null
+    if (!tri) {
+      console.warn("[mm] 没有可折叠的三角：当前大纲里所有节点都没有子项")
+      return null
+    }
+    const row = tri.closest(".mm-oline") as HTMLElement | null
+    const id = row?.dataset.node || ""
+    const before = outlineRows.find((r) => r.id === id)
+    console.log("[mm] 折叠前", { id, expanded: before?.expanded, kids: before?.kids })
+    const btn = tri as HTMLElement
+    btn.click()
+    const after = outlineRows.find((r) => r.id === id)
+    console.log("[mm] 折叠后", { id, expanded: after?.expanded, rows: outlineRows.length })
+    return { id, before: before?.expanded, after: after?.expanded, rows: outlineRows.length }
+  }
 
   // 粘贴图片：库把 paste 交给 mind.pasteHandler；再在根元素补一个捕获监听
   ;(mind as any).pasteHandler = onPaste
