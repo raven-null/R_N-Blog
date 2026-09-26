@@ -669,6 +669,8 @@ function boot(el: HTMLElement) {
     // 否则口令输入框这类地方连文字都粘不进去
     const t = (e.target as HTMLElement | null) || null
     const inOutline = !!t && t.tagName.toLowerCase() === "textarea" && t.classList.contains("mm-outline-text")
+    // 行式大纲：光标所在行就是要贴图的那一行
+    const inOutlineRow = !!t?.closest?.(".mm-oline")
 
     if (inOutline) {
       // 在大纲面板里粘贴：插到光标所在那一行对应的节点
@@ -681,6 +683,18 @@ function boot(el: HTMLElement) {
       e.preventDefault()
       e.stopPropagation() // 别让库的粘贴处理再插手
       if (!stageImage(file, String(node.id))) setMsg("图片贴不上去，请重试")
+      return
+    }
+
+    if (inOutlineRow) {
+      const rowId = currentRow()?.dataset.node || ""
+      if (!rowId) {
+        setMsg("没定位到大纲这一行的节点：把光标放到某一行内容上再粘贴")
+        return
+      }
+      e.preventDefault()
+      e.stopPropagation()
+      if (!stageImage(file, rowId)) setMsg("图片贴不上去，请重试")
       return
     }
 
@@ -860,7 +874,10 @@ function boot(el: HTMLElement) {
       hit.image = { url, width: 320, height: 200, fit: "contain" }
       ;(mind as any).refresh(data)
       dirty = true
-      if (panelOpen) updateOutlineImageCount(data)
+      if (panelOpen) {
+        updateOutlineImageCount(data)
+        renderOutlineTree() // 行内缩略图立刻出现，不用等下次重建
+      }
       setMsg("图片已贴在导图上，保存时会统一转 WebP 并上传", true)
       // 异步读真实尺寸，顺便校正节点图片比例
       void readFileAsImage(file)
@@ -881,7 +898,10 @@ function boot(el: HTMLElement) {
             h2.image.width = shown.width
             h2.image.height = shown.height
             ;(mind as any).refresh(d2)
-            if (panelOpen) updateOutlineImageCount(d2)
+            if (panelOpen) {
+              updateOutlineImageCount(d2)
+              renderOutlineTree()
+            }
           }
         })
         .catch(() => {
@@ -2114,6 +2134,10 @@ function boot(el: HTMLElement) {
     const host = outlineHost
     if (!host) return
     bindRowDrag(host)
+
+    // 大纲面板挂在 body 下，不在 #mm-root 里，根元素上的 paste 监听收不到它。
+    // 这里补一个捕获阶段的 paste：在大纲行里贴图能落到那一行。
+    host.addEventListener("paste", (e) => onPaste(e as ClipboardEvent), true)
 
     // Tab 必须留在面板里（不然焦点会顺着 Tab 走到画布上，而画布的 Tab 快捷键正好是
     // 「新建子节点」），但这里**只能 preventDefault**：一旦在捕获阶段 stopPropagation，
