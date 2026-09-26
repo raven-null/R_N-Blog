@@ -1630,6 +1630,10 @@ function boot(el: HTMLElement) {
   // 所以结构操作前必须先「结算」待提交的文字。
   let pendingRowEl: HTMLElement | null = null
   let pendingTimer: number | null = null
+  /** 判断鼠标是「单击」还是「拖动划选」用（拖动时要让浏览器自己做选择） */
+  let dragStartX = 0
+  let dragStartY = 0
+  let dragRowEl: HTMLElement | null = null
 
   /** 数据 → 行列表（折叠的节点：子项不生成行，符合"收起后看不到"） */
   function collectRows(data: any): OutlineRow[] {
@@ -2643,9 +2647,28 @@ function boot(el: HTMLElement) {
       }
       const topic = row.querySelector(".mm-oline-topic") as HTMLElement | null
       if (!topic) return
-      e.preventDefault()
-      // 顺序很重要：先聚焦、再放光标。反过来（放完光标再 focus）某些浏览器会把光标
-      // 重置掉，currentRow() 就找不到行，回车建行、Tab 调级这些按光标定位的功能会全失效。
+
+      // 记住按下的位置与这一行：松手时判断这是「单击」还是「拖动划选」
+      dragStartX = e.clientX
+      dragStartY = e.clientY
+      dragRowEl = row
+      // 注意这里**不能** preventDefault：划选文字要靠浏览器的默认行为
+    })
+
+    // 松手：单击才把光标放到行尾（省得精准点字），拖动则保留用户选中的文字
+    host.addEventListener("mouseup", (e) => {
+      if (mode !== "edit") return
+      const row = dragRowEl
+      const sx = dragStartX
+      const sy = dragStartY
+      dragRowEl = null
+      if (!row) return
+      const moved = Math.abs(e.clientX - sx) + Math.abs(e.clientY - sy) > 4
+      if (moved) return // 拖动划选：交给浏览器，别动光标
+      if ((e.target as HTMLElement | null)?.closest?.(".mm-oline-drag, .mm-oline-note, .mm-oline-img, .mm-tri")) return
+      const topic = row.querySelector(".mm-oline-topic") as HTMLElement | null
+      if (!topic) return
+      // 先聚焦再放光标（反过来某些浏览器会把光标重置掉，currentRow() 就找不到行）
       try {
         topic.focus({ preventScroll: true })
       } catch {
