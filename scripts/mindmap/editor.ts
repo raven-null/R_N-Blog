@@ -49,8 +49,14 @@ function boot(el: HTMLElement) {
     },
   } as any
 
+  // MindElixir 只接受 HTMLDivElement / 选择器字符串，而且会清空该容器：
+  // 这里自建一层干净 div 交给它，外层 el 留给浮条等 UI，互不干扰。
+  const canvasHost = document.createElement("div")
+  canvasHost.style.cssText = "position:absolute;inset:0"
+  el.appendChild(canvasHost)
+
   const mind = new MindElixir({
-    el,
+    el: canvasHost,
     direction: (MindElixir as any).SIDE ?? 2,
     editable: mode === "edit",
     contextMenu: mode === "edit",
