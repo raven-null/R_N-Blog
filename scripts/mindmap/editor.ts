@@ -141,10 +141,8 @@ function boot(el: HTMLElement) {
       else location.href = "/"
     })
   }
-  // 导出：原右下角浮条整体收进胶囊
-  capBtn("", "导出为 PNG 图片", ICON_DL, "PNG", () => void exportImage("png"))
-  if (mode === "edit") capBtn("", "导出为 SVG 矢量图", ICON_DL, "SVG", () => void exportImage("svg"))
-  capBtn("", "导出为 JSON 数据", ICON_DL, "JSON", () => exportJson())
+  // 导出：多个格式收进一个「导出」按钮，点开小菜单选择
+  const exportBtn = capBtn("cap-export", "导出导图", ICON_DL, "导出", () => toggleExportMenu())
   capBtn("bb-view-only", "在当前位置编辑这张导图", ICON_EDIT, "编辑", () => setMode("edit"))
   capBtn("bb-edit-only", "退出编辑，回到只读浏览", ICON_DONE, "完成", () => setMode("view"))
   // 只有「这张导图真的设了口令」才显形，所以单独持有引用
@@ -154,6 +152,50 @@ function boot(el: HTMLElement) {
     capBtn("", "导图信息", ICON_INFO, "信息", () => tell("info"))
   }
   capsule.classList.toggle("is-edit", mode === "edit")
+
+  // 导出菜单：绝对定位在胶囊正上方（放 capsule 内部，随胶囊一起定位）
+  const exportMenu = document.createElement("div")
+  exportMenu.className = "mm-cap-menu"
+  const ICON_IMG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="9.5" r="1.6"/><path d="m4 17 4.5-4.5L13 17l3-3 4 4"/></svg>'
+  const ICON_VEC = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h5"/><circle cx="4" cy="4" r="1.8"/><path d="M4 20h5"/><circle cx="4" cy="20" r="1.8"/><path d="M14 12h7"/><circle cx="20" cy="12" r="1.8"/><path d="M5.6 5.2 18.4 11"/><path d="M5.6 18.8 18.4 13"/></svg>'
+  const ICON_JSON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6c-2 0-2.5 1-2.5 3S6 12 4.5 12C6 12 6.5 13 6.5 15s.5 3 2.5 3"/><path d="M15 6c2 0 2.5 1 2.5 3S18 12 19.5 12C18 12 17.5 13 17.5 15s-.5 3-2.5 3"/></svg>'
+  const menuItem = (icon: string, title: string, text: string, cls: string, onClick: () => void) => {
+    const b = document.createElement("button")
+    b.type = "button"
+    b.className = "mm-cap-item" + (cls ? " " + cls : "")
+    b.title = title
+    b.innerHTML = icon + "<span>" + text + "</span>"
+    b.addEventListener("click", () => {
+      setExportMenu(false)
+      onClick()
+    })
+    exportMenu.appendChild(b)
+  }
+  menuItem(ICON_IMG, "导出为 PNG 图片（位图，适合分享）", "PNG 图片", "", () => void exportImage("png"))
+  menuItem(ICON_VEC, "导出为 SVG 矢量图（可继续编辑放大）", "SVG 矢量图", "bb-edit-only", () => void exportImage("svg"))
+  menuItem(ICON_JSON, "导出为 JSON 数据（可再次导入）", "JSON 数据", "", () => exportJson())
+  capsule.appendChild(exportMenu)
+
+  let exportOpen = false
+  function setExportMenu(open: boolean) {
+    exportOpen = open
+    exportMenu.classList.toggle("open", open)
+    exportBtn.classList.toggle("active", open)
+  }
+  function toggleExportMenu() {
+    setExportMenu(!exportOpen)
+  }
+  // 点别处或按 Esc 收起菜单
+  document.addEventListener("click", (e) => {
+    if (!exportOpen) return
+    const t = e.target as Node | null
+    if (t && (capsule.contains(t) || exportMenu.contains(t))) return
+    setExportMenu(false)
+  })
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") setExportMenu(false)
+  })
+
   el.appendChild(capsule)
 
   function tell(action: string) {
@@ -237,6 +279,7 @@ function boot(el: HTMLElement) {
   function setMode(next: "edit" | "view") {
     if (next === mode) return
     const editing = next === "edit"
+    setExportMenu(false) // 菜单里的 SVG 项在编辑态才出现，切模式先收起
     if (editing) {
       // 进入编辑：把待办的大纲改动丢掉重来，避免上面的旧文本盖掉导图
       dirtyOutline = false
