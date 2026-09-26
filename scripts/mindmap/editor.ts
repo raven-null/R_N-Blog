@@ -952,7 +952,10 @@ function boot(el: HTMLElement) {
           imageUrls.set(fid, oldUrl) // 已经能显示，不用重新拉
           hit.image.url = fid
           ;(mind as any).refresh(data)
-          if (panelOpen) updateOutlineImageCount(data)
+          if (panelOpen) {
+            updateOutlineImageCount(data)
+            renderOutlineTree() // 上传完立刻把行内缩略图刷成最终状态
+          }
         }
       } catch (e: any) {
         failed.push(it.id + "：" + (e?.message || e))
@@ -1803,8 +1806,10 @@ function boot(el: HTMLElement) {
         }
         return
       }
-      // 点行内缩略图 → 画布定位
+      // 点行内缩略图 → 看大图（顺带在画布上定位到该节点）
       if (t?.classList.contains("mm-oline-img")) {
+        const src = t.getAttribute("src") || ""
+        if (src) showImageView(src)
         try {
           const mindAny = mind as any
           const tpc = mindAny.findEle?.(t.dataset.node || "")
@@ -2158,7 +2163,10 @@ function boot(el: HTMLElement) {
       closeRowMenu()
     })
     document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") closeRowMenu()
+      if (e.key === "Escape") {
+        closeRowMenu()
+        closeImageView()
+      }
     })
 
     // 大纲面板挂在 body 下，不在 #mm-root 里，根元素上的 paste 监听收不到它。
@@ -2487,6 +2495,28 @@ function boot(el: HTMLElement) {
     renderOutlineTree()
     renderOutlineThumbs(mind.getData())
     updateOutlineImageCount()
+  }
+
+  /* ---------------- 行内图片的大图预览 ---------------- */
+  let imgViewEl: HTMLElement | null = null
+
+  function closeImageView() {
+    imgViewEl?.classList.remove("show")
+  }
+
+  function showImageView(src: string) {
+    if (!src) return
+    if (!imgViewEl) {
+      const box = document.createElement("div")
+      box.id = "mm-imgview"
+      box.innerHTML = '<img alt=""><div class="tip">点击任意处关闭</div>'
+      box.addEventListener("click", closeImageView)
+      document.body.appendChild(box)
+      imgViewEl = box
+    }
+    const img = imgViewEl.querySelector("img") as HTMLImageElement | null
+    if (img) img.src = src
+    imgViewEl.classList.add("show")
   }
 
   /* ---------------- 大纲行的右键菜单（插入 / 移除图片） ---------------- */
