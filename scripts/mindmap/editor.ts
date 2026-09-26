@@ -559,6 +559,11 @@ function boot(el: HTMLElement) {
    * （下面的 enableEdit/disableEdit 挂在冻结的静态对象上、实例上并没有这两个方法），
    * 所以直接改它。load 会重建节点，因此 init 之后还要再调一次。
    */
+  /** 大纲面板能否编辑（跟着模式的开关走，不能只在打开面板那一刻设一次） */
+  function applyOutlineEditable() {
+    if (outlineRich) outlineRich.setAttribute("contenteditable", mode === "edit" ? "true" : "false")
+  }
+
   function applyEditable() {
     const editing = mode === "edit"
     // 加密导图在拿到口令前不给改（保存本来也会被服务端拒），避免白改一场
@@ -569,6 +574,7 @@ function boot(el: HTMLElement) {
       /* 忽略 */
     }
     el.classList.toggle("mm-readonly", !allowed)
+    applyOutlineEditable()
   }
 
   /** 后台登录后 localStorage 里存有 admin_key，带上它服务端才认管理员身份 */
@@ -1386,9 +1392,9 @@ function boot(el: HTMLElement) {
       const img = node?.image
       const imgHtml =
         img && typeof img.url === "string" && img.url
-          ? '<img class="mm-oline-img" src="' + img.url + '" alt="" data-node="' + id + '" draggable="false">'
+          ? '<img class="mm-oline-img" src="' + img.url + '" alt="" data-node="' + id + '" draggable="false" contenteditable="false">'
           : ""
-      const li = (no: number) => 'contenteditable="' + (mode === "edit" ? "true" : "false") + '" spellcheck="false" data-line="' + no + '" data-node="' + id + '"'
+      const li = (no: number) => 'spellcheck="false" data-line="' + no + '" data-node="' + id + '"'
       if (depth === 0) {
         // 中心主题单占一行
         rows.push('<div class="mm-oline lv0" ' + li(0) + '><span class="mm-oline-topic">' + topic + "</span>" + imgHtml + "</div>")
@@ -1427,21 +1433,147 @@ function boot(el: HTMLElement) {
     })
   }
 
-  /** 键盘微调：只处理缩进与删除，其余交给浏览器原生编辑 */
+  /** 该行的层级（0 = 中心主题，1 = 一级…） */
+  function lineLevel(el: HTMLElement): number {
+    if (el.classList.contains("lv0")) return 0
+    const pad = parseInt(el.style.paddingLeft || "0", 10) || 0
+    return Math.floor(pad / 14) + 1
+  }
+
+  /** 包一层「· + 文字」，供新建/改写行时复用 */
+  function renderLineShell(level: number, topic: string): HTMLElement {
+    const d = document.createElement("div")
+    d.className = "mm-oline" + (level === 0 ? " lv0" : "")
+    if (level > 0) d.style.paddingLeft = (level - 1) * 14 + "px"
+    d.setAttribute("spellcheck", "false")
+    if (level === 0) {
+      d.innerHTML = '<span class="mm-oline-topic"></span>'
+      ;(d.querySelector(".mm-oline-topic") as HTMLElement).textContent = topic
+    } else {
+      d.innerHTML = '<span class="mm-oline-bullet">·</span><span class="mm-oline-topic"></span>'
+      ;(d.querySelector(".mm-oline-topic") as HTMLElement).textContent = topic
+    }
+    return d
+  }
+
+  /** 光标是否在这一行的开头（bullet 之后） */
+  function caretAtLineStart(line: HTMLElement): boolean {
+    const sel = window.getSelection()
+    if (!sel || !sel.rangeCount) return false
+    const r = sel.getRangeAt(0).cloneRange()
+    r.selectNodeContents(line)
+    try {
+      r.setEnd(sel.getRangeAt(0).endContainer, sel.getRangeAt(0).endOffset)
+    } catch {
+      return false
+    }
+    const before = (r.toString() || "").replace(/^·\s*/, "").trim()
+    return before.length === 0
+  }
+
+  function focusLineEnd(line: HTMLElement) {
+    try {
+      const topic = (line.querySelector(".mm-oline-topic") as HTMLElement) || line
+      const range = document.createRange()
+      range.selectNodeContents(topic)
+      range.collapse(false)
+      const sel = window.getSelection()
+      sel?.removeAllRanges()
+      sel?.addRange(range)
+      line.focus()
+    } catch {
+      /* 忽略 */
+    }
+  }
+
+  /**
+   * 富文本大纲的编辑行为：
+   *   Enter        → 在下面新建同级一行（自动带「·」），空行回车则退回上一级
+   *   Shift+Enter  → 在当前行后插入新行
+   *   Tab/⇧Tab     → 降级 / 升级
+   *   Backspace    → 行首退格：升级；已是顶层则并入上一行
+   */
   function onRichOutlineKeyDown(e: KeyboardEvent) {
     if (mode !== "edit") return
-    const host = outlineRich as unknown as HTMLElement | null
+    const host = outlineRich
     if (!host) return
     const line = currentOutlineLine()
     if (!line) return
+
     if (e.key === "Tab") {
       e.preventDefault()
-      const pad = Math.max(0, (parseInt(line.style.paddingLeft || "0", 10) || 0) + (e.shiftKey ? -14 : 14))
-      line.style.paddingLeft = pad + "px"
-      if (pad === 0) line.classList.add("lv0")
-      else line.classList.remove("lv0")
-      syncRichOutline()
+      const next = Math.max(0, lineLevel(line) + (e.shiftKey ? -1 : 1))
+      if (next === 0) {
+        line.classList.add("lv0")
+        line.style.paddingLeft = ""
+      } else {
+        line.classList.remove("lv0")
+        line.style.paddingLeft = (next - 1) * 14 + "px"
+      }
+      scheduleSync()
       return
+    }
+
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault()
+      const level = lineLevel(line)
+      const topic = ((line.querySelector(".mm-oline-topic") as HTMLElement)?.textContent || "").trim()
+      // 空项回车 → 退回上一级（连续两次回车可退出列表）
+      if (!topic) {
+        const up = Math.max(0, level - 1)
+        if (level > 0) {
+          if (up === 0) {
+            line.classList.add("lv0")
+            line.style.paddingLeft = ""
+          } else {
+            line.style.paddingLeft = (up - 1) * 14 + "px"
+          }
+          scheduleSync()
+        }
+        return
+      }
+      const fresh = renderLineShell(level, "")
+      line.parentNode?.insertBefore(fresh, line.nextSibling)
+      ;(fresh.dataset as any).line = ""
+      focusLineEnd(fresh)
+      scheduleSync()
+      return
+    }
+
+    if (e.key === "Enter" && e.shiftKey) {
+      e.preventDefault()
+      const fresh = renderLineShell(lineLevel(line), "")
+      line.parentNode?.insertBefore(fresh, line.nextSibling)
+      focusLineEnd(fresh)
+      scheduleSync()
+      return
+    }
+
+    if (e.key === "Backspace" && caretAtLineStart(line)) {
+      const level = lineLevel(line)
+      if (level > 0) {
+        e.preventDefault()
+        const up = Math.max(0, level - 1)
+        if (up === 0) {
+          line.classList.add("lv0")
+          line.style.paddingLeft = ""
+        } else {
+          line.style.paddingLeft = (up - 1) * 14 + "px"
+        }
+        scheduleSync()
+        return
+      }
+      // 已是顶层：并入上一行
+      const prev = line.previousElementSibling as HTMLElement | null
+      if (prev && prev.classList.contains("mm-oline")) {
+        e.preventDefault()
+        const prevTopic = prev.querySelector(".mm-oline-topic") as HTMLElement | null
+        const curTopic = (line.querySelector(".mm-oline-topic") as HTMLElement)?.textContent || ""
+        if (prevTopic) prevTopic.textContent = (prevTopic.textContent || "") + curTopic
+        line.remove()
+        focusLineEnd(prev)
+        scheduleSync()
+      }
     }
   }
 
@@ -1478,6 +1610,7 @@ function boot(el: HTMLElement) {
   function readRichOutline() {
     const host = outlineRich as unknown as HTMLElement | null
     if (!host) return null
+    const newIdByLine: Array<{ el: HTMLElement; id: string }> = []
     const prev = mind.getData() as any
     const byId = new Map<string, any>()
     const collect = (n: any) => {
@@ -1506,7 +1639,9 @@ function boot(el: HTMLElement) {
         isFirst = false
         continue
       }
-      const node: any = { id: id || nextId(), topic: topic || "新主题", children: [] }
+      const nid = id || nextId()
+      if (!id) newIdByLine.push({ el, id: nid }) // 新建的行：稍后把 id 写回 DOM，避免每次同步都换 id
+      const node: any = { id: nid, topic: topic || "新主题", children: [] }
       if (img) node.image = img
       while (stack.length > 1 && stack[stack.length - 1].level >= level) stack.pop()
       const parent = stack.length ? stack[stack.length - 1].node : root
@@ -1520,6 +1655,8 @@ function boot(el: HTMLElement) {
     const out: any = { nodeData: root }
     if (Array.isArray(prev?.arrows)) out.arrows = prev.arrows
     if (Array.isArray(prev?.summaries)) out.summaries = prev.summaries
+    // 回写新 id（只改属性，不动内容，光标不受影响）
+    for (const it of newIdByLine) it.el.dataset.node = it.id
     return out
   }
 
@@ -1596,7 +1733,7 @@ function boot(el: HTMLElement) {
       outlineBtnEl.title = open ? "关闭大纲（左侧写大纲，右侧实时成图）" : "大纲（左侧写大纲，右侧实时成图）"
     }
     // 只读时的大纲：可看不可改（contenteditable 关掉）
-    if (outlineRich) outlineRich.setAttribute("contenteditable", mode === "edit" ? "true" : "false")
+    applyOutlineEditable()
     // 导图区让出左侧空间（右侧实时成图）
     canvasHost.classList.toggle("outline-open", open)
     scheduleFit(320) // 可用宽度变了，重新居中并缩放
