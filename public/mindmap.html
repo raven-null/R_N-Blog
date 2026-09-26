@@ -212,13 +212,14 @@
       position: absolute !important;
       top: 0; right: 0; bottom: 0; left: 0;
       transition: left 0.25s ease;
-    }
-    .mm-canvas-host.outline-open { left: min(380px, 86vw); }
+    }    .mm-canvas-host.outline-open { left: min(380px, 86vw); }
 
-    /* 大纲面板：默认关闭，打开后左侧写大纲、右侧实时成图 */
+    /* 大纲面板：默认关闭，打开后左侧写大纲、右侧实时成图。
+       用 fixed 相对视口定位，避免被祖先容器（iframe、全屏态、canvasHost 的偏移）困住导致看不到。 */
     .mm-outline {
-      position: absolute; left: 0; top: 0; bottom: 0; z-index: 30;
-      width: min(380px, 86vw); display: none; flex-direction: column;
+      position: fixed; inset: 0 auto 0 0; z-index: 40;
+      width: min(380px, 86vw); height: 100%;
+      display: none; flex-direction: column;
       background: rgba(13, 13, 17, 0.94);
       border-right: 1px solid var(--mm-border);
       backdrop-filter: blur(20px) saturate(160%); -webkit-backdrop-filter: blur(20px) saturate(160%);
@@ -281,8 +282,8 @@
       try { if (window.parent !== window) document.documentElement.dataset.embedded = '1'; } catch (e) { /* 跨域则忽略 */ }
     })();
   </script>
-  <link rel="stylesheet" href="/js/vendor/mindmap/mindmap-editor.v24.css">
-  <script src="/js/vendor/mindmap/mindmap-editor.v24.js"></script>
+  <link rel="stylesheet" href="/js/vendor/mindmap/mindmap-editor.v25.css">
+  <script src="/js/vendor/mindmap/mindmap-editor.v25.js"></script>
   <script>
     // 兜底诊断：bundle 未加载或运行时抛错时给出可见提示，而不是静默无反应
     (function () {
@@ -314,7 +315,7 @@
       window.addEventListener('load', function () {
         if (!window.MindMapMount) {
           show('导图组件未能加载',
-            '脚本 mindmap-editor.v24.js 加载失败（404 / 部署未完成 / 被拦截）。<br>' +
+            '脚本 mindmap-editor.v25.js 加载失败（404 / 部署未完成 / 被拦截）。<br>' +
             '请 Ctrl+F5 强制刷新；若仍失败，检查 Netlify 最近一次部署是否成功。');
         }
       });

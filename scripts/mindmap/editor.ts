@@ -604,6 +604,9 @@ function boot(el: HTMLElement) {
     fitTimer = window.setTimeout(fitView, delay)
   }
   window.addEventListener("resize", () => scheduleFit(200))
+  // 进退浏览器全屏时视口尺寸会变，必须重新适配，否则导图会偏到看不见
+  document.addEventListener("fullscreenchange", () => scheduleFit(260))
+  document.addEventListener("webkitfullscreenchange", () => scheduleFit(260))
 
   /* ---------------- 大纲面板：左写大纲、右实时成图 ---------------- */
   // 面板默认关闭；打开时导图区让出宽度，右侧实时刷新
