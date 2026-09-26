@@ -1509,44 +1509,177 @@ function boot(el: HTMLElement) {
     if (dirtyOutline) applyOutline()
   }
 
-  /** 面板顶部缩略图条：列出所有带图节点，点了在画布上定位到它 */
-  function renderOutlineThumbs(data: any) {
-    const box = outlineEl?.querySelector("#mmOutlineImages") as HTMLElement | null
-    const cnt = outlineEl?.querySelector("#mmOutlineImgCnt") as HTMLElement | null
-    const items: Array<{ id: string; topic: string; url: string; w: number; h: number }> = []
-    const walk = (node: any) => {
+  /* ---------------- 大纲：行式列表（幕布手感） ----------------
+     每行是一个独立元素：折叠三角 + 可编辑文字 + 行内缩略图。
+     折叠、拖拽、多选都建立在"行"之上；文字用 contenteditable 单行编辑，
+     回车/Tab 在行之间操作，不依赖任何富文本解析。 */
+
+  type OutlineRow = {
+    id: string
+    level: number
+    topic: string
+    imgUrl: string
+    imgW: number
+    imgH: number
+    kids: number
+    expanded: boolean
+  }
+
+  let outlineRows: OutlineRow[] = []
+  let outlineHost: HTMLElement | null = null
+  let outlineEditing = false
+
+  /** 数据 → 行列表（折叠的节点：子项不生成行，符合"收起后看不到"） */
+  function collectRows(data: any): OutlineRow[] {
+    const rows: OutlineRow[] = []
+    const walk = (node: any, level: number) => {
+      const kids = (node?.children || []).length
       const img = node?.image
-      const url = typeof img?.url === "string" ? img.url : ""
-      if (url) {
-        items.push({
-          id: String(node.id ?? ""),
-          topic: String(node.topic ?? "").slice(0, 24),
-          url,
-          w: Number(img.width) || 0,
-          h: Number(img.height) || 0,
-        })
-      }
-      ;(node?.children || []).forEach(walk)
+      rows.push({
+        id: String(node?.id ?? ""),
+        level,
+        topic: String(node?.topic ?? ""),
+        imgUrl: img && typeof img.url === "string" ? img.url : "",
+        imgW: Number(img?.width) || 0,
+        imgH: Number(img?.height) || 0,
+        kids,
+        expanded: node?.expanded !== false,
+      })
+      if (node?.expanded === false) return // 收起：子项不显示
+      ;(node?.children || []).forEach((c: any) => walk(c, level + 1))
     }
-    walk(data?.nodeData ?? data)
-    if (cnt) cnt.textContent = items.length ? ` · 图片 ${items.length}` : ""
-    if (!box) return
-    if (!items.length) {
-      box.hidden = true
-      box.innerHTML = ""
+    walk(data?.nodeData ?? data, 0)
+    return rows
+  }
+
+  function rowEls(): HTMLElement[] {
+    if (!outlineHost) return []
+    return Array.from(outlineHost.querySelectorAll<HTMLElement>(".mm-oline"))
+  }
+
+  function renderOutlineTree() {
+    if (!outlineHost) return
+    const editing = outlineEditing && mode === "edit"
+    outlineHost.innerHTML = outlineRows
+      .map((r, i) => {
+        const cls = "mm-oline" + (r.level === 0 ? " lv0" : "")
+        const tri =
+          r.kids > 0
+            ? '<button type="button" class="mm-tri' + (r.expanded ? "" : " collapsed") + '" data-act="fold" title="' +
+              (r.expanded ? "收起子项" : "展开子项") + '">' + (r.expanded ? "▾" : "▸") + "</button>"
+            : '<span class="mm-tri empty"></span>'
+        const img = r.imgUrl
+          ? '<img class="mm-oline-img" src="' + r.imgUrl + '" alt="" draggable="false" data-node="' + r.id + '">'
+          : ""
+        const text = r.topic.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+        return (
+          '<div class="' + cls + '" data-line="' + i + '" data-node="' + r.id + '" style="padding-left:' +
+          (8 + r.level * 18) + 'px">' +
+          tri +
+          '<span class="mm-oline-topic"' + (editing ? ' contenteditable="true" spellcheck="false"' : "") + '>' + text + "</span>" +
+          img +
+          "</div>"
+        )
+      })
+      .join("")
+  }
+
+  /** 行内容改回数据：只改文字（图片、层级、顺序由各自的操作负责） */
+  function commitRowText(rowEl: HTMLElement) {
+    const id = rowEl.dataset.node || ""
+    const textEl = rowEl.querySelector(".mm-oline-topic") as HTMLElement | null
+    if (!id || !textEl) return
+    const text = (textEl.textContent || "").replace(/\s+/g, " ").trim()
+    const node = nodeByIdInData(id)
+    const data = mind.getData() as any
+    const target = findNodeIn(data?.nodeData, id)
+    if (!target) {
+      void node
       return
     }
-    box.hidden = false
-    box.innerHTML = items
-      .map(
-        (it) =>
-          '<button type="button" class="mm-oimg" data-node="' + it.id + '" title="' + it.topic + '">' +
-          '<img src="' + it.url + '" alt="" loading="lazy">' +
-          '<span class="t">' + (it.topic || "未命名") + "</span>" +
-          (it.w && it.h ? '<span class="d">' + it.w + "×" + it.h + "</span>" : "") +
-          "</button>",
-      )
-      .join("")
+    if (String(target.topic) === text) return
+    target.topic = text || "新主题"
+    mind.refresh(data)
+    dirty = true
+    outlineRows = collectRows(mind.getData())
+  }
+
+  /** 切换折叠（写进数据；渲染状态与导图视图同步） */
+  function toggleFold(id: string, collapse: boolean) {
+    const data = mind.getData() as any
+    const target = findNodeIn(data?.nodeData, id)
+    if (!target) return
+    target.expanded = !collapse
+    mind.refresh(data)
+    dirty = true
+    outlineRows = collectRows(mind.getData())
+    renderOutlineTree()
+    // 导图画布上的展开状态也要跟上
+    try {
+      const tpc = (mind as any).findEle?.(id)
+      if (tpc) {
+        const wantExpanded = !collapse
+        const isExpanded = tpc.parentNode?.children?.[1]?.className !== "minus"
+        if (wantExpanded !== isExpanded) (mind as any).expandNode?.(tpc)
+      }
+    } catch {
+      /* 忽略 */
+    }
+  }
+
+  /** 在大纲里定位节点（用 getData 的克隆数据） */
+  function findNodeIn(root: any, id: string): any | null {
+    if (!root) return null
+    if (String(root.id) === id) return root
+    for (const c of root.children || []) {
+      const hit = findNodeIn(c, id)
+      if (hit) return hit
+    }
+    return null
+  }
+  function nodeByIdInData(id: string): any | null {
+    return findNodeIn(mind.getData()?.nodeData, id)
+  }
+
+  /** 当前光标落在哪一行 */
+  function currentRow(): HTMLElement | null {
+    const sel = window.getSelection()
+    if (!sel || !sel.rangeCount) return null
+    let n: Node | null = sel.getRangeAt(0).startContainer
+    while (n && n !== outlineHost) {
+      if (n instanceof HTMLElement && n.classList.contains("mm-oline")) return n
+      n = n.parentNode
+    }
+    return null
+  }
+  /** 当前光标所在行的节点 id（粘贴图片时按行定位用） */
+  function outlineNodeIdAtCaret(): string {
+    return currentRow()?.dataset.node || ""
+  }
+
+  function caretToTextEnd(el: HTMLElement) {
+    try {
+      const range = document.createRange()
+      range.selectNodeContents(el)
+      range.collapse(false)
+      const sel = window.getSelection()
+      sel?.removeAllRanges()
+      sel?.addRange(range)
+      el.focus()
+    } catch {
+      /* 忽略 */
+    }
+  }
+
+  /** 顶层入口：数据变了就重建行列表；编辑中的行不重建（避免打断输入） */
+  function syncOutlineFromData(force = false) {
+    const data = mind.getData()
+    if (!force && outlineEditing && currentRow()) {
+      // 正在某行里打字：只更新图片等非文字信息不重建
+      return
+    }
+    outlineRows = collectRows(data)
+    renderOutlineTree()
   }
 
   function buildOutline() {
@@ -1558,68 +1691,39 @@ function boot(el: HTMLElement) {
       '<span class="mm-outline-title">大纲<span class="cnt" id="mmOutlineImgCnt"></span></span>' +
       "</div>" +
       '<div class="mm-outline-images" id="mmOutlineImages" hidden></div>' +
-      '<textarea class="mm-outline-text" spellcheck="false" placeholder="中心主题&#10;· 分支一&#10;  · 子节点&#10;    · 孙节点"></textarea>'
+      '<div class="mm-outline-tree" contenteditable="false"></div>'
     el.appendChild(outlineEl)
-    outlineText = outlineEl.querySelector(".mm-outline-text") as HTMLTextAreaElement
-    outlineText.addEventListener("input", () => {
-      if (mode !== "edit") return // 只读：只看不改
-      onOutlineInput()
-      scheduleApply()
-    })
-    outlineText.addEventListener("keydown", (e) => {
-      if (mode !== "edit") {
-        // 只读：打断修改类按键，只留滚动与复制
-        const mod = e.ctrlKey || e.metaKey
-        if (!(mod && (e.key === "c" || e.key === "C" || e.key === "a" || e.key === "A"))) e.preventDefault()
+    outlineHost = outlineEl.querySelector(".mm-outline-tree") as HTMLElement | null
+    outlineEl.querySelector(".mm-outline-tree")?.addEventListener("click", (e) => {
+      const t = e.target as HTMLElement | null
+      if (t?.classList.contains("mm-tri") && t.dataset.act === "fold") {
+        e.preventDefault()
         e.stopPropagation()
+        const row = t.closest(".mm-oline") as HTMLElement | null
+        if (row) toggleFold(row.dataset.node || "", t.classList.contains("collapsed"))
         return
       }
-      onOutlineKeyDown(e)
-    })
-    outlineText.addEventListener("beforeinput", (e) => {
-      if (mode !== "edit") e.preventDefault()
-    })
-    outlineText.addEventListener("paste", (e) => {
-      if (mode !== "edit") e.preventDefault()
-    })
-    outlineText.addEventListener("cut", (e) => {
-      if (mode !== "edit") e.preventDefault()
-    })
-    outlineText.addEventListener("drop", (e) => {
-      if (mode !== "edit") e.preventDefault()
-    })
-    outlineText.addEventListener("blur", flushOutline)
-    // 点缩略图 → 画布上定位到对应节点
-    outlineEl.querySelector("#mmOutlineImages")?.addEventListener("click", (e) => {
-      const btn = (e.target as HTMLElement | null)?.closest?.("[data-node]") as HTMLElement | null
-      if (!btn) return
-      try {
-        const mindAny = mind as any
-        const tpc = mindAny.findEle?.(btn.dataset.node || "")
-        if (tpc) {
-          mindAny.selectNode?.(tpc)
-          mindAny.scrollIntoView?.(tpc, true)
+      // 点行内缩略图 → 画布定位
+      if (t?.classList.contains("mm-oline-img")) {
+        try {
+          const mindAny = mind as any
+          const tpc = mindAny.findEle?.(t.dataset.node || "")
+          if (tpc) {
+            mindAny.selectNode?.(tpc)
+            mindAny.scrollIntoView?.(tpc, true)
+          }
+        } catch {
+          /* 忽略 */
         }
-      } catch {
-        /* 忽略 */
       }
     })
-    // 点缩略图：选中对应节点（方便直接编辑它）
-    outlineEl.querySelector("#mmOutlineImages")?.addEventListener("click", (e) => {
-      const btn = (e.target as HTMLElement | null)?.closest?.("[data-node]") as HTMLElement | null
-      if (!btn) return
-      const id = btn.dataset.node || ""
-      try {
-        const mindAny = mind as any
-        const tpc = mindAny.findEle?.(id)
-        if (tpc) {
-          mindAny.selectNode?.(tpc)
-          mindAny.scrollIntoView?.(tpc, true)
-          setMsg("已选中该图片所在节点")
-        }
-      } catch {
-        /* 忽略 */
-      }
+    buildOutlineBindings()
+  }
+
+  function buildOutlineBindings() {
+    outlineEl?.addEventListener("click", () => {
+      const row = currentRow()
+      if (row) outlineEditing = true
     })
   }
 
@@ -1634,16 +1738,11 @@ function boot(el: HTMLElement) {
       outlineBtnEl.classList.toggle("active", open)
       outlineBtnEl.title = open ? "关闭大纲（左侧写大纲，右侧实时成图）" : "大纲（左侧写大纲，右侧实时成图）"
     }
-    // 只读时的大纲：可看不可改
-    if (outlineText) outlineText.readOnly = mode !== "edit"
     // 导图区让出左侧空间（右侧实时成图）
     canvasHost.classList.toggle("outline-open", open)
     scheduleFit(320) // 可用宽度变了，重新居中并缩放
-    if (open && outlineText) {
-      const data = mind.getData()
-      outlineText.value = dataToOutline(data)
-      updateOutlineImageCount(data)
-      if (mode === "edit") setTimeout(() => outlineText!.focus(), 80)
+    if (open) {
+      refreshOutline()
     }
     try {
       localStorage.setItem("mindmap_outline_open", open ? "1" : "0")
@@ -1674,27 +1773,40 @@ function boot(el: HTMLElement) {
     panel.style.display = panelOpen ? "flex" : "none"
   }
   /** 大纲标题旁的图片数量 + 缩略图区（点缩略图会选中对应节点） */
-  function updateOutlineImageCount(data: any) {
-    const elCnt = outlineEl?.querySelector("#mmOutlineImgCnt") as HTMLElement | null
+  /** 面板整体刷新：行列表 + 缩略图条 + 计数 */
+  function refreshOutline() {
+    if (!outlineEl) return
+    outlineRows = collectRows(mind.getData())
+    renderOutlineTree()
+    renderOutlineThumbs(mind.getData())
+    updateOutlineImageCount()
+  }
+
+  /** 同步图片计数（顶部标题旁） */
+  function updateOutlineImageCount(data?: any) {
+    const cnt = outlineEl?.querySelector("#mmOutlineImgCnt") as HTMLElement | null
+    if (!cnt) return
+    let n = 0
+    const walk = (node: any) => {
+      if (node?.image) n++
+      ;(node?.children || []).forEach(walk)
+    }
+    walk((data || mind.getData())?.nodeData)
+    cnt.textContent = n ? ` · 图片 ${n}` : ""
+  }
+
+  /** 缩略图条：面板顶部（保留原有能力） */
+  function renderOutlineThumbs(data: any) {
     const box = outlineEl?.querySelector("#mmOutlineImages") as HTMLElement | null
-    const items: Array<{ id: string; topic: string; url: string; w: number; h: number }> = []
+    if (!box) return
+    const items: Array<{ id: string; topic: string; url: string }> = []
     const walk = (node: any) => {
       const img = node?.image
       const url = typeof img?.url === "string" ? img.url : ""
-      if (url) {
-        items.push({
-          id: String(node.id ?? ""),
-          topic: String(node.topic ?? "").slice(0, 24),
-          url,
-          w: Number(img.width) || 0,
-          h: Number(img.height) || 0,
-        })
-      }
+      if (url) items.push({ id: String(node.id ?? ""), topic: String(node.topic ?? "").slice(0, 24), url })
       ;(node?.children || []).forEach(walk)
     }
     walk(data?.nodeData ?? data)
-    if (elCnt) elCnt.textContent = items.length ? ` · 图片 ${items.length}` : ""
-    if (!box) return
     if (!items.length) {
       box.hidden = true
       box.innerHTML = ""
@@ -1704,14 +1816,13 @@ function boot(el: HTMLElement) {
     box.innerHTML = items
       .map(
         (it) =>
-          '<button type="button" class="mm-oimg" data-node="' + it.id + '" title="' + (it.topic || "节点") + '">' +
+          '<button type="button" class="mm-oimg" data-node="' + it.id + '" title="' + it.topic + '">' +
           '<img src="' + it.url + '" alt="" loading="lazy">' +
-          '<span class="t">' + (it.topic || "未命名") + "</span>" +
-          (it.w && it.h ? '<span class="d">' + it.w + "×" + it.h + "</span>" : "") +
-          "</button>",
+          '<span class="t">' + (it.topic || "未命名") + "</span></button>",
       )
       .join("")
   }
+
 
   function toggleOutline() {
     setOutlineOpen(!panelOpen)

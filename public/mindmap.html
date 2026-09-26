@@ -70,6 +70,42 @@
     #mm-root .mind-elixir-toolbar.lt > span:active { transform: scale(0.92); }
     #mm-root .mind-elixir-toolbar.lt > span.active,
     #mm-root .mind-elixir-toolbar.lt > span.mm-outline-btn.active { background: rgba(255, 159, 10, 0.18); color: var(--mm-accent); }
+    /* 行式大纲（幕布手感）：每行 = 折叠三角 + 文字 + 行内缩略图 */
+    .mm-outline-tree {
+      flex: 1; min-height: 0; overflow-y: auto; padding: 8px 10px 14px;
+      scrollbar-width: thin;
+    }
+    .mm-oline {
+      display: flex; align-items: center;
+      min-height: 28px; padding: 1px 6px; border-radius: 8px;
+      font-size: 13.5px; line-height: 1.6; color: var(--mm-text);
+      transition: background 0.15s ease;
+    }
+    .mm-oline:hover { background: rgba(255, 255, 255, 0.04); }
+    .mm-oline.lv0 {
+      font-size: 15px; font-weight: 600; color: #fff;
+      margin-bottom: 4px; padding-bottom: 5px; border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
+    }
+    .mm-oline .mm-tri {
+      flex: none; width: 16px; height: 16px; margin-right: 4px; padding: 0;
+      display: inline-flex; align-items: center; justify-content: center;
+      background: transparent; border: 0; cursor: pointer; font-size: 10px;
+      color: var(--mm-accent); opacity: 0.85;
+    }
+    .mm-oline .mm-tri:hover { opacity: 1; }
+    .mm-oline .mm-tri.empty { cursor: default; opacity: 0; }
+    .mm-oline .mm-oline-topic { flex: 0 1 auto; outline: none; word-break: break-word; min-width: 1em; }
+    .mm-oline .mm-oline-topic:focus { background: rgba(255, 255, 255, 0.06); border-radius: 4px; }
+    .mm-oline .mm-oline-img {
+      flex: none; width: 74px; height: 50px; object-fit: cover; margin-left: 8px;
+      border-radius: 8px; border: 1px solid var(--mm-border); cursor: pointer;
+      transition: border-color 0.2s ease, transform 0.2s ease;
+    }
+    .mm-oline .mm-oline-img:hover { border-color: var(--mm-accent); transform: translateY(-1px); }
+    @media (max-width: 720px) {
+      .mm-oline .mm-oline-img { width: 54px; height: 36px; }
+    }
+
     /* 只读时大纲可看不可改：视觉上和「正在编辑」区分开 */
     #mm-root.mm-readonly .mm-outline-text { color: rgba(255, 255, 255, 0.72); cursor: default; }
     #mm-root.mm-readonly me-tpc > .text { -webkit-user-select: none; -ms-user-select: none; user-select: none; }
@@ -235,8 +271,8 @@
       try { if (window.parent !== window) document.documentElement.dataset.embedded = '1'; } catch (e) { /* 跨域则忽略 */ }
     })();
   </script>
-  <link rel="stylesheet" href="/js/vendor/mindmap/mindmap-editor.v60.css">
-  <script src="/js/vendor/mindmap/mindmap-editor.v60.js"></script>
+  <link rel="stylesheet" href="/js/vendor/mindmap/mindmap-editor.v61.css">
+  <script src="/js/vendor/mindmap/mindmap-editor.v61.js"></script>
   <script>
     // 兜底诊断：bundle 未加载或运行时抛错时给出可见提示，而不是静默无反应
     (function () {
@@ -268,7 +304,7 @@
       window.addEventListener('load', function () {
         if (!window.MindMapMount) {
           show('导图组件未能加载',
-            '脚本 mindmap-editor.v60.js 加载失败（404 / 部署未完成 / 被拦截）。<br>' +
+            '脚本 mindmap-editor.v61.js 加载失败（404 / 部署未完成 / 被拦截）。<br>' +
             '请 Ctrl+F5 强制刷新；若仍失败，检查 Netlify 最近一次部署是否成功。');
         }
       });
