@@ -1010,28 +1010,28 @@ function boot(el: HTMLElement) {
     outlineBtnEl = b as unknown as HTMLButtonElement
   }
 
-  /* ---------------- 视野适配：内容自适应铺满可视区 ---------------- */
-  // 内容较小时导图会缩在中间显得"没铺满"，这里在关键时机自动居中并缩放到合适大小
+  /* ---------------- 视野适配：全部交给库自己的方法 ---------------- */
+  // 关键：不要自己给 .map-canvas 写 transform —— 库内部同时在维护缩放（scaleVal）和
+  // 连线位置（linkDiv）。两套叠加会让连线对不上节点、整体位置偏移，且 refresh 重建
+  // DOM 之后更明显。这里只用库提供的 scaleFit / toCenter。
   function fitView() {
-    const host = canvasHost
-    const w = host.clientWidth
-    const h = host.clientHeight
-    const canvas = host.querySelector(".map-canvas") as HTMLElement | null
+    const canvas = canvasHost.querySelector(".map-canvas") as HTMLElement | null
     if (!canvas) return
+    // 清掉历史版本写进去的内联变换
+    if (canvas.style.transform) {
+      canvas.style.transform = ""
+      canvas.style.transformOrigin = ""
+    }
     try {
-      ;(mind as any).scaleFit() // 先让库定缩放比例
+      ;(mind as any).scaleFit() // 让库按容器尺寸定缩放
     } catch {
       /* 忽略 */
     }
-    const scale = Number((mind as any).scaleVal) || 1
-    const cw = canvas.offsetWidth * scale
-    const ch = canvas.offsetHeight * scale
-    if (!w || !h || !cw || !ch) return
-    // 直接用容器与内容的真实尺寸居中：水平与垂直都留出均等留白
-    const tx = Math.max(0, Math.round((w - cw) / 2))
-    const ty = Math.max(0, Math.round((h - ch) / 2))
-    canvas.style.transformOrigin = "0 0"
-    canvas.style.transform = `translate3d(${tx}px, ${ty}px, 0) scale(${scale})`
+    try {
+      ;(mind as any).toCenter?.() // 再让它自己居中
+    } catch {
+      /* 忽略 */
+    }
   }
   let fitTimer: number | null = null
   function scheduleFit(delay = 260) {
