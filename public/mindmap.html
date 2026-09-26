@@ -26,7 +26,18 @@
     #mm-root { position: absolute; inset: 0; } /* 绝对定位铺满视口，容器尺寸不依赖 flex 计算 */
     /* ---------- 导图专属样式 ---------- */
     /* 只读态 */
-    /* 工具条常驻显示（只读时也要能看大纲）；不要在这里覆盖 display——库自己有 flex 布局 */
+    /* 左侧按钮组：竖直排列、竖直居中、图标等距。库默认 span 是 block，必须自己开 flex */
+    #mm-root .mind-elixir-toolbar.lt {
+      display: flex !important; flex-direction: column; align-items: center; justify-content: center;
+      gap: 12px;
+      top: 50%; transform: translateY(-50%);
+      left: 16px;
+      padding: 12px 10px; border-radius: 16px;
+      background: linear-gradient(145deg, rgba(30, 30, 37, 0.85), rgba(20, 20, 26, 0.78));
+      backdrop-filter: blur(24px) saturate(180%); -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border: 1px solid rgba(255, 255, 255, 0.13);
+      box-shadow: 0 16px 40px -12px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    }
     /* 左侧工具条：竖直排列、竖直居中、图标等距 */
     #mm-root .mind-elixir-toolbar.lt {
       display: flex !important; flex-direction: column; align-items: center; justify-content: center;
@@ -41,15 +52,20 @@
     }
     /* 库自带的 span+span { margin-top: 10px } 会和 gap 叠加，统一改成 gap 控制间距 */
     #mm-root .mind-elixir-toolbar.lt > span + span { margin-top: 0; }
-    /* 每个图标统一成 20×20 的圆形热区，间距由 gap 统一负责 */
+    /* 每个按钮统一热区并让图标居中；间距由 gap 统一负责 */
     #mm-root .mind-elixir-toolbar.lt > span {
-      align-items: center; justify-content: center;
+      display: inline-flex; align-items: center; justify-content: center;
       width: 30px; height: 30px; margin: 0; cursor: pointer;
       color: rgba(255, 255, 255, 0.72);
       border-radius: 10px;
       transition: background 0.2s ease, color 0.2s ease, transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
-    #mm-root .mind-elixir-toolbar.lt > span svg { width: 18px; height: 18px; display: block; }
+    #mm-root .mind-elixir-toolbar.lt > span svg {
+      width: 18px !important; height: 18px !important; display: block; max-width: 100%; max-height: 100%;
+    }
+    /* 大纲按钮（我们加的）也用同样的热区与居中 */
+    #mm-root .mind-elixir-toolbar.lt > span.mm-outline-btn { display: inline-flex !important; }
+    #mm-root .mind-elixir-toolbar.lt > span.mm-outline-btn svg { width: 18px !important; height: 18px !important; }
     #mm-root .mind-elixir-toolbar.lt > span:hover { background: rgba(255, 255, 255, 0.12); color: #fff; }
     #mm-root .mind-elixir-toolbar.lt > span:active { transform: scale(0.92); }
     #mm-root .mind-elixir-toolbar.lt > span.active,
@@ -160,8 +176,8 @@
       try { if (window.parent !== window) document.documentElement.dataset.embedded = '1'; } catch (e) { /* 跨域则忽略 */ }
     })();
   </script>
-  <link rel="stylesheet" href="/js/vendor/mindmap/mindmap-editor.v45.css">
-  <script src="/js/vendor/mindmap/mindmap-editor.v45.js"></script>
+  <link rel="stylesheet" href="/js/vendor/mindmap/mindmap-editor.v46.css">
+  <script src="/js/vendor/mindmap/mindmap-editor.v46.js"></script>
   <script>
     // 兜底诊断：bundle 未加载或运行时抛错时给出可见提示，而不是静默无反应
     (function () {
@@ -193,7 +209,7 @@
       window.addEventListener('load', function () {
         if (!window.MindMapMount) {
           show('导图组件未能加载',
-            '脚本 mindmap-editor.v45.js 加载失败（404 / 部署未完成 / 被拦截）。<br>' +
+            '脚本 mindmap-editor.v46.js 加载失败（404 / 部署未完成 / 被拦截）。<br>' +
             '请 Ctrl+F5 强制刷新；若仍失败，检查 Netlify 最近一次部署是否成功。');
         }
       });
