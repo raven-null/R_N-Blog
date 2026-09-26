@@ -131,26 +131,28 @@ function boot(el: HTMLElement) {
   const ICON_INFO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="8" r=".4" fill="currentColor"/></svg>'
   const ICON_KEY = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10.5" width="16" height="10" rx="2.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg>'
   const ICON_OUTLINE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="9" y1="6" x2="21" y2="6"/><line x1="9" y1="12" x2="21" y2="12"/><line x1="9" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1.3" fill="currentColor" stroke="none"/><circle cx="4" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="4" cy="18" r="1.3" fill="currentColor" stroke="none"/></svg>'
+  const ICON_SAVE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="m7 11 5 5 5-5"/><path d="M4 20h16"/></svg>'
 
   // 返回博客：放胶囊最左边（最不容易被挤掉），除后台内嵌外无条件出现。
   // 文章页嵌入 → 通知父页面回首页；独立打开 → 直接跳首页。
   if (!fromAdmin) {
-    capBtn("cap-back", "返回博客首页", ICON_BACK, "返回", () => {
+    capBtn("bb-view-only cap-back", "返回博客首页", ICON_BACK, "返回", () => {
       if (embedded) tell("back")
       else location.href = "/"
     })
   }
-  // 导出：多个格式收进一个「导出」按钮，点开小菜单选择
-  const exportBtn = capBtn("cap-export", "导出导图", ICON_DL, "导出", () => toggleExportMenu())
+  // 导出：多个格式收进一个「导出」按钮，点开小菜单选择（只读态）
+  const exportBtn = capBtn("bb-view-only cap-export", "导出导图", ICON_DL, "导出", () => toggleExportMenu())
   capBtn("bb-view-only", "在当前位置编辑这张导图", ICON_EDIT, "编辑", () => setMode("edit"))
-  // 大纲：库工具条上那个图标万一没挂上/看不见，这里也有一条入口
-  const capOutlineBtn = capBtn("bb-edit-only cap-outline", "大纲（左侧写大纲，右侧实时成图）", ICON_OUTLINE, "大纲", () => toggleOutline())
-  capBtn("bb-edit-only", "退出编辑，回到只读浏览", ICON_DONE, "完成", () => setMode("view"))
+  // 编辑态只留「保存」和「完成」：大纲按钮挪进库工具条（和库自带图标同一排），
+  // 留言/信息/返回/导出在编辑时全部收起，跟白板的编辑态一致。
+  const capSaveBtn = capBtn("bb-edit-only cap-save", "保存到服务器（Ctrl / ⌘ + S）", ICON_SAVE, "保存", () => void save(false))
+  capBtn("bb-edit-only", "保存并退出编辑", ICON_DONE, "完成", () => void finishEditing())
   // 只有「这张导图真的设了口令」才显形，所以单独持有引用
-  const capKeyBtn = capBtn("cap-key", "输入编辑口令", ICON_KEY, "口令", () => toggleKeyBar())
+  const capKeyBtn = capBtn("bb-edit-only cap-key", "输入编辑口令", ICON_KEY, "口令", () => toggleKeyBar())
   if (embedded) {
-    capBtn("", "查看留言", ICON_COMMENT, "留言", () => tell("comments"))
-    capBtn("", "导图信息", ICON_INFO, "信息", () => tell("info"))
+    capBtn("bb-view-only", "查看留言", ICON_COMMENT, "留言", () => tell("comments"))
+    capBtn("bb-view-only", "导图信息", ICON_INFO, "信息", () => tell("info"))
   }
   capsule.classList.toggle("is-edit", mode === "edit")
 
@@ -199,6 +201,68 @@ function boot(el: HTMLElement) {
 
   el.appendChild(capsule)
 
+  /* ---------- 退出编辑确认弹层（「完成」时若还有未保存改动） ---------- */
+  const dlg = document.createElement("div")
+  dlg.className = "mm-dlg"
+  dlg.innerHTML =
+    '<div class="mm-dlg-card">' +
+    '<div class="mm-dlg-title">退出编辑</div>' +
+    '<div class="mm-dlg-sub">还有改动没写进服务器。可以先保存，或者直接放弃这些改动。</div>' +
+    '<div class="mm-dlg-btns">' +
+    '<button class="mm-dlg-btn primary" data-act="save">保存并退出</button>' +
+    '<button class="mm-dlg-btn" data-act="discard">不保存，直接退出</button>' +
+    '<button class="mm-dlg-btn" data-act="cancel">取消</button>' +
+    "</div>" +
+    '<div class="mm-dlg-err"></div>' +
+    "</div>"
+  el.appendChild(dlg)
+  const dlgErr = dlg.querySelector(".mm-dlg-err") as HTMLElement
+  function closeDlg() {
+    dlg.classList.remove("show")
+    dlgErr.classList.remove("show")
+    dlgErr.textContent = ""
+  }
+  dlg.addEventListener("click", (e) => {
+    const t = e.target as HTMLElement | null
+    const act = (t?.closest("[data-act]") as HTMLElement | null)?.dataset.act || ""
+    if (!act) return
+    if (act === "cancel") {
+      closeDlg()
+      return
+    }
+    if (act === "discard") {
+      closeDlg()
+      setMode("view")
+      return
+    }
+    void (async () => {
+      const ok = await save(false)
+      if (ok) {
+        closeDlg()
+        setMode("view")
+      } else {
+        dlgErr.textContent = "保存失败，改动还在。可以重试，或选「不保存，直接退出」。"
+        dlgErr.classList.add("show")
+      }
+    })()
+  })
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && dlg.classList.contains("show")) closeDlg()
+  })
+
+  /** 点「完成」：有未保存改动先问一句，避免默默丢掉 */
+  async function finishEditing() {
+    if (mode !== "edit") return
+    flushOutline()
+    if (!dirty) {
+      setMode("view")
+      return
+    }
+    dlgErr.textContent = ""
+    dlgErr.classList.remove("show")
+    dlg.classList.add("show")
+  }
+
   function tell(action: string) {
     try {
       window.parent.postMessage({ type: "mindmap-stage", action, note }, "*")
@@ -242,12 +306,16 @@ function boot(el: HTMLElement) {
     wrap.appendChild(keyInput)
     el.appendChild(wrap)
   }
-  /** 这张导图设了口令、当前又不是管理员 → 显示口令入口并挂上浮条 */
+  /** 导图设了口令、当前又不是管理员 → 编辑时自动滑出口令浮条（胶囊里不再放按钮，保持只有「保存/完成」） */
   function updateKeyBar() {
-    if (!capKeyBtn) return
-    const need = locked() && !isAdmin() && mode === "edit"
-    capKeyBtn.classList.toggle("show", need)
-    if (need) mountKeyBar()
+    if (locked() && !isAdmin() && mode === "edit") {
+      mountKeyBar()
+      const wrap = el.querySelector(".mm-key") as HTMLElement | null
+      if (wrap && !wrap.classList.contains("open")) {
+        wrap.classList.add("open")
+        ;(wrap.querySelector("input") as HTMLInputElement | null)?.focus()
+      }
+    }
   }
   /** 口令浮条默认收起，点胶囊上的「口令」才展开 */
   function toggleKeyBar() {
@@ -805,9 +873,6 @@ function boot(el: HTMLElement) {
       outlineBtnEl.classList.toggle("active", open)
       outlineBtnEl.title = open ? "关闭大纲（左侧写大纲，右侧实时成图）" : "大纲（左侧写大纲，右侧实时成图）"
     }
-    // 胶囊里的大纲入口也同步状态
-    capOutlineBtn.classList.toggle("active", open)
-    capOutlineBtn.title = open ? "关闭大纲" : "大纲（左侧写大纲，右侧实时成图）"
     // 导图区让出左侧空间（右侧实时成图）
     canvasHost.classList.toggle("outline-open", open)
     scheduleFit(320) // 可用宽度变了，重新居中并缩放
