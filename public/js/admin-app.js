@@ -749,7 +749,7 @@
                 return;
             }
             currentMapId=mid;
-            host.innerHTML='<iframe class="wb-frame" title="导图编辑器" src="/mindmap.html?note='+encodeURIComponent(mid)+'&edit=1"></iframe>';
+            host.innerHTML='<iframe class="wb-frame" title="导图编辑器" src="/mindmap.html?note='+encodeURIComponent(mid)+'&edit=1&from=admin"></iframe>';
             loadMapMeta();
         }
         function mmReset(){

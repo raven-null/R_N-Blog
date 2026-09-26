@@ -48,16 +48,10 @@ if (root) {
 function boot(el: HTMLElement) {
   const note = el.dataset.note || ""
   let mode: "edit" | "view" = el.dataset.mode === "edit" ? "edit" : "view"
-  // 被前台文章页用 iframe 嵌入时，返回 / 留言 / 信息这些由父页面负责
+  // 被 iframe 嵌入（前台文章页 or 后台编辑页）：返回 / 留言 / 信息要通知父页面
   const embedded = window.parent !== window
-  // 后台编辑页也用 iframe，但它有自己的一整套顶栏按钮
-  const gallery = (() => {
-    try {
-      return !!localStorage.getItem("admin_key")
-    } catch {
-      return false
-    }
-  })()
+  // 后台编辑页内嵌的实例：它顶栏已有一整套按钮，这里不再重复给「返回」
+  const fromAdmin = new URLSearchParams(location.search).get("from") === "admin"
 
   // 深色主题：以官方 DARK_THEME 为底，换成博客的暖色调强调色
   const theme = {
@@ -137,9 +131,10 @@ function boot(el: HTMLElement) {
   const ICON_INFO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="8" r=".4" fill="currentColor"/></svg>'
   const ICON_KEY = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10.5" width="16" height="10" rx="2.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg>'
 
-  // 返回博客：文章页嵌入时通知父页面，独立打开（含后台新窗口预览）就退回首页
-  if (!gallery) {
-    capBtn("", "返回博客首页", ICON_BACK, "返回", () => {
+  // 返回博客：放胶囊最左边（最不容易被挤掉），除后台内嵌外无条件出现。
+  // 文章页嵌入 → 通知父页面回首页；独立打开 → 直接跳首页。
+  if (!fromAdmin) {
+    capBtn("cap-back", "返回博客首页", ICON_BACK, "返回", () => {
       if (embedded) tell("back")
       else location.href = "/"
     })
@@ -396,7 +391,7 @@ function boot(el: HTMLElement) {
       updateKeyBar()
       mountOutlineButton()
       if (mode === "edit") setMsg("Ctrl + S 保存")
-      else if (!gallery) setMsg("")
+      else setMsg("")
     } catch (e: any) {
       setMsg("加载失败：" + (e?.message || e))
     }
