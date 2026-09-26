@@ -239,19 +239,79 @@
             throw err;
         });
     }
+    document.addEventListener('DOMContentLoaded', function () { wireMindmapBind(); });
     function mountMindmap() {
         var host = $('eeMindmapHost');
         var mid = mapId();
         if (!host) return;
         if (!mid) {
-            host.innerHTML = '<div class="ee-hint">这篇文章没有绑定导图（mapId 为空），图片与内容存不到一起。<br>' +
-                '请到「导图管理」打开对应导图，用它的「发布」重新绑定这篇导图文章。</div>';
+            // 没绑定：给出「选一张已有的 / 新建一张」的入口，不用再去导图管理页绕一圈
+            var bar = $('eeMindmapBar');
+            if (bar) bar.style.display = 'flex';
+            host.innerHTML = '<div class="ee-hint">这篇文章还没绑定导图。选一张已有的，或用「新建一张导图」——' +
+                '绑定后这里会直接显示可编辑的导图，图片与内容就存在一起了。</div>';
+            void fillMindmapPicker();
             return;
         }
+        var bar2 = $('eeMindmapBar');
+        if (bar2) bar2.style.display = 'none';
         // iframe 内嵌导图页（与白板同一套交互：底部胶囊、右侧留言抽屉）
         // from=admin 让导图页收起自己的胶囊，由这里顶栏的按钮统一控制
         host.innerHTML = '<iframe class="ee-frame" title="导图编辑器" src="/mindmap.html?note=' +
             encodeURIComponent(mid) + '&edit=1&from=admin"></iframe>';
+    }
+    /* ===== 文章 → 导图 绑定 ===== */
+    function mmListApi() {
+        return fetch('/api/mindmap?action=list', {
+            headers: { 'X-Admin-Key': adminKey },
+            cache: 'no-store'
+        }).then(function (r) { return r.json(); });
+    }
+    function fillMindmapPicker() {
+        var sel = $('eeMindmapPick');
+        if (!sel || sel.dataset.loaded === '1') return Promise.resolve();
+        return mmListApi().then(function (d) {
+            if (!d || d.status !== 'success') return;
+            var items = d.items || [];
+            sel.innerHTML = '<option value="">— 选择一张已有导图 —</option>' +
+                items.map(function (it) {
+                    return '<option value="' + it.id + '">' +
+                        (it.title || '未命名导图').replace(/[<>&]/g, '') +
+                        '（' + it.id + (it.hasKey ? '·有口令' : '') + '）</option>';
+                }).join('');
+            sel.dataset.loaded = '1';
+        }).catch(function () { /* 列表拿不到就不显示选项 */ });
+    }
+    /** 把 doc.mapId 换成新值，并刷新导图区 */
+    function bindMindmap(newId) {
+        if (!doc) return;
+        doc.mapId = newId;
+        if (newId && doc.type !== 'mindmap') {
+            doc.type = 'mindmap';
+            if (typeof window.eeSetType === 'function') window.eeSetType('mindmap');
+        }
+        mountMindmap();
+    }
+    function wireMindmapBind() {
+        var sel = $('eeMindmapPick');
+        var btn = $('eeMindmapBind');
+        var nw = $('eeMindmapNew');
+        if (btn && !btn.dataset.wired) {
+            btn.dataset.wired = '1';
+            btn.addEventListener('click', function () {
+                var v = sel ? sel.value : '';
+                if (!v) { alert('先选一张导图'); return; }
+                bindMindmap(v);
+            });
+        }
+        if (nw && !nw.dataset.wired) {
+            nw.dataset.wired = '1';
+            nw.addEventListener('click', function () {
+                // 新建：给一个不会撞车的 id，导图保存时会自动创建
+                var nid = 'map-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7);
+                bindMindmap(nid);
+            });
+        }
     }
     window.eeSaveMindmap = async function () {
         var frame = document.querySelector('#eeMindmapHost iframe.ee-frame');

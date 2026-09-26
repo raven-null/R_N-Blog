@@ -61,6 +61,20 @@
     }
     .ee-btn.primary:hover{background:linear-gradient(135deg,rgba(59,130,246,.55),rgba(115,170,255,.45))}
     .ee-btn.danger:hover{border-color:var(--danger);color:var(--danger)}
+
+/* 导图面板顶部的「绑定导图」条（文章没绑导图时才出现） */
+.ee-mm-bar{
+display:none;align-items:center;gap:10px;flex-wrap:wrap;
+padding:10px 14px;border-bottom:1px solid rgba(255,255,255,.1);
+background:rgba(255,255,255,.03);font-size:13px;
+}
+.ee-mm-bar-label{color:var(--text-secondary)}
+.ee-mm-bar select{
+max-width:320px;padding:7px 10px;border-radius:10px;
+background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:var(--text);
+font-size:13px;font-family:inherit;outline:none;
+}
+.ee-mm-bar select:focus{border-color:rgba(255,255,255,.28)}
     /* ===== 主体 ===== */
     .ee-main{flex:1;min-height:0;display:flex;gap:12px;padding:12px 18px 16px;overflow:visible}
     .ee-editor-col{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column}
@@ -588,6 +602,12 @@
 
         <!-- 思维导图（内嵌导图页，使用同一套底部胶囊） -->
         <section class="ee-board" id="eeMindmap" style="display:none">
+            <div class="ee-mm-bar" id="eeMindmapBar" style="display:none">
+                <span class="ee-mm-bar-label">这篇文章还没绑定导图</span>
+                <select id="eeMindmapPick"><option value="">— 选择一张已有导图 —</option></select>
+                <button type="button" class="ee-btn" id="eeMindmapNew">新建一张导图</button>
+                <button type="button" class="ee-btn primary" id="eeMindmapBind">绑定并保存</button>
+            </div>
             <div class="ee-board-host" id="eeMindmapHost"><div class="ee-hint">正在加载导图…</div></div>
         </section>
     </main>

@@ -8,6 +8,7 @@
  *   PUT  ?id=xxx                     保存（baseRev 乐观锁；旧版入快照）
  *                                     需管理员，或笔记 editable=1 且口令匹配（body.editKey）
  * Admin（X-Admin-Key）：
+ *   GET  ?action=list                导图列表（仅管理员，给文章绑定导图用）
  *   GET  ?action=history&id=xxx      快照列表（revs + current）
  *   POST ?action=meta&id=xxx         改标题 / editable / 口令（editKey 传 "" 清除）
  *   POST ?action=rollback&id=&rev=   回滚到指定快照
@@ -84,6 +85,35 @@ export default async (req: Request) => {
   const isAdmin = await checkAuth(req)
 
   // ===================== Admin 端点 =====================
+
+  if (action === "list") {
+    if (!isAdmin) return json(401, { status: "error", message: "未授权" }, req)
+    try {
+      const store = getBlobStore(STORE, "strong")
+      const res = await store.list({ prefix: "notes/" })
+      const ids = res.blobs
+        .map((b: any) => String(b.key))
+        .filter((k: string) => k.endsWith("/meta"))
+        .map((k: string) => k.slice("notes/".length, -"/meta".length))
+        .filter((nid: string) => !!nid && ID_RE.test(nid))
+      const items: any[] = []
+      for (const nid of ids) {
+        const meta = await readMeta(store, nid)
+        items.push({
+          id: nid,
+          title: meta?.title || "未命名导图",
+          rev: meta?.rev ?? 0,
+          updatedAt: meta?.updatedAt || "",
+          hasKey: !!meta?.editKeyHash,
+          editable: (meta?.editable ?? 1) === 1,
+        })
+      }
+      items.sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)))
+      return json(200, { status: "success", items }, req, { "Cache-Control": "no-store" })
+    } catch (err: any) {
+      return json(500, { status: "error", message: err?.message || "读取导图列表失败" }, req)
+    }
+  }
 
   if (action === "history") {
     if (!isAdmin) return json(401, { status: "error", message: "未授权" }, req)
