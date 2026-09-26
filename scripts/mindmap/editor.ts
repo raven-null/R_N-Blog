@@ -1551,6 +1551,8 @@ function boot(el: HTMLElement) {
   let outlineRows: OutlineRow[] = []
   /** 多选：被选中的行 id（空 = 没有多选） */
   const selectedRows = new Set<string>()
+  /** 大纲内部的剪贴板：每行一个节点（不含 children），复制/剪切共用；只在同一页面内有效 */
+  let outlineClip: { nodes: any[] } | null = null
   let outlineHost: HTMLElement | null = null
   let outlineEditing = false
   // 行内文字是边打边提交的（防抖 300ms）。但回车/删除/Tab 会整表重建，
@@ -1853,6 +1855,133 @@ function boot(el: HTMLElement) {
     setMsg("已调整层级")
   }
 
+  /** 该行是否「整行被选中」（内容全选或没内容），用来区分「复制文字」还是「复制节点」 */
+  function rowFullySelected(): boolean {
+    const row = currentRow()
+    if (!row) return false
+    const topic = row.querySelector(".mm-oline-topic") as HTMLElement | null
+    if (!topic) return false
+    const text = (topic.textContent || "").trim()
+    if (!text) return true
+    const sel = window.getSelection()
+    if (!sel || sel.isCollapsed || sel.rangeCount === 0) return true
+    return (sel.toString() || "").replace(/\s+/g, "") === text.replace(/\s+/g, "")
+  }
+
+  /** 要操作的行的 id：有多选就用多选，否则用光标所在行 */
+  function targetRowIds(): string[] {
+    const ids: string[] = []
+    outlineRows.forEach((r) => {
+      if (selectedRows.has(r.id)) ids.push(r.id)
+    })
+    if (ids.length) return ids
+    const cur = currentRow()?.dataset.node
+    return cur ? [cur] : []
+  }
+
+  /**
+   * 把选中的行归并成「块」：每块 = 该行 + 它的全部子项（行序上层级更深的连续行）。
+   * 剪贴板里只存每一行自己的节点数据（去掉 children）——每行本来就对应一个节点，
+   * 带上 children 再逐行发 id 会把同一棵子树复制多份。
+   */
+  function copyRowBlocks(ids: string[]) {
+    const blocks: Array<{ start: number; end: number }> = []
+    for (const id of ids) {
+      const i = outlineRows.findIndex((r) => r.id === id)
+      if (i < 0) continue
+      const lv = outlineRows[i].level
+      let end = i + 1
+      while (end < outlineRows.length && outlineRows[end].level > lv) end++
+      if (!blocks.some((b) => i >= b.start && i < b.end)) blocks.push({ start: i, end })
+    }
+    blocks.sort((a, b) => a.start - b.start)
+    const top = blocks.filter((b, k) => k === 0 || b.start >= blocks[k - 1].end)
+    const data = mind.getData() as any
+    return top.map((b) => ({
+      start: b.start,
+      end: b.end,
+      nodes: outlineRows.slice(b.start, b.end).map((r) => {
+        const n: any = findNodeIn(data?.nodeData, r.id) || {}
+        const { children, ...rest } = n
+        void children
+        return { ...JSON.parse(JSON.stringify(rest)), level: r.level }
+      }),
+    }))
+  }
+
+  /** 复制（cut = true 时同时从大纲里摘掉） */
+  function copyRows(cut: boolean): number {
+    const ids = targetRowIds()
+    if (!ids.length) return 0
+    if (ids.includes(outlineRows[0]?.id || "")) {
+      setMsg(cut ? "中心主题不能剪切" : "中心主题不能复制")
+      return -1
+    }
+    const blocks = copyRowBlocks(ids)
+    if (!blocks.length) return 0
+    outlineClip = { nodes: blocks.flatMap((b) => b.nodes) }
+    try {
+      ;(window as any).__mmClipboard = outlineClip
+    } catch {
+      /* 忽略 */
+    }
+    if (cut) {
+      const drop = new Set<string>()
+      for (const b of blocks) for (let i = b.start; i < b.end; i++) drop.add(outlineRows[i].id)
+      outlineRows = outlineRows.filter((r) => !drop.has(r.id))
+      selectedRows.clear()
+      applyRowsToData(outlineRows)
+      renderOutlineTree()
+    }
+    const total = blocks.reduce((n, b) => n + b.end - b.start, 0)
+    setMsg((cut ? "已剪切 " : "已复制 ") + total + " 项（含子项）")
+    return total
+  }
+
+  /** 粘贴到当前行下面（同级）；多选复制来的会保持彼此的相对层级 */
+  function pasteRows(): boolean {
+    if (!outlineClip?.nodes?.length) return false
+    const targetId = currentRow()?.dataset.node || ""
+    const tIdx = outlineRows.findIndex((r) => r.id === targetId)
+    if (tIdx < 0) {
+      setMsg("先把光标放到要粘贴的位置")
+      return true
+    }
+    const nodes = outlineClip.nodes
+    const tLevel = outlineRows[0]?.id === targetId ? 0 : outlineRows[tIdx].level + 1
+    const base = Number(nodes[0]?.level) || 0
+    const insert: OutlineRow[] = []
+    nodes.forEach((n: any) => {
+      const lv = Math.max(tLevel, tLevel + (Number(n.level) || 0) - base)
+      insert.push({
+        id: nextId(),
+        level: lv,
+        topic: String(n.topic ?? ""),
+        imgUrl: n.image?.url || "",
+        imgW: Number(n.image?.width) || 0,
+        imgH: Number(n.image?.height) || 0,
+        kids: 0,
+        expanded: n.expanded !== false,
+      })
+    })
+    const out = outlineRows.slice(0, tIdx + 1).concat(insert, outlineRows.slice(tIdx + 1))
+    const fixed: OutlineRow[] = []
+    out.forEach((r, i) => {
+      if (i === 0) {
+        fixed.push({ ...r, level: 0 })
+        return
+      }
+      fixed.push({ ...r, level: Math.min(r.level, fixed[i - 1].level + 1) })
+    })
+    outlineRows = fixed
+    applyRowsToData(outlineRows)
+    renderOutlineTree()
+    const next = rowEls()[tIdx + 1]?.querySelector(".mm-oline-topic") as HTMLElement | null
+    if (next) caretToTextEnd(next)
+    setMsg("已粘贴 " + insert.length + " 项")
+    return true
+  }
+
   /** 把多选状态画到行上 */
   function paintRowSelection() {
     rowEls().forEach((el) => {
@@ -2000,6 +2129,26 @@ function boot(el: HTMLElement) {
         /* 忽略 */
       }
       if (idx < 0) return
+
+      const mod = e.ctrlKey || e.metaKey
+
+      // Ctrl+C / Ctrl+X：整行（连同子项）复制、剪切；选中了行内文字时让给浏览器复制文字
+      if (mod && (e.key.toLowerCase() === "c" || e.key.toLowerCase() === "x")) {
+        if (!rowFullySelected()) return
+        e.preventDefault()
+        e.stopPropagation()
+        copyRows(e.key.toLowerCase() === "x")
+        return
+      }
+
+      // Ctrl+V：把剪贴板里的节点贴到当前行下面（同级）
+      if (mod && e.key.toLowerCase() === "v") {
+        if (!outlineClip?.nodes?.length) return
+        e.preventDefault()
+        e.stopPropagation()
+        pasteRows()
+        return
+      }
 
       if (e.key === "Enter") {
         // 回车：在下面新建一项（同级），光标落到新行
