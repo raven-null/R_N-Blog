@@ -244,7 +244,8 @@
         var mid = mapId();
         if (!host) return;
         if (!mid) {
-            host.innerHTML = '<div class="ee-hint">这篇文章还没有绑定导图，无法内嵌编辑；可到「导图管理」新建导图后发布文章。</div>';
+            host.innerHTML = '<div class="ee-hint">这篇文章没有绑定导图（mapId 为空），图片与内容存不到一起。<br>' +
+                '请到「导图管理」打开对应导图，用它的「发布」重新绑定这篇导图文章。</div>';
             return;
         }
         // iframe 内嵌导图页（与白板同一套交互：底部胶囊、右侧留言抽屉）
@@ -699,9 +700,11 @@
             status: $('eeStatusSel').value,
             type: docType,
             boardId: (doc && doc.boardId) || '',
-            mapId: (doc && doc.mapId) || '',
+            // 注意：mapId 不能传空串，服务端在 type=mindmap 时会用它覆盖，等于清掉关联
             author: (doc && doc.author) || ''
         };
+        // 导图文章：仅当确实绑定了导图才回传 mapId（空值会清掉关联）
+        if (docType === 'mindmap' && doc && doc.mapId) body.mapId = doc.mapId;
         // 白板文章的正文不是编辑器内容：原样回传，避免保存元信息时清空
         if (docType === 'whiteboard') {
             body.content = (doc && doc.content) || '';

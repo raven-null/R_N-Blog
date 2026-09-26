@@ -760,14 +760,15 @@ function boot(el: HTMLElement) {
       setMsg(`已转 WebP ${kb(file.size)} → ${kb(blob.size)}，上传中…`, true)
       await uploadImage(blob, fid)
       const shown = displaySize(width, height)
+      const shownUrl = URL.createObjectURL(blob)
+      imageUrls.set(fid, shownUrl)
       node.image = { url: fid, width: shown.width, height: shown.height, fit: "contain" }
-      imageUrls.set(fid, URL.createObjectURL(blob))
       ;(mind as any).refresh(mind.getData())
       dirty = true
       scheduleFit(80)
-      setMsg(
-        `已插入图片：展示 ${shown.width}×${shown.height}（原图 ${width}×${height}，WebP ${kb(blob.size)}/${kb(file.size)}）${webp ? "" : "（此浏览器不支持 WebP，已按 PNG 存）"}`,
-      )
+      setMsg(`已插入图片：${shown.width}×${shown.height} · WebP ${kb(blob.size)}。记得保存导图（Ctrl+S）把图片引用一起存下来`)
+      // 图片已在服务器上，但引用要保存导图才会写进数据
+      if (mode === "edit") void save(false)
     } catch (e: any) {
       setMsg("图片插入失败：" + (e?.message || e))
     }
@@ -778,10 +779,13 @@ function boot(el: HTMLElement) {
     const fids: string[] = []
     const walk = (n: any) => {
       const u = n?.image?.url
-      if (typeof u === "string" && !u.startsWith("data:") && !u.startsWith("/") && !u.startsWith("http")) fids.push(u)
+      if (typeof u === "string" && !u.startsWith("data:") && !u.startsWith("/") && !u.startsWith("http") && !u.startsWith("blob:")) {
+        fids.push(u)
+      }
       ;(n?.children || []).forEach(walk)
     }
     walk(data?.nodeData || data)
+    const failed: string[] = []
     for (const fid of fids) {
       if (imageUrls.has(fid)) continue
       try {
@@ -789,21 +793,32 @@ function boot(el: HTMLElement) {
         const d = await res.json().catch(() => ({}))
         const dataURL: string = d?.file?.dataURL || ""
         if (dataURL) imageUrls.set(fid, dataURL)
+        else failed.push(fid)
       } catch {
-        /* 单张失败不影响整图 */
+        failed.push(fid)
       }
     }
-    // 把 fid 换成可直接显示的地址（blob: 或 data:），并刷新一次让库渲染出图片
+    // 把 fid 换成可直接显示的地址（data: / blob:）
     let changed = false
     const apply = (n: any) => {
       const u = n?.image?.url
       if (typeof u === "string" && imageUrls.has(u)) {
-        n.image.url = imageUrls.get(u)
+        n.image.url = imageUrls.get(u) as string
         changed = true
       }
       ;(n?.children || []).forEach(apply)
     }
     apply(data?.nodeData || data)
+    // 取不回来的（例如服务端没存上）：不要让它继续当 src 用，否则浏览器会去请求 img-xxx 而报 404
+    if (failed.length) {
+      const strip = (n: any) => {
+        const u = n?.image?.url
+        if (typeof u === "string" && failed.includes(u)) n.image.url = ""
+        ;(n?.children || []).forEach(strip)
+      }
+      strip(data?.nodeData || data)
+      setMsg(`有 ${failed.length} 张图片没能取回（${failed.join(", ")}），可能没上传成功`)
+    }
     return changed
   }
 
