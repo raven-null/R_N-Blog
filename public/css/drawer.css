@@ -29,7 +29,9 @@
 .mm-drawer-scrim.show { opacity: 1; pointer-events: auto; }
 .mm-drawer {
   position: absolute; top: 0; right: 0; bottom: 0; z-index: 38;
-  width: min(440px, 94vw); display: flex; flex-direction: column;
+  width: min(440px, 94vw);
+  /* 关闭时直接不渲染，打开才交给下面的 .open 规则显示（比藏在屏幕外稳） */
+  display: none; flex-direction: column;
   transform: translateX(103%);
   background: linear-gradient(145deg, rgba(26, 26, 33, 0.97), rgba(17, 17, 22, 0.95));
   border-left: 1px solid var(--mm-border);
@@ -37,7 +39,7 @@
   backdrop-filter: blur(30px) saturate(180%); -webkit-backdrop-filter: blur(30px) saturate(180%);
   transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
 }
-.mm-drawer.open { transform: none; }
+.mm-drawer.open { display: flex; transform: none; }
 .mm-drawer-head {
   display: flex; align-items: center; justify-content: space-between; gap: 10px; flex: none;
   padding: 14px 18px; border-bottom: 1px solid var(--mm-border);

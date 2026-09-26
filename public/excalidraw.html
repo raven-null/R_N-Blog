@@ -65,6 +65,11 @@
     body .mm-capsule { position: fixed; z-index: 40; }
     body.exc-no-capsule .mm-capsule,
     body.exc-from-admin .mm-capsule { display: none !important; }
+    /* 留言抽屉显隐兜底（与共享 drawer.css 一致，特异性更高） */
+    body .mm-drawer { display: none; }
+    body .mm-drawer.open { display: flex; }
+    body .mm-drawer-scrim { display: none; }
+    body .mm-drawer-scrim.show { display: block; }
     /* 底部居中胶囊会压住 Excalidraw 自带工具条，把它挪到左下，并给画布留出底部空间 */
     .excalidraw .App-bottom-bar { bottom: 74px !important; }
     .excalidraw .App-toolbar--mobile,
