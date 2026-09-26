@@ -87,12 +87,14 @@
       margin-bottom: 4px; padding-bottom: 5px; border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
     }
     .mm-oline .mm-tri {
-      flex: none; width: 16px; height: 16px; margin-right: 4px; padding: 0;
+      flex: none; width: 22px; height: 22px; margin-right: 6px; padding: 0;
       display: inline-flex; align-items: center; justify-content: center;
-      background: transparent; border: 0; cursor: pointer; font-size: 10px;
-      color: var(--mm-accent); opacity: 0.85;
+      background: transparent; border: 0; cursor: pointer; font-size: 13px; line-height: 1;
+      color: var(--mm-accent); opacity: 0.85; border-radius: 6px;
+      transition: background 0.15s ease, opacity 0.15s ease;
     }
-    .mm-oline .mm-tri:hover { opacity: 1; }
+    .mm-oline .mm-tri:hover { opacity: 1; background: rgba(255, 255, 255, 0.08); }
+    .mm-oline .mm-tri:active { transform: scale(0.94); }
     .mm-oline .mm-tri.empty { cursor: default; opacity: 0; }
     /* 行首拖拽手柄：小圆点，只在编辑模式可拖 */
     .mm-oline .mm-oline-drag {
@@ -295,8 +297,8 @@
       try { if (window.parent !== window) document.documentElement.dataset.embedded = '1'; } catch (e) { /* 跨域则忽略 */ }
     })();
   </script>
-  <link rel="stylesheet" href="/js/vendor/mindmap/mindmap-editor.v70.css">
-  <script src="/js/vendor/mindmap/mindmap-editor.v70.js"></script>
+  <link rel="stylesheet" href="/js/vendor/mindmap/mindmap-editor.v71.css">
+  <script src="/js/vendor/mindmap/mindmap-editor.v71.js"></script>
   <script>
     // 兜底诊断：bundle 未加载或运行时抛错时给出可见提示，而不是静默无反应
     (function () {
@@ -328,7 +330,7 @@
       window.addEventListener('load', function () {
         if (!window.MindMapMount) {
           show('导图组件未能加载',
-            '脚本 mindmap-editor.v70.js 加载失败（404 / 部署未完成 / 被拦截）。<br>' +
+            '脚本 mindmap-editor.v71.js 加载失败（404 / 部署未完成 / 被拦截）。<br>' +
             '请 Ctrl+F5 强制刷新；若仍失败，检查 Netlify 最近一次部署是否成功。');
         }
       });

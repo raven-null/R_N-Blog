@@ -1661,21 +1661,13 @@ function boot(el: HTMLElement) {
     const target = findNodeIn(data?.nodeData, id)
     if (!target) return
     target.expanded = !collapse
+    // mind.refresh(data) 会把 expanded 一起落下去（收起的节点不会再渲染子级与展开按钮），
+    // 所以这里不能再拿 DOM 的 class 去「校正」一次——refresh 之后 me-parent 的第二个
+    // 子元素是 me-children（className 为空），会被误判成已展开，把刚收起的节点又展开回来。
     mind.refresh(data)
     dirty = true
     outlineRows = collectRows(mind.getData())
     renderOutlineTree()
-    // 导图画布上的展开状态也要跟上
-    try {
-      const tpc = (mind as any).findEle?.(id)
-      if (tpc) {
-        const wantExpanded = !collapse
-        const isExpanded = tpc.parentNode?.children?.[1]?.className !== "minus"
-        if (wantExpanded !== isExpanded) (mind as any).expandNode?.(tpc)
-      }
-    } catch {
-      /* 忽略 */
-    }
   }
 
   /** 在大纲里定位节点（用 getData 的克隆数据） */
