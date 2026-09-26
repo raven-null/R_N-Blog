@@ -1065,6 +1065,7 @@ function boot(el: HTMLElement) {
         meta = null
         loadedRev = 0
         mind.init(emptyData())
+        refreshTakenIds()
         applyEditable() // init 会重建节点，编辑开关要重新同步
         scheduleFit(200)
         if (mode === "edit") {
@@ -1077,6 +1078,7 @@ function boot(el: HTMLElement) {
       // 节点图片存的是 fid，先取回来换成可显示地址，再交给库渲染
       await resolveImageUrls(d.data || {})
       mind.init(d.data || emptyData())
+      refreshTakenIds()
       applyEditable()
       // 加载完成后自适应铺满可视区（只读与编辑模式都适用）
       fitView()
@@ -1270,7 +1272,28 @@ function boot(el: HTMLElement) {
   let outlineText: HTMLTextAreaElement | null = null
 
   let uid = 0
-  const nextId = () => "n" + ++uid
+  // 数据里已经占用的节点 id。默认数据里就有 "n1"，而计数器也从 n1 起步，
+  // 直接撞车会让 applyRowsToData 的 byId 互相覆盖，表现为「刚写的节点消失、多出重复节点」。
+  const takenIds = new Set<string>()
+  const nextId = () => {
+    let id = ""
+    do {
+      id = "n" + ++uid
+    } while (takenIds.has(id))
+    takenIds.add(id)
+    return id
+  }
+
+  /** 重新登记数据里已有的 id（载入 / 重建数据后调用） */
+  function refreshTakenIds() {
+    takenIds.clear()
+    const walk = (n: any) => {
+      if (!n) return
+      if (n.id !== undefined) takenIds.add(String(n.id))
+      ;(n.children || []).forEach(walk)
+    }
+    walk((mind.getData() as any)?.nodeData)
+  }
 
   /**
    * 大纲解析：把每一行折算成「相对层级」（根 0、一级分支 1……）
@@ -1762,7 +1785,7 @@ function boot(el: HTMLElement) {
     for (let i = 1; i < rows.length; i++) {
       const r = rows[i]
       const old = byId.get(r.id)
-      const node: any = { ...(old || {}), id: r.id, topic: r.topic || "新主题", children: [] }
+      const node: any = { ...(old || {}), id: r.id || nextId(), topic: r.topic || "新主题", children: [] }
       while (stack.length > 1 && stack[stack.length - 1].level >= r.level) stack.pop()
       const parent = stack.length ? stack[stack.length - 1].node : root
       parent.children.push(node)
@@ -1771,6 +1794,7 @@ function boot(el: HTMLElement) {
     mind.refresh({ nodeData: root } as any)
     dirty = true
     outlineRows = collectRows(mind.getData())
+    refreshTakenIds()
     updateOutlineImageCount()
   }
 
