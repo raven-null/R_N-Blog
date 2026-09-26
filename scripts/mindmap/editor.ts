@@ -1581,14 +1581,85 @@ function boot(el: HTMLElement) {
     box.innerHTML = rows
       .map(
         (r) =>
+          '<div class="mm-fold-row" data-id="' + r.id + '"' + (r.level === 0 ? "" : ' draggable="true"') + ">" +
           '<button type="button" class="mm-fold-btn' + (r.expanded ? "" : " collapsed") + '" data-node="' + r.id + '" ' +
           'title="' + (r.expanded ? "收起子项" : "展开子项") + '">' +
           '<span class="tri">' + (r.expanded ? "▾" : "▸") + "</span>" +
           '<span class="t" style="padding-left:' + r.level * 12 + 'px">' + (r.topic || "未命名") + "</span>" +
           '<span class="n">' + r.kids + "</span>" +
-          "</button>",
+          "</button>" +
+          (r.level === 0 ? "" : '<span class="handle" title="拖动可调整层级与顺序">⋮⋮</span>') +
+          "</div>",
       )
       .join("")
+  }
+
+  /* ---------- 拖拽调层级：在树上摘下来再挂到目标位置 ---------- */
+
+  /** 按 id 找节点（返回父节点，便于摘除） */
+  function findParentOf(root: any, id: string): { parent: any; index: number } | null {
+    const kids = root?.children || []
+    for (let i = 0; i < kids.length; i++) {
+      if (String(kids[i].id) === id) return { parent: root, index: i }
+      const deep = findParentOf(kids[i], id)
+      if (deep) return deep
+    }
+    return null
+  }
+  function findNode(root: any, id: string): any | null {
+    if (!root) return null
+    if (String(root.id) === id) return root
+    for (const c of root.children || []) {
+      const hit = findNode(c, id)
+      if (hit) return hit
+    }
+    return null
+  }
+  function isDescendant(ancestor: any, id: string): boolean {
+    return (ancestor?.children || []).some((c: any) => String(c.id) === id || isDescendant(c, id))
+  }
+
+  /**
+   * 把 sourceId 移到 targetId 的上方/内部/下方。
+   * mode: "before" 同级插到前面、"in" 变成子项、"after" 同级插到后面
+   */
+  function moveNodeInTree(sourceId: string, targetId: string, mode: "before" | "in" | "after"): boolean {
+    if (!sourceId || !targetId || sourceId === targetId) return false
+    const data = mind.getData() as any
+    const root = data?.nodeData
+    if (!root) return false
+    const src = findNode(root, sourceId)
+    const tgt = findNode(root, targetId)
+    if (!src || !tgt) return false
+    // 不能把节点拖进自己的子树（会成环）
+    if (isDescendant(src, targetId)) {
+      setMsg("不能把这一项拖到它自己的子项里")
+      return false
+    }
+    const spot = findParentOf(root, sourceId)
+    if (!spot) return false
+    spot.parent.children.splice(spot.index, 1)
+    // 摘下来之后重新定位目标（索引可能变了）
+    const tgtSpot = findParentOf(root, targetId)
+    if (mode === "in") {
+      tgt.children = tgt.children || []
+      tgt.children.push(src)
+      tgt.expanded = true
+    } else if (tgtSpot) {
+      const at = mode === "before" ? tgtSpot.index : tgtSpot.index + 1
+      tgtSpot.parent.children.splice(at, 0, src)
+    } else {
+      // 目标是根节点：按"变成子项"处理
+      root.children = root.children || []
+      root.children.push(src)
+    }
+    mind.refresh(data)
+    dirty = true
+    renderOutlineThumbs(mind.getData())
+    renderOutlineFold(mind.getData())
+    if (outlineText) outlineText.value = dataToOutline(mind.getData())
+    setMsg("已调整层级")
+    return true
   }
 
   function buildOutline() {
@@ -1632,6 +1703,44 @@ function boot(el: HTMLElement) {
       if (mode !== "edit") e.preventDefault()
     })
     outlineText.addEventListener("blur", flushOutline)
+    // 折叠条：拖拽调层级（上/中/下三档落点）
+    let dragging: string | null = null
+    const foldBox = outlineEl.querySelector("#mmOutlineFold") as HTMLElement | null
+    foldBox?.addEventListener("dragstart", (e) => {
+      const row = (e.target as HTMLElement | null)?.closest?.(".mm-fold-row") as HTMLElement | null
+      if (!row) return
+      dragging = row.dataset.id || null
+      row.classList.add("dragging")
+      try {
+        e.dataTransfer?.setData("text/plain", dragging || "")
+      } catch {
+        /* 忽略 */
+      }
+    })
+    foldBox?.addEventListener("dragend", () => {
+      dragging = null
+      foldBox.querySelectorAll(".mm-fold-row").forEach((el) => el.classList.remove("dragging", "drop-before", "drop-in", "drop-after"))
+    })
+    foldBox?.addEventListener("dragover", (e) => {
+      const row = (e.target as HTMLElement | null)?.closest?.(".mm-fold-row") as HTMLElement | null
+      if (!row || !dragging || row.dataset.id === dragging) return
+      e.preventDefault()
+      const rect = row.getBoundingClientRect()
+      const rel = (e.clientY - rect.top) / Math.max(1, rect.height)
+      const mode = rel < 0.28 ? "before" : rel > 0.72 ? "after" : "in"
+      foldBox.querySelectorAll(".mm-fold-row").forEach((el) => el.classList.remove("drop-before", "drop-in", "drop-after"))
+      row.classList.add("drop-" + mode)
+    })
+    foldBox?.addEventListener("drop", (e) => {
+      const row = (e.target as HTMLElement | null)?.closest?.(".mm-fold-row") as HTMLElement | null
+      if (!row || !dragging) return
+      e.preventDefault()
+      const mode = row.classList.contains("drop-before") ? "before" : row.classList.contains("drop-after") ? "after" : "in"
+      const src = dragging
+      dragging = null
+      moveNodeInTree(src, row.dataset.id || "", mode as "before" | "in" | "after")
+    })
+
     // 折叠条：点击切换画布上对应节点的展开/收起
     outlineEl.querySelector("#mmOutlineFold")?.addEventListener("click", (e) => {
       const btn = (e.target as HTMLElement | null)?.closest?.("[data-node]") as HTMLElement | null
