@@ -13,6 +13,22 @@
  */
 import MindElixir, { DARK_THEME } from "mind-elixir"
 
+/** 右键菜单/工具栏文案（取自库自带 dist/i18n.js 的 zh_CN；该文件未在 package exports 中，无法直接 import） */
+const zhCN = {
+  addChild: "插入子节点",
+  addParent: "插入父节点",
+  addSibling: "插入同级节点",
+  removeNode: "删除节点",
+  focus: "专注",
+  cancelFocus: "取消专注",
+  moveUp: "上移",
+  moveDown: "下移",
+  link: "连接",
+  linkBidirectional: "双向连接",
+  clickTips: "请点击目标节点",
+  summary: "摘要",
+}
+
 interface MapMeta {
   title?: string
   editable: 0 | 1
@@ -59,13 +75,15 @@ function boot(el: HTMLElement) {
     el: canvasHost,
     direction: (MindElixir as any).SIDE ?? 2,
     editable: mode === "edit",
-    contextMenu: mode === "edit",
-    toolBar: mode === "edit",
+    // 文案本地化：库的顶层 locale 选项已弃用，改为传给 contextMenu / toolBar
+    contextMenu: mode === "edit" ? ({ locale: zhCN } as any) : false,
+    toolBar: mode === "edit" ? ({ locale: zhCN } as any) : false,
     keypress: mode === "edit",
     theme,
     overflowHidden: false,
     scaleSensitivity: 40,
-  })
+    newTopicName: "新主题",
+  } as any)
 
   let meta: MapMeta | null = null
   let loadedRev: number | null = null

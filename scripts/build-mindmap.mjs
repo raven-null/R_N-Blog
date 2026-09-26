@@ -33,6 +33,7 @@ execFileSync(
     "--target=es2020",
     "--jsx=automatic",
     "--minify",
+    "--charset=utf8", // 保留中文字面量（默认会转义成 \uXXXX）
     `--outfile=${join(vendorDir, jsName)}`,
   ],
   { stdio: "inherit" },
