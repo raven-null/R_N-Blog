@@ -1741,7 +1741,22 @@ function boot(el: HTMLElement) {
         e.preventDefault()
         e.stopPropagation()
         const row = t.closest(".mm-oline") as HTMLElement | null
-        if (row) toggleFold(row.dataset.node || "", t.classList.contains("collapsed"))
+        const id = row?.dataset.node || ""
+        const willCollapse = !t.classList.contains("collapsed")
+        try {
+          console.log("[mm] 点了折叠三角", { id, willCollapse, rows: outlineRows.length, editable: (mind as any).editable })
+        } catch {
+          /* 忽略 */
+        }
+        if (row) toggleFold(id, willCollapse)
+        try {
+          const after = mind.getData() as any
+          const n = nodeByIdInData(id)
+          void after
+          console.log("[mm] 折叠后节点 expanded =", n?.expanded)
+        } catch {
+          /* 忽略 */
+        }
         return
       }
       // 点行内缩略图 → 画布定位
@@ -2236,6 +2251,36 @@ function boot(el: HTMLElement) {
   el.addEventListener("paste", (e) => onPaste(e as ClipboardEvent), true)
   // 供宿主判断"有没有没落盘的改动"（后台编辑页保存前提示用）
   ;(window as any).__mindmapDirty = () => dirty
+  // 折叠相关的现场诊断：控制台执行 __mmFoldDiag() 会打印所有关键状态
+  ;(window as any).__mmFoldDiag = () => {
+    const host = document.querySelector(".mm-outline-tree") as HTMLElement | null
+    const tris = Array.from(document.querySelectorAll(".mm-outline-tree .mm-tri")) as HTMLElement[]
+    const mepd = Array.from(document.querySelectorAll("me-epd"))
+    const first = tris.find((x) => !x.classList.contains("empty")) || tris[0] || null
+    const cs = first ? getComputedStyle(first) : null
+    const out = {
+      有大纲容器: !!host,
+      大纲行数: document.querySelectorAll(".mm-outline-tree .mm-oline").length,
+      三角个数: tris.length,
+      画布展开按钮个数: mepd.length,
+      第一个三角: first
+        ? {
+            text: first.textContent,
+            cls: first.className,
+            pointerEvents: cs?.pointerEvents,
+            display: cs?.display,
+            visibility: cs?.visibility,
+            opacity: cs?.opacity,
+            size: cs ? cs.width + "x" + cs.height : "",
+            rect: first.getBoundingClientRect().toJSON(),
+          }
+        : null,
+      导图可编辑: (mind as any).editable,
+      数据里的折叠状态: outlineRows.map((r) => ({ id: r.id, kids: r.kids, expanded: r.expanded })),
+    }
+    console.log("[mm] 折叠诊断", out)
+    return out
+  }
 
   // 粘贴图片：库把 paste 交给 mind.pasteHandler；再在根元素补一个捕获监听
   ;(mind as any).pasteHandler = onPaste
