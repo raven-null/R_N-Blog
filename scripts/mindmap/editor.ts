@@ -522,11 +522,10 @@ function boot(el: HTMLElement) {
     const editing = next === "edit"
     setExportMenu(false) // 菜单里的 SVG 项在编辑态才出现，切模式先收起
     if (editing) {
-      // 进入编辑：把待办的大纲改动丢掉重来，避免上面的旧文本盖掉导图
-      dirtyOutline = false
-      if (flushTimer) {
-        window.clearTimeout(flushTimer)
-        flushTimer = null
+      // 进入编辑：把待办的同步取消掉，避免上一轮的内容盖回导图
+      if (richSyncTimer) {
+        window.clearTimeout(richSyncTimer)
+        richSyncTimer = null
       }
     } else {
       flushOutline() // 退出前把大纲里的改动落到导图上
@@ -662,19 +661,18 @@ function boot(el: HTMLElement) {
     // 注意顺序：先确认是「图片 + 可处理的目标」，再 preventDefault，
     // 否则口令输入框这类地方连文字都粘不进去
     const t = (e.target as HTMLElement | null) || null
-    const inOutline = !!t && t.tagName.toLowerCase() === "textarea" && t.classList.contains("mm-outline-text")
+    const inOutline = !!t && !!outlineRich && outlineRich.contains(t)
 
     if (inOutline) {
-      // 在大纲面板里粘贴：插到光标所在那一行对应的节点
-      const line = outlineCaretLine(t as HTMLTextAreaElement)
-      const node = nodeById(outlineLineNodeIds[line] || "")
-      if (!node) {
-        setMsg("没定位到大纲这一行的节点：把光标放到某一行内容上再粘贴")
+      // 在大纲面板里粘贴：插到光标所在那一行的节点上（行内直接出现缩略图）
+      const caretId = outlineNodeIdAtCaret()
+      if (!caretId) {
+        setMsg("把光标放到大纲某一行里再粘贴图片")
         return
       }
       e.preventDefault()
       e.stopPropagation() // 别让库的粘贴处理再插手
-      if (!stageImage(file, String(node.id))) setMsg("图片贴不上去，请重试")
+      if (!stageImage(file, caretId)) setMsg("图片贴不上去，请重试")
       return
     }
 
@@ -1260,7 +1258,7 @@ function boot(el: HTMLElement) {
   // 面板默认关闭；打开时导图区让出宽度，右侧实时刷新
   let panelOpen = false
   let outlineEl: HTMLElement | null = null
-  let outlineText: HTMLTextAreaElement | null = null
+  let outlineRich: HTMLElement | null = null
 
   let uid = 0
   const nextId = () => "n" + ++uid
@@ -1319,20 +1317,13 @@ function boot(el: HTMLElement) {
     return { nodeData: root }
   }
 
-  /** 大纲第 N 行对应哪个节点（用于「在大纲里粘贴图片 → 插到光标所在那行」） */
-  let outlineLineNodeIds: string[] = []
-
-  /** 导图 → 大纲文本：根行不带前缀，其余行「2 空格 × 层级 + · 」（也兼容 Markdown 列表写法） */
+/** 导图 → 大纲文本：根行不带前缀，其余行「2 空格 × 层级 + · 」（也兼容 Markdown 列表写法） */
   function dataToOutline(data: any): string {
     const lines: string[] = []
-    outlineLineNodeIds = []
     const walk = (node: any, depth: number) => {
       const topic = String(node?.topic ?? "").replace(/\r?\n/g, " ")
       // 带图片的节点在大纲里标一下，方便一眼看出哪几项有图
-      const img = node?.image
-      const mark = img ? `  [图片${img.width && img.height ? ` ${img.width}×${img.height}` : ""}]` : ""
-      lines.push((depth === 0 ? topic : OUTLINE_INDENT.repeat(depth - 1) + OUTLINE_BULLET + topic) + mark)
-      outlineLineNodeIds.push(String(node?.id ?? ""))
+      lines.push(depth === 0 ? topic : OUTLINE_INDENT.repeat(depth - 1) + OUTLINE_BULLET + topic)
       ;(node?.children || []).forEach((c: any) => walk(c, depth + 1))
     }
     walk(data?.nodeData ?? data, 0)
@@ -1356,149 +1347,194 @@ function boot(el: HTMLElement) {
     return found
   }
 
-  /** 光标在大纲第几行（0 基） */
-  function outlineCaretLine(ta: HTMLTextAreaElement): number {
-    const pos = ta.selectionStart || 0
-    return String(ta.value || "").slice(0, pos).split("\n").length - 1
+  /** 光标落在富文本大纲的哪一行（返回该行对应的节点 id） */
+  function outlineNodeIdAtCaret(): string {
+    const sel = window.getSelection()
+    if (!sel || !sel.rangeCount) return ""
+    let node: Node | null = sel.getRangeAt(0).startContainer
+    while (node && node !== outlineRich) {
+      if (node instanceof HTMLElement && node.classList.contains("mm-oline")) return node.dataset.node || ""
+      node = node.parentNode
+    }
+    return ""
   }
 
   /* ---------------- 大纲编辑手感 ---------------- */
-  /** 当前行的缩进空格数（Tab 视为一级缩进） */
-  function lineIndent(text: string, pos: number): number {
-    const start = text.lastIndexOf("\n", Math.max(0, pos - 1)) + 1
-    const seg = text.slice(start, pos)
-    const ws = (seg.match(/^[\t ]*/) as RegExpMatchArray)[0]
-    return ws.replace(/\t/g, OUTLINE_INDENT).length
+
+
+  /** 把面板里的改动同步回导图（旧版走 textarea 解析，现在由富文本 DOM 承担） */
+  function flushOutline() {
+    if (richSyncTimer) {
+      window.clearTimeout(richSyncTimer)
+      richSyncTimer = null
+    }
+    syncRichOutline()
   }
 
-  /** 该行是否已经带列表符（空行不算） */
-  function hasBullet(text: string, pos: number): boolean {
-    const start = text.lastIndexOf("\n", Math.max(0, pos - 1)) + 1
-    const line = text.slice(start)
-    return BULLET_RE.test(line) && line.trim() !== ""
+  /* ---------------- 富文本大纲：缩略图直接嵌在行内 ---------------- */
+  // 每行是一个 contenteditable 的 div：文字 + 行内缩略图。
+  // 这样图片就"长在"对应那一行里，看得见、也能直接点选。
+  const OUTLINE_STEP_FORCE = 380 // 两张图最多缩到这么宽（越小越省地方）
+
+  function renderRichOutline(data: any) {
+    const host = outlineRich as unknown as HTMLElement | null
+    if (!host) return
+    const rows: string[] = []
+    const walk = (node: any, depth: number) => {
+      const topic = String(node?.topic ?? "").replace(/\r?\n/g, " ")
+      const id = String(node?.id ?? "")
+      const img = node?.image
+      const imgHtml =
+        img && typeof img.url === "string" && img.url
+          ? '<img class="mm-oline-img" src="' + img.url + '" alt="" data-node="' + id + '" draggable="false">'
+          : ""
+      const li = (no: number) => 'contenteditable="' + (mode === "edit" ? "true" : "false") + '" spellcheck="false" data-line="' + no + '" data-node="' + id + '"'
+      if (depth === 0) {
+        // 中心主题单占一行
+        rows.push('<div class="mm-oline lv0" ' + li(0) + '><span class="mm-oline-topic">' + topic + "</span>" + imgHtml + "</div>")
+      } else {
+        const pad = (depth - 1) * 14
+        rows.push(
+          '<div class="mm-oline" style="padding-left:' + pad + 'px" ' + li(1) + '><span class="mm-oline-bullet">·</span><span class="mm-oline-topic">' +
+            topic +
+            "</span>" +
+            imgHtml +
+            "</div>",
+        )
+      }
+      ;(node?.children || []).forEach((c: any) => walk(c, depth + 1))
+    }
+    walk(data?.nodeData ?? data, 0)
+    host.innerHTML = rows.join("")
+  }
+
+  /** 点行内缩略图 → 在画布里选中并聚焦对应节点 */
+  function bindOutlineClick() {
+    outlineEl!.addEventListener("click", (e) => {
+      const img = (e.target as HTMLElement | null)?.closest?.(".mm-oline-img") as HTMLElement | null
+      if (!img) return
+      const id = img.dataset.node || ""
+      try {
+        const mindAny = mind as any
+        const tpc = mindAny.findEle?.(id)
+        if (tpc) {
+          mindAny.selectNode?.(tpc)
+          mindAny.scrollIntoView?.(tpc, true)
+        }
+      } catch {
+        /* 忽略 */
+      }
+    })
+  }
+
+  /** 键盘微调：只处理缩进与删除，其余交给浏览器原生编辑 */
+  function onRichOutlineKeyDown(e: KeyboardEvent) {
+    if (mode !== "edit") return
+    const host = outlineRich as unknown as HTMLElement | null
+    if (!host) return
+    const line = currentOutlineLine()
+    if (!line) return
+    if (e.key === "Tab") {
+      e.preventDefault()
+      const pad = Math.max(0, (parseInt(line.style.paddingLeft || "0", 10) || 0) + (e.shiftKey ? -14 : 14))
+      line.style.paddingLeft = pad + "px"
+      if (pad === 0) line.classList.add("lv0")
+      else line.classList.remove("lv0")
+      syncRichOutline()
+      return
+    }
+  }
+
+  /** 光标当前在哪一行（没有就把光标放到第一行） */
+  function currentOutlineLine(): HTMLElement | null {
+    const sel = window.getSelection()
+    if (!sel || !sel.rangeCount) return null
+    let node: Node | null = sel.getRangeAt(0).startContainer
+    while (node && node !== outlineEl) {
+      if (node instanceof HTMLElement && node.classList.contains("mm-oline")) return node
+      node = node.parentNode
+    }
+    return null
+  }
+
+  function focusOutlineLine(el: HTMLElement) {
+    try {
+      const range = document.createRange()
+      range.selectNodeContents(el)
+      range.collapse(false)
+      const sel = window.getSelection()
+      sel?.removeAllRanges()
+      sel?.addRange(range)
+      el.focus()
+    } catch {
+      /* 忽略 */
+    }
   }
 
   /**
-   * 替换选区并把光标放到指定位置，同时抛一次 input 让实时成图生效
-   * （textarea 上用 setRangeText 会保持撤销栈，手动改 value 不会）
+   * 把富文本大纲读回导图数据：层级由 padding-left 决定（每 14px 一级）。
+   * 图片无法从纯文本重建，所以沿用原数据里对应节点的 image（按 data-node 匹配）。
    */
-  function replaceRange(ta: HTMLTextAreaElement, from: number, to: number, text: string, caret: number) {
-    try {
-      ta.setRangeText(text, from, to, "end")
-      ta.selectionStart = ta.selectionEnd = caret
-    } catch {
-      const v = ta.value
-      ta.value = v.slice(0, from) + text + v.slice(to)
-      ta.selectionStart = ta.selectionEnd = from + text.length
+  function readRichOutline() {
+    const host = outlineRich as unknown as HTMLElement | null
+    if (!host) return null
+    const prev = mind.getData() as any
+    const byId = new Map<string, any>()
+    const collect = (n: any) => {
+      if (n?.image) byId.set(String(n.id), n.image)
+      ;(n?.children || []).forEach(collect)
     }
-    ta.dispatchEvent(new Event("input", { bubbles: true }))
-  }
+    collect(prev?.nodeData)
 
-  /** 行尾位置（不含行尾空白） */
-  function lineEnd(text: string, pos: number): number {
-    const nl = text.indexOf("\n", pos)
-    return nl === -1 ? text.length : nl
-  }
-
-  /** 把某行整行改写（保持光标偏移尽量不变） */
-  function rewriteLine(ta: HTMLTextAreaElement, deltaIndent: number) {
-    const text = ta.value
-    const pos = ta.selectionStart
-    const lineStart = text.lastIndexOf("\n", Math.max(0, pos - 1)) + 1
-    const end = lineEnd(text, pos)
-    let line = text.slice(lineStart, end)
-    const bullet = (line.match(/^[\t ]*(?:[·•▪◦]|[-*+]|\d+[.)])\s+/) as RegExpMatchArray | null)?.[0] ?? ""
-    const wsLen = (line.match(/^[\t ]*/) as RegExpMatchArray)[0].replace(/\t/g, OUTLINE_INDENT).length
-    const level = Math.floor(wsLen / 2)
-    const next = Math.max(0, level + deltaIndent)
-    const bodyStart = lineStart + bullet.length
-    const body = line.trim() === "" ? "" : text.slice(bodyStart, end)
-    const prefix = next === 0 ? "" : OUTLINE_INDENT.repeat(next) + OUTLINE_BULLET
-    const caretInBody = Math.max(0, pos - bodyStart)
-    const newLine = prefix + body
-    replaceRange(ta, lineStart, end, newLine, lineStart + Math.min(caretInBody, body.length) + prefix.length)
-  }
-
-  function onOutlineKeyDown(e: KeyboardEvent) {
-    const ta = outlineText
-    if (!ta) return
-    const text = ta.value
-    const pos = ta.selectionStart
-
-    // Tab / Shift+Tab：降级 / 升级
-    if (e.key === "Tab") {
-      e.preventDefault()
-      rewriteLine(ta, e.shiftKey ? -1 : 1)
-      return
-    }
-
-    // Enter：自动补「- 」前缀与同级缩进；在空节点上回车则回到上一级
-    if (e.key === "Enter" && !e.shiftKey && ta.selectionStart === ta.selectionEnd) {
-      e.preventDefault()
-      const lineStart = text.lastIndexOf("\n", Math.max(0, pos - 1)) + 1
-      const end = lineEnd(text, pos)
-      const line = text.slice(lineStart, end)
-      const indent = lineIndent(text, pos)
-      const body = line.replace(/^\s*(?:[-*+]|\d+[.)])\s+/, "").trim()
-
-      if (body === "" && hasBullet(text, pos)) {
-        // 空项目回车 → 清掉列表符并退回上一级（连续两次回车可快速退出列表）
-        const next = Math.max(0, Math.floor(indent / 2) - 1)
-        const prefix = next === 0 ? "" : OUTLINE_INDENT.repeat(next)
-        replaceRange(ta, lineStart, end, prefix, lineStart + prefix.length)
-        return
+    const lines = Array.from(host.querySelectorAll(".mm-oline")) as HTMLElement[]
+    const root: any = { id: "root", topic: "", children: [] }
+    const stack: Array<{ level: number; node: any }> = []
+    let isFirst = true
+    for (const el of lines) {
+      const clone = el.cloneNode(true) as HTMLElement
+      clone.querySelectorAll("img").forEach((im) => im.remove())
+      const topic = (clone.textContent || "").replace(/\s+/g, " ").trim()
+      if (!topic && !el.querySelector("img")) continue
+      const pad = parseInt(el.style.paddingLeft || "0", 10) || 0
+      const level = el.classList.contains("lv0") ? 0 : Math.floor(pad / 14) + 1
+      const id = el.dataset.node || ""
+      const img = id ? byId.get(id) : undefined
+      if (isFirst) {
+        root.topic = topic || "中心主题"
+        root.id = "root"
+        if (img) root.image = img
+        isFirst = false
+        continue
       }
-      const prefix = "\n" + OUTLINE_INDENT.repeat(Math.floor(indent / 2)) + OUTLINE_BULLET
-      replaceRange(ta, pos, pos, prefix, pos + prefix.length)
-      return
+      const node: any = { id: id || nextId(), topic: topic || "新主题", children: [] }
+      if (img) node.image = img
+      while (stack.length > 1 && stack[stack.length - 1].level >= level) stack.pop()
+      const parent = stack.length ? stack[stack.length - 1].node : root
+      parent.children.push(node)
+      stack.push({ level, node })
     }
-
-    // Backspace：光标在「- 」末尾（节点为空）时删掉整段前缀
-    if (e.key === "Backspace" && ta.selectionStart === ta.selectionEnd) {
-      const lineStart = text.lastIndexOf("\n", Math.max(0, pos - 1)) + 1
-      const before = text.slice(lineStart, pos)
-      if (/^[\t ]*(?:[·•▪◦]|[-*+]|\d+[.)])\s+$/.test(before)) {
-        e.preventDefault()
-        replaceRange(ta, lineStart, pos, "", lineStart)
-      }
-    }
+    if (!root.topic) root.topic = "中心主题"
+    if (!root.children.length) root.children.push({ id: nextId(), topic: "分支主题", children: [] })
+    return { nodeData: root }
   }
 
-  /** 输入「·」或「-」后自动补空格，省得手敲分隔符 */
-  function onOutlineInput() {
-    const ta = outlineText
-    if (!ta) return
-    const pos = ta.selectionStart
-    if (pos !== ta.selectionEnd) return
-    const text = ta.value
-    const lineStart = text.lastIndexOf("\n", Math.max(0, pos - 1)) + 1
-    const before = text.slice(lineStart, pos)
-    if (/^[\t ]*[·•▪◦\-*+]$/.test(before)) {
-      replaceRange(ta, pos, pos, " ", pos + 1)
-    }
-  }
-
-  let flushTimer: number | null = null
-  let dirtyOutline = false
-  function applyOutline() {
-    if (!outlineText) return
-    dirtyOutline = false
+  /** 编辑后同步：内容有变化才提交（避免光标一动就重排全图） */
+  let lastOutlineSig = ""
+  function syncRichOutline() {
+    if (mode !== "edit") return
+    const host = outlineRich as unknown as HTMLElement | null
+    if (!host) return
+    const sig = host.textContent || ""
+    if (sig === lastOutlineSig) return
+    lastOutlineSig = sig
     try {
-      mind.refresh(outlineToData(outlineText.value))
+      const next = readRichOutline()
+      if (next) mind.refresh(next as any)
       dirty = true
-      scheduleFit(60) // 内容变了，重新居中
+      updateOutlineImageCount(mind.getData())
     } catch (e: any) {
       setMsg("大纲解析失败：" + (e?.message || e))
     }
-  }
-  function scheduleApply() {
-    dirtyOutline = true
-    if (flushTimer) window.clearTimeout(flushTimer)
-    flushTimer = window.setTimeout(() => applyOutline(), 350)
-  }
-  function flushOutline() {
-    if (flushTimer) { window.clearTimeout(flushTimer); flushTimer = null }
-    if (dirtyOutline) applyOutline()
   }
 
   function buildOutline() {
@@ -1509,55 +1545,38 @@ function boot(el: HTMLElement) {
       '<div class="mm-outline-head">' +
       '<span class="mm-outline-title">大纲<span class="cnt" id="mmOutlineImgCnt"></span></span>' +
       "</div>" +
-      '<div class="mm-outline-images" id="mmOutlineImages" hidden></div>' +
-      '<textarea class="mm-outline-text" spellcheck="false" placeholder="中心主题&#10;· 分支一&#10;  · 子节点&#10;    · 孙节点"></textarea>'
+      '<div class="mm-outline-text rich" contenteditable="false" spellcheck="false"></div>'
     el.appendChild(outlineEl)
-    outlineText = outlineEl.querySelector(".mm-outline-text") as HTMLTextAreaElement
-    outlineText.addEventListener("input", () => {
-      if (mode !== "edit") return // 只读：只看不改
-      onOutlineInput()
-      scheduleApply()
+    outlineRich = outlineEl.querySelector(".mm-outline-text") as HTMLElement | null
+    bindOutlineClick()
+
+    const host = outlineRich
+    if (!host) return
+    host.addEventListener("input", () => {
+      if (mode !== "edit") return
+      scheduleSync()
     })
-    outlineText.addEventListener("keydown", (e) => {
+    host.addEventListener("keydown", (e) => {
       if (mode !== "edit") {
-        // 只读：打断修改类按键，只留滚动与复制
         const mod = e.ctrlKey || e.metaKey
         if (!(mod && (e.key === "c" || e.key === "C" || e.key === "a" || e.key === "A"))) e.preventDefault()
         e.stopPropagation()
         return
       }
-      onOutlineKeyDown(e)
+      onRichOutlineKeyDown(e)
     })
-    outlineText.addEventListener("beforeinput", (e) => {
-      if (mode !== "edit") e.preventDefault()
+    host.addEventListener("blur", () => {
+      if (mode === "edit") syncRichOutline()
     })
-    outlineText.addEventListener("paste", (e) => {
-      if (mode !== "edit") e.preventDefault()
-    })
-    outlineText.addEventListener("cut", (e) => {
-      if (mode !== "edit") e.preventDefault()
-    })
-    outlineText.addEventListener("drop", (e) => {
-      if (mode !== "edit") e.preventDefault()
-    })
-    outlineText.addEventListener("blur", flushOutline)
-    // 点缩略图：选中对应节点（方便直接编辑它）
-    outlineEl.querySelector("#mmOutlineImages")?.addEventListener("click", (e) => {
-      const btn = (e.target as HTMLElement | null)?.closest?.("[data-node]") as HTMLElement | null
-      if (!btn) return
-      const id = btn.dataset.node || ""
-      try {
-        const mindAny = mind as any
-        const tpc = mindAny.findEle?.(id)
-        if (tpc) {
-          mindAny.selectNode?.(tpc)
-          mindAny.scrollIntoView?.(tpc, true)
-          setMsg("已选中该图片所在节点")
-        }
-      } catch {
-        /* 忽略 */
-      }
-    })
+  }
+
+  let richSyncTimer: number | null = null
+  function scheduleSync() {
+    if (richSyncTimer) window.clearTimeout(richSyncTimer)
+    richSyncTimer = window.setTimeout(() => {
+      richSyncTimer = null
+      syncRichOutline()
+    }, 400)
   }
 
   let outlineBtnEl: HTMLButtonElement | null = null
@@ -1571,16 +1590,16 @@ function boot(el: HTMLElement) {
       outlineBtnEl.classList.toggle("active", open)
       outlineBtnEl.title = open ? "关闭大纲（左侧写大纲，右侧实时成图）" : "大纲（左侧写大纲，右侧实时成图）"
     }
-    // 只读时的大纲：可看不可改
-    if (outlineText) outlineText.readOnly = mode !== "edit"
+    // 只读时的大纲：可看不可改（contenteditable 关掉）
+    if (outlineRich) outlineRich.setAttribute("contenteditable", mode === "edit" ? "true" : "false")
     // 导图区让出左侧空间（右侧实时成图）
     canvasHost.classList.toggle("outline-open", open)
     scheduleFit(320) // 可用宽度变了，重新居中并缩放
-    if (open && outlineText) {
+    if (open) {
       const data = mind.getData()
-      outlineText.value = dataToOutline(data)
+      renderRichOutline(data)
+      lastOutlineSig = (outlineRich?.textContent || "")
       updateOutlineImageCount(data)
-      if (mode === "edit") setTimeout(() => outlineText!.focus(), 80)
     }
     try {
       localStorage.setItem("mindmap_outline_open", open ? "1" : "0")
@@ -1610,44 +1629,17 @@ function boot(el: HTMLElement) {
     panel.style.zIndex = "2147483000"
     panel.style.display = panelOpen ? "flex" : "none"
   }
-  /** 大纲标题旁的图片数量 + 缩略图区（点缩略图会选中对应节点） */
+  /** 大纲标题旁的图片数量（缩略图已经直接嵌在行内，这里只报个数） */
   function updateOutlineImageCount(data: any) {
     const elCnt = outlineEl?.querySelector("#mmOutlineImgCnt") as HTMLElement | null
-    const box = outlineEl?.querySelector("#mmOutlineImages") as HTMLElement | null
-    const items: Array<{ id: string; topic: string; url: string; w: number; h: number }> = []
+    if (!elCnt) return
+    let n = 0
     const walk = (node: any) => {
-      const img = node?.image
-      const url = typeof img?.url === "string" ? img.url : ""
-      if (url) {
-        items.push({
-          id: String(node.id ?? ""),
-          topic: String(node.topic ?? "").slice(0, 24),
-          url,
-          w: Number(img.width) || 0,
-          h: Number(img.height) || 0,
-        })
-      }
+      if (node?.image) n++
       ;(node?.children || []).forEach(walk)
     }
     walk(data?.nodeData ?? data)
-    if (elCnt) elCnt.textContent = items.length ? ` · 图片 ${items.length}` : ""
-    if (!box) return
-    if (!items.length) {
-      box.hidden = true
-      box.innerHTML = ""
-      return
-    }
-    box.hidden = false
-    box.innerHTML = items
-      .map(
-        (it) =>
-          '<button type="button" class="mm-oimg" data-node="' + it.id + '" title="' + (it.topic || "节点") + '">' +
-          '<img src="' + it.url + '" alt="" loading="lazy">' +
-          '<span class="t">' + (it.topic || "未命名") + "</span>" +
-          (it.w && it.h ? '<span class="d">' + it.w + "×" + it.h + "</span>" : "") +
-          "</button>",
-      )
-      .join("")
+    elCnt.textContent = n ? ` · 图片 ${n}` : ""
   }
 
   function toggleOutline() {
