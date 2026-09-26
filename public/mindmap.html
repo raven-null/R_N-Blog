@@ -22,9 +22,9 @@
     * { box-sizing: border-box; }
     body { display: block; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "PingFang SC", sans-serif; }
     #mm-root { position: absolute; inset: 0; } /* 绝对定位铺满视口，容器尺寸不依赖 flex 计算 */
-    /* 状态提示：浮在顶部居中的小胶囊（导出按钮已全部移到底部胶囊里） */
+    /* 状态提示：浮在顶部居中的小胶囊（只在有操作结果/错误时出现） */
     .mm-bar {
-      position: absolute; top: 14px; left: 50%; transform: translateX(-50%); z-index: 21;
+      position: absolute; top: 14px; left: 50%; transform: translateX(-50%); z-index: 42;
       display: flex; align-items: center; max-width: 88vw;
     }
     .mm-bar .mm-msg {
@@ -229,8 +229,8 @@
       padding: 10px 12px; border-bottom: 1px solid var(--mm-border);
       font-size: 12.5px; color: var(--mm-dim);
     }
-    .mm-outline-title { font-weight: 600; color: var(--mm-text); }
-    .mm-outline-tip { flex: 1; min-width: 120px; font-size: 11.5px; color: rgba(255, 255, 255, 0.42); }
+    /* 标题占满左侧，按钮靠右；不再放说明文字 */
+    .mm-outline-title { flex: 1; font-weight: 600; color: var(--mm-text); }
     .mm-outline-text {
       flex: 1; width: 100%; box-sizing: border-box; padding: 12px 14px;
       border: 0; outline: none; resize: none; background: transparent; color: var(--mm-text);
@@ -281,8 +281,8 @@
       try { if (window.parent !== window) document.documentElement.dataset.embedded = '1'; } catch (e) { /* 跨域则忽略 */ }
     })();
   </script>
-  <link rel="stylesheet" href="/js/vendor/mindmap/mindmap-editor.v23.css">
-  <script src="/js/vendor/mindmap/mindmap-editor.v23.js"></script>
+  <link rel="stylesheet" href="/js/vendor/mindmap/mindmap-editor.v24.css">
+  <script src="/js/vendor/mindmap/mindmap-editor.v24.js"></script>
   <script>
     // 兜底诊断：bundle 未加载或运行时抛错时给出可见提示，而不是静默无反应
     (function () {
@@ -314,7 +314,7 @@
       window.addEventListener('load', function () {
         if (!window.MindMapMount) {
           show('导图组件未能加载',
-            '脚本 mindmap-editor.v23.js 加载失败（404 / 部署未完成 / 被拦截）。<br>' +
+            '脚本 mindmap-editor.v24.js 加载失败（404 / 部署未完成 / 被拦截）。<br>' +
             '请 Ctrl+F5 强制刷新；若仍失败，检查 Netlify 最近一次部署是否成功。');
         }
       });

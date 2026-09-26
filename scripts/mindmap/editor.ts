@@ -370,14 +370,8 @@ function boot(el: HTMLElement) {
     if (editing) {
       // 切到编辑：工具条这时才显示，大纲图标要补挂一次（库工具条只在 init 时创建）
       mountOutlineButton()
-      if (locked() && !editKey) {
-        // 加密导图：先要口令。可以浏览，但改不了，提示说清楚
-        setMsg("此导图已加密：请先输入编辑口令")
-      } else {
-        setMsg("编辑中：Ctrl + S 保存")
-      }
-    } else {
-      setMsg("已切换到只读浏览")
+      // 只有「加密导图还没给口令」这一种情况需要文字说明，其余不打扰
+      if (locked() && !editKey) setMsg("此导图已加密：请先输入编辑口令")
     }
     // 大纲面板在两种模式下都能看；只读时只是改不了（readOnly 由 setOutlineOpen 按 mode 设置）
     if (outlineEl?.classList.contains("open")) setOutlineOpen(true)
@@ -456,8 +450,7 @@ function boot(el: HTMLElement) {
       scheduleFit(320)
       updateKeyBar()
       mountOutlineButton()
-      if (mode === "edit") setMsg("Ctrl + S 保存")
-      else setMsg("")
+      setMsg("")
     } catch (e: any) {
       setMsg("加载失败：" + (e?.message || e))
     }
@@ -810,7 +803,6 @@ function boot(el: HTMLElement) {
       mind.refresh(outlineToData(outlineText.value))
       dirty = true
       scheduleFit(60) // 内容变了，重新居中
-      setMsg("已按大纲更新导图")
     } catch (e: any) {
       setMsg("大纲解析失败：" + (e?.message || e))
     }
@@ -832,7 +824,6 @@ function boot(el: HTMLElement) {
     outlineEl.innerHTML =
       '<div class="mm-outline-head">' +
       '<span class="mm-outline-title">大纲</span>' +
-      '<span class="mm-outline-tip">回车自动接下一项 · Tab 降级 · Shift+Tab 升级 · 改动实时成图</span>' +
       '<button class="mm-btn" data-act="sync" title="用当前导图内容覆盖大纲">从导图刷新</button>' +
       '<button class="mm-btn" data-act="close">关闭</button>' +
       "</div>" +
@@ -888,11 +879,7 @@ function boot(el: HTMLElement) {
       outlineBtnEl.title = open ? "关闭大纲（左侧写大纲，右侧实时成图）" : "大纲（左侧写大纲，右侧实时成图）"
     }
     // 只读时的大纲：可看不可改
-    if (outlineText) {
-      outlineText.readOnly = mode !== "edit"
-      const tip = outlineEl!.querySelector(".mm-outline-tip") as HTMLElement | null
-      if (tip) tip.textContent = mode === "edit" ? "回车自动接下一项 · Tab 降级 · Shift+Tab 升级 · 改动实时成图" : "只读查看：每行一项，缩进表示层级"
-    }
+    if (outlineText) outlineText.readOnly = mode !== "edit"
     // 导图区让出左侧空间（右侧实时成图）
     canvasHost.classList.toggle("outline-open", open)
     scheduleFit(320) // 可用宽度变了，重新居中并缩放
