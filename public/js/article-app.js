@@ -4,7 +4,7 @@
  */
         // 文章详情页应用
         /* 白板编辑器 bundle 版本：与 scripts/build-excalidraw.mjs 的 BUNDLE_VERSION 保持一致 */
-const EXC_BUNDLE_VERSION = 'v23';
+const EXC_BUNDLE_VERSION = 'v24';
 
 const ArticleApp = {
             // 当前文章数据

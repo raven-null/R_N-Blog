@@ -69,8 +69,6 @@ const UI_CSS = `
 .excalidraw .welcome-screen-center,
 .excalidraw .welcome-screen-decor{display:none!important}
 @keyframes exc-modal-in{from{opacity:0;transform:scale(.96) translateY(8px)}to{opacity:1;transform:none}}
-.exc-msg{display:flex;align-items:center;gap:8px;margin:8px 14px 10px;padding:7px 14px;border-radius:14px;font-size:12.5px;line-height:1.5;color:#d4d7e2;background:linear-gradient(145deg,rgba(30,30,36,.72),rgba(24,24,30,.6));backdrop-filter:blur(20px) saturate(160%);-webkit-backdrop-filter:blur(20px) saturate(160%);border:1px solid rgba(255,255,255,.1);box-shadow:inset 0 1px 0 rgba(255,255,255,.07);animation:exc-msg-in .35s cubic-bezier(.22,1,.36,1)}
-.exc-msg .dot{width:6px;height:6px;border-radius:50%;flex:none;background:#5ac8fa;box-shadow:0 0 10px rgba(90,200,250,.9)}
 /* bare 模式（前台画布舞台就地编辑）：极简口令浮条 */
 .exc-bare-key{position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:8;display:flex;align-items:center;gap:8px;padding:6px 8px 6px 14px;border-radius:999px;background:linear-gradient(145deg,rgba(28,28,34,.86),rgba(18,18,24,.8));backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%);border:1px solid rgba(255,255,255,.13);box-shadow:0 10px 30px -8px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.09)}
 .exc-bare-key svg{width:13px;height:13px;flex:none;color:#9aa0ff}
@@ -82,8 +80,7 @@ const UI_CSS = `
 .exc-ph-sub{font-size:13px;color:rgba(255,255,255,.45);line-height:1.8;max-width:400px}
 .exc-spinner{width:22px;height:22px;border-radius:50%;border:2px solid rgba(255,255,255,.14);border-top-color:rgba(255,255,255,.75);animation:exc-spin .8s linear infinite}
 @keyframes exc-spin{to{transform:rotate(360deg)}}
-@keyframes exc-msg-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
-@media (prefers-reduced-motion:reduce){.exc-btn{transition:none}.exc-msg{animation:none}}
+@media (prefers-reduced-motion:reduce){.exc-btn{transition:none}}
 `
 function ensureUiStyles() {
   if (document.getElementById("excalidraw-ui-css")) return
@@ -1137,12 +1134,10 @@ function NoteApp({
           }
         />
       </div>
-      {msg && (
-        <div className="exc-msg">
-          <span className="dot" />
-          <span>{msg}</span>
-        </div>
-      )}
+      {/* 状态提示：顶部居中胶囊浮条（与导图一致），没有文案时自动隐藏 */}
+      <div className={"mm-bar" + (msg ? " show" : "")}>
+        <span className="mm-msg">{msg}</span>
+      </div>
       {pubOpen && (
         <div className="exc-mask" onClick={() => setPubOpen(false)}>
           <div className="exc-modal" onClick={e => e.stopPropagation()}>
