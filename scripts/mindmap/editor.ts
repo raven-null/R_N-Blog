@@ -13,6 +13,56 @@
  */
 import MindElixir, { DARK_THEME } from "mind-elixir"
 
+/* ============ 行内样式标记：**加粗** ==高亮== ~~删除线~~ __下划线__ ============ */
+const escapeHtml = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+
+type InlineSeg = { text: string; mark: string }
+
+/** 把一行文字按标记切成片段；没闭合的标记按普通文字处理 */
+function scanInline(text: string): InlineSeg[] {
+  const out: InlineSeg[] = []
+  const marks = ["**", "==", "~~", "__"]
+  let buf = ""
+  let i = 0
+  while (i < text.length) {
+    const mk = marks.find((m) => text.startsWith(m, i))
+    if (mk) {
+      const end = text.indexOf(mk, i + mk.length)
+      const inner = end >= 0 ? text.slice(i + mk.length, end) : ""
+      if (end > i + mk.length && !inner.includes("\n")) {
+        if (buf) {
+          out.push({ text: buf, mark: "" })
+          buf = ""
+        }
+        out.push({ text: inner, mark: mk })
+        i = end + mk.length
+        continue
+      }
+    }
+    buf += text[i]
+    i++
+  }
+  if (buf) out.push({ text: buf, mark: "" })
+  return out
+}
+
+const MARK_CLASS: Record<string, string> = {
+  "**": "mm-b",
+  "==": "mm-mark",
+  "~~": "mm-del",
+  "__": "mm-u",
+}
+
+/** 标记文本 → HTML（换行转 <br>）；大纲与画布共用 */
+function renderInline(text: string): string {
+  return scanInline(text)
+    .map((seg) => {
+      const html = escapeHtml(seg.text).replace(/\n/g, "<br>")
+      return seg.mark ? '<span class="' + MARK_CLASS[seg.mark] + '">' + html + "</span>" : html
+    })
+    .join("")
+}
+
 /** 右键菜单/工具栏文案（取自库自带 dist/i18n.js 的 zh_CN；该文件未在 package exports 中，无法直接 import） */
 const zhCN = {
   addChild: "插入子节点",
@@ -100,6 +150,9 @@ function boot(el: HTMLElement) {
       ],
     } as any,
     toolBar: { locale: zhCN } as any,
+    // 画布节点也按样式渲染（库用 textContent 时只会显示 **加粗** 这类原始标记）。
+    // 库在 init / 编辑结束 / 摘要等处都会调它，正好复用大纲那一套渲染。
+    markdown: (topic: string) => renderInline(String(topic ?? "")),
     keypress: true,
     theme,
     overflowHidden: false,
@@ -1721,61 +1774,7 @@ function boot(el: HTMLElement) {
       .join("")
   }
 
-  /* ---------------- 行内样式标记：**加粗** ==高亮== ~~删除线~~ __下划线__ ---------------- */
-  const escapeHtml = (s: string) =>
-    s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-
-  type InlineSeg = { text: string; mark: string }
-
-  /** 把一行文字按标记切成片段；没闭合的标记按普通文字处理 */
-  function scanInline(text: string): InlineSeg[] {
-    const out: InlineSeg[] = []
-    const marks = ["**", "==", "~~", "__"]
-    let buf = ""
-    let i = 0
-    while (i < text.length) {
-      const mk = marks.find((m) => text.startsWith(m, i))
-      if (mk) {
-        const end = text.indexOf(mk, i + mk.length)
-        const inner = end >= 0 ? text.slice(i + mk.length, end) : ""
-        if (end > i + mk.length && !inner.includes("\n")) {
-          if (buf) {
-            out.push({ text: buf, mark: "" })
-            buf = ""
-          }
-          out.push({ text: inner, mark: mk })
-          i = end + mk.length
-          continue
-        }
-      }
-      buf += text[i]
-      i++
-    }
-    if (buf) out.push({ text: buf, mark: "" })
-    return out
-  }
-
-  const MARK_CLASS: Record<string, string> = {
-    "**": "mm-b",
-    "==": "mm-mark",
-    "~~": "mm-del",
-    "__": "mm-u",
-  }
-
-  /** 标记文本 → HTML（<br> 表示换行） */
-  function renderInline(text: string): string {
-    return scanInline(text)
-      .map((seg) => {
-        const html = escapeHtml(seg.text).replace(/\n/g, "<br>")
-        return seg.mark ? '<span class="' + MARK_CLASS[seg.mark] + '">' + html + "</span>" : html
-      })
-      .join("")
-  }
-
-  /** 反过来：把打字时带标记的纯文本显示出来（让标记本身可见） */
-  function plainInline(text: string): string {
-    return escapeHtml(text).replace(/\n/g, "<br>")
-  }
+  /* ---------------- 行内样式标记（工具函数见文件顶部） ---------------- */
 
   /** 从行的 DOM 里读回文字：把样式 span 还原成标记，<br> 还原成换行 */
   function readTopic(root: HTMLElement): string {
