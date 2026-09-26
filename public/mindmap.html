@@ -241,6 +241,25 @@
     /* 「·」与后面文字的间距（用户要求：拉开一点） */
     .mm-oline-bullet { color: var(--mm-accent); flex: none; opacity: 0.75; margin-right: 10px; }
 
+    /* 专注模式提示条（库的「专注」会把画布限制在一个分支里，容易让人以为节点没了） */
+    .mm-focusbar {
+      position: fixed; left: 50%; transform: translateX(-50%) translateY(-8px);
+      top: 54px; z-index: 2147483020; display: none; align-items: center; gap: 12px;
+      padding: 8px 12px; border-radius: 999px;
+      background: rgba(20, 20, 26, 0.92); border: 1px solid rgba(255, 255, 255, 0.14);
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.42);
+      backdrop-filter: blur(16px) saturate(160%); -webkit-backdrop-filter: blur(16px) saturate(160%);
+      font-size: 12.5px; color: var(--mm-text); opacity: 0;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+    }
+    .mm-focusbar.show { display: flex; opacity: 1; transform: translateX(-50%) translateY(0); }
+    .mm-focusbar .txt { color: var(--mm-dim); }
+    .mm-focusbar button {
+      padding: 5px 12px; border-radius: 999px; cursor: pointer; font-family: inherit; font-size: 12.5px;
+      background: rgba(255, 255, 255, 0.92); border: 0; color: #16161a; font-weight: 600;
+    }
+    .mm-focusbar button:hover { background: #fff; }
+
     /* 行内样式标记：**加粗** ==高亮== ~~删除线~~ __下划线__ */
     .mm-oline .mm-b { font-weight: 700; color: #fff; }
     .mm-oline .mm-mark {
@@ -416,8 +435,8 @@
       try { if (window.parent !== window) document.documentElement.dataset.embedded = '1'; } catch (e) { /* 跨域则忽略 */ }
     })();
   </script>
-  <link rel="stylesheet" href="/js/vendor/mindmap/mindmap-editor.v94.css">
-  <script src="/js/vendor/mindmap/mindmap-editor.v94.js"></script>
+  <link rel="stylesheet" href="/js/vendor/mindmap/mindmap-editor.v95.css">
+  <script src="/js/vendor/mindmap/mindmap-editor.v95.js"></script>
   <script>
     // 兜底诊断：bundle 未加载或运行时抛错时给出可见提示，而不是静默无反应
     (function () {
@@ -449,7 +468,7 @@
       window.addEventListener('load', function () {
         if (!window.MindMapMount) {
           show('导图组件未能加载',
-            '脚本 mindmap-editor.v94.js 加载失败（404 / 部署未完成 / 被拦截）。<br>' +
+            '脚本 mindmap-editor.v95.js 加载失败（404 / 部署未完成 / 被拦截）。<br>' +
             '请 Ctrl+F5 强制刷新；若仍失败，检查 Netlify 最近一次部署是否成功。');
         }
       });

@@ -3205,12 +3205,73 @@ function boot(el: HTMLElement) {
   ;(mind as any).pasteHandler = onPaste
   el.addEventListener("paste", (e) => onPaste(e as ClipboardEvent), true)
 
+  /* ---------------- 专注模式：只在画布上盯着一个分支看 ---------------- */
+  let focusBarEl: HTMLElement | null = null
+
+  function hideFocusBar() {
+    focusBarEl?.classList.remove("show")
+  }
+
+  function showFocusBar() {
+    if (!focusBarEl) {
+      const wrap = document.createElement("div")
+      wrap.className = "mm-focusbar"
+      wrap.innerHTML =
+        '<span class="txt">专注模式：画布上只显示这一个分支</span>' +
+        '<button type="button">退出专注</button>'
+      wrap.addEventListener("click", (e) => {
+        if (!(e.target as HTMLElement | null)?.closest?.("button")) return
+        e.preventDefault()
+        e.stopPropagation()
+        exitFocus()
+      })
+      document.body.appendChild(wrap)
+      focusBarEl = wrap
+    }
+    focusBarEl.classList.add("show")
+  }
+
+  /** 退出专注：先拿完整数据再取消，避免取消后拿到的是子树 */
+  function exitFocus() {
+    try {
+      const full = (mind as any).getData?.()
+      ;(mind as any).cancelFocus?.()
+      // cancelFocus 内部会 refresh 一次完整数据；这里不额外写回，免得盖掉它自己的恢复
+      void full
+    } catch {
+      /* 忽略 */
+    }
+    hideFocusBar()
+    setMsg("已退出专注")
+  }
+
   /*
    * 点带图片的节点开始改文字时，库会执行 `e.style.opacity = "0"` 把整个节点内容
    * （图片也在一起）隐藏掉，所以看起来像「一点图片就没了」。
    * 这里在 beginEdit 之后把节点内容恢复成半透明：图片留着当参照，编辑框照常压在上面，
    * 输入的文字依然清晰可读。编辑结束时库自己会把透明度恢复成 1。
    */
+  // 专注模式没有事件可用（库只在 focusNode/cancelFocus 里改 isFocusMode），
+  // 所以盯画布的 DOM：进/出专注都会重排，变化后同步一次提示条。
+  try {
+    let focusCheckTimer: number | null = null
+    const syncFocusBar = () => {
+      if (focusCheckTimer !== null) window.clearTimeout(focusCheckTimer)
+      focusCheckTimer = window.setTimeout(() => {
+        focusCheckTimer = null
+        try {
+          if ((mind as any).isFocusMode) showFocusBar()
+          else hideFocusBar()
+        } catch {
+          /* 忽略 */
+        }
+      }, 260)
+    }
+    new MutationObserver(syncFocusBar).observe(canvasHost, { childList: true, subtree: true })
+  } catch {
+    /* 忽略 */
+  }
+
   try {
     ;(mind as any).bus?.addListener?.("operation", (ev: any) => {
       if (ev?.name === "finishEdit") {
