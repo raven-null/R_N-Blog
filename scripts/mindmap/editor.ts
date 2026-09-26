@@ -3237,6 +3237,75 @@ function boot(el: HTMLElement) {
   ;(mind as any).pasteHandler = onPaste
   el.addEventListener("paste", (e) => onPaste(e as ClipboardEvent), true)
 
+  /* ---------------- 按住 Ctrl 拖动鼠标缩放 ---------------- */
+  try {
+    let zooming = false
+    let zStartX = 0
+    let zStartY = 0
+    let zStartScale = 0
+
+    // 按下先只记位置：真正开始缩放要等拖动超过阈值。
+    // 这样「是按住了 Ctrl 但只是点一下」不会把缩放误触发（也不拦事件）。
+    const onZoomDown = (e: MouseEvent) => {
+      if (!e.ctrlKey && !e.metaKey) return
+      if (e.button !== 0) return
+      zooming = false
+      zStartX = e.clientX
+      zStartY = e.clientY
+      zStartScale = Number((mind as any).scaleVal) || 1
+      canvasHost.classList.add("mm-zoom-pending")
+    }
+
+    canvasHost.addEventListener("mousedown", onZoomDown, true)
+
+    window.addEventListener(
+      "mousemove",
+      (e) => {
+        if (!zStartScale) return
+        const dx = e.clientX - zStartX
+        const dy = e.clientY - zStartY
+        if (!zooming) {
+          if (Math.abs(dx) + Math.abs(dy) < 6) return
+          zooming = true
+          canvasHost.classList.add("mm-zooming")
+          canvasHost.classList.remove("mm-zoom-pending")
+        }
+        e.preventDefault()
+        e.stopPropagation()
+        // 横向 260px 约等于缩放一倍；纵向拖动做少量微调（更好控制）
+        const delta = dx / 260 + dy / 900
+        const next = Math.max(0.2, Math.min(2.2, zStartScale * (1 + delta)))
+        try {
+          ;(mind as any).scale?.(next, { x: zStartX, y: zStartY })
+        } catch {
+          /* 忽略 */
+        }
+      },
+      true,
+    )
+
+    window.addEventListener(
+      "mouseup",
+      () => {
+        zooming = false
+        zStartScale = 0
+        canvasHost.classList.remove("mm-zooming", "mm-zoom-pending")
+      },
+      true,
+    )
+
+    // 按住 Ctrl 时给个「可缩放」的光标提示
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Control" || e.key === "Meta") canvasHost.classList.add("mm-zoom-ready")
+    })
+    document.addEventListener("keyup", (e) => {
+      if (e.key === "Control" || e.key === "Meta") canvasHost.classList.remove("mm-zoom-ready")
+    })
+    window.addEventListener("blur", () => canvasHost.classList.remove("mm-zoom-ready", "mm-zooming"))
+  } catch {
+    /* 忽略：缩放只是便利功能，不行也不影响别的 */
+  }
+
   /* ---------------- 选区工具栏：选中文字后浮出来套样式 ---------------- */
   let fmtBarEl: HTMLElement | null = null
   const FMT_BTNS: Array<{ mark: string; label: string; title: string }> = [
