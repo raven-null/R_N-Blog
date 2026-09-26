@@ -880,10 +880,11 @@
                             <button class="art-chip" onclick="setArtStatus('draft')">草稿 <span class="cnt" id="artCntDraft"></span></button>
                         </div>
                         <div class="art-seg" id="artTypeSeg">
-                            <button class="art-chip active" onclick="setArtType('all')">全部类型</button>
-                            <button class="art-chip" onclick="setArtType('article')">文章</button>
-                            <button class="art-chip" onclick="setArtType('whiteboard')">白板</button>
-                            <button class="art-chip" onclick="setArtType('card')">随记</button>
+                            <button class="art-chip active" data-type="all" onclick="setArtType('all')">全部类型</button>
+                            <button class="art-chip" data-type="article" onclick="setArtType('article')">文章</button>
+                            <button class="art-chip" data-type="whiteboard" onclick="setArtType('whiteboard')">白板</button>
+                            <button class="art-chip" data-type="card" onclick="setArtType('card')">随记</button>
+                            <button class="art-chip" data-type="mindmap" onclick="setArtType('mindmap')">导图</button>
                         </div>
                         <div class="art-search">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
@@ -1644,7 +1645,7 @@ body.admin-write-full .admin-actions.mobile-float{display:none}
     </div>
 
         <script src="js/tag-picker.js?v=1.0.0"></script>
-        <script src="js/admin-app.js?v=1.8.4"></script>
+        <script src="js/admin-app.js?v=1.8.5"></script>
 
     <!-- 前台预览抽屉（iframe 内嵌，零跳出） -->
     <style>
