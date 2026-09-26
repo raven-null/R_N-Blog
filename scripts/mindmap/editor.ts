@@ -110,28 +110,10 @@ function boot(el: HTMLElement) {
   const msgEl = document.createElement("span")
   msgEl.className = "mm-msg"
   bar.appendChild(msgEl)
-
-  const btn = (text: string, cls: string, onClick: () => void) => {
-    const b = document.createElement("button")
-    b.className = "mm-btn" + (cls ? " " + cls : "")
-    b.textContent = text
-    b.addEventListener("click", onClick)
-    bar.appendChild(b)
-    return b
-  }
-
-  if (mode === "edit") {
-    // 保存按钮已移除：保存走 Ctrl+S、后台编辑页的「保存」按钮（宿主调用 __mindmapSave）与发布时的自动保存
-    btn("导出 PNG", "", () => void exportImage("png"))
-    btn("导出 SVG", "", () => void exportImage("svg"))
-    btn("导出 JSON", "", () => exportJson())
-  } else {
-    btn("导出 PNG", "", () => void exportImage("png"))
-    btn("导出 JSON", "", () => exportJson())
-  }
+  // 状态提示（保存结果 / 大纲变化）放在顶部，导出按钮已全部移入底部胶囊
   el.appendChild(bar)
 
-  /* ---------- 底部居中胶囊：返回 / 编辑 · 完成 / 留言 / 信息 ---------- */
+  /* ---------- 底部居中胶囊：返回 / 导出 / 编辑 · 完成 / 留言 / 信息 / 口令 ---------- */
   const capsule = document.createElement("div")
   capsule.className = "mm-capsule"
   const capBtn = (cls: string, title: string, svg: string, text: string, onClick: () => void) => {
@@ -145,14 +127,24 @@ function boot(el: HTMLElement) {
     return b
   }
   const ICON_BACK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m3 10.5 9-7.5 9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>'
+  const ICON_DL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 20h16"/></svg>'
   const ICON_EDIT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>'
   const ICON_DONE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>'
   const ICON_COMMENT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>'
   const ICON_INFO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="8" r=".4" fill="currentColor"/></svg>'
   const ICON_KEY = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10.5" width="16" height="10" rx="2.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg>'
 
-  // 前台文章页嵌入时才有「返回博客」；后台编辑页嵌入时只保留信息
-  if (embedded && !gallery) capBtn("", "返回博客首页", ICON_BACK, "返回", () => tell("back"))
+  // 返回博客：文章页嵌入时通知父页面，独立打开（含后台新窗口预览）就退回首页
+  if (!gallery) {
+    capBtn("", "返回博客首页", ICON_BACK, "返回", () => {
+      if (embedded) tell("back")
+      else location.href = "/"
+    })
+  }
+  // 导出：原右下角浮条整体收进胶囊
+  capBtn("", "导出为 PNG 图片", ICON_DL, "PNG", () => void exportImage("png"))
+  if (mode === "edit") capBtn("", "导出为 SVG 矢量图", ICON_DL, "SVG", () => void exportImage("svg"))
+  capBtn("", "导出为 JSON 数据", ICON_DL, "JSON", () => exportJson())
   capBtn("bb-view-only", "在当前位置编辑这张导图", ICON_EDIT, "编辑", () => setMode("edit"))
   capBtn("bb-edit-only", "退出编辑，回到只读浏览", ICON_DONE, "完成", () => setMode("view"))
   // 只有「这张导图真的设了口令」才显形，所以单独持有引用
