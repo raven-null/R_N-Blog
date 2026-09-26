@@ -689,7 +689,9 @@ function boot(el: HTMLElement) {
     }
 
     if (inOutlineRow) {
-      const rowId = currentRow()?.dataset.node || ""
+      const curRow = currentRow()
+      settlePendingRowText(curRow) // 先把这一行的文字落进数据，保证按 id 找得到节点
+      const rowId = curRow?.dataset.node || ""
       if (!rowId) {
         setMsg("没定位到大纲这一行的节点：把光标放到某一行内容上再粘贴")
         return
@@ -2713,6 +2715,51 @@ function boot(el: HTMLElement) {
     console.log("[mm] 折叠诊断", out)
     return out
   }
+  // 图片专项诊断：控制台执行 __mmImgDiag()
+  ;(window as any).__mmImgDiag = () => {
+    const data = mind.getData() as any
+    const nodes: any[] = []
+    const walk = (n: any, lv: number) => {
+      if (!n) return
+      if (n.image) {
+        const u = String(n.image.url || "")
+        nodes.push({
+          层级: lv,
+          id: n.id,
+          主题: String(n.topic || "").slice(0, 18),
+          图片地址: u.slice(0, 64),
+          地址类型: u.startsWith("blob:") ? "blob(未上传)" : u.startsWith("data:") ? "data" : u.startsWith("img-") ? "fid(需解析)" : u.startsWith("/") ? "路径" : "其它",
+          尺寸: (n.image.width || 0) + "x" + (n.image.height || 0),
+        })
+      }
+      ;(n.children || []).forEach((c: any) => walk(c, lv + 1))
+    }
+    walk(data?.nodeData, 0)
+    const imgs = Array.from(document.querySelectorAll(".mm-outline-tree .mm-oline-img")) as HTMLImageElement[]
+    const out = {
+      数据里有图的节点数: nodes.length,
+      节点明细: nodes,
+      大纲行数: document.querySelectorAll(".mm-outline-tree .mm-oline").length,
+      行内缩略图个数: imgs.length,
+      缩略图明细: imgs.map((im) => {
+        const r = im.getBoundingClientRect()
+        const cs = getComputedStyle(im)
+        return {
+          src: (im.getAttribute("src") || "").slice(0, 48),
+          已加载: im.complete && im.naturalWidth > 0,
+          原始尺寸: im.naturalWidth + "x" + im.naturalHeight,
+          显示尺寸: Math.round(r.width) + "x" + Math.round(r.height),
+          在视口内: r.top < window.innerHeight && r.bottom > 0,
+          样式: cs.display + "/" + cs.visibility + "/opacity" + cs.opacity,
+        }
+      }),
+      大纲面板是否打开: panelOpen,
+      当前模式: mode,
+    }
+    console.log("[mm] 图片诊断", out)
+    return out
+  }
+
   // 直接跑一次折叠（不经过点击），用来区分「点击没生效」还是「折叠本身没生效」
   ;(window as any).__mmFoldTest = () => {
     const tri = document.querySelector(".mm-outline-tree .mm-tri:not(.empty)") as HTMLElement | null

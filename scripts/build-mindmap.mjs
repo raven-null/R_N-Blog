@@ -15,7 +15,7 @@ import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..")
-const BUNDLE_VERSION = "v86" // bundle 内容变更时递增
+const BUNDLE_VERSION = "v87" // bundle 内容变更时递增
 
 const vendorDir = join(root, "public/js/vendor/mindmap")
 mkdirSync(vendorDir, { recursive: true })
