@@ -168,6 +168,7 @@ function boot(el: HTMLElement) {
         meta = null
         loadedRev = 0
         mind.init(emptyData())
+        scheduleFit(200)
         if (mode === "edit") {
           setMsg(isAdmin() ? "新导图：直接编辑并保存即可创建" : "新导图：仅管理员可创建（请先登录后台）")
         }
@@ -176,13 +177,9 @@ function boot(el: HTMLElement) {
       meta = d.meta || null
       loadedRev = meta?.rev ?? null
       mind.init(d.data || emptyData())
-      // 只读模式：居中并适配缩放
-      try {
-        mind.toCenter()
-        if (mode === "view") mind.scaleFit()
-      } catch {
-        /* 忽略 */
-      }
+      // 加载完成后自适应铺满可视区（只读与编辑模式都适用）
+      fitView()
+      scheduleFit(320)
       updateKeyBar()
       setMsg("")
     } catch (e: any) {
@@ -273,6 +270,23 @@ function boot(el: HTMLElement) {
     setTimeout(() => URL.revokeObjectURL(a.href), 4000)
   }
 
+  /* ---------------- 视野适配：内容自适应铺满可视区 ---------------- */
+  // 内容较小时导图会缩在中间显得"没铺满"，这里在关键时机自动居中并缩放到合适大小
+  function fitView() {
+    try {
+      ;(mind as any).toCenter()
+      ;(mind as any).scaleFit()
+    } catch {
+      /* 忽略 */
+    }
+  }
+  let fitTimer: number | null = null
+  function scheduleFit(delay = 260) {
+    if (fitTimer) window.clearTimeout(fitTimer)
+    fitTimer = window.setTimeout(fitView, delay)
+  }
+  window.addEventListener("resize", () => scheduleFit(200))
+
   /* ---------------- 大纲面板：左写大纲、右实时成图 ---------------- */
   // 面板默认关闭；打开时导图区让出宽度，右侧实时刷新
   let panelOpen = false
@@ -341,6 +355,11 @@ function boot(el: HTMLElement) {
     try {
       mind.refresh(outlineToData(outlineText.value))
       dirty = true
+      try {
+        ;(mind as any).toCenter()
+      } catch {
+        /* 忽略 */
+      }
       setMsg("已按大纲更新导图")
     } catch (e: any) {
       setMsg("大纲解析失败：" + (e?.message || e))
@@ -389,6 +408,7 @@ function boot(el: HTMLElement) {
     outlineEl!.classList.toggle("open", open)
     // 导图区让出左侧空间（右侧实时成图）
     canvasHost.style.left = open ? "min(380px, 86vw)" : "0"
+    scheduleFit(320) // 可用宽度变了，重新居中并缩放
     if (open && outlineText) {
       outlineText.value = dataToOutline(mind.getData())
       setTimeout(() => outlineText!.focus(), 80)
