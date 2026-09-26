@@ -37,6 +37,7 @@ interface ArticleMeta {
   chunked?: boolean // 长文章已分章存储（主记录不存全文）
   chunkCount?: number // 分章数量
   boardId?: string // type=whiteboard 时关联的 Excalidraw 笔记 id
+  mapId?: string // type=mindmap 时关联的思维导图 id
 }
 
 // ===================== 认证 =====================
@@ -274,17 +275,20 @@ export default async (req: Request) => {
       const now = new Date().toISOString().slice(0, 10)
 
       // 内容形态：article（默认）/ whiteboard（纯白板）/ card（卡片笔记，预留）
-      const validTypes = ["article", "whiteboard", "card"]
+      const validTypes = ["article", "whiteboard", "card", "mindmap"]
       const type = validTypes.includes(body.type) ? body.type : "article"
       const boardId = type === "whiteboard" && typeof body.boardId === "string"
         ? body.boardId.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 64)
+        : ""
+      const mapId = type === "mindmap" && typeof body.mapId === "string"
+        ? body.mapId.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 64)
         : ""
 
       // 标签完全按传入内容保存，不再自动附加「随记」等固定标签
       const tagsArr = Array.isArray(tags) ? tags : (tags || "").split(",").map((t: string) => t.trim()).filter(Boolean)
 
       // 提取摘要（有内容时自动提取，否则用传入的 excerpt）
-      const noExcerpt = type === "card" || type === "whiteboard" // 随记与白板没有摘要
+      const noExcerpt = type === "card" || type === "whiteboard" || type === "mindmap" // 随记、白板、导图没有摘要
       const autoExcerpt = (!noExcerpt && content)
         ? content.replace(/#+\s+/g, "").replace(/\*\*(.*?)\*\*/g, "$1").replace(/\*(.*?)\*/g, "$1").replace(/\[([^\]]+)\]\([^)]+\)/g, "$1").replace(/!\[([^\]]*)\]\([^)]+\)/g, "").replace(/`([^`]+)`/g, "$1").replace(/\n/g, " ").trim().slice(0, 150)
         : ""
@@ -306,6 +310,7 @@ export default async (req: Request) => {
         status: status || "published",
         type,
         boardId,
+        mapId,
         createdAt: now,
         updatedAt: now,
       }

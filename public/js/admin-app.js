@@ -519,7 +519,7 @@
 
         // ===== 形态切换（文章/随记/白板）：顶部 tab + 右侧操作组 + 视图动画 =====
         let writeMode='article';
-        const WRITE_VIEWS={article:{view:'view-article',group:'rightGroupArticle'},note:{view:'view-note',group:'rightGroupNote'},board:{view:'view-board',group:'rightGroupBoard'}};
+        const WRITE_VIEWS={article:{view:'view-article',group:'rightGroupArticle'},note:{view:'view-note',group:'rightGroupNote'},board:{view:'view-board',group:'rightGroupBoard'},mindmap:{view:'view-mindmap',group:'rightGroupMindmap'}};
         let writeSwitchTimer=null;
         function setWriteMode(mode){
             writeMode=mode;
@@ -550,6 +550,11 @@
                 const host=document.getElementById('wbBoardHost');
                 if(!currentBoardId)wbNew(true);                        // 没有画板：直接给一块空白画布
                 else if(host&&!host.querySelector('iframe.wb-frame'))wbMount(currentBoardId); // 有画板但未挂载：恢复
+            }
+            else if(mode==='mindmap'){
+                const host=document.getElementById('mmMapHost');
+                if(!currentMapId)mmNew(true);                          // 没有导图：直接给一块空白导图
+                else if(host&&!host.querySelector('iframe.wb-frame'))mmMount(currentMapId); // 有导图未挂载：恢复
             }
         }
         function fitEditor(){
@@ -686,6 +691,170 @@
                     return await boardMetaSet({editKey:v},'口令已设置');
                 }
             });
+        }
+
+        // ===== 思维导图（写文章页导图形态；与白板同一套交互，接口换成 /api/mindmap）=====
+        let currentMapId='';
+        let currentMapArticleId=''; // 已发布过的导图文章 id
+        let currentMapName='';
+        let mapMeta=null;
+
+        function mmApi(q, opts){
+            opts=opts||{};
+            return fetch('/api/mindmap?'+q, {
+                method:opts.method||'GET',
+                headers:{'Content-Type':'application/json','X-Admin-Key':adminKey},
+                body:opts.body,
+                cache:'no-store'
+            }).then(function(r){return r.json()});
+        }
+        function mmSaver(){
+            const f=document.querySelector('#mmMapHost iframe.wb-frame');
+            try{
+                const w=f&&f.contentWindow;
+                if(w&&typeof w.__mindmapSave==='function')return w.__mindmapSave;
+            }catch(e){}
+            return null;
+        }
+        function syncMapPermBtns(){
+            const e=document.getElementById('mmEditToggleBtn');
+            const k=document.getElementById('mmSetKeyBtn');
+            if(e)e.textContent=(mapMeta&&mapMeta.editable===0)?'开放编辑':'设为只读';
+            if(k)k.textContent=(mapMeta&&mapMeta.hasKey)?'重设口令':'设口令';
+        }
+        async function loadMapMeta(){
+            if(!currentMapId){mapMeta=null;syncMapPermBtns();return}
+            try{
+                const d=await mmApi('id='+encodeURIComponent(currentMapId)+'&metaOnly=1');
+                mapMeta=(d&&d.status==='success')?d.meta:null;
+            }catch(e){mapMeta=null}
+            syncMapPermBtns();
+        }
+        async function mapMetaSet(body,okMsg){
+            if(!currentMapId){showToast('请先点「新建导图」','error');return false}
+            const d=await mmApi('action=meta&id='+encodeURIComponent(currentMapId),{method:'POST',body:JSON.stringify(body)});
+            if(!d||d.status!=='success'){showToast((d&&d.message)||'操作失败','error');return false}
+            if(okMsg)showToast(okMsg,'success');
+            await loadMapMeta();
+            return true;
+        }
+        function mmMount(id){
+            const host=document.getElementById('mmMapHost');
+            if(!host)return;
+            const mid=(id||currentMapId||'').trim();
+            if(!/^[A-Za-z0-9_-]{1,64}$/.test(mid)){
+                host.innerHTML='<div class="wb-hint">点「新建导图」开始，或在文章管理里打开已有导图</div>';
+                return;
+            }
+            currentMapId=mid;
+            host.innerHTML='<iframe class="wb-frame" title="导图编辑器" src="/mindmap.html?note='+encodeURIComponent(mid)+'&edit=1"></iframe>';
+            loadMapMeta();
+        }
+        function mmReset(){
+            const host=document.getElementById('mmMapHost');
+            if(host)host.innerHTML='';
+            currentMapId='';
+            currentMapArticleId='';
+            currentMapName='';
+            mapMeta=null;
+            syncMapPermBtns();
+            if(host)host.innerHTML='<div class="wb-hint">点「新建导图」开始，或在文章管理里打开已有导图</div>';
+        }
+        function mmNew(silent){
+            currentMapId='mm-'+Math.random().toString(36).slice(2,10);
+            currentMapArticleId='';
+            currentMapName='';
+            mmMount(currentMapId);
+            if(!silent)showToast('新导图已创建：直接编辑，点「发布」保存并发布','success');
+        }
+        async function mmSave(){
+            const saver=mmSaver();
+            if(!saver){showToast('导图编辑器还在加载，请稍候','error');return}
+            const ok=await saver();
+            showToast(ok?'导图已保存':'导图保存未完成（口令/网络？）',ok?'success':'error');
+        }
+        async function mmToggleEditable(){
+            if(!currentMapId){showToast('请先点「新建导图」','error');return}
+            await loadMapMeta();
+            const isReadOnly=!!(mapMeta&&mapMeta.editable===0);
+            const word=isReadOnly?'开放编辑':'设为只读';
+            const ok=await showConfirm(isReadOnly?'确定对所有人开放编辑？任何拿到链接的人都能修改这块导图。':'确定设为只读？之后只有管理员可以编辑。',word,word);
+            if(!ok)return;
+            await mapMetaSet({editable:isReadOnly?1:0},isReadOnly?'已开放编辑':'已设为只读');
+        }
+        async function mmSetKey(){
+            if(!currentMapId){showToast('请先点「新建导图」','error');return}
+            await loadMapMeta();
+            const hasKey=!!(mapMeta&&mapMeta.hasKey);
+            openExcModal({
+                title:hasKey?'重设编辑口令':'设置编辑口令',
+                sub:'设置后访客需输入口令才能编辑（查看不受影响），口令至少 4 位。',
+                okText:'保存口令',
+                body:'<div class="exc-field"><label>编辑口令</label><input type="text" id="mmKeyInput" maxlength="40" autocomplete="off" placeholder="至少 4 位"></div>'+
+                     (hasKey?'<div style="margin-top:10px"><button type="button" class="btn btn-danger btn-sm" id="mmKeyClear">清除口令</button></div>':''),
+                onReady:function(){
+                    const b=document.getElementById('mmKeyClear');
+                    if(b)b.addEventListener('click',async function(){
+                        const done=await mapMetaSet({editKey:''},'口令已清除');
+                        if(done)closeExcModal();
+                    });
+                },
+                onOk:async function(){
+                    const v=(document.getElementById('mmKeyInput').value||'').trim();
+                    if(v.length<4){showToast('口令至少 4 位','error');return false}
+                    return await mapMetaSet({editKey:v},'口令已设置');
+                }
+            });
+        }
+        // 发布导图文章（复用发布弹窗的名称/状态/标签/封面/编辑密钥字段）
+        async function publishMindmap(){
+            if(!currentMapId){showToast('请先点「新建导图」','error');return}
+            const nameEl=document.getElementById('edBoardName');
+            const name=((nameEl&&nameEl.value)||'').trim()||('导图 '+new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}));
+            const tags=selectedArticleTags.slice();
+            const status=document.getElementById('edStatus').value;
+            const saver=mmSaver();
+            if(saver){ const ok=await saver(); if(!ok){showToast('导图保存未完成，已中止发布','error');return} }
+            // 名称写入 meta（同时作为文章标题）
+            try{ await mmApi('action=meta&id='+encodeURIComponent(currentMapId),{method:'POST',body:JSON.stringify({title:name})}) }catch(e){}
+            // 编辑密钥：默认开启（Raven_NULL），可在弹窗取消
+            const useKeyEl=document.getElementById('edUseEditKey');
+            const keyEl=document.getElementById('edEditKey');
+            if(useKeyEl&&useKeyEl.checked){
+                const kv=((keyEl&&keyEl.value)||'').trim();
+                if(kv.length>=4){
+                    try{
+                        const d=await mmApi('action=meta&id='+encodeURIComponent(currentMapId),{method:'POST',body:JSON.stringify({editKey:kv})});
+                        if(!d||d.status!=='success')showToast((d&&d.message)||'编辑密钥设置失败','error');
+                        else showToast('编辑密钥已开启（'+kv+'）','success');
+                    }catch(e){}
+                }else showToast('编辑密钥至少 4 位，本次未设置','error');
+            }else{
+                try{ await mmApi('action=meta&id='+encodeURIComponent(currentMapId),{method:'POST',body:JSON.stringify({editKey:''})}) }catch(e){}
+            }
+            // 已发布过的导图：沿用同一篇文章
+            if(!currentMapArticleId){
+                try{
+                    const ar=await apiFetch('action=articles');
+                    if(ar.status==='success'){
+                        const found=(ar.data||[]).find(function(a){return a.type==='mindmap'&&a.mapId===currentMapId});
+                        if(found)currentMapArticleId=found.id;
+                    }
+                }catch(e){}
+            }
+            const imgEl=document.getElementById('edImage');
+            const image=imgEl?imgEl.value.trim():'';
+            const body={title:name,content:'',status,type:'mindmap',mapId:currentMapId,tags,image};
+            if(currentMapArticleId)body.id=currentMapArticleId;
+            const r=await apiFetch('action=articles',{method:'POST',body:JSON.stringify(body)});
+            if(r.status!=='success'){showToast(r.message||'发布失败','error');return}
+            closePublishModal();
+            if(imgEl){imgEl.value='';if(typeof renderCoverPreview==='function')renderCoverPreview()}
+            mmReset();
+            mmNew(true);
+            loadArticles();
+            notifyArticlesChanged();
+            showToast((status==='draft'?'导图已存为草稿':'导图已发布')+'，已新建一块空白导图可继续编辑；要改刚发布的那块请到「文章管理」打开','success');
         }
 
         // 随记快速记录
@@ -904,8 +1073,8 @@
             [ex,cv,bn,ek].forEach(function(el){if(el)el.style.removeProperty('display')});
             if(ex&&!isArticle)ex.style.display='none';
             if(cv&&mode==='note')cv.style.display='none';
-            if(bn&&mode!=='board')bn.style.display='none';
-            if(ek&&mode!=='board')ek.style.display='none';
+            if(bn&&mode!=='board'&&mode!=='mindmap')bn.style.display='none';
+            if(ek&&mode!=='board'&&mode!=='mindmap')ek.style.display='none';
             if(mode==='note'){
                 // 随记表单里已填的标签作为弹窗初值
                 const wmP=initWmTagPicker();
@@ -915,6 +1084,14 @@
             if(mode==='board'){
                 const el=document.getElementById('edBoardName');
                 if(el)el.value=currentBoardName||defaultBoardName();
+                const lb=document.querySelector('#publishBoardNameField>label');
+                if(lb)lb.textContent='画板名称';
+            }
+            if(mode==='mindmap'){
+                const el=document.getElementById('edBoardName');
+                if(el)el.value=currentMapName||'';
+                const lb=document.querySelector('#publishBoardNameField>label');
+                if(lb)lb.textContent='导图名称';
             }
             document.getElementById('publishModal').classList.add('open');
             loadArticleTagNames();
@@ -926,6 +1103,7 @@
         function publishConfirm(){
             if(writeMode==='note')return publishNote();
             if(writeMode==='board')return publishBoard();
+            if(writeMode==='mindmap')return publishMindmap();
             return saveArticle();
         }
         // 随记发布：标签与状态来自弹窗
