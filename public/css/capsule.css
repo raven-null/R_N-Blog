@@ -1,0 +1,185 @@
+/*!
+ * 底部胶囊 + 口令浮条（导图页与白板页共用）
+ * 用法：
+ *   1) 页面引入本文件；
+ *   2) 结构见 scripts/mindmap/editor.ts 与 scripts/excalidraw/editor.tsx：
+ *      <div class="mm-capsule is-edit?">
+ *        <button class="mm-cap-btn [bb-view-only|bb-edit-only] [cap-back|cap-export|cap-save]">…
+ *        <div class="mm-cap-menu">…<button class="mm-cap-item">…</div>
+ *      </div>
+ *      <div class="mm-key [open]">…</div>
+ *   3) 需要在宿主上挂 .mm-readonly 表示只读（口令浮条样式不受影响）。
+ * 约定：位置用 absolute，宿主需为定位上下文（导图页用 #mm-root，白板用 .exc-shell）。
+ */
+
+/* ---------- 状态提示：顶部居中（无文字时自动隐藏） ---------- */
+.mm-bar {
+  position: absolute; top: 14px; left: 50%; transform: translateX(-50%); z-index: 42;
+  display: flex; align-items: center; max-width: 88vw;
+}
+.mm-bar .mm-msg {
+  display: inline-block; padding: 6px 14px; border-radius: 999px;
+  max-width: 88vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  background: rgba(16, 16, 19, 0.72); border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(24px) saturate(180%); -webkit-backdrop-filter: blur(24px) saturate(180%);
+  box-shadow: 0 12px 32px -14px rgba(0, 0, 0, 0.7);
+  font-size: 12.5px;
+}
+.mm-bar .mm-msg:empty { display: none; }
+
+/* ---------- 口令浮条：默认收起，点胶囊上的「口令」或进入编辑时滑出 ---------- */
+.mm-key {
+  position: absolute; left: 50%; top: 14px; transform: translateX(-50%) translateY(-160%); z-index: 41;
+  display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px;
+  background: rgba(16, 16, 19, 0.72); border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(24px) saturate(180%); -webkit-backdrop-filter: blur(24px) saturate(180%);
+  font-size: 12px; color: rgba(255, 255, 255, 0.55);
+  opacity: 0; pointer-events: none;
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.25s ease;
+}
+.mm-key.open { transform: translateX(-50%) translateY(0); opacity: 1; pointer-events: auto; }
+.mm-key input {
+  width: 140px; padding: 4px 9px; border-radius: 8px; font-size: 12px; font-family: inherit;
+  background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #e8e8ea; outline: none;
+}
+
+/* ---------- 底部居中胶囊 ---------- */
+.mm-capsule {
+  position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); z-index: 22;
+  display: flex; align-items: center; justify-content: center; flex-wrap: nowrap; gap: 2px;
+  padding: 5px 6px; border-radius: 20px; width: max-content; max-width: 94vw;
+  background: linear-gradient(145deg, rgba(30, 30, 37, 0.85), rgba(20, 20, 26, 0.78));
+  backdrop-filter: blur(26px) saturate(180%); -webkit-backdrop-filter: blur(26px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  box-shadow: 0 14px 44px -10px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  animation: mm-capsule-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "PingFang SC", sans-serif;
+}
+@keyframes mm-capsule-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(14px); }
+  to { opacity: 1; transform: translateX(-50%); }
+}
+.mm-cap-btn {
+  display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+  padding: 6px 11px; border-radius: 14px; cursor: pointer;
+  flex: 0 0 auto;
+  color: #d8dbe4; font-size: 12.5px; font-family: inherit;
+  background: transparent; border: none;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.mm-cap-btn svg { width: 14px; height: 14px; flex: none; }
+.mm-cap-btn:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
+.mm-cap-btn:active { transform: scale(0.94); }
+.mm-cap-btn.active { background: rgba(255, 255, 255, 0.14); color: #fff; }
+
+/* ---------- 胶囊上的小菜单（导出等） ---------- */
+.mm-cap-menu {
+  position: absolute; bottom: calc(100% + 10px); left: 50%; transform: translateX(-50%) translateY(6px);
+  display: flex; flex-direction: column; gap: 2px; padding: 6px; border-radius: 16px;
+  min-width: 172px; z-index: 23;
+  background: linear-gradient(145deg, rgba(32, 32, 40, 0.95), rgba(20, 20, 26, 0.93));
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  box-shadow: 0 22px 56px -16px rgba(0, 0, 0, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.mm-cap-menu.open { opacity: 1; pointer-events: auto; transform: translateX(-50%) translateY(0); }
+.mm-cap-item {
+  display: flex; align-items: center; gap: 9px; white-space: nowrap;
+  padding: 9px 12px; border-radius: 11px; cursor: pointer; text-align: left;
+  color: #d8dbe4; font-size: 12.5px; font-family: inherit; background: transparent; border: none;
+  transition: background 0.18s ease, color 0.18s ease;
+}
+.mm-cap-item svg { width: 15px; height: 15px; flex: none; opacity: 0.78; }
+.mm-cap-item:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
+
+/* ---------- 查看 / 编辑 两态的按钮显隐 ---------- */
+.mm-capsule .bb-edit-only { display: none; }
+.mm-capsule.is-edit .bb-view-only { display: none; }
+.mm-capsule.is-edit .bb-edit-only { display: inline-flex; }
+/* 保存：编辑态主按钮 */
+.mm-cap-btn.cap-save { color: #eaf2ff; }
+.mm-cap-btn.cap-save:hover { background: rgba(115, 170, 255, 0.2); color: #fff; }
+/* 口令入口：仅「导图/白板确实设了口令且非管理员」时加 .show 显形 */
+.mm-cap-btn.cap-key { display: none; }
+.mm-capsule.is-edit .mm-cap-btn.cap-key.show { display: inline-flex; }
+/* 菜单里的项也按两态显隐 */
+.mm-cap-menu .bb-edit-only { display: none; }
+.mm-capsule.is-edit .mm-cap-menu .bb-edit-only { display: flex; }
+
+/* ---------- 退出编辑确认弹层 ---------- */
+.mm-dlg {
+  position: absolute; inset: 0; z-index: 60; display: none;
+  align-items: center; justify-content: center; padding: 18px;
+  background: rgba(5, 5, 9, 0.5);
+  backdrop-filter: blur(10px) saturate(140%); -webkit-backdrop-filter: blur(10px) saturate(140%);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "PingFang SC", sans-serif;
+}
+.mm-dlg.show { display: flex; }
+.mm-dlg-card {
+  width: min(350px, 92vw); padding: 22px; border-radius: 22px;
+  background: linear-gradient(145deg, rgba(34, 34, 42, 0.97), rgba(20, 20, 26, 0.95));
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  box-shadow: 0 30px 90px -20px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  animation: mm-dlg-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes mm-dlg-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+.mm-dlg-title { font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+.mm-dlg-sub { font-size: 12.5px; color: rgba(255, 255, 255, 0.5); margin-bottom: 16px; line-height: 1.7; }
+.mm-dlg-btns { display: flex; flex-direction: column; gap: 8px; }
+.mm-dlg-btn {
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+  padding: 10px 16px; border-radius: 13px; cursor: pointer; font-family: inherit; font-size: 13.5px;
+  color: #e8e8ea; border: 1px solid rgba(255, 255, 255, 0.13);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.04));
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.mm-dlg-btn:hover {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.17), rgba(255, 255, 255, 0.07));
+  border-color: rgba(255, 255, 255, 0.28);
+}
+.mm-dlg-btn:active { transform: scale(0.97); }
+.mm-dlg-btn.primary {
+  color: #eaf2ff; font-weight: 600; border-color: rgba(115, 170, 255, 0.45);
+  background: linear-gradient(145deg, rgba(59, 130, 246, 0.42), rgba(115, 170, 255, 0.28));
+}
+.mm-dlg-btn.primary:hover {
+  background: linear-gradient(145deg, rgba(59, 130, 246, 0.6), rgba(115, 170, 255, 0.42));
+}
+.mm-dlg-err {
+  display: none; margin-top: 12px; padding: 8px 12px; border-radius: 10px; font-size: 12px;
+  color: #ff9f0a; background: rgba(255, 159, 10, 0.1); border: 1px solid rgba(255, 159, 10, 0.25);
+}
+.mm-dlg-err.show { display: block; }
+
+/* ---------- 独立打开时自带的信息小卡（嵌入时由宿主页面负责） ---------- */
+.mm-info {
+  position: absolute; right: 16px; bottom: 76px; z-index: 23; width: 280px; max-width: calc(100vw - 32px);
+  padding: 14px 16px; border-radius: 18px;
+  background: linear-gradient(145deg, rgba(32, 32, 40, 0.95), rgba(20, 20, 26, 0.92));
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  box-shadow: 0 22px 56px -16px rgba(0, 0, 0, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(28px) saturate(180%); -webkit-backdrop-filter: blur(28px) saturate(180%);
+  color: #cfd3df; font-size: 12.5px; line-height: 1.8;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "PingFang SC", sans-serif;
+  animation: mm-dlg-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.mm-info h4 { margin: 0 0 8px; font-size: 15px; color: #fff; }
+.mm-info .row { display: flex; gap: 8px; }
+.mm-info .row .k { flex: none; width: 44px; color: rgba(255, 255, 255, 0.4); }
+
+/* ---------- 窄屏：按钮紧凑一点，避免胶囊溢出 ---------- */
+@media (max-width: 720px) {
+  .mm-capsule { padding: 4px 4px; gap: 0; }
+  .mm-cap-btn { padding: 6px 8px; gap: 4px; font-size: 12px; }
+  .mm-cap-btn svg { width: 13px; height: 13px; }
+  .mm-cap-menu { min-width: 156px; }
+}
+@media (max-width: 460px) {
+  .mm-capsule { flex-wrap: wrap; max-width: 96vw; row-gap: 2px; }
+}

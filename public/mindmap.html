@@ -9,6 +9,7 @@
   <script src="/js/site-icon.js?v=1.0.0"></script>
   <link rel="stylesheet" href="/css/scrollbar.css?v=1.0.1">
   <link rel="stylesheet" href="/css/responsive.css?v=1.0.0">
+  <link rel="stylesheet" href="/css/capsule.css?v=1.0.0">
   <style>
     :root {
       --mm-bg: #0b0b0e;
@@ -22,104 +23,7 @@
     * { box-sizing: border-box; }
     body { display: block; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "PingFang SC", sans-serif; }
     #mm-root { position: absolute; inset: 0; } /* 绝对定位铺满视口，容器尺寸不依赖 flex 计算 */
-    /* 状态提示：浮在顶部居中的小胶囊（只在有操作结果/错误时出现） */
-    .mm-bar {
-      position: absolute; top: 14px; left: 50%; transform: translateX(-50%); z-index: 42;
-      display: flex; align-items: center; max-width: 88vw;
-    }
-    .mm-bar .mm-msg {
-      display: inline-block; padding: 6px 14px; border-radius: 999px;
-      max-width: 88vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-      background: var(--mm-panel); border: 1px solid var(--mm-border); color: var(--mm-dim);
-      backdrop-filter: blur(24px) saturate(180%); -webkit-backdrop-filter: blur(24px) saturate(180%);
-      box-shadow: 0 12px 32px -14px rgba(0, 0, 0, 0.7);
-      font-size: 12.5px;
-    }
-    .mm-bar .mm-msg:empty { display: none; }
-    /* 口令浮条：加密导图进编辑态时自动滑出（用 fixed 定位，iframe 内也贴自身顶部） */
-    .mm-key {
-      position: fixed; left: 50%; top: 14px; transform: translateX(-50%) translateY(-160%); z-index: 41;
-      display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px;
-      background: var(--mm-panel); border: 1px solid var(--mm-border);
-      backdrop-filter: blur(24px) saturate(180%); -webkit-backdrop-filter: blur(24px) saturate(180%);
-      font-size: 12px; color: var(--mm-dim);
-      opacity: 0; pointer-events: none; transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.25s ease;
-    }
-    .mm-key.open { transform: translateX(-50%) translateY(0); opacity: 1; pointer-events: auto; }
-    .mm-key input {
-      width: 140px; padding: 4px 9px; border-radius: 8px; font-size: 12px; font-family: inherit;
-      background: rgba(0, 0, 0, 0.3); border: 1px solid var(--mm-border); color: var(--mm-text); outline: none;
-    }
-
-    /* ---------- 底部居中胶囊：返回 / 导出 / 编辑 · 完成 / 留言 / 信息 / 口令 ---------- */
-    .mm-capsule {
-      position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); z-index: 22;
-      display: flex; align-items: center; justify-content: center; flex-wrap: nowrap; gap: 2px;
-      padding: 5px 6px; border-radius: 20px; width: max-content; max-width: 94vw;
-      background: linear-gradient(145deg, rgba(30, 30, 37, 0.85), rgba(20, 20, 26, 0.78));
-      backdrop-filter: blur(26px) saturate(180%); -webkit-backdrop-filter: blur(26px) saturate(180%);
-      border: 1px solid rgba(255, 255, 255, 0.13);
-      box-shadow: 0 14px 44px -10px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-      animation: mm-capsule-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both;
-    }
-    @keyframes mm-capsule-in { from { opacity: 0; transform: translateX(-50%) translateY(14px); } to { opacity: 1; transform: translateX(-50%); } }
-    .mm-cap-btn {
-      display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
-      padding: 6px 11px; border-radius: 14px; cursor: pointer;
-      color: #d8dbe4; font-size: 12.5px; font-family: inherit;
-      background: transparent; border: none;
-      transition: background 0.2s ease, color 0.2s ease, transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-    }
-    .mm-cap-btn svg { width: 14px; height: 14px; flex: none; }
-    .mm-cap-btn:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
-    .mm-cap-btn:active { transform: scale(0.94); }
-    .mm-cap-btn.active { background: rgba(255, 255, 255, 0.14); color: #fff; }
-    /* 返回：绝不压缩，排在胶囊首位；极窄屏允许整条胶囊换行，也照样看得到 */
-    .mm-cap-btn.cap-back { flex: 0 0 auto; }
-    @media (max-width: 460px) {
-      .mm-capsule { flex-wrap: wrap; max-width: 96vw; row-gap: 2px; }
-    }
-    /* 导出菜单：浮在胶囊正上方 */
-    .mm-cap-menu {
-      position: absolute; bottom: calc(100% + 10px); left: 50%; transform: translateX(-50%) translateY(6px);
-      display: flex; flex-direction: column; gap: 2px; padding: 6px; border-radius: 16px;
-      min-width: 172px; z-index: 23;
-      background: linear-gradient(145deg, rgba(32, 32, 40, 0.95), rgba(20, 20, 26, 0.93));
-      border: 1px solid rgba(255, 255, 255, 0.13);
-      box-shadow: 0 22px 56px -16px rgba(0, 0, 0, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.08);
-      opacity: 0; pointer-events: none;
-      transition: opacity 0.2s ease, transform 0.24s cubic-bezier(0.22, 1, 0.36, 1);
-    }
-    .mm-cap-menu.open { opacity: 1; pointer-events: auto; transform: translateX(-50%) translateY(0); }
-    .mm-cap-item {
-      display: flex; align-items: center; gap: 9px; white-space: nowrap;
-      padding: 9px 12px; border-radius: 11px; cursor: pointer; text-align: left;
-      color: #d8dbe4; font-size: 12.5px; font-family: inherit; background: transparent; border: none;
-      transition: background 0.18s ease, color 0.18s ease;
-    }
-    .mm-cap-item svg { width: 15px; height: 15px; flex: none; opacity: 0.78; }
-    .mm-cap-item:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
-    .mm-cap-menu .bb-edit-only { display: none; }
-    .mm-capsule.is-edit .mm-cap-menu .bb-edit-only { display: flex; }
-    /* 窄屏：按钮紧凑一点，避免胶囊溢出（溢出会把后面的按钮挤出屏幕） */
-    @media (max-width: 720px) {
-      .mm-capsule { padding: 4px 4px; gap: 0; }
-      .mm-cap-btn { padding: 6px 8px; gap: 4px; font-size: 12px; }
-      .mm-cap-btn svg { width: 13px; height: 13px; }
-      .mm-cap-menu { min-width: 156px; }
-    }
-    /* 查看态只显示「编辑」，编辑态只显示「保存」「完成」。
-       编辑时其余按钮（返回/导出/留言/信息）一律收起，和白板的编辑态一致；
-       大纲按钮不在这里，它挂在库的左侧工具条上，跟库自带图标同一排。 */
-    .mm-capsule .bb-edit-only { display: none; }
-    .mm-capsule.is-edit .bb-view-only { display: none; }
-    .mm-capsule.is-edit .bb-edit-only { display: inline-flex; }
-    /* 保存：编辑态的主按钮，给点颜色区别于「完成」 */
-    .mm-cap-btn.cap-save { color: #eaf2ff; }
-    .mm-cap-btn.cap-save:hover { background: rgba(115, 170, 255, 0.2); color: #fff; }
-    /* 口令入口：只有服务端说这张导图设了口令、且不是管理员才显形 */
-    .mm-cap-btn.cap-key { display: none; }
-    .mm-capsule.is-edit .mm-cap-btn.cap-key.show { display: inline-flex; }
+    /* ---------- 导图专属样式 ---------- */
     /* 只读态 */
     /* 工具条常驻显示：方向切换 + 大纲入口，只读时也能看大纲；能不能改内容由 mind.editable 拦着 */
     #mm-root .mind-elixir-toolbar { display: block !important; }
@@ -162,44 +66,6 @@
       #mm-root .mind-elixir-toolbar.lt > span svg { width: 16px; height: 16px; }
     }
 
-    /* 退出编辑确认弹层 */
-    .mm-dlg {
-      position: absolute; inset: 0; z-index: 60; display: none;
-      align-items: center; justify-content: center; padding: 18px;
-      background: rgba(5, 5, 9, 0.5);
-      backdrop-filter: blur(10px) saturate(140%); -webkit-backdrop-filter: blur(10px) saturate(140%);
-    }
-    .mm-dlg.show { display: flex; }
-    .mm-dlg-card {
-      width: min(350px, 92vw); padding: 22px; border-radius: 22px;
-      background: linear-gradient(145deg, rgba(34, 34, 42, 0.97), rgba(20, 20, 26, 0.95));
-      border: 1px solid rgba(255, 255, 255, 0.13);
-      box-shadow: 0 30px 90px -20px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-      animation: mm-dlg-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
-    }
-    @keyframes mm-dlg-in { from { opacity: 0; transform: translateY(10px) scale(0.97); } to { opacity: 1; transform: none; } }
-    .mm-dlg-title { font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 4px; }
-    .mm-dlg-sub { font-size: 12.5px; color: rgba(255, 255, 255, 0.5); margin-bottom: 16px; line-height: 1.7; }
-    .mm-dlg-btns { display: flex; flex-direction: column; gap: 8px; }
-    .mm-dlg-btn {
-      display: flex; align-items: center; justify-content: center; gap: 7px;
-      padding: 10px 16px; border-radius: 13px; cursor: pointer; font-family: inherit; font-size: 13.5px;
-      color: #e8e8ea; border: 1px solid rgba(255, 255, 255, 0.13);
-      background: linear-gradient(145deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.04));
-      transition: background 0.2s ease, border-color 0.2s ease, transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-    }
-    .mm-dlg-btn:hover { background: linear-gradient(145deg, rgba(255, 255, 255, 0.17), rgba(255, 255, 255, 0.07)); border-color: rgba(255, 255, 255, 0.28); }
-    .mm-dlg-btn:active { transform: scale(0.97); }
-    .mm-dlg-btn.primary {
-      color: #eaf2ff; font-weight: 600; border-color: rgba(115, 170, 255, 0.45);
-      background: linear-gradient(145deg, rgba(59, 130, 246, 0.42), rgba(115, 170, 255, 0.28));
-    }
-    .mm-dlg-btn.primary:hover { background: linear-gradient(145deg, rgba(59, 130, 246, 0.6), rgba(115, 170, 255, 0.42)); }
-    .mm-dlg-err {
-      display: none; margin-top: 12px; padding: 8px 12px; border-radius: 10px; font-size: 12px;
-      color: #ff9f0a; background: rgba(255, 159, 10, 0.1); border: 1px solid rgba(255, 159, 10, 0.25);
-    }
-    .mm-dlg-err.show { display: block; }
 
     .mm-empty { height: 100%; display: flex; align-items: center; justify-content: center; text-align: center; padding: 24px; color: var(--mm-dim); }
     .mm-empty .card { padding: 28px 26px; border-radius: 22px; background: var(--mm-panel); border: 1px solid var(--mm-border); max-width: calc(100vw - 40px); }
@@ -239,11 +105,6 @@
       font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     }
     .mm-outline-text::placeholder { color: rgba(255, 255, 255, 0.28); }
-
-    @media (max-width: 640px) {
-      .mm-bar { left: 10px; right: 10px; bottom: 10px; justify-content: center; }
-      .mm-bar .mm-msg { max-width: 100%; }
-    }
   </style>
 </head>
 <body>

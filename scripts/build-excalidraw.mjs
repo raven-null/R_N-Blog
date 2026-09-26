@@ -20,7 +20,7 @@ import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..")
-const BUNDLE_VERSION = "v18" // bundle 内容变更时递增（配合 immutable 缓存换新）
+const BUNDLE_VERSION = "v19" // bundle 内容变更时递增（配合 immutable 缓存换新）
 
 const vendorDir = join(root, "public/js/vendor/excalidraw")
 const excDist = join(root, "node_modules/@excalidraw/excalidraw/dist/prod")
@@ -38,6 +38,8 @@ execFileSync(
     "--platform=browser",
     "--target=es2020",
     "--jsx=automatic",
+    // 中文字面量保持原样，避免 bundle 里全是 \uXXXX 转义（体积也小一点）
+    "--charset=utf8",
     "--minify",
     `--outfile=${join(vendorDir, jsName)}`,
   ],

@@ -264,13 +264,40 @@ function sceneFp(elements: readonly any[]): number {
   return h
 }
 
-function NoteApp({ note, mode, bare }: { note: string; mode: "edit" | "view"; bare?: boolean }) {
+function NoteApp({
+  note,
+  mode,
+  bare,
+  fromAdmin,
+}: {
+  note: string
+  mode: "edit" | "view"
+  bare?: boolean
+  fromAdmin?: boolean
+}) {
   const apiRef = useRef<any>(null)
   const filesSigRef = useRef<Record<string, string>>({}) // 已上传图片指纹（避免重复上传）
   const loadedRev = useRef<number | null>(null)
   // 未保存改动检测：画布指纹基准
   const fpRef = useRef(0)
   const dirtyRef = useRef(false)
+  // 查看 / 编辑就地切换（与导图页同一套胶囊体验，不改 URL）
+  const [editMode, setEditMode] = useState(mode === "edit")
+  const [capMenuOpen, setCapMenuOpen] = useState(false)
+  const capRef = useRef<HTMLDivElement | null>(null)
+  const embedded = typeof window !== "undefined" && window.parent !== window
+  // 白板胶囊只在「独立打开的白板页」出现：前台画布舞台（bare）与后台编辑页各有自己的一排按钮
+  const showCapsule = !bare && !fromAdmin
+  // 信息浮层（独立打开时没有宿主页面的气泡，这里自带一个）
+  const [infoOpen, setInfoOpen] = useState(false)
+  // 进入编辑时是否要把口令浮条滑出来
+  const keyRef = useRef<HTMLDivElement | null>(null)
+  const toggleKeyBar = () => {
+    const el = keyRef.current
+    if (!el) return
+    const open = el.classList.toggle("open")
+    if (open) el.querySelector("input")?.focus()
+  }
   // 成功类消息短暂显示后自动消失
   const okTimer = useRef<number | undefined>(undefined)
   const setMsgOk = (text: string) => {
@@ -307,7 +334,7 @@ function NoteApp({ note, mode, bare }: { note: string; mode: "edit" | "view"; ba
         if (!silent) {
           setLoading(false)
           // 编辑模式：给一块空画布直接画，保存时才创建（文案区分管理员/访客）
-          if (mode === "edit") {
+          if (editMode) {
             setMsg(
               isAdmin
                 ? "新笔记：直接开始画，点「保存」即可创建"
@@ -381,8 +408,8 @@ function NoteApp({ note, mode, bare }: { note: string; mode: "edit" | "view"; ba
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { load() }, [])
   useEffect(() => {
-    document.title = mode === "edit" ? `编辑：${title}` : title
-  }, [title, mode])
+    document.title = editMode ? `编辑：${title}` : title
+  }, [title, editMode])
 
   // L1.5 协作感知：轻量轮询 meta.rev 检测他人更新
   // view 模式自动静默刷新；edit 模式提示（避免覆盖未保存改动）
@@ -397,7 +424,7 @@ function NoteApp({ note, mode, bare }: { note: string; mode: "edit" | "view"; ba
         const remoteRev = d.meta.rev as number
         const localRev = loadedRev.current
         if (localRev === null || remoteRev === localRev) return
-        if (mode === "view") {
+        if (!editMode) {
           setMsgOk(`已自动更新到 rev ${remoteRev}`)
           await load(true)
         } else {
@@ -406,10 +433,10 @@ function NoteApp({ note, mode, bare }: { note: string; mode: "edit" | "view"; ba
       } catch {
         // 轮询失败静默（网络抖动/离线）
       }
-    }, mode === "view" ? 20000 : 30000)
+    }, editMode ? 30000 : 20000)
     return () => window.clearInterval(timer)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [note, mode])
+  }, [note, editMode])
 
   const save = async (force = false): Promise<boolean> => {
     const api = apiRef.current
@@ -629,6 +656,80 @@ function NoteApp({ note, mode, bare }: { note: string; mode: "edit" | "view"; ba
     }
   }
 
+  /* ---------- 底部胶囊（与导图页同一套外观与交互） ---------- */
+
+  /** 导出成 .excalidraw 文件，可再次导入 */
+  const exportScene = () => {
+    const api = apiRef.current
+    if (!api) return
+    try {
+      const data = {
+        type: "excalidraw",
+        version: 2,
+        source: "raven-blog",
+        elements: api.getSceneElements(),
+        appState: api.getAppState(),
+        files: api.getFiles(),
+      }
+      const blob = new Blob([JSON.stringify(data)], { type: "application/json" })
+      const a = document.createElement("a")
+      a.href = URL.createObjectURL(blob)
+      a.download = `excalidraw-${note || "board"}.excalidraw`
+      a.click()
+      setMsgOk("已导出 .excalidraw")
+    } catch (e: any) {
+      setMsg("导出出错：" + (e?.message || e))
+    }
+  }
+
+  /** 与宿主页面（文章页）通信：返回 / 留言 / 信息 */
+  const tell = (action: string) => {
+    try {
+      window.parent.postMessage({ type: "board-stage", action, note }, "*")
+    } catch {
+      /* 忽略 */
+    }
+  }
+
+  /** 进入 / 退出编辑：就地切换，不刷新页面 */
+  const enterEdit = () => {
+    setInfoOpen(false)
+    setEditMode(true)
+    setMsgOk(isAdmin || !meta?.hasKey ? "" : "此白板已加密：请先输入编辑口令")
+  }
+  /** 完成：有未保存改动先尝试保存，成功才退出编辑 */
+  const finishEdit = async () => {
+    if (dirtyRef.current) {
+      const ok = await save(false)
+      if (!ok) return // 保存失败（口令错等）：留在编辑态，错误信息已在提示里
+    }
+    setEditMode(false)
+  }
+
+  // 菜单点外部 / Esc 收起
+  useEffect(() => {
+    if (!capMenuOpen) return
+    const onDown = (e: MouseEvent) => {
+      if (capRef.current && !capRef.current.contains(e.target as Node)) setCapMenuOpen(false)
+    }
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setCapMenuOpen(false) }
+    document.addEventListener("mousedown", onDown)
+    document.addEventListener("keydown", onKey)
+    return () => {
+      document.removeEventListener("mousedown", onDown)
+      document.removeEventListener("keydown", onKey)
+    }
+  }, [capMenuOpen])
+
+  // 加密白板进编辑态时把口令浮条滑出来
+  useEffect(() => {
+    if (!editMode || !meta?.hasKey || isAdmin) return
+    const el = keyRef.current
+    if (!el) return
+    el.classList.add("open")
+    el.querySelector("input")?.focus()
+  }, [editMode, meta?.hasKey, isAdmin])
+
   // 「发布为博文」：导出截图 → 上传 → 按形态创建 draft 草稿
   // kind: article（截图+内嵌白板+链接的普通文章）/ whiteboard（整页白板文章）
   const publishToBlog = async (kind: "article" | "whiteboard") => {
@@ -704,7 +805,7 @@ function NoteApp({ note, mode, bare }: { note: string; mode: "edit" | "view"; ba
 
   // Ctrl/Cmd + S 保存
   useEffect(() => {
-    if (mode !== "edit") return
+    if (!editMode) return
     const h = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
         e.preventDefault()
@@ -717,7 +818,7 @@ function NoteApp({ note, mode, bare }: { note: string; mode: "edit" | "view"; ba
 
   // 暴露保存方法与脏标记给宿主页面（bare 模式：前台舞台「完成」时判断是否需询问保存）
   useEffect(() => {
-    if (mode !== "edit") return
+    if (!editMode) return
     const fn = () => save(false)
     ;(window as any).__excalidrawSave = fn
     ;(window as any).__excalidrawDirty = () => dirtyRef.current
@@ -735,7 +836,7 @@ function NoteApp({ note, mode, bare }: { note: string; mode: "edit" | "view"; ba
     )
   }
   // 仅 view 模式对不存在的笔记显示占位；edit 模式继续渲染空画布（保存时创建）
-  if (notFound && mode === "view") {
+  if (notFound && !editMode) {
     return (
       <div className="exc-ph">
         <div className="exc-ph-card">
@@ -753,23 +854,112 @@ function NoteApp({ note, mode, bare }: { note: string; mode: "edit" | "view"; ba
 
   return (
     <div className="exc-shell" style={{ position: "relative" }}>
-      {/* 编辑模式不再显示顶栏：保存用 Ctrl+S，需要口令时由下方浮动条输入 */}
-      {/* bare 模式（前台舞台）：无工具条，仅口令输入浮条；保存用 Ctrl+S / 宿主「完成」询问 */}
-      {mode === "edit" && meta?.hasKey && !isAdmin && (
-        <div className="exc-bare-key">
-          <Ic p={ICONS.lock} />
-          <input
-            className="exc-input"
-            value={editKey}
-            onChange={e => setEditKey(e.target.value)}
-            type="password"
-            placeholder="编辑口令（输入后 Ctrl+S 保存）"
-          />
+      {/* 口令浮条：与导图页同一套样式，进编辑态自动滑出（bare 模式沿用旧的紧凑浮条） */}
+      {editMode && meta?.hasKey && !isAdmin && (
+        bare ? (
+          <div className="exc-bare-key">
+            <Ic p={ICONS.lock} />
+            <input
+              className="exc-input"
+              value={editKey}
+              onChange={e => setEditKey(e.target.value)}
+              type="password"
+              placeholder="编辑口令（输入后 Ctrl+S 保存）"
+            />
+          </div>
+        ) : (
+          <div className="mm-key" ref={keyRef}>
+            <Ic p={ICONS.lock} />
+            <input
+              value={editKey}
+              onChange={e => setEditKey(e.target.value)}
+              type="password"
+              placeholder="编辑口令"
+            />
+          </div>
+        )
+      )}
+
+      {/* 底部居中胶囊：独立打开的白板页才出现（前台舞台与后台编辑页各有自己的一排按钮） */}
+      {showCapsule && (
+        <div className={"mm-capsule" + (editMode ? " is-edit" : "")} ref={capRef}>
+          {/* 返回博客：独立打开直接回首页 */}
+          <button className="mm-cap-btn bb-view-only cap-back" title="返回博客首页" onClick={() => { location.href = "/" }}>
+            <Ic p={ICONS.home} />
+            <span>返回</span>
+          </button>
+          {/* 导出：PNG / .excalidraw 收进小菜单 */}
+          <button
+            className={"mm-cap-btn bb-view-only cap-export" + (capMenuOpen ? " active" : "")}
+            title="导出白板"
+            onClick={() => setCapMenuOpen(v => !v)}
+          >
+            <Ic p={ICONS.save} />
+            <span>导出</span>
+          </button>
+          <button className="mm-cap-btn bb-view-only" title="在当前位置编辑这块白板" onClick={enterEdit}>
+            <Ic p={ICONS.pencil} />
+            <span>编辑</span>
+          </button>
+          <button className="mm-cap-btn bb-view-only" title="查看留言" onClick={() => tell("comments")}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+            <span>留言</span>
+          </button>
+          <button className="mm-cap-btn bb-view-only" title="白板信息" onClick={() => setInfoOpen(v => !v)}>
+            <Ic p={ICONS.alert} />
+            <span>信息</span>
+          </button>
+          {/* 编辑态：只留「保存」和「完成」 */}
+          <button
+            className="mm-cap-btn bb-edit-only cap-save"
+            title="保存到服务器（Ctrl / ⌘ + S）"
+            disabled={saving}
+            onClick={() => save(false)}
+          >
+            <Ic p={ICONS.save} />
+            <span>{saving ? "保存中" : "保存"}</span>
+          </button>
+          <button className="mm-cap-btn bb-edit-only" title="保存并退出编辑" onClick={finishEdit}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+            <span>完成</span>
+          </button>
+          {/* 口令入口：仅设了口令且非管理员时显形 */}
+          {meta?.hasKey && !isAdmin && (
+            <button
+              className="mm-cap-btn bb-edit-only cap-key show"
+              title="输入编辑口令"
+              onClick={toggleKeyBar}
+            >
+              <Ic p={ICONS.lock} />
+              <span>口令</span>
+            </button>
+          )}
+          {/* 导出菜单 */}
+          <div className={"mm-cap-menu" + (capMenuOpen ? " open" : "")}>
+            <button className="mm-cap-item" title="导出为 PNG 图片" onClick={() => { setCapMenuOpen(false); exportPng() }}>
+              <Ic p={ICONS.image} />
+              <span>PNG 图片</span>
+            </button>
+            <button className="mm-cap-item" title="导出为 .excalidraw 文件（可再次导入）" onClick={() => { setCapMenuOpen(false); exportScene() }}>
+              <Ic p={ICONS.doc} />
+              <span>.excalidraw 文件</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 信息浮层（独立打开时自带；嵌入时点「信息」交给宿主页面） */}
+      {showCapsule && infoOpen && (
+        <div className="mm-info">
+          <h4>{title}</h4>
+          <div className="row"><span className="k">白板</span><span style={{ wordBreak: "break-all" }}>{note}</span></div>
+          {meta?.rev != null && <div className="row"><span className="k">版本</span><span>rev {meta.rev}</span></div>}
+          {meta?.hasKey && <div className="row"><span className="k">口令</span><span>已加密</span></div>}
         </div>
       )}
       <div className="exc-canvas">
         <Excalidraw
-          key={note + mode}
+          key={note + (editMode ? "edit" : "view")}
           excalidrawAPI={api => { apiRef.current = api }}
           onChange={(els: readonly any[]) => {
             // 画布指纹变化即视为有未保存改动；撤销回原状会自动恢复「已保存」态
@@ -783,11 +973,11 @@ function NoteApp({ note, mode, bare }: { note: string; mode: "edit" | "view"; ba
             }
           }}
           initialData={initialData}
-          viewModeEnabled={mode === "view"}
+          viewModeEnabled={!editMode}
           langCode="zh-CN"
           theme="light"
           UIOptions={
-            mode === "view"
+            !editMode
               ? {
                   welcomeScreen: false,
                   canvasActions: {
@@ -857,10 +1047,11 @@ function mountAll() {
     const note = (el.dataset.note || "").trim()
     const mode = el.dataset.mode === "edit" ? "edit" : "view"
     const bare = el.dataset.bare === "1"
+    const fromAdmin = new URLSearchParams(location.search).get("from") === "admin"
     const root = createRoot(el)
     // 记住 root，便于宿主清空/换画板时真正卸载（否则旧实例的 window 级监听会残留）
     ;(el as any).__excRoot = root
-    root.render(<NoteApp note={note} mode={mode} bare={bare} />)
+    root.render(<NoteApp note={note} mode={mode} bare={bare} fromAdmin={fromAdmin} />)
   })
 }
 
