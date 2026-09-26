@@ -110,7 +110,7 @@ function boot(el: HTMLElement) {
   // 状态提示（保存结果 / 大纲变化）放在顶部，导出按钮已全部移入底部胶囊
   el.appendChild(bar)
 
-  /* ---------- 底部居中胶囊：返回 / 导出 / 编辑 · 完成 / 留言 / 信息 / 口令 ---------- */
+  /* ---------- 底部居中胶囊：仅导图页/前台文章页需要；后台内嵌不渲染 ---------- */
   const capsule = document.createElement("div")
   capsule.className = "mm-capsule"
   const capBtn = (cls: string, title: string, svg: string, text: string, onClick: () => void) => {
@@ -133,14 +133,12 @@ function boot(el: HTMLElement) {
   const ICON_OUTLINE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="9" y1="6" x2="21" y2="6"/><line x1="9" y1="12" x2="21" y2="12"/><line x1="9" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1.3" fill="currentColor" stroke="none"/><circle cx="4" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="4" cy="18" r="1.3" fill="currentColor" stroke="none"/></svg>'
   const ICON_SAVE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="m7 11 5 5 5-5"/><path d="M4 20h16"/></svg>'
 
-  // 返回博客：放胶囊最左边（最不容易被挤掉），除后台内嵌外无条件出现。
-  // 文章页嵌入 → 通知父页面回首页；独立打开 → 直接跳首页。
-  if (!fromAdmin) {
-    capBtn("bb-view-only cap-back", "返回博客首页", ICON_BACK, "返回", () => {
-      if (embedded) tell("back")
-      else location.href = "/"
-    })
-  }
+  // 返回博客：放胶囊最左边。文章页嵌入 → 通知父页面回首页；独立打开 → 直接跳首页。
+  // （后台内嵌时整条胶囊都不渲染，各按钮照常构建即可，不必单独判断）
+  capBtn("bb-view-only cap-back", "返回博客首页", ICON_BACK, "返回", () => {
+    if (embedded) tell("back")
+    else location.href = "/"
+  })
   // 导出：多个格式收进一个「导出」按钮，点开小菜单选择（只读态）
   const exportBtn = capBtn("bb-view-only cap-export", "导出导图", ICON_DL, "导出", () => toggleExportMenu())
   capBtn("bb-view-only", "在当前位置编辑这张导图", ICON_EDIT, "编辑", () => setMode("edit"))
@@ -199,7 +197,9 @@ function boot(el: HTMLElement) {
     if (e.key === "Escape") setExportMenu(false)
   })
 
-  el.appendChild(capsule)
+  // 后台编辑页内嵌时不要这条胶囊：它顶栏已经有新建/新窗口/只读/口令/发布一整套按钮，
+  // 「保存」由宿主顶栏调用 window.__mindmapSave()，这里再放一排是重复的。
+  if (!fromAdmin) el.appendChild(capsule)
 
   /* ---------- 退出编辑确认弹层（「完成」时若还有未保存改动） ---------- */
   const dlg = document.createElement("div")
