@@ -1442,7 +1442,10 @@ function boot(el: HTMLElement) {
   document.addEventListener("fullscreenchange", onViewportChange)
   document.addEventListener("webkitfullscreenchange", onViewportChange)
   window.addEventListener("resize", () => {
-    if (outlineEl && panelOpen) positionOutlinePanel(outlineEl)
+    if (outlineEl && panelOpen) {
+      applyOutlineWidth(outlineWidth)
+      positionOutlinePanel(outlineEl)
+    }
   })
 
   /* ---------------- 大纲面板：左写大纲、右实时成图 ---------------- */
@@ -2096,6 +2099,7 @@ function boot(el: HTMLElement) {
       '<div class="mm-outline-images" id="mmOutlineImages" hidden></div>' +
       '<div class="mm-outline-tree" contenteditable="false"></div>'
     el.appendChild(outlineEl)
+    mountOutlineResizer(outlineEl)
     outlineHost = outlineEl.querySelector(".mm-outline-tree") as HTMLElement | null
     outlineRows = collectRows(mind.getData())
     renderOutlineTree()
@@ -3089,6 +3093,7 @@ function boot(el: HTMLElement) {
     }
     // 导图区让出左侧空间（右侧实时成图）
     canvasHost.classList.toggle("outline-open", open)
+    canvasHost.style.setProperty("--mm-outline-w", outlineWidth + "px")
     scheduleFit(320) // 可用宽度变了，重新居中并缩放
     if (open) {
       refreshOutline()
@@ -3105,6 +3110,82 @@ function boot(el: HTMLElement) {
    * 全屏、iframe、后台内嵌几种情况下祖先容器的尺寸/定位都不同，所以除了 CSS 的
    * position:fixed，这里再用内联尺寸兜一层，并且保证它始终挂在最外层容器上。
    */
+  /** 大纲面板宽度：可拖动改变，并记住上次拉到的宽度 */
+  let outlineWidth = 380
+  const OUTLINE_MIN_W = 240
+  const OUTLINE_MAX_RATIO = 0.9
+  try {
+    const saved = Number(localStorage.getItem("mindmap_outline_width") || "")
+    if (Number.isFinite(saved) && saved >= OUTLINE_MIN_W) outlineWidth = saved
+  } catch {
+    /* 忽略 */
+  }
+  const maxOutlineWidth = () => Math.max(OUTLINE_MIN_W, Math.round(window.innerWidth * OUTLINE_MAX_RATIO))
+  function applyOutlineWidth(w: number, persist = false) {
+    outlineWidth = Math.max(OUTLINE_MIN_W, Math.min(maxOutlineWidth(), Math.round(w)))
+    if (outlineEl && panelOpen) positionOutlinePanel(outlineEl)
+    if (canvasHost.classList.contains("outline-open")) {
+      canvasHost.style.setProperty("--mm-outline-w", outlineWidth + "px")
+    }
+    if (persist) {
+      try {
+        localStorage.setItem("mindmap_outline_width", String(outlineWidth))
+      } catch {
+        /* 忽略 */
+      }
+    }
+  }
+
+  /** 面板右边缘的拖拽把手：左右拖动改宽度，双击复位 */
+  function mountOutlineResizer(panel: HTMLElement) {
+    if (panel.querySelector(".mm-outline-resizer")) return
+    const grip = document.createElement("div")
+    grip.className = "mm-outline-resizer"
+    grip.title = "拖动改变宽度（双击复位）"
+    panel.appendChild(grip)
+
+    let dragging = false
+    let startX = 0
+    let startW = 0
+
+    grip.addEventListener("pointerdown", (e) => {
+      if (e.button !== 0) return
+      e.preventDefault()
+      e.stopPropagation()
+      dragging = true
+      startX = e.clientX
+      startW = outlineWidth
+      grip.classList.add("dragging")
+      try {
+        grip.setPointerCapture(e.pointerId)
+      } catch {
+        /* 忽略 */
+      }
+    })
+
+    grip.addEventListener("pointermove", (e) => {
+      if (!dragging) return
+      e.preventDefault()
+      e.stopPropagation()
+      applyOutlineWidth(startW + (e.clientX - startX))
+    })
+
+    const stop = () => {
+      if (!dragging) return
+      dragging = false
+      grip.classList.remove("dragging")
+      applyOutlineWidth(outlineWidth, true) // 松手才落盘
+    }
+    grip.addEventListener("pointerup", stop)
+    grip.addEventListener("pointercancel", stop)
+    grip.addEventListener("dblclick", (e) => {
+      e.preventDefault()
+      e.stopPropagation()
+      applyOutlineWidth(380, true)
+      setMsg("大纲宽度已复位")
+    })
+  }
+
   function positionOutlinePanel(panel: HTMLElement) {
     // 挂到 document.body 顶层，彻底摆脱 #mm-root 的层叠上下文
     try {
@@ -3112,7 +3193,7 @@ function boot(el: HTMLElement) {
     } catch {
       /* 忽略 */
     }
-    const w = Math.min(380, Math.round(window.innerWidth * 0.86))
+    const w = Math.max(OUTLINE_MIN_W, Math.min(maxOutlineWidth(), outlineWidth))
     panel.style.position = "fixed"
     panel.style.left = "0"
     panel.style.top = "0"

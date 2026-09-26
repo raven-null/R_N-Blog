@@ -171,7 +171,7 @@
       position: absolute !important;
       top: 0; right: 0; bottom: 0; left: 0;
       transition: left 0.25s ease;
-    }    .mm-canvas-host.outline-open { left: min(380px, 86vw); }
+    }    .mm-canvas-host.outline-open { left: var(--mm-outline-w, min(380px, 86vw)); }
 
     /* 大纲面板：默认关闭，打开后左侧写大纲、右侧实时成图。
        用 fixed 相对视口定位，避免被祖先容器（iframe、全屏态、canvasHost 的偏移）困住导致看不到。 */
@@ -195,6 +195,19 @@
       backdrop-filter: blur(20px) saturate(160%); -webkit-backdrop-filter: blur(20px) saturate(160%);
     }
     .mm-outline.open { display: flex; }
+    /* 右边缘拖拽把手：拖动改宽度（双击复位） */
+    .mm-outline-resizer {
+      position: absolute; top: 0; right: 0; width: 8px; height: 100%;
+      cursor: col-resize; z-index: 5; touch-action: none;
+      background: transparent; transition: background 0.15s ease;
+    }
+    .mm-outline-resizer::after {
+      content: ""; position: absolute; top: 0; right: 2px; width: 2px; height: 100%;
+      background: transparent; transition: background 0.15s ease;
+    }
+    .mm-outline-resizer:hover::after,
+    .mm-outline-resizer.dragging::after { background: var(--mm-accent); }
+    .mm-outline-resizer:hover, .mm-outline-resizer.dragging { background: rgba(255, 255, 255, 0.04); }
     .mm-outline-head {
       display: flex; align-items: center;
       padding: 10px 14px 8px; border-bottom: 1px solid var(--mm-border);
@@ -518,8 +531,8 @@
       try { if (window.parent !== window) document.documentElement.dataset.embedded = '1'; } catch (e) { /* 跨域则忽略 */ }
     })();
   </script>
-  <link rel="stylesheet" href="/js/vendor/mindmap/mindmap-editor.v104.css">
-  <script src="/js/vendor/mindmap/mindmap-editor.v104.js"></script>
+  <link rel="stylesheet" href="/js/vendor/mindmap/mindmap-editor.v105.css">
+  <script src="/js/vendor/mindmap/mindmap-editor.v105.js"></script>
   <script>
     // 兜底诊断：bundle 未加载或运行时抛错时给出可见提示，而不是静默无反应
     (function () {
@@ -551,7 +564,7 @@
       window.addEventListener('load', function () {
         if (!window.MindMapMount) {
           show('导图组件未能加载',
-            '脚本 mindmap-editor.v104.js 加载失败（404 / 部署未完成 / 被拦截）。<br>' +
+            '脚本 mindmap-editor.v105.js 加载失败（404 / 部署未完成 / 被拦截）。<br>' +
             '请 Ctrl+F5 强制刷新；若仍失败，检查 Netlify 最近一次部署是否成功。');
         }
       });
