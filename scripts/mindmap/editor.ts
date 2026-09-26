@@ -1571,16 +1571,21 @@ function boot(el: HTMLElement) {
             ? '<button type="button" class="mm-tri' + (r.expanded ? "" : " collapsed") + '" data-act="fold" title="' +
               (r.expanded ? "收起子项" : "展开子项") + '">' + (r.expanded ? "▾" : "▸") + "</button>"
             : '<span class="mm-tri empty"></span>'
+        // 行首小圆点 = 拖拽手柄（只有它开启原生拖拽，行内其它位置留给文字编辑）
+        const drag =
+          mode === "edit" && i > 0
+            ? '<span class="mm-oline-drag" draggable="true" title="按住拖动，可改上下顺序与层级"></span>'
+            : '<span class="mm-oline-drag off"></span>'
         const img = r.imgUrl
           ? '<img class="mm-oline-img" src="' + r.imgUrl + '" alt="" draggable="false" data-node="' + r.id + '">'
           : ""
         const text = r.topic.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
         return (
           '<div class="' + cls + '" data-line="' + i + '" data-node="' + r.id + '"' +
-          (mode === "edit" && i > 0 ? ' draggable="true"' : "") +
           ' style="padding-left:' +
           (8 + r.level * 18) + 'px">' +
           tri +
+          drag +
           '<span class="mm-oline-topic"' + (editing ? ' contenteditable="true" spellcheck="false"' : "") + '>' + text + "</span>" +
           img +
           "</div>"
@@ -1809,7 +1814,9 @@ function boot(el: HTMLElement) {
 
     host.addEventListener("dragstart", (e) => {
       if (mode !== "edit") return
-      const row = (e.target as HTMLElement | null)?.closest?.(".mm-oline") as HTMLElement | null
+      const t = e.target as HTMLElement | null
+      if (!t?.closest?.(".mm-oline-drag")) return
+      const row = t.closest?.(".mm-oline") as HTMLElement | null
       if (!row) return
       if (String(row.dataset.line) === "0") {
         e.preventDefault()
@@ -1864,6 +1871,8 @@ function boot(el: HTMLElement) {
       if (mode !== "edit") return
       const t = e.target as HTMLElement | null
       if (t?.classList.contains("mm-tri") || t?.classList.contains("mm-oline-img")) return
+      // 圆点手柄是拖拽用的，按住它交给原生 DnD，不要抢成「放光标」
+      if (t?.closest?.(".mm-oline-drag")) return
       const row = t?.closest?.(".mm-oline") as HTMLElement | null
       if (!row) return
 

@@ -94,6 +94,22 @@
     }
     .mm-oline .mm-tri:hover { opacity: 1; }
     .mm-oline .mm-tri.empty { cursor: default; opacity: 0; }
+    /* 行首拖拽手柄：小圆点，只在编辑模式可拖 */
+    .mm-oline .mm-oline-drag {
+      flex: none; width: 14px; height: 18px; margin-right: 4px;
+      display: inline-flex; align-items: center; justify-content: center;
+      cursor: grab;
+    }
+    .mm-oline .mm-oline-drag::before {
+      content: ""; width: 5px; height: 5px; border-radius: 50%;
+      background: rgba(255, 255, 255, 0.42);
+      transition: background 0.15s ease, transform 0.15s ease;
+    }
+    .mm-oline:hover .mm-oline-drag::before { background: var(--mm-accent); transform: scale(1.35); }
+    .mm-oline .mm-oline-drag:active { cursor: grabbing; }
+    .mm-oline .mm-oline-drag.off { cursor: default; }
+    .mm-oline .mm-oline-drag.off::before { background: rgba(255, 255, 255, 0.18); }
+    .mm-oline:hover .mm-oline-drag.off::before { background: rgba(255, 255, 255, 0.18); transform: none; }
     .mm-oline .mm-oline-topic { flex: 1 1 auto; outline: none; word-break: break-word; min-width: 1em; white-space: pre-wrap; }
     /* 多选高亮 */
     .mm-oline.selected-row { background: rgba(255, 159, 10, 0.16); box-shadow: inset 0 0 0 1px rgba(255, 159, 10, 0.45); }
@@ -278,8 +294,8 @@
       try { if (window.parent !== window) document.documentElement.dataset.embedded = '1'; } catch (e) { /* 跨域则忽略 */ }
     })();
   </script>
-  <link rel="stylesheet" href="/js/vendor/mindmap/mindmap-editor.v66.css">
-  <script src="/js/vendor/mindmap/mindmap-editor.v66.js"></script>
+  <link rel="stylesheet" href="/js/vendor/mindmap/mindmap-editor.v67.css">
+  <script src="/js/vendor/mindmap/mindmap-editor.v67.js"></script>
   <script>
     // 兜底诊断：bundle 未加载或运行时抛错时给出可见提示，而不是静默无反应
     (function () {
@@ -311,7 +327,7 @@
       window.addEventListener('load', function () {
         if (!window.MindMapMount) {
           show('导图组件未能加载',
-            '脚本 mindmap-editor.v66.js 加载失败（404 / 部署未完成 / 被拦截）。<br>' +
+            '脚本 mindmap-editor.v67.js 加载失败（404 / 部署未完成 / 被拦截）。<br>' +
             '请 Ctrl+F5 强制刷新；若仍失败，检查 Netlify 最近一次部署是否成功。');
         }
       });
