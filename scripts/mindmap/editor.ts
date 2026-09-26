@@ -149,7 +149,7 @@ function boot(el: HTMLElement) {
   // 只有「这张导图真的设了口令」才显形，所以单独持有引用
   const capKeyBtn = capBtn("bb-edit-only cap-key", "输入编辑口令", ICON_KEY, "口令", () => toggleKeyBar())
   if (embedded) {
-    capBtn("bb-view-only", "查看留言", ICON_COMMENT, "留言", () => tell("comments"))
+    capBtn("bb-view-only", "查看留言", ICON_COMMENT, "留言", () => toggleDrawer())
     capBtn("bb-view-only", "导图信息", ICON_INFO, "信息", () => tell("info"))
   }
   capsule.classList.toggle("is-edit", mode === "edit")
@@ -262,6 +262,156 @@ function boot(el: HTMLElement) {
     dlgErr.classList.remove("show")
     dlg.classList.add("show")
   }
+
+  /* ---------------- 留言抽屉（形态与白板一致：右侧滑出） ---------------- */
+  const drawerScrim = document.createElement("div")
+  drawerScrim.className = "mm-drawer-scrim"
+  const drawer = document.createElement("aside")
+  drawer.className = "mm-drawer"
+  drawer.innerHTML =
+    '<div class="mm-drawer-head">' +
+    '<span class="mm-drawer-title">留言<span class="cnt" id="mmCmtCount"></span></span>' +
+    '<button class="mm-drawer-x" data-mm-close="1" title="关闭" aria-label="关闭">' +
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>' +
+    "</button>" +
+    "</div>" +
+    '<div class="mm-drawer-body" id="mmCmtList"><div class="mm-cmt-empty">加载中…</div></div>' +
+    '<form class="mm-drawer-foot" id="mmCmtForm">' +
+    '<input id="mmCmtName" maxlength="32" placeholder="昵称 *" required>' +
+    '<textarea id="mmCmtText" maxlength="5000" placeholder="写下你的留言… *（纯文本，最长 5000 字）" required></textarea>' +
+    '<div class="row"><span class="tip" id="mmCmtTip"></span>' +
+    '<button class="send" type="submit" id="mmCmtSend">发送</button></div>' +
+    "</form>"
+  el.appendChild(drawerScrim)
+  el.appendChild(drawer)
+  const cmtList = drawer.querySelector("#mmCmtList") as HTMLElement
+  const cmtForm = drawer.querySelector("#mmCmtForm") as HTMLFormElement
+  const cmtName = drawer.querySelector("#mmCmtName") as HTMLInputElement
+  const cmtText = drawer.querySelector("#mmCmtText") as HTMLTextAreaElement
+  const cmtTip = drawer.querySelector("#mmCmtTip") as HTMLElement
+  const cmtSend = drawer.querySelector("#mmCmtSend") as HTMLButtonElement
+  const cmtCount = drawer.querySelector("#mmCmtCount") as HTMLElement
+  let cmtLoaded = false
+
+  const esc = (s: any) =>
+    String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
+
+  function fmtTime(ts: number): string {
+    try {
+      const d = new Date(ts)
+      const p = (n: number) => String(n).padStart(2, "0")
+      return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
+    } catch {
+      return ""
+    }
+  }
+
+  function renderComments(list: any[]) {
+    cmtCount.textContent = list.length ? `（${list.length}）` : ""
+    if (!list.length) {
+      cmtList.innerHTML = '<div class="mm-cmt-empty">还没有留言</div>'
+      return
+    }
+    cmtList.innerHTML = list
+      .map((c) => {
+        const name = esc(c?.name || "访客")
+        const initial = esc(String(c?.name || "客").trim().slice(0, 1) || "客")
+        const img = c?.image ? `<img class="mm-cmt-img" src="${esc(c.image)}" alt="留言图片" loading="lazy">` : ""
+        return (
+          '<div class="mm-cmt">' +
+          `<div class="mm-cmt-avatar">${initial}</div>` +
+          '<div class="mm-cmt-main">' +
+          `<div class="mm-cmt-top"><span class="mm-cmt-name">${name}</span><span class="mm-cmt-time">${esc(fmtTime(Number(c?.createdAt) || 0))}</span></div>` +
+          `<div class="mm-cmt-text">${esc(c?.content || "")}</div>` +
+          img +
+          "</div></div>"
+        )
+      })
+      .join("")
+  }
+
+  async function loadComments() {
+    try {
+      const res = await fetch(`/api/comments?postId=${encodeURIComponent(note)}`, { cache: "no-store" })
+      const d = await res.json().catch(() => ({}))
+      renderComments(Array.isArray(d?.comments) ? d.comments : [])
+    } catch (e: any) {
+      cmtList.innerHTML = '<div class="mm-cmt-empty">留言加载失败</div>'
+    }
+  }
+
+  function setDrawerOpen(open: boolean) {
+    drawer.classList.toggle("open", open)
+    drawerScrim.classList.toggle("show", open)
+    if (open) {
+      if (!cmtLoaded) {
+        cmtLoaded = true
+        void loadComments()
+      }
+      try {
+        cmtName.value = localStorage.getItem("comment_name") || cmtName.value
+      } catch {
+        /* 忽略 */
+      }
+    }
+    // 通知父页面（嵌入时用于同步按钮状态）
+    tell(open ? "comments-open" : "comments-close")
+  }
+  function toggleDrawer() {
+    setDrawerOpen(!drawer.classList.contains("open"))
+  }
+
+  drawerScrim.addEventListener("click", () => setDrawerOpen(false))
+  drawer.querySelector(".mm-drawer-x")?.addEventListener("click", () => setDrawerOpen(false))
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && drawer.classList.contains("open")) setDrawerOpen(false)
+  })
+
+  cmtForm.addEventListener("submit", async (e) => {
+    e.preventDefault()
+    const name = cmtName.value.trim()
+    const content = cmtText.value.trim()
+    if (!name || !content) {
+      cmtTip.textContent = "昵称和内容都要填"
+      cmtTip.classList.add("err")
+      return
+    }
+    cmtSend.disabled = true
+    cmtTip.classList.remove("err")
+    cmtTip.textContent = "发送中…"
+    try {
+      const res = await fetch("/api/comments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ postId: note, name, content }),
+      })
+      const d = await res.json().catch(() => ({}))
+      if (!res.ok || d.status !== "success") {
+        cmtTip.textContent = d.message || `发送失败（${res.status}）`
+        cmtTip.classList.add("err")
+        return
+      }
+      try {
+        localStorage.setItem("comment_name", name)
+      } catch {
+        /* 忽略 */
+      }
+      cmtText.value = ""
+      cmtTip.textContent = "留言成功"
+      await loadComments()
+    } catch (err: any) {
+      cmtTip.textContent = "发送出错：" + (err?.message || err)
+      cmtTip.classList.add("error")
+    } finally {
+      cmtSend.disabled = false
+    }
+  })
+
+  // 宿主页面（文章页/后台）让它打开抽屉
+  window.addEventListener("message", (e: MessageEvent) => {
+    const d: any = e.data || {}
+    if (d.type === "mindmap-open-comments") setDrawerOpen(true)
+  })
 
   function tell(action: string) {
     try {
