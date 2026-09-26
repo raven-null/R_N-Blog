@@ -621,6 +621,47 @@ function boot(el: HTMLElement) {
 
   const nextFid = () => "img-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 7)
 
+
+  /** 从剪贴板里取图片（截图 / 复制的图片文件 / 复制的网页图片） */
+  function pickImageFromClipboard(dt: DataTransfer | null): File | null {
+    if (!dt) return null
+    if (dt.items && dt.items.length) {
+      for (const it of Array.from(dt.items)) {
+        if (it.kind === "file" && it.type.startsWith("image/")) {
+          const f = it.getAsFile()
+          if (f) return f
+        }
+      }
+    }
+    if (dt.files && dt.files.length) {
+      for (const f of Array.from(dt.files)) {
+        if (f.type.startsWith("image/")) return f
+      }
+    }
+    return null
+  }
+
+  /**
+   * 粘贴即插图：复制图片（截图 / 右键复制图片）后直接 Ctrl+V。
+   * 库里 paste 事件最后会调用 mind.pasteHandler（不处理返回值），所以在这里做副作用。
+   */
+  function onPaste(e: ClipboardEvent) {
+    if (mode !== "edit") return
+    const file = pickImageFromClipboard((e as any).clipboardData)
+    if (!file) return
+    e.preventDefault()
+    // 正在某个输入框里打字时不抢粘贴（口令框、大纲面板等）
+    const t = e.target as HTMLElement | null
+    const tag = (t?.tagName || "").toLowerCase()
+    if (tag === "input" || tag === "textarea" || (t && (t as HTMLElement).isContentEditable)) return
+    const node = selectedNode()
+    if (!node) {
+      setMsg("先点选一个节点，再粘贴图片")
+      return
+    }
+    void insertImage(file, node)
+  }
+
   function pickImage() {
     if (mode !== "edit") return
     fileInput.click()
@@ -699,8 +740,8 @@ function boot(el: HTMLElement) {
     }
   }
 
-  async function insertImage(file: File) {
-    const node = selectedNode()
+  async function insertImage(file: File, target?: any) {
+    const node = target || selectedNode()
     if (!node) {
       setMsg("先点选一个节点，再插入图片")
       return
@@ -1323,6 +1364,9 @@ function boot(el: HTMLElement) {
   } catch {
     /* 忽略 */
   }
+  // 粘贴图片：库里 paste 的最后一步会调 mind.pasteHandler
+  ;(mind as any).pasteHandler = onPaste
+
   void load()
   updateKeyBar()
   applyEditable()
