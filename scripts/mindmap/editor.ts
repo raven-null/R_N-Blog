@@ -827,8 +827,6 @@ function boot(el: HTMLElement) {
     outlineEl.innerHTML =
       '<div class="mm-outline-head">' +
       '<span class="mm-outline-title">大纲</span>' +
-      '<button class="mm-btn" data-act="sync" title="用当前导图内容覆盖大纲">从导图刷新</button>' +
-      '<button class="mm-btn" data-act="close">关闭</button>' +
       "</div>" +
       '<textarea class="mm-outline-text" spellcheck="false" placeholder="中心主题&#10;· 分支一&#10;  · 子节点&#10;    · 孙节点"></textarea>'
     el.appendChild(outlineEl)
@@ -861,15 +859,6 @@ function boot(el: HTMLElement) {
       if (mode !== "edit") e.preventDefault()
     })
     outlineText.addEventListener("blur", flushOutline)
-    outlineEl.addEventListener("click", (e) => {
-      const t = e.target as HTMLElement
-      const act = t && t.dataset ? t.dataset.act : ""
-      if (act === "close") setOutlineOpen(false)
-      if (act === "sync") {
-        outlineText!.value = dataToOutline(mind.getData())
-        setMsg("已用导图内容刷新大纲")
-      }
-    })
   }
 
   let outlineBtnEl: HTMLButtonElement | null = null
