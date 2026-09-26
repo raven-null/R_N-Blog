@@ -1010,28 +1010,18 @@ function boot(el: HTMLElement) {
     outlineBtnEl = b as unknown as HTMLButtonElement
   }
 
-  /* ---------------- 视野适配：全部交给库自己的方法 ---------------- */
-  // 关键：不要自己给 .map-canvas 写 transform —— 库内部同时在维护缩放（scaleVal）和
-  // 连线位置（linkDiv）。两套叠加会让连线对不上节点、整体位置偏移，且 refresh 重建
-  // DOM 之后更明显。这里只用库提供的 scaleFit / toCenter。
+  /* ---------------- 视野适配：交给库自己 ---------------- */
+  // 历史教训：自己给 .map-canvas 写 transform、或连调 scaleFit()+toCenter()，
+  // 都会和库内部的缩放/位移/连线维护打架（scaleFit 改缩放后 toCenter 仍按旧尺寸算位移，
+  // 连线也按旧坐标画）——表现为整体偏移、连线对不上节点。
+  // 库在 init() 与 layout() 时会自己居中（alignment: "nodes" 会按内容居中），所以这里不干预。
   function fitView() {
-    const canvas = canvasHost.querySelector(".map-canvas") as HTMLElement | null
-    if (!canvas) return
-    try {
-      ;(mind as any).scaleFit() // 让库按容器尺寸定缩放
-    } catch {
-      /* 忽略 */
-    }
-    try {
-      ;(mind as any).toCenter?.() // 再让它自己居中
-    } catch {
-      /* 忽略 */
-    }
+    /* 有意留空：居中与缩放全部由 MindElixir 内部处理 */
   }
   let fitTimer: number | null = null
   function scheduleFit(delay = 260) {
-    if (fitTimer) window.clearTimeout(fitTimer)
-    fitTimer = window.setTimeout(fitView, delay)
+    /* 有意留空：见上 */
+    void delay
   }
   window.addEventListener("resize", () => scheduleFit(200))
   // 进退浏览器全屏时视口尺寸会变，必须重新适配，否则导图会偏到看不见
