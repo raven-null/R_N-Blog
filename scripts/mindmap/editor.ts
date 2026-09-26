@@ -613,6 +613,8 @@ function boot(el: HTMLElement) {
     return { width: Math.max(1, Math.round(w * scale)), height: Math.max(1, Math.round(h * scale)) }
   }
   const imageUrls = new Map<string, string>() // fid → blob URL（刷新后按需从服务器取回）
+  /** 大纲行右键「插入图片」时记住目标行，文件选完后贴到这一行（库默认用画布选中的节点） */
+  let pendingOutlineImageRow = ""
 
   const fileInput = document.createElement("input")
   fileInput.type = "file"
@@ -720,6 +722,12 @@ function boot(el: HTMLElement) {
   /** 统一入口：选图 / 右键插入 / 粘贴都走这里（先贴上看，保存时再转 WebP 上传） */
   function addImage(file: File) {
     if (mode !== "edit") return
+    if (pendingOutlineImageRow) {
+      const pid = pendingOutlineImageRow
+      pendingOutlineImageRow = ""
+      if (!stageImage(file, pid)) setMsg("图片贴不上去，请重试")
+      return
+    }
     const node = targetNodeForImage()
     const id = String(node?.id || "")
     if (!id) {
@@ -2135,6 +2143,24 @@ function boot(el: HTMLElement) {
     if (!host) return
     bindRowDrag(host)
 
+    // 大纲行右键菜单：画布的右键菜单只作用于画布节点，大纲行上没有插图入口。
+    host.addEventListener("contextmenu", (e) => {
+      if (mode !== "edit") return
+      const row = (e.target as HTMLElement | null)?.closest?.(".mm-oline") as HTMLElement | null
+      if (!row) return
+      e.preventDefault()
+      e.stopPropagation()
+      openRowMenu(row, e.clientX, e.clientY)
+    })
+    document.addEventListener("mousedown", (e) => {
+      if (!rowMenuEl) return
+      if (rowMenuEl.contains(e.target as Node)) return
+      closeRowMenu()
+    })
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") closeRowMenu()
+    })
+
     // 大纲面板挂在 body 下，不在 #mm-root 里，根元素上的 paste 监听收不到它。
     // 这里补一个捕获阶段的 paste：在大纲行里贴图能落到那一行。
     host.addEventListener("paste", (e) => onPaste(e as ClipboardEvent), true)
@@ -2461,6 +2487,82 @@ function boot(el: HTMLElement) {
     renderOutlineTree()
     renderOutlineThumbs(mind.getData())
     updateOutlineImageCount()
+  }
+
+  /* ---------------- 大纲行的右键菜单（插入 / 移除图片） ---------------- */
+  let rowMenuEl: HTMLElement | null = null
+  let rowMenuTarget: HTMLElement | null = null
+
+  function closeRowMenu() {
+    rowMenuEl?.classList.remove("show")
+    rowMenuTarget = null
+  }
+
+  function ensureRowMenu(): HTMLElement {
+    if (rowMenuEl) return rowMenuEl
+    const menu = document.createElement("div")
+    menu.className = "mm-rowmenu"
+    menu.innerHTML =
+      '<button type="button" data-act="img-add">插入图片<span>或直接 Ctrl+V</span></button>' +
+      '<button type="button" data-act="img-remove">移除这一行的图片</button>' +
+      '<button type="button" data-act="img-view">查看图片</button>'
+    document.body.appendChild(menu)
+    menu.addEventListener("click", (e) => {
+      const btn = (e.target as HTMLElement | null)?.closest?.("[data-act]") as HTMLElement | null
+      const act = btn?.dataset.act || ""
+      const row = rowMenuTarget
+      const id = row?.dataset.node || ""
+      closeRowMenu()
+      if (!id || !act) return
+      if (act === "img-add") {
+        pendingOutlineImageRow = id
+        pickImage()
+        return
+      }
+      if (act === "img-remove") {
+        removeImageById(id)
+        return
+      }
+      if (act === "img-view") {
+        const url = row?.querySelector(".mm-oline-img")?.getAttribute("src") || ""
+        if (url) window.open(url, "_blank")
+      }
+    })
+    rowMenuEl = menu
+    return menu
+  }
+
+  function openRowMenu(row: HTMLElement, x: number, y: number) {
+    const menu = ensureRowMenu()
+    rowMenuTarget = row
+    const hasImg = !!row.querySelector(".mm-oline-img")
+    const viewBtn = menu.querySelector('[data-act="img-view"]') as HTMLButtonElement | null
+    const rmBtn = menu.querySelector('[data-act="img-remove"]') as HTMLButtonElement | null
+    if (viewBtn) viewBtn.style.display = hasImg ? "flex" : "none"
+    if (rmBtn) rmBtn.disabled = !hasImg
+    menu.classList.add("show")
+    const w = menu.offsetWidth || 220
+    const h = menu.offsetHeight || 110
+    menu.style.left = Math.min(x, window.innerWidth - w - 8) + "px"
+    menu.style.top = Math.min(y, window.innerHeight - h - 8) + "px"
+  }
+
+  /** 按节点 id 移除图片（大纲右键菜单用） */
+  function removeImageById(id: string) {
+    if (mode !== "edit" || !id) return
+    const data = mind.getData() as any
+    const node = findNodeIn(data?.nodeData, id)
+    if (!node) return
+    if (!node.image) {
+      setMsg("这一行没有图片")
+      return
+    }
+    delete node.image
+    ;(mind as any).refresh(data)
+    dirty = true
+    outlineRows = collectRows(mind.getData())
+    renderOutlineTree()
+    setMsg("已移除图片")
   }
 
   /** 同步图片计数（顶部标题旁） */
