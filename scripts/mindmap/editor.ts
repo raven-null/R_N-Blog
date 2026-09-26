@@ -58,11 +58,18 @@ function boot(el: HTMLElement) {
     ...DARK_THEME,
     cssVar: {
       ...(DARK_THEME as any).cssVar,
-      "--main-color": "#ff9f0a",
+      // 选中描边（原来用橙色，容易和文字颜色混在一起看）
+      "--main-color": "rgba(255, 255, 255, 0.55)",
       "--main-bgcolor": "#141418",
+      // 普通节点文字
       "--color": "#e8e8ea",
+      // 根节点（中心主题）文字：与普通节点统一，不再一个白一个灰
+      "--root-color": "#e8e8ea",
+      // 根节点描边：和普通节点同一套，只靠底色深浅区分层级
+      "--root-border-color": "rgba(255, 255, 255, 0.4)",
       "--bgcolor": "#0b0b0e",
-      "--selected": "#2a2113",
+      // 选中高亮：原来是暖橙底，改成低饱和深灰蓝，不再像"变成黄色"
+      "--selected": "#3a4152",
       "--panel-color": "#e8e8ea",
       "--panel-bgcolor": "#18181c",
       "--panel-border-color": "rgba(255,255,255,.14)",
