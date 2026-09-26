@@ -1713,6 +1713,44 @@ body.admin-write-full .admin-actions.mobile-float{display:none}
             overflow: visible !important;
         }
 
+        /* ===== 表情等弹窗面板：纯黑填充 + 完全不透明（变量 + 逐条强制，双保险） ===== */
+        html body .vditor {
+            --panel-background-color: #000000 !important;
+            --panel-shadow: 0 18px 44px -14px rgba(0, 0, 0, 0.92) !important;
+        }
+        html body .vditor-panel,
+        html body .vditor-panel--arrow,
+        html body .vditor-hint,
+        html body .vditor-tip,
+        html body .vditor-emojis,
+        html body .vditor-emojis__tail,
+        html body .vditor-hint > div,
+        html body .vditor-panel > div {
+            background-color: #000000 !important;
+            background-image: none !important;
+            opacity: 1 !important;
+            filter: none !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+            color: #ffffff !important;
+        }
+        /* 面板左侧/箭头的填充同色，避免出现半透明或浅色三角 */
+        html body .vditor-panel--arrow::before,
+        html body .vditor-panel--arrow::after {
+            background-color: #000000 !important;
+            border-color: rgba(255, 255, 255, 0.2) !important;
+            opacity: 1 !important;
+        }
+        /* 表情条目：纯黑底 + 白色内容 */
+        html body .vditor-emojis button {
+            background-color: #000000 !important;
+            color: #ffffff !important;
+        }
+        html body .vditor-emojis button:hover {
+            background-color: #1d1d24 !important;
+        }
+        html body .vditor-emojis button span { color: #ffffff !important; }
+
 </style>
     <div id="fpMask" onclick="closeFrontPreview()"></div>
     <aside id="fpDrawer" aria-hidden="true">
