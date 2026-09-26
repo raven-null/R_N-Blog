@@ -2084,6 +2084,32 @@ function boot(el: HTMLElement) {
     })
   }
 
+  /** 焦点（光标）是否已经在大纲面板里 */
+  function caretInOutline(): boolean {
+    const sel = window.getSelection()
+    if (!sel || !sel.rangeCount) return false
+    return !!outlineEl?.contains(sel.getRangeAt(0).startContainer)
+  }
+
+  /**
+   * 拦住会「漏到画布」的按键：Tab 与 Enter。
+   * 库的快捷键表里 Tab = addChild()、Enter = insertSibling()，焦点一旦不在大纲行里，
+   * 这两个键就会被画布吃掉去新建节点。
+   */
+  function swallowOutlineKey(e: KeyboardEvent) {
+    if (mode !== "edit") return
+    if (e.isComposing) return // 输入法组合中（回车在选字）不要拦
+    if (e.key !== "Tab" && e.key !== "Enter") return
+    if (e.key === "Enter" && e.shiftKey) return // Shift+Enter 留给行内换行
+    try {
+      console.log("[mm] 拦下按键", { key: e.key, shift: e.shiftKey, composing: e.isComposing, inOutline: caretInOutline() })
+    } catch {
+      /* 忽略 */
+    }
+    e.preventDefault()
+    e.stopPropagation()
+  }
+
   function buildOutlineBindings() {
     const host = outlineHost
     if (!host) return
@@ -2091,14 +2117,16 @@ function boot(el: HTMLElement) {
 
     // Tab / Shift+Tab 必须留在面板里。不拦的话焦点会顺着 Tab 走到画布上，
     // 而画布的 Tab 快捷键正好是「新建子节点」——这就是「想改位置却建了新节点」的原因。
-    host.addEventListener(
+    host.addEventListener("keydown", (e) => swallowOutlineKey(e), true)
+
+    // 全局兜底：焦点根本不在大纲里时（点过画布、点过面板空白），Tab/Enter 也不能漏到画布上。
+    // 注意：焦点在大纲里时不要在这里拦，否则会挡住我们自己的回车/调级处理。
+    document.addEventListener(
       "keydown",
       (e) => {
-        if (mode !== "edit") return
-        if (e.key !== "Tab" && e.key !== "Enter") return
-        if (e.key === "Enter" && e.shiftKey) return // Shift+Enter 留给行内换行
-        e.preventDefault()
-        e.stopPropagation()
+        if (!panelOpen) return
+        if (caretInOutline()) return
+        swallowOutlineKey(e)
       },
       true,
     )
@@ -2135,13 +2163,14 @@ function boot(el: HTMLElement) {
       const topic = row.querySelector(".mm-oline-topic") as HTMLElement | null
       if (!topic) return
       e.preventDefault()
-      caretToTextEnd(topic)
-      // 再显式聚焦一次：光标没真正落到行里的话，Tab/Enter 会漏到画布上触发库的快捷键
+      // 顺序很重要：先聚焦、再放光标。反过来（放完光标再 focus）某些浏览器会把光标
+      // 重置掉，currentRow() 就找不到行，回车建行、Tab 调级这些按光标定位的功能会全失效。
       try {
         topic.focus({ preventScroll: true })
       } catch {
         /* 忽略 */
       }
+      caretToTextEnd(topic)
     })
 
     // 大纲 → 导图：边打边同步（防抖 300ms，不依赖失焦）
@@ -2184,7 +2213,14 @@ function boot(el: HTMLElement) {
       } catch {
         /* 忽略 */
       }
-      if (idx < 0) return
+      if (idx < 0) {
+        try {
+          console.warn("[mm] 按键时找不到当前行（光标不在大纲行里）", { key: e.key, 光标在大纲内: caretInOutline() })
+        } catch {
+          /* 忽略 */
+        }
+        return
+      }
 
       const mod = e.ctrlKey || e.metaKey
 
@@ -2231,6 +2267,11 @@ function boot(el: HTMLElement) {
         renderOutlineTree()
         const next = rowEls()[idx + 1]?.querySelector(".mm-oline-topic") as HTMLElement | null
         if (next) caretToTextEnd(next)
+        try {
+          console.log("[mm] 回车建了新行", { idx, 新行数: outlineRows.length, 光标落到新行: !!next })
+        } catch {
+          /* 忽略 */
+        }
         return
       }
 
