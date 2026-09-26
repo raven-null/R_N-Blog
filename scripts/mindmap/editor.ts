@@ -290,25 +290,25 @@ function boot(el: HTMLElement) {
       return
     }
     if (ltBar.querySelector(".mm-outline-btn")) return
-    const b = document.createElement("button") as HTMLButtonElement
-    b.type = "button"
+    // 与库自带图标同结构：<span><svg class="icon">，尺寸/间距/对齐由库的样式统一负责
+    const b = document.createElement("span")
     b.className = "mm-outline-btn"
     b.title = "大纲（左侧写大纲，右侧实时成图）"
     b.innerHTML =
-      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+      '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
       '<line x1="9" y1="6" x2="21" y2="6"></line>' +
       '<line x1="9" y1="12" x2="21" y2="12"></line>' +
       '<line x1="9" y1="18" x2="21" y2="18"></line>' +
-      '<circle cx="4" cy="6" r="1.2" fill="currentColor" stroke="none"></circle>' +
-      '<circle cx="4" cy="12" r="1.2" fill="currentColor" stroke="none"></circle>' +
-      '<circle cx="4" cy="18" r="1.2" fill="currentColor" stroke="none"></circle>' +
+      '<circle cx="4" cy="6" r="1.3" fill="currentColor" stroke="none"></circle>' +
+      '<circle cx="4" cy="12" r="1.3" fill="currentColor" stroke="none"></circle>' +
+      '<circle cx="4" cy="18" r="1.3" fill="currentColor" stroke="none"></circle>' +
       "</svg>"
     b.addEventListener("click", (e) => {
       e.stopPropagation()
       toggleOutline()
     })
     ltBar.appendChild(b)
-    outlineBtnEl = b
+    outlineBtnEl = b as unknown as HTMLButtonElement
   }
 
   /* ---------------- 视野适配：内容自适应铺满可视区 ---------------- */
