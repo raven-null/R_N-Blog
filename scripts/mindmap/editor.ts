@@ -605,8 +605,16 @@ function boot(el: HTMLElement) {
   }
   window.addEventListener("resize", () => scheduleFit(200))
   // 进退浏览器全屏时视口尺寸会变，必须重新适配，否则导图会偏到看不见
-  document.addEventListener("fullscreenchange", () => scheduleFit(260))
-  document.addEventListener("webkitfullscreenchange", () => scheduleFit(260))
+  const onViewportChange = () => {
+    scheduleFit(260)
+    // 大纲面板的内联尺寸也要跟着视口更新，否则全屏后会露出一截或超出
+    if (outlineEl && panelOpen) positionOutlinePanel(outlineEl)
+  }
+  document.addEventListener("fullscreenchange", onViewportChange)
+  document.addEventListener("webkitfullscreenchange", onViewportChange)
+  window.addEventListener("resize", () => {
+    if (outlineEl && panelOpen) positionOutlinePanel(outlineEl)
+  })
 
   /* ---------------- 大纲面板：左写大纲、右实时成图 ---------------- */
   // 面板默认关闭；打开时导图区让出宽度，右侧实时刷新
@@ -865,7 +873,9 @@ function boot(el: HTMLElement) {
   function setOutlineOpen(open: boolean) {
     buildOutline()
     panelOpen = open
-    outlineEl!.classList.toggle("open", open)
+    const panel = outlineEl!
+    panel.classList.toggle("open", open)
+    positionOutlinePanel(panel)
     if (outlineBtnEl) {
       outlineBtnEl.classList.toggle("active", open)
       outlineBtnEl.title = open ? "关闭大纲（左侧写大纲，右侧实时成图）" : "大纲（左侧写大纲，右侧实时成图）"
@@ -884,6 +894,28 @@ function boot(el: HTMLElement) {
     } catch {
       /* 忽略 */
     }
+  }
+
+  /**
+   * 大纲面板铺满视口左侧。
+   * 全屏、iframe、后台内嵌几种情况下祖先容器的尺寸/定位都不同，所以除了 CSS 的
+   * position:fixed，这里再用内联尺寸兜一层，并且保证它始终挂在最外层容器上。
+   */
+  function positionOutlinePanel(panel: HTMLElement) {
+    // 挂到 document.body 顶层，彻底摆脱 #mm-root 的层叠上下文
+    try {
+      if (panel.parentNode !== document.body) document.body.appendChild(panel)
+    } catch {
+      /* 忽略 */
+    }
+    const w = Math.min(380, Math.round(window.innerWidth * 0.86))
+    panel.style.position = "fixed"
+    panel.style.left = "0"
+    panel.style.top = "0"
+    panel.style.width = w + "px"
+    panel.style.height = window.innerHeight + "px"
+    panel.style.zIndex = "2147483000"
+    panel.style.display = panelOpen ? "flex" : "none"
   }
   function toggleOutline() {
     setOutlineOpen(!panelOpen)
