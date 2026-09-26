@@ -934,6 +934,26 @@
             }
         });
         // ===== Vditor 编辑器（所见即所得，轻量沉浸式） =====
+        // 按需加载：只有在真的要用编辑器时才注入脚本/样式（首屏省 289KB JS + 43KB CSS）
+        let vditorLoading=null;
+        function loadVditor(){
+            if(typeof Vditor!=='undefined')return Promise.resolve(true);
+            if(vditorLoading)return vditorLoading;
+            const withV='?v=1.0.0';
+            if(!document.getElementById('vditorCss')){
+                const l=document.createElement('link');
+                l.id='vditorCss';l.rel='stylesheet';l.href='js/vendor/vditor/dist/index.css'+withV;
+                document.head.appendChild(l);
+            }
+            vditorLoading=new Promise(resolve=>{
+                const s=document.createElement('script');
+                s.id='vditorJs';s.src='js/vendor/vditor/dist/index.min.js'+withV;
+                s.onload=()=>resolve(typeof Vditor!=='undefined');
+                s.onerror=()=>resolve(false);
+                document.head.appendChild(s);
+            });
+            return vditorLoading;
+        }
         let vditorInstance=null;
         let vditorReady=false;      // after 回调触发后为 true
         let vditorPendingMd=null;   // 初始化完成前暂存待写入内容
@@ -943,7 +963,15 @@
             const host=document.getElementById('vditor');
             if(!host)return null;
             if(typeof Vditor==='undefined'){
-                host.innerHTML='<div style="height:100%;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:13px">编辑器加载失败，请刷新页面重试</div>';
+                // 首次进来：先按需拉脚本，加载完再初始化一次（避免静默失败）
+                host.innerHTML='<div style="height:100%;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:13px">编辑器加载中…</div>';
+                loadVditor().then(ok=>{
+                    if(!ok){
+                        host.innerHTML='<div style="height:100%;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:13px">编辑器加载失败，请刷新页面重试</div>';
+                        return;
+                    }
+                    ensureEditor();
+                });
                 return null;
             }
             // 防御：若此前某次初始化中断在 #vditor 内残留了编辑器 DOM，

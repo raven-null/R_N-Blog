@@ -10,9 +10,8 @@
     <!-- Markdown 渲染库 -->
     <script src="js/vendor/marked.min.js"></script>
     <script src="js/markdown.js"></script>
-    <!-- Vditor 编辑器（所见即所得，轻量沉浸式），资源本地化避免外网 CDN 不可达导致布局失效 -->
-    <link rel="stylesheet" href="js/vendor/vditor/dist/index.css">
-    <script src="js/vendor/vditor/dist/index.min.js"></script>
+    <!-- Vditor 编辑器（所见即所得）：资源本地化，进「写文章」时按需注入（默认标签不是写作页，
+         首屏没必要为它下 289KB JS + 43KB CSS）。其余语言/绘图子包由 Vditor 自身按需拉取。 -->
     <style>
         *{margin:0;padding:0;box-sizing:border-box}
         :root{--bg:#080808;--bg-card:#111;--bg-input:#1a1a1a;--bg-hover:#1c1c1c;--bg-active:#1a2a3a;--text:#fff;--text-muted:rgba(255,255,255,.85);--accent:#4fc3f7;--accent-dim:rgba(79,195,247,.1);--border:#252525;--border-light:#333;--danger:#ef5350;--success:#66bb6a;--warning:#ffa726;--radius:10px;--radius-sm:6px;--shadow:0 8px 32px rgba(0,0,0,.5);--sidebar-w:220px;--sidebar-collapsed:52px}
@@ -1645,7 +1644,7 @@ body.admin-write-full .admin-actions.mobile-float{display:none}
     </div>
 
         <script src="js/tag-picker.js?v=1.0.0"></script>
-        <script src="js/admin-app.js?v=1.9.5"></script>
+        <script src="js/admin-app.js?v=1.9.6"></script>
 
     <!-- 前台预览抽屉（iframe 内嵌，零跳出） -->
     <style>
