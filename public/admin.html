@@ -1751,6 +1751,30 @@ body.admin-write-full .admin-actions.mobile-float{display:none}
         }
         html body .vditor-emojis button span { color: #ffffff !important; }
 
+        /* ===== 弹窗面板显示在最顶层：抬升祖先链层级 + 面板取最大 z-index =====
+           （编辑器容器带 backdrop-filter 会形成层叠上下文，只改面板自身无效） */
+        html body #tab-write,
+        html body .view-container,
+        html body .editor-wrap,
+        html body .ee-main,
+        html body .ee-editor-card,
+        html body .vditor,
+        html body .vditor-content {
+            position: relative !important;
+            z-index: 3000 !important;
+        }
+        html body .vditor-toolbar {
+            position: relative !important;
+            z-index: 3001 !important;
+            overflow: visible !important;
+        }
+        html body .vditor-panel,
+        html body .vditor-hint,
+        html body .vditor-tip,
+        html body .vditor-panel--arrow {
+            z-index: 2147483647 !important;
+        }
+
 </style>
     <div id="fpMask" onclick="closeFrontPreview()"></div>
     <aside id="fpDrawer" aria-hidden="true">
