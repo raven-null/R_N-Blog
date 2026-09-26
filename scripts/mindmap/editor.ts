@@ -111,7 +111,7 @@ function boot(el: HTMLElement) {
   }
 
   if (mode === "edit") {
-    btn("保存", "primary", () => void save(false))
+    // 保存按钮已移除：保存走 Ctrl+S、后台编辑页的「保存」按钮（宿主调用 __mindmapSave）与发布时的自动保存
     btn("导出 PNG", "", () => void exportImage("png"))
     btn("导出 SVG", "", () => void exportImage("svg"))
     btn("导出 JSON", "", () => exportJson())
@@ -185,7 +185,8 @@ function boot(el: HTMLElement) {
       scheduleFit(320)
       updateKeyBar()
       mountOutlineButton()
-      setMsg("")
+      if (mode === "edit") setMsg("Ctrl + S 保存")
+      else setMsg("")
     } catch (e: any) {
       setMsg("加载失败：" + (e?.message || e))
     }
