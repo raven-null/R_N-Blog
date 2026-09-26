@@ -1828,6 +1828,11 @@ function boot(el: HTMLElement) {
     const targets = rest.map((r) => r.id)
     const baseIdx = targets.indexOf(toId)
     if (baseIdx < 0) return
+    // 变成子项时，目标若本来是收起的，搬完就看不见了 —— 自动展开，让用户看到结果
+    if (mode === "in") {
+      const t = rest[baseIdx]
+      if (t) t.expanded = true
+    }
     const delta = rest[baseIdx].level + (mode === "in" ? 1 : 0) - srcLevel
     const moved = moving.map((r) => ({ ...r, level: Math.max(1, r.level + delta) }))
     const insertAt = mode === "before" ? baseIdx : baseIdx + 1
@@ -1874,7 +1879,9 @@ function boot(el: HTMLElement) {
       dragId = row.dataset.node || null
       row.classList.add("dragging")
       try {
-        e.dataTransfer?.setData("text/plain", dragId || "")
+        // 故意不用 text/plain：带文本类型时，拖到某些位置松开会被浏览器当成「用这段文字搜索」，
+        // 直接弹搜索框。这里只放一个自定义类型（Firefox 要求必须 setData 才允许拖）。
+        e.dataTransfer?.setData("application/x-mm-row", dragId || "")
         if (e.dataTransfer) e.dataTransfer.effectAllowed = "move"
       } catch {
         /* 忽略 */
@@ -1887,7 +1894,9 @@ function boot(el: HTMLElement) {
       e.preventDefault()
       const rect = row.getBoundingClientRect()
       const rel = (e.clientY - rect.top) / Math.max(1, rect.height)
-      const mode = rel < 0.3 ? "before" : rel > 0.7 ? "after" : "in"
+      // 中间一大片（30%~70%）都给「变成它的子项」，上下两成才是插到前面/后面。
+      // 之前中间太窄，想降到下一级很难命中，感觉像「只能拖回上一级」。
+      const mode = rel < 0.22 ? "before" : rel > 0.78 ? "after" : "in"
       clearMarks()
       row.classList.add("dragging")
       row.classList.add("drop-" + mode)
@@ -1983,6 +1992,13 @@ function boot(el: HTMLElement) {
       if (!row) return
       const id = row.dataset.node || ""
       const idx = outlineRows.findIndex((r) => r.id === id)
+      try {
+        if (["Tab", "Enter", "Backspace", "Delete"].includes(e.key)) {
+          console.log("[mm] 大纲按键", { key: e.key, shift: e.shiftKey, alt: e.altKey, ctrl: e.ctrlKey, idx, id, level: outlineRows[idx]?.level, selected: selectedRows.size })
+        }
+      } catch {
+        /* 忽略 */
+      }
       if (idx < 0) return
 
       if (e.key === "Enter") {
