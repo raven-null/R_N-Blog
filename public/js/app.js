@@ -298,6 +298,7 @@ const BlogApp = {
                         <img src="${this.escAttr(post.image)}" alt="${this.esc(post.title)}" class="img-placeholder" loading="lazy" decoding="async"
                              referrerpolicy="no-referrer"
                              data-g1="${gradientColors[0]}" data-g2="${gradientColors[1]}" data-icon="${this.getCardIcon(post.tags || [])}"
+                             onload="BlogApp.handleCoverLoad(this)"
                              onerror="BlogApp.handleCoverError(this)">
                     </div>
                 ` : `
@@ -1012,6 +1013,25 @@ const BlogApp = {
     // HTML 属性转义（额外转义单引号，用于 onclick 等单引号属性）
     escAttr(str) {
         return this.esc(str).replace(/'/g, '&#39;');
+    },
+
+    // 封面加载完成：按真实宽高比调整卡片高度，并保证图片完整显示（不裁剪）
+    handleCoverLoad(img) {
+        try {
+            if (!img) return;
+            const w = img.naturalWidth || 0;
+            const h = img.naturalHeight || 0;
+            if (!w || !h) return;
+            const box = img.parentElement;
+            if (!box || !box.classList.contains('card-img')) return;
+            const cardW = box.clientWidth || 320;
+            // 目标高度 = 按真实比例算出来的高度，再夹到卡片的合理区间
+            const target = Math.round(cardW * h / w);
+            const height = Math.max(180, Math.min(360, target));
+            box.style.height = height + 'px';
+            // 图片按 contain 完整显示：宽高比和容器有差异时，用容器底色兜住留白
+            img.style.objectFit = 'contain';
+        } catch (e) { /* 兜底异常忽略 */ }
     },
 
     // 封面加载失败兜底：先重试默认封面，仍失败则退化为标签渐变底 + 图标

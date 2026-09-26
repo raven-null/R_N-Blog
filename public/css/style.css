@@ -1174,12 +1174,14 @@ body.home-layout {
 .card-img .img-placeholder {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    /* 完整展示整张封面：不裁切（高度由 app.js 按图片真实比例给出，保持卡片错落感） */
+    object-fit: contain;
+    object-position: center;
     transition: transform 0.4s;
 }
 
 .card:hover .card-img .img-placeholder {
-    transform: scale(1.03);
+    transform: scale(1.015);
 }
         /* ===== 白板文章卡片：网格底 + 封面图 + 交互白板标识 ===== */
         .card.card-board .board-cover {
