@@ -1017,11 +1017,6 @@ function boot(el: HTMLElement) {
   function fitView() {
     const canvas = canvasHost.querySelector(".map-canvas") as HTMLElement | null
     if (!canvas) return
-    // 清掉历史版本写进去的内联变换
-    if (canvas.style.transform) {
-      canvas.style.transform = ""
-      canvas.style.transformOrigin = ""
-    }
     try {
       ;(mind as any).scaleFit() // 让库按容器尺寸定缩放
     } catch {
