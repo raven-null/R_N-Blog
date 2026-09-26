@@ -122,13 +122,45 @@
     .mm-capsule.is-edit .mm-cap-btn.cap-key.show { display: inline-flex; }
     /* 只读态 */
     /* 工具条常驻显示：方向切换 + 大纲入口，只读时也能看大纲；能不能改内容由 mind.editable 拦着 */
-    #mm-root .mind-elixir-toolbar { display: flex !important; }
-    #mm-root .mind-elixir-toolbar > span { cursor: pointer; }
+    #mm-root .mind-elixir-toolbar { display: block !important; }
+    /* 左侧工具条：竖直排列、竖直居中、图标等距 */
+    #mm-root .mind-elixir-toolbar.lt {
+      display: flex !important; flex-direction: column; align-items: center; justify-content: center;
+      gap: 12px;
+      top: 50%; transform: translateY(-50%);
+      left: 16px;
+      padding: 12px 10px; border-radius: 16px;
+      background: linear-gradient(145deg, rgba(30, 30, 37, 0.85), rgba(20, 20, 26, 0.78));
+      backdrop-filter: blur(24px) saturate(180%); -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border: 1px solid rgba(255, 255, 255, 0.13);
+      box-shadow: 0 16px 40px -12px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    }
+    /* 库自带的 span+span { margin-top: 10px } 会和 gap 叠加，统一改成 gap 控制间距 */
+    #mm-root .mind-elixir-toolbar.lt > span + span { margin-top: 0; }
+    /* 每个图标统一成 20×20 的圆形热区，间距由 gap 统一负责 */
+    #mm-root .mind-elixir-toolbar.lt > span {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 30px; height: 30px; margin: 0; cursor: pointer;
+      color: rgba(255, 255, 255, 0.72);
+      border-radius: 10px;
+      transition: background 0.2s ease, color 0.2s ease, transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    #mm-root .mind-elixir-toolbar.lt > span svg { width: 18px; height: 18px; display: block; }
+    #mm-root .mind-elixir-toolbar.lt > span:hover { background: rgba(255, 255, 255, 0.12); color: #fff; }
+    #mm-root .mind-elixir-toolbar.lt > span:active { transform: scale(0.92); }
+    #mm-root .mind-elixir-toolbar.lt > span.active,
+    #mm-root .mind-elixir-toolbar.lt > span.mm-outline-btn.active { background: rgba(255, 159, 10, 0.18); color: var(--mm-accent); }
     /* 只读时大纲可看不可改：视觉上和「正在编辑」区分开 */
     #mm-root.mm-readonly .mm-outline-text { color: rgba(255, 255, 255, 0.72); cursor: default; }
     #mm-root.mm-readonly me-tpc > .text { -webkit-user-select: none; -ms-user-select: none; user-select: none; }
     #mm-root.mm-readonly me-epd { display: none !important; }
     html[data-embedded="1"] .mm-capsule { bottom: 14px; }
+    /* 窄屏：工具条再紧凑一点，避免压住内容 */
+    @media (max-width: 720px) {
+      #mm-root .mind-elixir-toolbar.lt { left: 10px; gap: 8px; padding: 9px 8px; }
+      #mm-root .mind-elixir-toolbar.lt > span { width: 26px; height: 26px; }
+      #mm-root .mind-elixir-toolbar.lt > span svg { width: 16px; height: 16px; }
+    }
 
     /* 退出编辑确认弹层 */
     .mm-dlg {
@@ -173,11 +205,7 @@
     .mm-empty .card { padding: 28px 26px; border-radius: 22px; background: var(--mm-panel); border: 1px solid var(--mm-border); max-width: calc(100vw - 40px); }
     .mm-empty .t { font-size: 17px; color: #fff; font-weight: 600; margin-bottom: 8px; }
     .mm-empty .row { font-size: 13px; line-height: 1.9; }
-    /* 大纲按钮：与库自带图标同结构（span + svg.icon），尺寸/间距/对齐完全交给库的工具栏样式，
-       这里只加颜色反馈，保证风格统一 */
-    .mind-elixir-toolbar .mm-outline-btn { cursor: pointer; }
-    .mind-elixir-toolbar .mm-outline-btn:hover { color: var(--mm-accent); }
-    .mind-elixir-toolbar .mm-outline-btn.active { color: var(--mm-accent); }
+    /* 大纲按钮已并入左侧工具条的统一样式（见上），这里不再单独设尺寸与间距 */
 
     /* 导图画布容器：库会写入内联 position:relative，这里用 !important 保持绝对定位铺满 */
     .mm-canvas-host {
@@ -253,8 +281,8 @@
       try { if (window.parent !== window) document.documentElement.dataset.embedded = '1'; } catch (e) { /* 跨域则忽略 */ }
     })();
   </script>
-  <link rel="stylesheet" href="/js/vendor/mindmap/mindmap-editor.v22.css">
-  <script src="/js/vendor/mindmap/mindmap-editor.v22.js"></script>
+  <link rel="stylesheet" href="/js/vendor/mindmap/mindmap-editor.v23.css">
+  <script src="/js/vendor/mindmap/mindmap-editor.v23.js"></script>
   <script>
     // 兜底诊断：bundle 未加载或运行时抛错时给出可见提示，而不是静默无反应
     (function () {
@@ -286,7 +314,7 @@
       window.addEventListener('load', function () {
         if (!window.MindMapMount) {
           show('导图组件未能加载',
-            '脚本 mindmap-editor.v22.js 加载失败（404 / 部署未完成 / 被拦截）。<br>' +
+            '脚本 mindmap-editor.v23.js 加载失败（404 / 部署未完成 / 被拦截）。<br>' +
             '请 Ctrl+F5 强制刷新；若仍失败，检查 Netlify 最近一次部署是否成功。');
         }
       });
