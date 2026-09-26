@@ -370,7 +370,8 @@ function boot(el: HTMLElement) {
    * 层级跳级也安全（逐级找父节点），不会丢行。
    */
   const OUTLINE_INDENT = "  "
-  const BULLET_RE = /^\s*(?:[-*+]|\d+[.)])\s+/
+  const OUTLINE_BULLET = "· "
+  const BULLET_RE = /^\s*(?:[·•▪◦]|[-*+]|\d+[.)])\s+/
 
   function outlineToData(text: string): any {
     const root: any = { id: "root", topic: "", children: [] }
@@ -404,9 +405,9 @@ function boot(el: HTMLElement) {
       }
 
       const indent = (line.match(/^[\t ]*/) as RegExpMatchArray)[0].replace(/\t/g, OUTLINE_INDENT).length
-      // 去掉所有前导列表符，方便「- - 内容」这类手滑输入
+      // 去掉前导列表符，方便「· - 内容」这类手滑输入；认 ·、- * +、1. 1)
       let topic = line.trim()
-      while (BULLET_RE.test(topic)) topic = topic.replace(BULLET_RE, "")
+      for (let i = 0; i < 6 && BULLET_RE.test(topic); i++) topic = topic.replace(BULLET_RE, "")
       add(Math.floor(indent / 2), topic.trim())
     }
 
@@ -415,12 +416,12 @@ function boot(el: HTMLElement) {
     return { nodeData: root }
   }
 
-  /** 导图 → 大纲文本：根行不带列表符，其余行「2 空格 × 层级 + - 」 */
+  /** 导图 → 大纲文本：根行不带前缀，其余行「2 空格 × 层级 + · 」（也兼容 Markdown 列表写法） */
   function dataToOutline(data: any): string {
     const lines: string[] = []
     const walk = (node: any, depth: number) => {
       const topic = String(node?.topic ?? "").replace(/\r?\n/g, " ")
-      lines.push(depth === 0 ? topic : OUTLINE_INDENT.repeat(depth - 1) + "- " + topic)
+      lines.push(depth === 0 ? topic : OUTLINE_INDENT.repeat(depth - 1) + OUTLINE_BULLET + topic)
       ;(node?.children || []).forEach((c: any) => walk(c, depth + 1))
     }
     walk(data?.nodeData ?? data, 0)
@@ -472,13 +473,13 @@ function boot(el: HTMLElement) {
     const lineStart = text.lastIndexOf("\n", Math.max(0, pos - 1)) + 1
     const end = lineEnd(text, pos)
     let line = text.slice(lineStart, end)
-    const bullet = (line.match(/^[\t ]*(?:[-*+]|\d+[.)])\s+/) as RegExpMatchArray | null)?.[0] ?? ""
+    const bullet = (line.match(/^[\t ]*(?:[·•▪◦]|[-*+]|\d+[.)])\s+/) as RegExpMatchArray | null)?.[0] ?? ""
     const wsLen = (line.match(/^[\t ]*/) as RegExpMatchArray)[0].replace(/\t/g, OUTLINE_INDENT).length
     const level = Math.floor(wsLen / 2)
     const next = Math.max(0, level + deltaIndent)
     const bodyStart = lineStart + bullet.length
     const body = line.trim() === "" ? "" : text.slice(bodyStart, end)
-    const prefix = next === 0 ? "" : OUTLINE_INDENT.repeat(next) + "- "
+    const prefix = next === 0 ? "" : OUTLINE_INDENT.repeat(next) + OUTLINE_BULLET
     const caretInBody = Math.max(0, pos - bodyStart)
     const newLine = prefix + body
     replaceRange(ta, lineStart, end, newLine, lineStart + Math.min(caretInBody, body.length) + prefix.length)
@@ -513,7 +514,7 @@ function boot(el: HTMLElement) {
         replaceRange(ta, lineStart, end, prefix, lineStart + prefix.length)
         return
       }
-      const prefix = "\n" + OUTLINE_INDENT.repeat(Math.floor(indent / 2)) + "- "
+      const prefix = "\n" + OUTLINE_INDENT.repeat(Math.floor(indent / 2)) + OUTLINE_BULLET
       replaceRange(ta, pos, pos, prefix, pos + prefix.length)
       return
     }
@@ -522,14 +523,14 @@ function boot(el: HTMLElement) {
     if (e.key === "Backspace" && ta.selectionStart === ta.selectionEnd) {
       const lineStart = text.lastIndexOf("\n", Math.max(0, pos - 1)) + 1
       const before = text.slice(lineStart, pos)
-      if (/^[\t ]*(?:[-*+]|\d+[.)])\s+$/.test(before)) {
+      if (/^[\t ]*(?:[·•▪◦]|[-*+]|\d+[.)])\s+$/.test(before)) {
         e.preventDefault()
         replaceRange(ta, lineStart, pos, "", lineStart)
       }
     }
   }
 
-  /** 输入「-」后自动补空格，省得敲 "- 内容" */
+  /** 输入「·」或「-」后自动补空格，省得手敲分隔符 */
   function onOutlineInput() {
     const ta = outlineText
     if (!ta) return
@@ -538,7 +539,7 @@ function boot(el: HTMLElement) {
     const text = ta.value
     const lineStart = text.lastIndexOf("\n", Math.max(0, pos - 1)) + 1
     const before = text.slice(lineStart, pos)
-    if (/^[\t ]*[-*+]$/.test(before)) {
+    if (/^[\t ]*[·•▪◦\-*+]$/.test(before)) {
       replaceRange(ta, pos, pos, " ", pos + 1)
     }
   }
@@ -578,7 +579,7 @@ function boot(el: HTMLElement) {
       '<button class="mm-btn" data-act="sync" title="用当前导图内容覆盖大纲">从导图刷新</button>' +
       '<button class="mm-btn" data-act="close">关闭</button>' +
       "</div>" +
-      '<textarea class="mm-outline-text" spellcheck="false" placeholder="中心主题&#10;- 分支一&#10;  - 子节点&#10;    - 孙节点"></textarea>'
+      '<textarea class="mm-outline-text" spellcheck="false" placeholder="中心主题&#10;· 分支一&#10;  · 子节点&#10;    · 孙节点"></textarea>'
     el.appendChild(outlineEl)
     outlineText = outlineEl.querySelector(".mm-outline-text") as HTMLTextAreaElement
     outlineText.addEventListener("input", () => {
