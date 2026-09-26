@@ -645,33 +645,47 @@ function boot(el: HTMLElement) {
    * 粘贴即插图：复制图片（截图 / 右键复制图片）后直接 Ctrl+V。
    * 库里 paste 事件最后会调用 mind.pasteHandler（不处理返回值），所以在这里做副作用。
    */
+  /** 是不是在可输入的地方（口令框等）——那里粘贴文字不能被我们拦掉 */
+  function isTypingTarget(t: HTMLElement | null): boolean {
+    if (!t) return false
+    const tag = (t.tagName || "").toLowerCase()
+    if (tag === "input") return true
+    if (tag === "textarea") return !t.classList.contains("mm-outline-text") // 大纲面板要单独处理
+    return !!(t as HTMLElement).isContentEditable
+  }
+
   function onPaste(e: ClipboardEvent) {
     if (mode !== "edit") return
+    // 剪贴板里没有图片就什么也不做（文字粘贴照常）
     const file = pickImageFromClipboard((e as any).clipboardData)
     if (!file) return
-    const t = e.target as HTMLElement | null
-    const tag = (t?.tagName || "").toLowerCase()
+    // 注意顺序：先确认是「图片 + 可处理的目标」，再 preventDefault，
+    // 否则口令输入框这类地方连文字都粘不进去
+    const t = (e.target as HTMLElement | null) || null
+    const inOutline = !!t && t.tagName.toLowerCase() === "textarea" && t.classList.contains("mm-outline-text")
 
-    // 在大纲面板里粘贴：插到光标所在的那一行对应的节点
-    if (tag === "textarea" && t && t.classList.contains("mm-outline-text")) {
-      e.preventDefault()
+    if (inOutline) {
+      // 在大纲面板里粘贴：插到光标所在那一行对应的节点
       const line = outlineCaretLine(t as HTMLTextAreaElement)
-      const id = outlineLineNodeIds[line] || ""
-      const node = nodeById(id)
+      const node = nodeById(outlineLineNodeIds[line] || "")
       if (!node) {
-        setMsg("没定位到大纲这一行的节点，换个位置再粘贴试试")
+        setMsg("没定位到大纲这一行的节点：把光标放到某一行内容上再粘贴")
         return
       }
+      e.preventDefault()
+      e.stopPropagation() // 别让库的粘贴处理再插手
       void insertImage(file, node)
       return
     }
 
+    if (isTypingTarget(t)) return // 口令框等：不抢
+
+    // 画布/节点上：优先用当前选中的节点；没选中就自动建一个节点来放图
     e.preventDefault()
-    // 其他输入框（编辑口令等）不抢粘贴
-    if (tag === "input" || tag === "textarea" || (t && (t as HTMLElement).isContentEditable)) return
-    const node = selectedNode()
+    e.stopPropagation()
+    const node = targetNodeForImage()
     if (!node) {
-      setMsg("先点选一个节点（或把光标放到大纲某一行），再粘贴图片")
+      setMsg("没找到可放置图片的节点")
       return
     }
     void insertImage(file, node)
@@ -680,6 +694,26 @@ function boot(el: HTMLElement) {
   function pickImage() {
     if (mode !== "edit") return
     fileInput.click()
+  }
+
+  /**
+   * 选一个用来放图片的节点：
+   * 优先当前选中的节点；没选中就自动在中心主题下建一个「图片」节点。
+   * （粘贴图片时不必先手动选中，少一步操作）
+   */
+  function targetNodeForImage(): any | null {
+    const cur = selectedNode()
+    if (cur) return cur
+    try {
+      const mindAny = mind as any
+      const root = mind.getData()?.nodeData
+      if (!root) return null
+      mindAny.selectNode?.(mindAny.findEle?.(root.id))
+      mindAny.addChild?.() // 库会在当前节点下新建子节点并选中它
+      return selectedNode()
+    } catch {
+      return null
+    }
   }
 
   /** 选中节点：库的 currentNodes 就是当前选中的节点对象 */
@@ -756,8 +790,8 @@ function boot(el: HTMLElement) {
   }
 
   async function insertImage(file: File, target?: any) {
-    const node = target || selectedNode()
-    if (!node) {
+    const targetId = String((target || selectedNode())?.id || "")
+    if (!targetId) {
       setMsg("先点选一个节点，再插入图片")
       return
     }
@@ -777,8 +811,24 @@ function boot(el: HTMLElement) {
       const shown = displaySize(width, height)
       const shownUrl = URL.createObjectURL(blob)
       imageUrls.set(fid, shownUrl)
-      node.image = { url: fid, width: shown.width, height: shown.height, fit: "contain" }
-      ;(mind as any).refresh(mind.getData())
+      // 在实时数据里按 id 找到节点再挂图（改副本是不会生效的）
+      const data = mind.getData() as any
+      let hit: any = null
+      const find = (n: any) => {
+        if (!n || hit) return
+        if (String(n.id) === targetId) {
+          hit = n
+          return
+        }
+        ;(n.children || []).forEach(find)
+      }
+      find(data?.nodeData)
+      if (!hit) {
+        setMsg("没找到目标节点（可能已被删除），图片未插入")
+        return
+      }
+      hit.image = { url: fid, width: shown.width, height: shown.height, fit: "contain" }
+      ;(mind as any).refresh(data)
       dirty = true
       scheduleFit(80)
       setMsg(`已插入图片：${shown.width}×${shown.height} · WebP ${kb(blob.size)}。记得保存导图（Ctrl+S）把图片引用一起存下来`)
