@@ -615,7 +615,7 @@ function boot(el: HTMLElement) {
   fileInput.addEventListener("change", () => {
     const f = fileInput.files && fileInput.files[0]
     fileInput.value = ""
-    if (f) void insertImage(f)
+    if (f) addImage(f)
   })
   el.appendChild(fileInput)
 
@@ -674,7 +674,7 @@ function boot(el: HTMLElement) {
       }
       e.preventDefault()
       e.stopPropagation() // 别让库的粘贴处理再插手
-      void insertImage(file, node)
+      if (!stageImage(file, String(node.id))) setMsg("图片贴不上去，请重试")
       return
     }
 
@@ -684,16 +684,29 @@ function boot(el: HTMLElement) {
     e.preventDefault()
     e.stopPropagation()
     const node = targetNodeForImage()
-    if (!node) {
+    const id = String(node?.id || "")
+    if (!id) {
       setMsg("没找到可放置图片的节点")
       return
     }
-    void insertImage(file, node)
+    if (!stageImage(file, id)) setMsg("图片贴不上去，请重试")
   }
 
   function pickImage() {
     if (mode !== "edit") return
     fileInput.click()
+  }
+
+  /** 统一入口：选图 / 右键插入 / 粘贴都走这里（先贴上看，保存时再转 WebP 上传） */
+  function addImage(file: File) {
+    if (mode !== "edit") return
+    const node = targetNodeForImage()
+    const id = String(node?.id || "")
+    if (!id) {
+      setMsg("没找到可放置图片的节点")
+      return
+    }
+    if (!stageImage(file, id)) setMsg("图片贴不上去，请重试")
   }
 
   /**
@@ -789,6 +802,134 @@ function boot(el: HTMLElement) {
     }
   }
 
+  /* ---------- 图片：先贴上看，保存时统一转 WebP 并上传（与白板一致） ---------- */
+  const pendingImages: Array<{ id: string; blob: Blob; name: string }> = []
+  const pendingBlobUrl = new Map<string, string>()
+  /** blob: 地址 → 原始文件（保存时用它做 WebP 转换） */
+  const blobByUrl = new Map<string, Blob>()
+
+  /** 把实时数据里所有 blob: 图片地址收集成待上传队列 */
+  function collectPendingFromData(): number {
+    const data = mind.getData() as any
+    let added = 0
+    const walk = (n: any) => {
+      const u = n?.image?.url
+      if (typeof u === "string" && u.startsWith("blob:")) {
+        if (!pendingBlobUrl.has(u)) {
+          const blob = blobByUrl.get(u)
+          if (blob) {
+            pendingBlobUrl.set(u, String(n.id))
+            pendingImages.push({ id: String(n.id), blob, name: "paste" })
+            added++
+          }
+        }
+      }
+      ;(n?.children || []).forEach(walk)
+    }
+    walk(data?.nodeData)
+    return added
+  }
+
+  /**
+   * 粘贴/选图后先只挂上本地图片（blob:），立刻能看到；
+   * 真正的 WebP 转换与上传留到保存时统一做（与白板同一套节奏）。
+   */
+  function stageImage(file: File, targetId: string): boolean {
+    try {
+      const url = URL.createObjectURL(file)
+      blobByUrl.set(url, file)
+      const data = mind.getData() as any
+      let hit: any = null
+      const find = (n: any) => {
+        if (!n || hit) return
+        if (String(n.id) === targetId) {
+          hit = n
+          return
+        }
+        ;(n.children || []).forEach(find)
+      }
+      find(data?.nodeData)
+      if (!hit) return false
+      // 先按 320 宽、按需高度占位，取到真实尺寸后再校正
+      hit.image = { url, width: 320, height: 200, fit: "contain" }
+      ;(mind as any).refresh(data)
+      dirty = true
+      setMsg("图片已贴在导图上，保存时会统一转 WebP 并上传", true)
+      // 异步读真实尺寸，顺便校正节点图片比例
+      void readFileAsImage(file)
+        .then((img) => {
+          const shown = displaySize(img.naturalWidth || 1, img.naturalHeight || 1)
+          const d2 = mind.getData() as any
+          let h2: any = null
+          const f2 = (n: any) => {
+            if (!n || h2) return
+            if (String(n.id) === targetId) {
+              h2 = n
+              return
+            }
+            ;(n.children || []).forEach(f2)
+          }
+          f2(d2?.nodeData)
+          if (h2 && h2.image && h2.image.url === url) {
+            h2.image.width = shown.width
+            h2.image.height = shown.height
+            ;(mind as any).refresh(d2)
+          }
+        })
+        .catch(() => {
+          /* 尺寸取不到就保持占位 */
+        })
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  /** 保存前统一处理：转 WebP → 上传 → 把地址换成 fid */
+  async function flushPendingImages(): Promise<boolean> {
+    collectPendingFromData()
+    if (!pendingImages.length) return true
+    const total = pendingImages.length
+    const failed: string[] = []
+    for (let i = 0; i < total; i++) {
+      const it = pendingImages[i]
+      setMsg(`图片转换上传 ${i + 1}/${total}…`, true)
+      try {
+        const img = await readFileAsImage(new File([it.blob], it.name, { type: it.blob.type }))
+        const { blob } = await toWebp(img)
+        if (blob.size > MAX_IMAGE_BYTES) throw new Error("图片过大（上限 5MB）")
+        const fid = nextFid()
+        await uploadImage(blob, fid)
+        const data = mind.getData() as any
+        let hit: any = null
+        const find = (n: any) => {
+          if (!n || hit) return
+          if (String(n.id) === it.id) {
+            hit = n
+            return
+          }
+          ;(n.children || []).forEach(find)
+        }
+        find(data?.nodeData)
+        if (hit && hit.image && typeof hit.image.url === "string" && hit.image.url.startsWith("blob:")) {
+          const oldUrl = hit.image.url
+          imageUrls.set(fid, oldUrl) // 已经能显示，不用重新拉
+          hit.image.url = fid
+          ;(mind as any).refresh(data)
+        }
+      } catch (e: any) {
+        failed.push(it.id + "：" + (e?.message || e))
+      }
+    }
+    pendingImages.length = 0
+    pendingBlobUrl.clear()
+    if (failed.length) {
+      setMsg(`有 ${failed.length}/${total} 张图片没能上传：${failed.join("；")}`)
+      return false
+    }
+    return true
+  }
+
   async function insertImage(file: File, target?: any) {
     const targetId = String((target || selectedNode())?.id || "")
     if (!targetId) {
@@ -799,6 +940,9 @@ function boot(el: HTMLElement) {
     setMsg(`转换中…（原图 ${kb(file.size)}）`, true)
     let fid = ""
     try {
+      // 先直接贴在导图上（blob:），转换与上传留到保存时统一做
+      const targetIdForStage = targetId
+      if (mode === "edit" && targetIdForStage && stageImage(file, targetIdForStage)) return
       const img = await readFileAsImage(file)
       const { blob, width, height, webp } = await toWebp(img)
       if (blob.size > MAX_IMAGE_BYTES) {
@@ -971,7 +1115,13 @@ function boot(el: HTMLElement) {
     if (mode !== "edit" || saving) return false
     flushOutline() // 面板里可能还有未生效的改动
     saving = true
+    // 先把贴上的图片统一转 WebP 并上传（与白板同一套流程）
+    const imagesOk = await flushPendingImages()
     setMsg("保存中…", true)
+    if (!imagesOk) {
+      saving = false
+      return false
+    }
     try {
       const data = toStoredData()
       const body: any = { data, baseRev: loadedRev ?? 0 }
