@@ -291,6 +291,14 @@ function NoteApp({
   const showCapsule = true
   // 信息浮层（独立打开时没有宿主页面的气泡，这里自带一个）
   const [infoOpen, setInfoOpen] = useState(false)
+  // 留言抽屉（形态与导图/白板独立页一致）
+  const [cmtOpen, setCmtOpen] = useState(false)
+  const [cmts, setCmts] = useState<any[] | null>(null)
+  const [cmtName, setCmtName] = useState("")
+  const [cmtText, setCmtText] = useState("")
+  const [cmtTip, setCmtTip] = useState("")
+  const [cmtSending, setCmtSending] = useState(false)
+  const cmtLoadedRef = useRef(false)
   // 进入编辑时是否要把口令浮条滑出来
   const keyRef = useRef<HTMLDivElement | null>(null)
   const toggleKeyBar = () => {
@@ -659,6 +667,77 @@ function NoteApp({
 
   /* ---------- 底部胶囊（与导图页同一套外观与交互） ---------- */
 
+  /** 留言时间格式（与导图页一致） */
+  const fmtTime = (ts: number) => {
+    try {
+      const d = new Date(ts)
+      const p = (n: number) => String(n).padStart(2, "0")
+      return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
+    } catch {
+      return ""
+    }
+  }
+
+  async function loadComments() {
+    try {
+      const res = await fetch(`/api/comments?postId=${encodeURIComponent(note)}`, { cache: "no-store" })
+      const d = await res.json().catch(() => ({}))
+      setCmts(Array.isArray(d?.comments) ? d.comments : [])
+    } catch {
+      setCmts([])
+      setCmtTip("留言加载失败")
+    }
+  }
+
+  function toggleComments() {
+    const next = !cmtOpen
+    setCmtOpen(next)
+    if (next && !cmtLoadedRef.current) {
+      cmtLoadedRef.current = true
+      try {
+        setCmtName(localStorage.getItem("comment_name") || "")
+      } catch {
+        /* 忽略 */
+      }
+      void loadComments()
+    }
+  }
+
+  async function submitComment() {
+    const name = cmtName.trim()
+    const content = cmtText.trim()
+    if (!name || !content) {
+      setCmtTip("昵称和内容都要填")
+      return
+    }
+    setCmtSending(true)
+    setCmtTip("发送中…")
+    try {
+      const res = await fetch("/api/comments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ postId: note, name, content }),
+      })
+      const d = await res.json().catch(() => ({}))
+      if (!res.ok || d.status !== "success") {
+        setCmtTip(d.message || `发送失败（${res.status}）`)
+        return
+      }
+      try {
+        localStorage.setItem("comment_name", name)
+      } catch {
+        /* 忽略 */
+      }
+      setCmtText("")
+      setCmtTip("留言成功")
+      await loadComments()
+    } catch (e: any) {
+      setCmtTip("发送出错：" + (e?.message || e))
+    } finally {
+      setCmtSending(false)
+    }
+  }
+
   /** 导出成 .excalidraw 文件，可再次导入 */
   const exportScene = () => {
     const api = apiRef.current
@@ -854,7 +933,9 @@ function NoteApp({
     : { elements: [] }
 
   return (
-    <div className="exc-shell" style={{ position: "relative" }}>
+    // 结构与导图页一致：.exc-shell 充当 #mm-root 的角色（固定铺满视口），
+    // 所有浮层（胶囊 / 口令浮条 / 状态条）都挂在它下面，定位规则与导图完全相同。
+    <div className="exc-shell" style={{ position: "fixed", inset: 0, zIndex: 1 }}>
       {/* 口令浮条：与导图页同一套样式，进编辑态自动滑出（bare 模式沿用旧的紧凑浮条） */}
       {editMode && meta?.hasKey && !isAdmin && (
         bare ? (
@@ -885,7 +966,7 @@ function NoteApp({
       {showCapsule && (
         <div className={"mm-capsule" + (editMode ? " is-edit" : "")} ref={capRef}>
           {/* 返回博客：独立打开直接回首页 */}
-          <button className="mm-cap-btn bb-view-only cap-back" title="返回博客首页" onClick={() => { location.href = "/" }}>
+          <button className="mm-cap-btn bb-view-only cap-back" title="返回博客首页" onClick={() => { if (embedded) tell("back"); else location.href = "/" }}>
             <Ic p={ICONS.home} />
             <span>返回</span>
           </button>
@@ -902,7 +983,7 @@ function NoteApp({
             <Ic p={ICONS.pencil} />
             <span>编辑</span>
           </button>
-          <button className="mm-cap-btn bb-view-only" title="查看留言" onClick={() => tell("comments")}>
+          <button className="mm-cap-btn bb-view-only" title="查看留言" onClick={toggleComments}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
             <span>留言</span>
           </button>
@@ -937,11 +1018,11 @@ function NoteApp({
           )}
           {/* 导出菜单 */}
           <div className={"mm-cap-menu" + (capMenuOpen ? " open" : "")}>
-            <button className="mm-cap-item" title="导出为 PNG 图片" onClick={() => { setCapMenuOpen(false); exportPng() }}>
+            <button className="mm-cap-item bb-view-only" title="导出为 PNG 图片" onClick={() => { setCapMenuOpen(false); exportPng() }}>
               <Ic p={ICONS.image} />
               <span>PNG 图片</span>
             </button>
-            <button className="mm-cap-item" title="导出为 .excalidraw 文件（可再次导入）" onClick={() => { setCapMenuOpen(false); exportScene() }}>
+            <button className="mm-cap-item bb-view-only" title="导出为 .excalidraw 文件（可再次导入）" onClick={() => { setCapMenuOpen(false); exportScene() }}>
               <Ic p={ICONS.doc} />
               <span>.excalidraw 文件</span>
             </button>
@@ -958,6 +1039,58 @@ function NoteApp({
           {meta?.hasKey && <div className="row"><span className="k">口令</span><span>已加密</span></div>}
         </div>
       )}
+      {/* 留言抽屉：形态与导图一致（右侧滑出） */}
+      <div className={"mm-drawer-scrim" + (cmtOpen ? " show" : "")} onClick={() => setCmtOpen(false)} />
+      <aside className={"mm-drawer" + (cmtOpen ? " open" : "")}>
+        <div className="mm-drawer-head">
+          <span className="mm-drawer-title">留言{cmts && cmts.length ? <span className="cnt">（{cmts.length}）</span> : null}</span>
+          <button className="mm-drawer-x" title="关闭" aria-label="关闭" onClick={() => setCmtOpen(false)}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
+          </button>
+        </div>
+        <div className="mm-drawer-body">
+          {cmts === null ? (
+            <div className="mm-cmt-empty">加载中…</div>
+          ) : cmts.length === 0 ? (
+            <div className="mm-cmt-empty">还没有留言</div>
+          ) : (
+            cmts.map((c, i) => (
+              <div className="mm-cmt" key={c?.id || i}>
+                <div className="mm-cmt-avatar">{String(c?.name || "客").trim().slice(0, 1) || "客"}</div>
+                <div className="mm-cmt-main">
+                  <div className="mm-cmt-top">
+                    <span className="mm-cmt-name">{c?.name || "访客"}</span>
+                    <span className="mm-cmt-time">{fmtTime(Number(c?.createdAt) || 0)}</span>
+                  </div>
+                  <div className="mm-cmt-text">{c?.content || ""}</div>
+                  {c?.image ? <img className="mm-cmt-img" src={c.image} alt="留言图片" loading="lazy" /> : null}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+        <form
+          className="mm-drawer-foot"
+          onSubmit={e => {
+            e.preventDefault()
+            void submitComment()
+          }}
+        >
+          <input value={cmtName} maxLength={32} placeholder="昵称 *" required onChange={e => setCmtName(e.target.value)} />
+          <textarea
+            value={cmtText}
+            maxLength={5000}
+            placeholder="写下你的留言… *（纯文本，最长 5000 字）"
+            required
+            onChange={e => setCmtText(e.target.value)}
+          />
+          <div className="row">
+            <span className={"tip" + (cmtTip.includes("失败") || cmtTip.includes("出错") || cmtTip.includes("都要填") ? " err" : "")}>{cmtTip}</span>
+            <button className="send" type="submit" disabled={cmtSending}>{cmtSending ? "发送中" : "发送"}</button>
+          </div>
+        </form>
+      </aside>
+
       <div className="exc-canvas">
         <Excalidraw
           key={note + (editMode ? "edit" : "view")}
