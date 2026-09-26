@@ -1574,7 +1574,9 @@ function boot(el: HTMLElement) {
           : ""
         const text = r.topic.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
         return (
-          '<div class="' + cls + '" data-line="' + i + '" data-node="' + r.id + '" style="padding-left:' +
+          '<div class="' + cls + '" data-line="' + i + '" data-node="' + r.id + '"' +
+          (mode === "edit" && i > 0 ? ' draggable="true"' : "") +
+          ' style="padding-left:' +
           (8 + r.level * 18) + 'px">' +
           tri +
           '<span class="mm-oline-topic"' + (editing ? ' contenteditable="true" spellcheck="false"' : "") + '>' + text + "</span>" +
@@ -1747,9 +1749,105 @@ function boot(el: HTMLElement) {
     updateOutlineImageCount()
   }
 
+  /** 把 fromId 这一行（连同子项）搬到 toId 的前面 / 里面 / 后面 */
+  function moveRowTo(fromId: string, toId: string, mode: "before" | "in" | "after") {
+    if (!fromId || !toId || fromId === toId) return
+    const fromIdx = outlineRows.findIndex((r) => r.id === fromId)
+    const toIdx = outlineRows.findIndex((r) => r.id === toId)
+    if (fromIdx < 0 || toIdx < 0) return
+    if (fromIdx === 0) {
+      setMsg("中心主题不能移动")
+      return
+    }
+    // 连同子项一起搬：取到这一行之后、层级更深的连续行
+    const srcLevel = outlineRows[fromIdx].level
+    let end = fromIdx + 1
+    while (end < outlineRows.length && outlineRows[end].level > srcLevel) end++
+    const moving = outlineRows.slice(fromIdx, end)
+    if (moving.some((r) => r.id === toId)) {
+      setMsg("不能把节点拖到它自己的子项里")
+      return
+    }
+    const rest = outlineRows.slice(0, fromIdx).concat(outlineRows.slice(end))
+    const targets = rest.map((r) => r.id)
+    const baseIdx = targets.indexOf(toId)
+    if (baseIdx < 0) return
+    const delta = rest[baseIdx].level + (mode === "in" ? 1 : 0) - srcLevel
+    const moved = moving.map((r) => ({ ...r, level: Math.max(1, r.level + delta) }))
+    const insertAt = mode === "before" ? baseIdx : baseIdx + 1
+    const out = rest.slice(0, insertAt).concat(moved, rest.slice(insertAt))
+    // 后一件的层级不能跳太多（保持树合法）
+    const fixed: OutlineRow[] = []
+    out.forEach((r, i) => {
+      if (i === 0) {
+        fixed.push({ ...r, level: 0 })
+        return
+      }
+      const prevLv = fixed[i - 1].level
+      fixed.push({ ...r, level: Math.min(r.level, prevLv + 1) })
+    })
+    outlineRows = fixed
+    applyRowsToData(outlineRows)
+    renderOutlineTree()
+    setMsg("已调整层级")
+  }
+
+  function bindRowDrag(host: HTMLElement) {
+    let dragId: string | null = null
+    const clearMarks = () =>
+      host.querySelectorAll(".mm-oline").forEach((el) => el.classList.remove("dragging", "drop-before", "drop-in", "drop-after"))
+
+    host.addEventListener("dragstart", (e) => {
+      if (mode !== "edit") return
+      const row = (e.target as HTMLElement | null)?.closest?.(".mm-oline") as HTMLElement | null
+      if (!row) return
+      if (String(row.dataset.line) === "0") {
+        e.preventDefault()
+        return
+      }
+      dragId = row.dataset.node || null
+      row.classList.add("dragging")
+      try {
+        e.dataTransfer?.setData("text/plain", dragId || "")
+        if (e.dataTransfer) e.dataTransfer.effectAllowed = "move"
+      } catch {
+        /* 忽略 */
+      }
+    })
+    host.addEventListener("dragover", (e) => {
+      if (!dragId) return
+      const row = (e.target as HTMLElement | null)?.closest?.(".mm-oline") as HTMLElement | null
+      if (!row || row.dataset.node === dragId) return
+      e.preventDefault()
+      const rect = row.getBoundingClientRect()
+      const rel = (e.clientY - rect.top) / Math.max(1, rect.height)
+      const mode = rel < 0.3 ? "before" : rel > 0.7 ? "after" : "in"
+      clearMarks()
+      row.classList.add("dragging")
+      row.classList.add("drop-" + mode)
+    })
+    host.addEventListener("drop", (e) => {
+      if (!dragId) return
+      const row = (e.target as HTMLElement | null)?.closest?.(".mm-oline") as HTMLElement | null
+      if (!row) return
+      e.preventDefault()
+      e.stopPropagation()
+      const mode = row.classList.contains("drop-before") ? "before" : row.classList.contains("drop-after") ? "after" : "in"
+      const src = dragId
+      dragId = null
+      clearMarks()
+      moveRowTo(src, row.dataset.node || "", mode as "before" | "in" | "after")
+    })
+    host.addEventListener("dragend", () => {
+      dragId = null
+      clearMarks()
+    })
+  }
+
   function buildOutlineBindings() {
     const host = outlineHost
     if (!host) return
+    bindRowDrag(host)
 
     // 点击行（三角与缩略图除外）→ 光标直接落到这一行文字里，省得精准点字
     host.addEventListener("mousedown", (e) => {
@@ -1823,6 +1921,32 @@ function boot(el: HTMLElement) {
         renderOutlineTree()
         const next = rowEls()[idx + 1]?.querySelector(".mm-oline-topic") as HTMLElement | null
         if (next) caretToTextEnd(next)
+        return
+      }
+
+      if (e.key === "Backspace" || e.key === "Delete") {
+        // 删除这一项（含它的子项）；中心主题不能删
+        const topicEl = row.querySelector(".mm-oline-topic") as HTMLElement | null
+        const textNow = (topicEl?.textContent || "").replace(/\s+/g, " ").trim()
+        const sel = window.getSelection()
+        const selectedAll = !!sel && !sel.isCollapsed && (sel.toString() || "").length > 0
+        // 内容为空，或当前选中了内容 → 视为删整行；否则交给浏览器删字符
+        if (!textNow || selectedAll) {
+          e.preventDefault()
+          e.stopPropagation()
+          if (idx === 0) {
+            setMsg("中心主题不能删除")
+            return
+          }
+          const cur = outlineRows[idx]
+          const removed = cur ? cur.kids + 1 : 1
+          outlineRows.splice(idx, 1)
+          applyRowsToData(outlineRows)
+          renderOutlineTree()
+          const prev = rowEls()[Math.max(0, idx - 1)]?.querySelector(".mm-oline-topic") as HTMLElement | null
+          if (prev) caretToTextEnd(prev)
+          setMsg(removed > 1 ? `已删除该节点及其 ${removed - 1} 个子项` : "已删除该节点")
+        }
         return
       }
 
