@@ -74,6 +74,12 @@
   to = "/.netlify/functions/avatar-image"
   status = 200
 
+# 图片库只读列表（给「智能工作台 → 图库 → 博客的图片」用）
+[[redirects]]
+  from = "/api/gallery-list"
+  to = "/.netlify/functions/gallery-list"
+  status = 200
+
 # ===== 静态资源长缓存 =====
 # Netlify 默认给静态文件 must-revalidate，导致每次访问都要回源验证（慢）。
 # 改为 immutable：文件名带版本号（?v=）或内容变更时更新 URL，缓存 7 天绝对安全。

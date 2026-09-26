@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>思维导图</title>
+  <link rel="icon" id="siteFavicon" href="/images/Default/web-logo.webp" type="image/webp">
+  <link rel="apple-touch-icon" href="/images/Default/web-logo.webp">
+  <script src="/js/site-icon.js?v=1.0.0"></script>
+  <link rel="stylesheet" href="/css/scrollbar.css?v=1.0.1">
+  <link rel="stylesheet" href="/css/responsive.css?v=1.0.0">
+  <style>
+    :root {
+      --mm-bg: #0b0b0e;
+      --mm-panel: rgba(16, 16, 19, 0.72);
+      --mm-border: rgba(255, 255, 255, 0.12);
+      --mm-text: #e8e8ea;
+      --mm-dim: rgba(255, 255, 255, 0.55);
+      --mm-accent: #ff9f0a;
+    }
+    html, body { margin: 0; padding: 0; height: 100%; background: var(--mm-bg); color: var(--mm-text); overflow: hidden; }
+    * { box-sizing: border-box; }
+    body { display: flex; flex-direction: column; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "PingFang SC", sans-serif; }
+    #mm-root { position: relative; flex: 1; min-height: 0; }
+    /* 极简浮条：保存 / 导出 / 提示（不占满宽度，避免遮挡画布） */
+    .mm-bar {
+      position: absolute; right: 14px; bottom: 14px; z-index: 20;
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+      padding: 8px 10px; border-radius: 14px;
+      background: var(--mm-panel); border: 1px solid var(--mm-border);
+      backdrop-filter: blur(24px) saturate(180%); -webkit-backdrop-filter: blur(24px) saturate(180%);
+      box-shadow: 0 12px 32px -12px rgba(0, 0, 0, 0.7);
+      font-size: 13px;
+    }
+    .mm-bar .mm-msg { color: var(--mm-dim); font-size: 12px; max-width: 42vw; }
+    .mm-btn {
+      padding: 6px 13px; border-radius: 999px; font-size: 13px; font-family: inherit; cursor: pointer;
+      background: rgba(255, 255, 255, 0.08); border: 1px solid var(--mm-border); color: var(--mm-text);
+      transition: all 0.2s ease;
+    }
+    .mm-btn:hover { border-color: var(--mm-accent); color: var(--mm-accent); }
+    .mm-btn.primary { background: linear-gradient(180deg, #fff, #d9d9e3); color: #0b0b10; border-color: rgba(255, 255, 255, 0.5); font-weight: 600; }
+    .mm-key {
+      position: absolute; left: 50%; top: 12px; transform: translateX(-50%); z-index: 20;
+      display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px;
+      background: var(--mm-panel); border: 1px solid var(--mm-border);
+      backdrop-filter: blur(24px) saturate(180%); -webkit-backdrop-filter: blur(24px) saturate(180%);
+      font-size: 12px; color: var(--mm-dim);
+    }
+    .mm-key input {
+      width: 140px; padding: 4px 9px; border-radius: 8px; font-size: 12px; font-family: inherit;
+      background: rgba(0, 0, 0, 0.3); border: 1px solid var(--mm-border); color: var(--mm-text); outline: none;
+    }
+    .mm-empty { height: 100%; display: flex; align-items: center; justify-content: center; text-align: center; padding: 24px; color: var(--mm-dim); }
+    .mm-empty .card { padding: 28px 26px; border-radius: 22px; background: var(--mm-panel); border: 1px solid var(--mm-border); max-width: calc(100vw - 40px); }
+    .mm-empty .t { font-size: 17px; color: #fff; font-weight: 600; margin-bottom: 8px; }
+    .mm-empty .row { font-size: 13px; line-height: 1.9; }
+    .mm-empty code { background: rgba(255, 255, 255, 0.1); padding: 2px 7px; border-radius: 6px; color: #bcd0ff; font-size: 12px; }
+    @media (max-width: 640px) {
+      .mm-bar { left: 10px; right: 10px; bottom: 10px; justify-content: center; }
+      .mm-bar .mm-msg { max-width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <!--
+    思维导图页（独立页，供文章页整页展示与后台编辑页 iframe 内嵌）
+    用法：
+      /mindmap.html?note=<id>            只读查看
+      /mindmap.html?note=<id>&edit=1     编辑（管理员，或开放编辑 + 口令）
+      /mindmap.html?edit=1               新建（自动生成 id，保存时需管理员）
+  -->
+  <main id="mm-root"></main>
+
+  <script>
+    (function () {
+      var qs = new URLSearchParams(location.search);
+      var note = (qs.get('note') || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 64);
+      var edit = qs.get('edit') === '1' || qs.get('edit') === 'true';
+      var root = document.getElementById('mm-root');
+
+      if (!note && !edit) {
+        root.innerHTML =
+          '<div class="mm-empty"><div class="card">' +
+          '<div class="t">思维导图</div>' +
+          '<div class="row"><code>/mindmap.html?note=导图ID</code> —— 查看已有导图</div>' +
+          '<div class="row"><code>/mindmap.html?note=导图ID&edit=1</code> —— 编辑</div>' +
+          '<div class="row"><code>/mindmap.html?edit=1</code> —— 新建（需管理员）</div>' +
+          '</div></div>';
+        return;
+      }
+
+      if (!note) note = 'mm-' + Math.random().toString(36).slice(2, 10);
+      root.dataset.note = note;
+      root.dataset.mode = edit ? 'edit' : 'view';
+      document.title = (edit ? '编辑导图' : '思维导图') + ' - ' + note;
+    })();
+  </script>
+  <script src="/js/vendor/mindmap/mindmap-editor.v1.js"></script>
+  <script>
+    // 兜底诊断：bundle 加载失败时给出可见提示，而不是空白页
+    window.addEventListener('load', function () {
+      if (!window.MindMapMount) {
+        var root = document.getElementById('mm-root');
+        if (root && !root.querySelector('.mm-bar')) {
+          root.innerHTML =
+            '<div class="mm-empty"><div class="card">' +
+            '<div class="t">导图组件未能加载</div>' +
+            '<div class="row">脚本 mindmap-editor.v1.js 加载失败（404 / 部署未完成 / 被拦截）。<br>' +
+            '请 Ctrl+F5 强制刷新；若仍失败，检查 Netlify 最近一次部署是否成功。</div>' +
+            '</div></div>';
+        }
+      }
+    });
+  </script>
+</body>
+</html>

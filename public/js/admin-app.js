@@ -900,10 +900,12 @@
             const ex=document.getElementById('publishExcerptField');
             const cv=document.getElementById('publishCoverField');
             const bn=document.getElementById('publishBoardNameField');
-            [ex,cv,bn].forEach(function(el){if(el)el.style.removeProperty('display')});
+            const ek=document.getElementById('publishEditKeyField');
+            [ex,cv,bn,ek].forEach(function(el){if(el)el.style.removeProperty('display')});
             if(ex&&!isArticle)ex.style.display='none';
             if(cv&&mode==='note')cv.style.display='none';
             if(bn&&mode!=='board')bn.style.display='none';
+            if(ek&&mode!=='board')ek.style.display='none';
             if(mode==='note'){
                 // 随记表单里已填的标签作为弹窗初值
                 const wmP=initWmTagPicker();
@@ -979,6 +981,23 @@
             closePublishModal();
             if(imgEl){imgEl.value='';if(typeof renderCoverPreview==='function')renderCoverPreview()}
             // 发布后刷新列表并清空画布（准备画下一块白板）
+            // 编辑密钥：默认开启，默认值 Raven_NULL；用户可在弹窗取消勾选
+            const useKeyEl=document.getElementById('edUseEditKey');
+            const keyEl=document.getElementById('edEditKey');
+            if(useKeyEl&&useKeyEl.checked){
+                const kv=((keyEl&&keyEl.value)||'').trim();
+                if(kv.length>=4){
+                    try{
+                        const d=await excApi('action=meta&id='+encodeURIComponent(currentBoardId),{method:'POST',body:JSON.stringify({editKey:kv})});
+                        if(!d||d.status!=='success')showToast((d&&d.message)||'编辑密钥设置失败','error');
+                        else showToast('编辑密钥已开启（'+kv+'）','success');
+                    }catch(e){/* 忽略：文章已发布成功 */}
+                }else{
+                    showToast('编辑密钥至少 4 位，本次未设置','error');
+                }
+            }else{
+                try{await excApi('action=meta&id='+encodeURIComponent(currentBoardId),{method:'POST',body:JSON.stringify({editKey:''})})}catch(e){}
+            }
             wbReset();
             wbNew(true); // 清空后直接给一块新的空白画板
             loadArticles();

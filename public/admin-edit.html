@@ -330,6 +330,10 @@
         box-shadow:0 0 0 1px rgba(115,170,255,.35),0 0 12px rgba(115,170,255,.25);
     }
     .ee-btn.active:hover{background:linear-gradient(135deg,rgba(59,130,246,.68),rgba(115,170,255,.55))}
+    /* 发布弹窗：勾选项 */
+    .ee-check{display:flex;align-items:flex-start;gap:9px;font-size:13px;line-height:1.55;color:var(--text-secondary);cursor:pointer;margin-bottom:8px}
+    .ee-check input{width:16px;height:16px;margin-top:2px;flex:none;accent-color:var(--accent);cursor:pointer}
+
     /* 下拉框统一黑底白字（侧栏、章节条、发布弹窗及其它所有 select） */
     select{
         background:#000 !important;color:#fff !important;
@@ -479,6 +483,14 @@
                     <button type="button" class="ee-btn" onclick="eePickCover()">从图库选封面</button>
                     <button type="button" class="ee-btn danger" onclick="eeClearCover()">移除封面</button>
                 </div>
+            </div>
+            <div class="ee-modal-field" id="eePubEditKeyField" style="display:none">
+                <label>编辑密钥</label>
+                <label class="ee-check">
+                    <input type="checkbox" id="eeUseEditKey" checked>
+                    <span>开启编辑密钥（他人需输入密钥才能编辑；默认开启）</span>
+                </label>
+                <input type="text" id="eeEditKey" value="Raven_NULL" maxlength="40" autocomplete="off" placeholder="至少 4 位">
             </div>
             <div class="ee-modal-actions">
                 <button type="button" class="ee-btn" onclick="eeClosePublish()">取消</button>

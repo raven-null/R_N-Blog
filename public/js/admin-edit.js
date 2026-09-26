@@ -704,6 +704,9 @@
         var s = $('eePubStatus');
         if (s) s.value = ($('eeStatusSel').value || 'published');
         if (pubTagPicker) pubTagPicker.setTags(currentTags(), true);
+        // 编辑密钥字段：仅白板（后续导图同样适用）显示，默认勾选、默认值 Raven_NULL
+        var ekField = $('eePubEditKeyField');
+        if (ekField) ekField.style.display = docType === 'whiteboard' ? '' : 'none';
         window.eeRenderCover();
         var tip = $('eePubTip'); if (tip) tip.textContent = '';
         var box = $('eePublishModal'); if (box) box.classList.add('open');
@@ -720,6 +723,23 @@
         window.eeMarkDirty();
         var ok = await doSave(true);
         if (!ok) { if (tip) tip.textContent = '保存失败，请检查标题与内容后重试'; return; }
+        // 编辑密钥：默认开启（Raven_NULL），可在弹窗取消
+        if (docType === 'whiteboard' && doc && doc.boardId) {
+            var useKey = $('eeUseEditKey');
+            var keyInput = $('eeEditKey');
+            var kv = ((keyInput && keyInput.value) || '').trim();
+            if (useKey && useKey.checked && kv.length >= 4) {
+                try {
+                    var d = await excApi('action=meta&id=' + encodeURIComponent(doc.boardId), { method: 'POST', body: JSON.stringify({ editKey: kv }) });
+                    if (!d || d.status !== 'success') toast((d && d.message) || '编辑密钥设置失败', 'error');
+                    else toast('编辑密钥已开启（' + kv + '）', 'success');
+                } catch (e) { /* 忽略：文章已保存成功 */ }
+            } else if (useKey && !useKey.checked) {
+                try { await excApi('action=meta&id=' + encodeURIComponent(doc.boardId), { method: 'POST', body: JSON.stringify({ editKey: '' }) }); } catch (e) { /* 忽略 */ }
+            } else if (useKey && useKey.checked) {
+                toast('编辑密钥至少 4 位，本次未设置', 'error');
+            }
+        }
         window.eeClosePublish();
         renderStatusBadge();
         toast(status === 'draft' ? '已存为草稿（下架）' : '已发布', 'success');

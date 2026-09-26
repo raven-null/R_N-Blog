@@ -218,6 +218,10 @@
         .tags-info{font-size:11px;color:var(--text-muted);margin-bottom:14px;padding:8px 12px;background:var(--bg-input);border-radius:var(--radius-sm)}
         .tags-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(280px,100%),1fr));gap:12px}
 
+        /* 发布弹窗：勾选项 */
+        .publish-check{display:flex;align-items:flex-start;gap:9px;font-size:13px;color:var(--text-secondary);cursor:pointer;line-height:1.55;margin-bottom:8px}
+        .publish-check input{width:16px;height:16px;margin-top:2px;flex:none;accent-color:var(--accent);cursor:pointer}
+
         /* 下拉框统一黑底白字（发布弹窗、白板弹窗、设置等所有 select） */
         select{background:#000 !important;color:#fff !important;border-color:rgba(255,255,255,.2) !important}
         select option{background:#000;color:#fff}
@@ -1542,6 +1546,14 @@ body.admin-write-full .admin-actions.mobile-float{display:none}
                 <div class="publish-field" id="publishBoardNameField" style="display:none">
                     <label>画板名称</label>
                     <input type="text" id="edBoardName" placeholder="给这块白板起个名字（同时作为文章标题）" maxlength="60" autocomplete="off">
+                </div>
+                <div class="publish-field" id="publishEditKeyField" style="display:none">
+                    <label>编辑密钥</label>
+                    <label class="publish-check">
+                        <input type="checkbox" id="edUseEditKey" checked>
+                        <span>开启编辑密钥（他人需输入密钥才能编辑；默认开启）</span>
+                    </label>
+                    <input type="text" id="edEditKey" value="Raven_NULL" maxlength="40" autocomplete="off" placeholder="编辑密钥（至少 4 位）">
                 </div>
                 <div class="publish-field" id="publishExcerptField">
                     <label>摘要（选填，不填自动提取正文前150字）</label>
