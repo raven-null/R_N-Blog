@@ -85,7 +85,14 @@ function boot(el: HTMLElement) {
     // 所以必须无条件注册（哪怕当前是只读），否则「查看 → 点编辑」切过来时
     // 工具条和右键菜单根本不存在，表现就是「编辑了但什么都不能动」。
     // 中文文案：库的顶层 locale 已弃用，改为传给 contextMenu / toolBar。
-    contextMenu: { locale: zhCN } as any,
+    contextMenu: {
+      locale: zhCN,
+      // 与库自带菜单项同构：name 显示文案、key 提示快捷键、onclick 直接调
+      extend: [
+        { name: "插入图片", key: "", onclick: () => void pickImage() },
+        { name: "移除图片", key: "", onclick: () => removeImageFromSelection() },
+      ],
+    } as any,
     toolBar: { locale: zhCN } as any,
     keypress: true,
     theme,
@@ -583,6 +590,168 @@ function boot(el: HTMLElement) {
     }
   }
 
+
+  /* ---------------- 节点图片（插入时统一转 WebP，与原图同尺寸存服务器） ---------------- */
+  const MAX_IMAGE_EDGE = 1600
+  const WEBP_QUALITY = 0.82
+  const MAX_IMAGE_BYTES = 5 * 1024 * 1024
+  const imageUrls = new Map<string, string>() // fid → blob URL（刷新后按需从服务器取回）
+
+  const fileInput = document.createElement("input")
+  fileInput.type = "file"
+  fileInput.accept = "image/*"
+  fileInput.style.display = "none"
+  fileInput.addEventListener("change", () => {
+    const f = fileInput.files && fileInput.files[0]
+    fileInput.value = ""
+    if (f) void insertImage(f)
+  })
+  el.appendChild(fileInput)
+
+  const nextFid = () => "img-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 7)
+
+  function pickImage() {
+    if (mode !== "edit") return
+    fileInput.click()
+  }
+
+  /** 选中节点：库的 currentNodes 就是当前选中的节点对象 */
+  function selectedNode(): any | null {
+    const cur = (mind as any).currentNodes
+    const n = Array.isArray(cur) && cur.length ? cur[0] : null
+    // nodeObj 是数据模型（与 getData 返回的是同一批对象）
+    return n?.nodeObj || n || null
+  }
+
+  function removeImageFromSelection() {
+    if (mode !== "edit") return
+    const node = selectedNode()
+    if (!node) {
+      setMsg("先点选一个节点")
+      return
+    }
+    if (!node.image) {
+      setMsg("该节点没有图片")
+      return
+    }
+    delete node.image
+    ;(mind as any).refresh(mind.getData())
+    dirty = true
+    scheduleFit(80)
+    setMsg("已移除图片")
+  }
+
+  function readFileAsImage(file: File): Promise<HTMLImageElement> {
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file)
+      const img = new Image()
+      img.onload = () => {
+        URL.revokeObjectURL(url)
+        resolve(img)
+      }
+      img.onerror = () => {
+        URL.revokeObjectURL(url)
+        reject(new Error("图片读取失败"))
+      }
+      img.src = url
+    })
+  }
+
+  /** 压缩 + 转 WebP（保留透明通道），返回二进制与体积信息 */
+  async function toWebp(img: HTMLImageElement) {
+    const scale = Math.min(1, MAX_IMAGE_EDGE / Math.max(img.naturalWidth || 1, img.naturalHeight || 1))
+    const w = Math.max(1, Math.round((img.naturalWidth || 1) * scale))
+    const h = Math.max(1, Math.round((img.naturalHeight || 1) * scale))
+    const canvas = document.createElement("canvas")
+    canvas.width = w
+    canvas.height = h
+    const ctx = canvas.getContext("2d")
+    if (!ctx) throw new Error("浏览器不支持 canvas")
+    ctx.drawImage(img, 0, 0, w, h)
+    const blob: Blob | null = await new Promise((resolve) =>
+      canvas.toBlob((b) => resolve(b), "image/webp", WEBP_QUALITY),
+    )
+    const out = blob && blob.type === "image/webp" ? blob : await new Promise<Blob>((resolve) => canvas.toBlob((b) => resolve(b as Blob), "image/png"))
+    if (!out) throw new Error("图片编码失败")
+    return { blob: out, width: w, height: h, webp: out.type === "image/webp" }
+  }
+
+  async function uploadImage(blob: Blob, fid: string): Promise<void> {
+    const res = await fetch(`/api/excalidraw?action=file&id=${encodeURIComponent(note)}&fid=${encodeURIComponent(fid)}`, {
+      method: "POST",
+      headers: { "Content-Type": blob.type || "application/octet-stream", ...authHeaders() },
+      body: blob,
+    })
+    const d = await res.json().catch(() => ({}))
+    if (!res.ok || d.status !== "success") {
+      throw new Error(d.message || `上传失败（${res.status}）`)
+    }
+  }
+
+  async function insertImage(file: File) {
+    const node = selectedNode()
+    if (!node) {
+      setMsg("先点选一个节点，再插入图片")
+      return
+    }
+    const kb = (n: number) => Math.round(n / 1024) + "KB"
+    setMsg(`转换中…（原图 ${kb(file.size)}）`, true)
+    let fid = ""
+    try {
+      const img = await readFileAsImage(file)
+      const { blob, width, height, webp } = await toWebp(img)
+      if (blob.size > MAX_IMAGE_BYTES) {
+        setMsg(`图片过大（${Math.round(blob.size / 1048576 * 10) / 10}MB，上限 5MB）`)
+        return
+      }
+      fid = nextFid()
+      setMsg(`已转 WebP ${kb(file.size)} → ${kb(blob.size)}，上传中…`, true)
+      await uploadImage(blob, fid)
+      node.image = { url: fid, width, height, fit: "contain" }
+      imageUrls.set(fid, URL.createObjectURL(blob))
+      ;(mind as any).refresh(mind.getData())
+      dirty = true
+      scheduleFit(80)
+      setMsg(`已插入图片：${width}×${height} · WebP ${kb(blob.size)}（原图 ${kb(file.size)}）${webp ? "" : "（此浏览器不支持 WebP，已按 PNG 存）"}`)
+    } catch (e: any) {
+      setMsg("图片插入失败：" + (e?.message || e))
+    }
+  }
+
+  /** 节点里的图片 url 存的是 fid；显示前按需从服务器取回并换成 blob URL（浏览器会缓存） */
+  async function resolveImageUrls(data: any) {
+    const fids: string[] = []
+    const walk = (n: any) => {
+      const u = n?.image?.url
+      if (typeof u === "string" && !u.startsWith("data:") && !u.startsWith("/") && !u.startsWith("http")) fids.push(u)
+      ;(n?.children || []).forEach(walk)
+    }
+    walk(data?.nodeData || data)
+    for (const fid of fids) {
+      if (imageUrls.has(fid)) continue
+      try {
+        const res = await fetch(`/api/excalidraw?action=file&id=${encodeURIComponent(note)}&fid=${encodeURIComponent(fid)}`, { cache: "force-cache" })
+        const d = await res.json().catch(() => ({}))
+        const dataURL: string = d?.file?.dataURL || ""
+        if (dataURL) imageUrls.set(fid, dataURL)
+      } catch {
+        /* 单张失败不影响整图 */
+      }
+    }
+    // 把 fid 换成可直接显示的地址（blob: 或 data:），并刷新一次让库渲染出图片
+    let changed = false
+    const apply = (n: any) => {
+      const u = n?.image?.url
+      if (typeof u === "string" && imageUrls.has(u)) {
+        n.image.url = imageUrls.get(u)
+        changed = true
+      }
+      ;(n?.children || []).forEach(apply)
+    }
+    apply(data?.nodeData || data)
+    return changed
+  }
+
   /* ---------------- 加载 ---------------- */
   async function load() {
     setMsg("加载中…", true)
@@ -606,6 +775,8 @@ function boot(el: HTMLElement) {
       }
       meta = d.meta || null
       loadedRev = meta?.rev ?? null
+      // 节点图片存的是 fid，先取回来换成可显示地址，再交给库渲染
+      await resolveImageUrls(d.data || {})
       mind.init(d.data || emptyData())
       applyEditable()
       // 加载完成后自适应铺满可视区（只读与编辑模式都适用）
@@ -629,6 +800,27 @@ function boot(el: HTMLElement) {
     }
   }
 
+  /** 保存前把显示用的地址（blob: / data:）还原成 fid，导图数据里只留引用 */
+  function toStoredData() {
+    const data = mind.getData()
+    const walk = (n: any) => {
+      const u = n?.image?.url
+      if (typeof u === "string") {
+        if (u.startsWith("blob:") || u.startsWith("data:")) {
+          for (const [fid, shown] of imageUrls) {
+            if (shown === u) {
+              n.image.url = fid
+              break
+            }
+          }
+        }
+      }
+      ;(n?.children || []).forEach(walk)
+    }
+    walk(data?.nodeData || data)
+    return data
+  }
+
   /* ---------------- 保存 ---------------- */
   async function save(force: boolean): Promise<boolean> {
     if (mode !== "edit" || saving) return false
@@ -636,7 +828,7 @@ function boot(el: HTMLElement) {
     saving = true
     setMsg("保存中…", true)
     try {
-      const data = mind.getData()
+      const data = toStoredData()
       const body: any = { data, baseRev: loadedRev ?? 0 }
       if (meta?.hasKey && !isAdmin()) body.editKey = keyInput ? keyInput.value : editKey
       if (force) body.force = 1
