@@ -554,6 +554,11 @@
                 else if(host&&!host.querySelector('iframe.wb-frame'))mmMount(currentMapId); // 有导图未挂载：恢复
             }
         }
+        // 形态切换：玻璃分段选择器的 radio 变化驱动视图切换（点击 label 与键盘方向键都会触发）
+        document.querySelectorAll('#writeModeGroup input[data-mode]').forEach(function(inp){
+            inp.addEventListener('change',function(){ setWriteMode(inp.dataset.mode) });
+        });
+
         function fitEditor(){
             const host=document.getElementById('vditor');
             const wrap=document.getElementById('writeModeArticle');
