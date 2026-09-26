@@ -926,7 +926,55 @@
                         }
                         .back-tab-btn:hover{background:rgba(255,255,255,.12);color:#e6e7f2}
                         .back-tab-btn:active{transform:scale(.97)}
-                        .tab-item-wrap{position:relative;padding-bottom:6px}
+                        /* 形态切换：玻璃分段选择器（Uiverse 风格；4 项，滑块随选中项移动） */
+        .glass-radio-group{
+            display:flex;position:relative;width:fit-content;
+            background:rgba(255,255,255,.06);border-radius:12px;overflow:hidden;
+            backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+            box-shadow:
+                inset 1px 1px 4px rgba(255,255,255,.18),
+                inset -1px -1px 6px rgba(0,0,0,.3),
+                0 4px 12px rgba(0,0,0,.15);
+        }
+        .glass-radio-group input{display:none}
+        .glass-radio-group label{
+            min-width:64px;display:flex;align-items:center;justify-content:center;
+            padding:7px 16px;font-size:13px;font-weight:600;letter-spacing:.3px;
+            color:var(--text-muted);cursor:pointer;position:relative;z-index:2;
+            user-select:none;transition:color .3s ease-in-out;
+        }
+        .glass-radio-group label:hover{color:#fff}
+        .glass-radio-group input:checked+label{color:#fff}
+        .glass-glider{
+            position:absolute;top:0;bottom:0;left:0;width:calc(100% / 4);
+            border-radius:12px;z-index:1;
+            transition:
+                transform .5s cubic-bezier(.37,1.95,.66,.56),
+                background .4s ease-in-out,
+                box-shadow .4s ease-in-out;
+        }
+        #wmArticle:checked ~ .glass-glider{
+            transform:translateX(0%);
+            background:linear-gradient(135deg,rgba(192,192,192,.35),#e0e0e0);
+            box-shadow:0 0 18px rgba(192,192,192,.45),0 0 10px rgba(255,255,255,.35) inset;
+        }
+        #wmNote:checked ~ .glass-glider{
+            transform:translateX(100%);
+            background:linear-gradient(135deg,rgba(255,159,10,.35),#ff9f0a);
+            box-shadow:0 0 18px rgba(255,159,10,.45),0 0 10px rgba(255,235,150,.35) inset;
+        }
+        #wmBoard:checked ~ .glass-glider{
+            transform:translateX(200%);
+            background:linear-gradient(135deg,rgba(115,170,255,.35),#a0d8ff);
+            box-shadow:0 0 18px rgba(160,216,255,.45),0 0 10px rgba(200,240,255,.35) inset;
+        }
+        #wmMindmap:checked ~ .glass-glider{
+            transform:translateX(300%);
+            background:linear-gradient(135deg,rgba(80,220,180,.35),#7ff0d0);
+            box-shadow:0 0 18px rgba(80,220,180,.45),0 0 10px rgba(180,255,240,.35) inset;
+        }
+
+        .tab-item-wrap{position:relative;padding-bottom:6px}
                         .tab-item{
                             padding:7px 15px;border-radius:99px;border:none;background:transparent;
                             font-size:13.5px;cursor:pointer;color:#b8b9c9;font-family:inherit;
@@ -1058,21 +1106,17 @@ body.admin-write-full .admin-actions.mobile-float{display:none}
                     <!-- 顶部：返回 + 形态 tab ｜ 右侧按形态切换 -->
                     <div class="wm-bar top-tab-bar">
                         <div class="tab-left-wrap">
-                            <div class="tab-item-wrap active-wrap" id="tabWrapArticle" data-mode="article">
-                                <button class="tab-item active" data-mode="article" onclick="setWriteMode('article')">文章</button>
-                                <div class="indicator"></div>
-                            </div>
-                            <div class="tab-item-wrap" id="tabWrapNote" data-mode="note">
-                                <button class="tab-item" data-mode="note" onclick="setWriteMode('note')">随记</button>
-                                <div class="indicator"></div>
-                            </div>
-                            <div class="tab-item-wrap" id="tabWrapBoard" data-mode="board">
-                                <button class="tab-item" data-mode="board" onclick="setWriteMode('board')">白板</button>
-                                <div class="indicator"></div>
-                            </div>
-                            <div class="tab-item-wrap" id="tabWrapMindmap" data-mode="mindmap">
-                                <button class="tab-item" data-mode="mindmap" onclick="setWriteMode('mindmap')">导图</button>
-                                <div class="indicator"></div>
+                            <!-- 形态切换：玻璃分段选择器（滑块随选中项移动） -->
+                            <div class="glass-radio-group" id="writeModeGroup">
+                                <input type="radio" name="write-mode" id="wmArticle" data-mode="article" checked>
+                                <label for="wmArticle">文章</label>
+                                <input type="radio" name="write-mode" id="wmNote" data-mode="note">
+                                <label for="wmNote">随记</label>
+                                <input type="radio" name="write-mode" id="wmBoard" data-mode="board">
+                                <label for="wmBoard">白板</label>
+                                <input type="radio" name="write-mode" id="wmMindmap" data-mode="mindmap">
+                                <label for="wmMindmap">导图</label>
+                                <div class="glass-glider"></div>
                             </div>
                         </div>
 
@@ -1587,7 +1631,7 @@ body.admin-write-full .admin-actions.mobile-float{display:none}
     </div>
 
         <script src="js/tag-picker.js?v=1.0.0"></script>
-        <script src="js/admin-app.js?v=1.8.0"></script>
+        <script src="js/admin-app.js?v=1.8.1"></script>
 
     <!-- 前台预览抽屉（iframe 内嵌，零跳出） -->
     <style>

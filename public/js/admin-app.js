@@ -523,12 +523,9 @@
         let writeSwitchTimer=null;
         function setWriteMode(mode){
             writeMode=mode;
-            // 顶部 tab：pill 高亮 + 底部指示条
-            document.querySelectorAll('#tab-write .tab-item').forEach(function(b){
-                b.classList.toggle('active',b.dataset.mode===mode);
-            });
-            document.querySelectorAll('#tab-write .tab-item-wrap').forEach(function(w){
-                w.classList.toggle('active-wrap',w.dataset.mode===mode);
+            // 形态切换：玻璃分段选择器与当前形态同步（滑块随选中项移动）
+            document.querySelectorAll('#writeModeGroup input[data-mode]').forEach(function(inp){
+                inp.checked = inp.dataset.mode === mode;
             });
             // 视图切换（旧视图自然过渡回隐藏态，新视图滑入）
             for(const k in WRITE_VIEWS){
