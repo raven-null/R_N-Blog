@@ -329,7 +329,6 @@ function boot(el: HTMLElement) {
   // 关键：MindElixir 用实例属性 mind.editable 控制能否编辑（库内部大量 `if (!e.editable) return`），
   // 它只赋值不做别的副作用，运行时切换是安全的；再配合 DOM 层拦截做双保险。
   const MOD_KEYS = ["Delete", "Backspace", "Enter", "Tab", "F2", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"]
-  let outlineWasOpen = false
   el.addEventListener(
     "contextmenu",
     (e) => {
@@ -380,14 +379,8 @@ function boot(el: HTMLElement) {
     } else {
       setMsg("已切换到只读浏览")
     }
-    // 大纲面板只在编辑态可用；退出时先收起，回来时恢复
-    if (!editing && outlineEl?.classList.contains("open")) {
-      outlineWasOpen = true
-      setOutlineOpen(false)
-    } else if (editing && outlineWasOpen) {
-      outlineWasOpen = false
-      setOutlineOpen(true)
-    }
+    // 大纲面板在两种模式下都能看；只读时只是改不了（readOnly 由 setOutlineOpen 按 mode 设置）
+    if (outlineEl?.classList.contains("open")) setOutlineOpen(true)
     scheduleFit(280)
     reportMode()
   }
@@ -553,10 +546,9 @@ function boot(el: HTMLElement) {
     setTimeout(() => URL.revokeObjectURL(a.href), 4000)
   }
 
-  /* ---------------- 大纲按钮：图标形式，与库左下工具栏并列 ---------------- */
+  /* ---------------- 大纲按钮：图标形式，与库左下工具栏并列（只读时也能看大纲） ---------------- */
   let outlineMountTries = 0
   function mountOutlineButton() {
-    if (mode !== "edit") return
     const ltBar = el.querySelector(".mind-elixir-toolbar.lt")
     if (!ltBar) {
       // 工具栏由库的 init() 挂入 DOM，构造后可能还没出现：稍后重试
@@ -848,10 +840,32 @@ function boot(el: HTMLElement) {
     el.appendChild(outlineEl)
     outlineText = outlineEl.querySelector(".mm-outline-text") as HTMLTextAreaElement
     outlineText.addEventListener("input", () => {
+      if (mode !== "edit") return // 只读：只看不改
       onOutlineInput()
       scheduleApply()
     })
-    outlineText.addEventListener("keydown", onOutlineKeyDown)
+    outlineText.addEventListener("keydown", (e) => {
+      if (mode !== "edit") {
+        // 只读：打断修改类按键，只留滚动与复制
+        const mod = e.ctrlKey || e.metaKey
+        if (!(mod && (e.key === "c" || e.key === "C" || e.key === "a" || e.key === "A"))) e.preventDefault()
+        e.stopPropagation()
+        return
+      }
+      onOutlineKeyDown(e)
+    })
+    outlineText.addEventListener("beforeinput", (e) => {
+      if (mode !== "edit") e.preventDefault()
+    })
+    outlineText.addEventListener("paste", (e) => {
+      if (mode !== "edit") e.preventDefault()
+    })
+    outlineText.addEventListener("cut", (e) => {
+      if (mode !== "edit") e.preventDefault()
+    })
+    outlineText.addEventListener("drop", (e) => {
+      if (mode !== "edit") e.preventDefault()
+    })
     outlineText.addEventListener("blur", flushOutline)
     outlineEl.addEventListener("click", (e) => {
       const t = e.target as HTMLElement
@@ -873,12 +887,18 @@ function boot(el: HTMLElement) {
       outlineBtnEl.classList.toggle("active", open)
       outlineBtnEl.title = open ? "关闭大纲（左侧写大纲，右侧实时成图）" : "大纲（左侧写大纲，右侧实时成图）"
     }
+    // 只读时的大纲：可看不可改
+    if (outlineText) {
+      outlineText.readOnly = mode !== "edit"
+      const tip = outlineEl!.querySelector(".mm-outline-tip") as HTMLElement | null
+      if (tip) tip.textContent = mode === "edit" ? "回车自动接下一项 · Tab 降级 · Shift+Tab 升级 · 改动实时成图" : "只读查看：每行一项，缩进表示层级"
+    }
     // 导图区让出左侧空间（右侧实时成图）
     canvasHost.classList.toggle("outline-open", open)
     scheduleFit(320) // 可用宽度变了，重新居中并缩放
     if (open && outlineText) {
       outlineText.value = dataToOutline(mind.getData())
-      setTimeout(() => outlineText!.focus(), 80)
+      if (mode === "edit") setTimeout(() => outlineText!.focus(), 80)
     }
     try {
       localStorage.setItem("mindmap_outline_open", open ? "1" : "0")
@@ -913,16 +933,15 @@ function boot(el: HTMLElement) {
 
   // 挂载大纲按钮：先试一次，再用 MutationObserver 兜底（工具栏出现/重建时自动挂上）
   mountOutlineButton()
-  if (mode === "edit") {
-    try {
-      const mo = new MutationObserver(() => {
-        if (el.querySelector(".mm-outline-btn")) return
-        mountOutlineButton()
-      })
-      mo.observe(el, { childList: true, subtree: true })
-    } catch {
-      /* 忽略 */
-    }
+  // 只读时工具条也常驻（方向切换 + 大纲入口），所以两种模式都要盯着补挂
+  try {
+    const mo = new MutationObserver(() => {
+      if (el.querySelector(".mm-outline-btn")) return
+      mountOutlineButton()
+    })
+    mo.observe(el, { childList: true, subtree: true })
+  } catch {
+    /* 忽略 */
   }
   void load()
   updateKeyBar()
