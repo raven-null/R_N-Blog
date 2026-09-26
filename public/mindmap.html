@@ -56,6 +56,14 @@
     .mm-empty .t { font-size: 17px; color: #fff; font-weight: 600; margin-bottom: 8px; }
     .mm-empty .row { font-size: 13px; line-height: 1.9; }
     .mm-empty code { background: rgba(255, 255, 255, 0.1); padding: 2px 7px; border-radius: 6px; color: #bcd0ff; font-size: 12px; }
+    /* 导图画布容器：库会写入内联 position:relative，这里用 !important 保持绝对定位铺满 */
+    .mm-canvas-host {
+      position: absolute !important;
+      top: 0; right: 0; bottom: 0; left: 0;
+      transition: left 0.25s ease;
+    }
+    .mm-canvas-host.outline-open { left: min(380px, 86vw); }
+
     /* 大纲面板：默认关闭，打开后左侧写大纲、右侧实时成图 */
     .mm-outline {
       position: absolute; left: 0; top: 0; bottom: 0; z-index: 30;
@@ -120,8 +128,8 @@
       document.title = (edit ? '编辑导图' : '思维导图') + ' - ' + note;
     })();
   </script>
-  <link rel="stylesheet" href="/js/vendor/mindmap/mindmap-editor.v5.css">
-  <script src="/js/vendor/mindmap/mindmap-editor.v5.js"></script>
+  <link rel="stylesheet" href="/js/vendor/mindmap/mindmap-editor.v6.css">
+  <script src="/js/vendor/mindmap/mindmap-editor.v6.js"></script>
   <script>
     // 兜底诊断：bundle 加载失败时给出可见提示，而不是空白页
     window.addEventListener('load', function () {
@@ -131,7 +139,7 @@
           root.innerHTML =
             '<div class="mm-empty"><div class="card">' +
             '<div class="t">导图组件未能加载</div>' +
-            '<div class="row">脚本 mindmap-editor.v5.js 加载失败（404 / 部署未完成 / 被拦截）。<br>' +
+            '<div class="row">脚本 mindmap-editor.v6.js 加载失败（404 / 部署未完成 / 被拦截）。<br>' +
             '请 Ctrl+F5 强制刷新；若仍失败，检查 Netlify 最近一次部署是否成功。</div>' +
             '</div></div>';
         }

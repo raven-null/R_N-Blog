@@ -68,7 +68,9 @@ function boot(el: HTMLElement) {
   // MindElixir 只接受 HTMLDivElement / 选择器字符串，而且会清空该容器：
   // 这里自建一层干净 div 交给它，外层 el 留给浮条等 UI，互不干扰。
   const canvasHost = document.createElement("div")
-  canvasHost.style.cssText = "position:absolute;inset:0;transition:left .25s ease"
+  // 注意：MindElixir 构造时会执行 el.style.position = "relative"（内联样式），
+  // 因此定位必须靠 .mm-canvas-host 的 !important 规则，否则容器高度会塌成内容高度。
+  canvasHost.className = "mm-canvas-host"
   el.appendChild(canvasHost)
 
   const mind = new MindElixir({
@@ -418,7 +420,7 @@ function boot(el: HTMLElement) {
     panelOpen = open
     outlineEl!.classList.toggle("open", open)
     // 导图区让出左侧空间（右侧实时成图）
-    canvasHost.style.left = open ? "min(380px, 86vw)" : "0"
+    canvasHost.classList.toggle("outline-open", open)
     scheduleFit(320) // 可用宽度变了，重新居中并缩放
     if (open && outlineText) {
       outlineText.value = dataToOutline(mind.getData())
