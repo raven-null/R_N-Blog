@@ -82,6 +82,8 @@ function boot(el: HTMLElement) {
     theme,
     overflowHidden: false,
     scaleSensitivity: 40,
+    // 默认 alignment 是 "root"（按根节点居中）→ 内容会贴顶、下方留白；改为按整个导图内容居中
+    alignment: "nodes",
     newTopicName: "新主题",
   } as any)
 
@@ -273,12 +275,25 @@ function boot(el: HTMLElement) {
   /* ---------------- 视野适配：内容自适应铺满可视区 ---------------- */
   // 内容较小时导图会缩在中间显得"没铺满"，这里在关键时机自动居中并缩放到合适大小
   function fitView() {
+    const host = canvasHost
+    const w = host.clientWidth
+    const h = host.clientHeight
+    const canvas = host.querySelector(".map-canvas") as HTMLElement | null
+    if (!canvas) return
     try {
-      ;(mind as any).toCenter()
-      ;(mind as any).scaleFit()
+      ;(mind as any).scaleFit() // 先让库定缩放比例
     } catch {
       /* 忽略 */
     }
+    const scale = Number((mind as any).scaleVal) || 1
+    const cw = canvas.offsetWidth * scale
+    const ch = canvas.offsetHeight * scale
+    if (!w || !h || !cw || !ch) return
+    // 直接用容器与内容的真实尺寸居中：水平与垂直都留出均等留白
+    const tx = Math.max(0, Math.round((w - cw) / 2))
+    const ty = Math.max(0, Math.round((h - ch) / 2))
+    canvas.style.transformOrigin = "0 0"
+    canvas.style.transform = `translate3d(${tx}px, ${ty}px, 0) scale(${scale})`
   }
   let fitTimer: number | null = null
   function scheduleFit(delay = 260) {
@@ -355,11 +370,7 @@ function boot(el: HTMLElement) {
     try {
       mind.refresh(outlineToData(outlineText.value))
       dirty = true
-      try {
-        ;(mind as any).toCenter()
-      } catch {
-        /* 忽略 */
-      }
+      scheduleFit(60) // 内容变了，重新居中
       setMsg("已按大纲更新导图")
     } catch (e: any) {
       setMsg("大纲解析失败：" + (e?.message || e))
