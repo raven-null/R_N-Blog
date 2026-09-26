@@ -3242,57 +3242,80 @@ function boot(el: HTMLElement) {
     let zooming = false
     let zStartX = 0
     let zStartY = 0
-    let zStartScale = 0
+    let zStartScale = 1
+    let zTx = 0
+    let zTy = 0
 
-    // 按下先只记位置：真正开始缩放要等拖动超过阈值。
-    // 这样「是按住了 Ctrl 但只是点一下」不会把缩放误触发（也不拦事件）。
-    const onZoomDown = (e: MouseEvent) => {
+    const mapEl = () => canvasHost.querySelector(".map-canvas") as HTMLElement | null
+    /** 从内联 transform 里取出平移量（库自己解析时也是只认 translate3d 的前两个参数） */
+    const parseT = (el: HTMLElement) => {
+      const m = /translate3d\(([^,]+),\s*([^,]+)/.exec(el.style.transform || "")
+      return { x: m ? parseFloat(m[1]) : 0, y: m ? parseFloat(m[2]) : 0 }
+    }
+
+    /** 以 (px,py) 为中心缩放到 newScale：与库内部算法一致，这样库后续的平移/缩放不会跳 */
+    const applyZoom = (newScale: number, px: number, py: number) => {
+      const el = mapEl()
+      if (!el) return
+      const s = Math.max(0.2, Math.min(2.2, newScale))
+      const rect = canvasHost.getBoundingClientRect()
+      // 与库内部的 scale 算法一致：以「相对容器中心」的偏移为基准做补偿，
+      // 这样缩放后库自己的平移/滚轮缩放不会跳位。
+      const ox = px - rect.left - rect.width / 2
+      const oy = py - rect.top - rect.height / 2
+      const k = 1 - s / zStartScale
+      const tx = zTx - (-ox + zTx) * k
+      const ty = zTy - (-oy + zTy) * k
+      el.style.transform = "translate3d(" + tx + "px, " + ty + "px, 0) scale(" + s + ")"
+      ;(mind as any).scaleVal = s
+      dbg("[mm] ctrl 拖动缩放", { 目标: Number(s.toFixed(3)), 起点: Number(zStartScale.toFixed(3)) })
+    }
+
+    const onDown = (e: PointerEvent) => {
       if (!e.ctrlKey && !e.metaKey) return
       if (e.button !== 0) return
-      zooming = false
+      const el = mapEl()
+      if (!el) return
+      zooming = true
       zStartX = e.clientX
       zStartY = e.clientY
       zStartScale = Number((mind as any).scaleVal) || 1
-      canvasHost.classList.add("mm-zoom-pending")
+      const t = parseT(el)
+      zTx = t.x
+      zTy = t.y
+      // 捕获阶段就掐掉：库的 mousedown 是后注册的，这样它连开始都做不到
+      e.preventDefault()
+      e.stopPropagation()
+      canvasHost.classList.add("mm-zooming")
+      dbg("[mm] ctrl 按下", { 起点缩放: zStartScale, 平移: t })
+      try {
+        canvasHost.setPointerCapture(e.pointerId)
+      } catch {
+        /* 忽略 */
+      }
     }
 
-    canvasHost.addEventListener("mousedown", onZoomDown, true)
+    const onMove = (e: PointerEvent) => {
+      if (!zooming) return
+      e.preventDefault()
+      e.stopPropagation()
+      // 横向 260px 约等于缩放一倍；纵向做少量微调（更好控制）
+      const delta = (e.clientX - zStartX) / 260 + (e.clientY - zStartY) / 900
+      applyZoom(zStartScale * (1 + delta), zStartX, zStartY)
+    }
 
-    window.addEventListener(
-      "mousemove",
-      (e) => {
-        if (!zStartScale) return
-        const dx = e.clientX - zStartX
-        const dy = e.clientY - zStartY
-        if (!zooming) {
-          if (Math.abs(dx) + Math.abs(dy) < 6) return
-          zooming = true
-          canvasHost.classList.add("mm-zooming")
-          canvasHost.classList.remove("mm-zoom-pending")
-        }
-        e.preventDefault()
-        e.stopPropagation()
-        // 横向 260px 约等于缩放一倍；纵向拖动做少量微调（更好控制）
-        const delta = dx / 260 + dy / 900
-        const next = Math.max(0.2, Math.min(2.2, zStartScale * (1 + delta)))
-        try {
-          ;(mind as any).scale?.(next, { x: zStartX, y: zStartY })
-        } catch {
-          /* 忽略 */
-        }
-      },
-      true,
-    )
+    const onUp = () => {
+      if (!zooming) return
+      zooming = false
+      canvasHost.classList.remove("mm-zooming")
+    }
 
-    window.addEventListener(
-      "mouseup",
-      () => {
-        zooming = false
-        zStartScale = 0
-        canvasHost.classList.remove("mm-zooming", "mm-zoom-pending")
-      },
-      true,
-    )
+    canvasHost.addEventListener("pointerdown", onDown, true)
+    canvasHost.addEventListener("pointermove", onMove, true)
+    canvasHost.addEventListener("pointerup", onUp, true)
+    canvasHost.addEventListener("pointercancel", onUp, true)
+    // 指针跑出容器也要收尾
+    window.addEventListener("pointerup", onUp, true)
 
     // 按住 Ctrl 时给个「可缩放」的光标提示
     document.addEventListener("keydown", (e) => {
@@ -3301,11 +3324,13 @@ function boot(el: HTMLElement) {
     document.addEventListener("keyup", (e) => {
       if (e.key === "Control" || e.key === "Meta") canvasHost.classList.remove("mm-zoom-ready")
     })
-    window.addEventListener("blur", () => canvasHost.classList.remove("mm-zoom-ready", "mm-zooming"))
+    window.addEventListener("blur", () => {
+      onUp()
+      canvasHost.classList.remove("mm-zoom-ready")
+    })
   } catch {
     /* 忽略：缩放只是便利功能，不行也不影响别的 */
   }
-
   /* ---------------- 选区工具栏：选中文字后浮出来套样式 ---------------- */
   let fmtBarEl: HTMLElement | null = null
   const FMT_BTNS: Array<{ mark: string; label: string; title: string }> = [
