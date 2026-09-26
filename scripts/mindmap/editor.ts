@@ -254,8 +254,8 @@ function boot(el: HTMLElement) {
   }
 
   /* ---------- 查看 / 编辑 双向切换 ---------- */
-  // MindElixir 的右键菜单 / 工具条 / 快捷键都是在构造时就注册好的，运行时改属性不会解绑；
-  // 所以只读态改为「DOM 层面」处理：data-mode 交给 CSS 收起工具条，并在捕获阶段拦掉修改类动作。
+  // 关键：MindElixir 用实例属性 mind.editable 控制能否编辑（库内部大量 `if (!e.editable) return`），
+  // 它只赋值不做别的副作用，运行时切换是安全的；再配合 DOM 层拦截做双保险。
   const MOD_KEYS = ["Delete", "Backspace", "Enter", "Tab", "F2", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"]
   let outlineWasOpen = false
   el.addEventListener(
@@ -299,8 +299,8 @@ function boot(el: HTMLElement) {
     } else {
       setMsg("已切换到只读浏览")
     }
-    // 只读态不允许直接改文字
-    el.querySelectorAll(".mind-elixir .topic").forEach((n) => n.setAttribute("contenteditable", editing ? "true" : "false"))
+    // 只读态不允许改内容
+    applyEditable()
     // 大纲面板只在编辑态可用；退出时先收起
     if (!editing && outlineEl?.classList.contains("open")) {
       outlineWasOpen = true
@@ -311,6 +311,19 @@ function boot(el: HTMLElement) {
     }
     scheduleFit(280)
     reportMode()
+  }
+
+  /** 把当前的编辑权限同步到库实例上（load 会重建节点，需要再调一次） */
+  function applyEditable() {
+    const editing = mode === "edit"
+    try {
+      // 库内部到处是 `if (!e.editable) return`：点节点不进编辑、右键菜单不弹、按键不触发增删
+      ;(mind as any).editable = editing
+    } catch {
+      /* 忽略 */
+    }
+    // 只读态再禁掉文字选择，避免看起来能改（不改 contenteditable：那会让浏览器直接改节点文字）
+    el.classList.toggle("mm-readonly", !editing)
   }
 
   /** 后台登录后 localStorage 里存有 admin_key，带上它服务端才认管理员身份 */
@@ -345,6 +358,7 @@ function boot(el: HTMLElement) {
         meta = null
         loadedRev = 0
         mind.init(emptyData())
+        applyEditable() // init 会重建节点，编辑开关要重新同步
         scheduleFit(200)
         if (mode === "edit") {
           setMsg(isAdmin() ? "新导图：直接编辑并保存即可创建" : "新导图：仅管理员可创建（请先登录后台）")
@@ -354,6 +368,7 @@ function boot(el: HTMLElement) {
       meta = d.meta || null
       loadedRev = meta?.rev ?? null
       mind.init(d.data || emptyData())
+      applyEditable()
       // 加载完成后自适应铺满可视区（只读与编辑模式都适用）
       fitView()
       scheduleFit(320)
@@ -822,6 +837,7 @@ function boot(el: HTMLElement) {
   }
   void load()
   updateKeyBar()
+  applyEditable()
   reportMode()
   // 面板默认关闭；上次开着则恢复（前台文章页里不自动展开，免得一进来就挤掉半屏）
   if (mode === "edit" && !embedded) {

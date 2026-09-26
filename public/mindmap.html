@@ -110,8 +110,10 @@
     /* 口令入口：只有服务端说这张导图设了口令才显形 */
     .mm-cap-btn.cap-key { display: none; }
     .mm-capsule.is-edit .mm-cap-btn.cap-key.show { display: inline-flex; }
-    /* 只读态：收起编辑工具条与大纲入口 */
+    /* 只读态：收起编辑工具条与大纲入口，并禁止选中节点文字 */
     #mm-root[data-mode="view"] .mind-elixir-toolbar { display: none !important; }
+    #mm-root.mm-readonly me-tpc > .text { -webkit-user-select: none; -ms-user-select: none; user-select: none; }
+    #mm-root.mm-readonly me-epd { display: none !important; }
     html[data-embedded="1"] .mm-capsule { bottom: 14px; }
 
     .mm-empty { height: 100%; display: flex; align-items: center; justify-content: center; text-align: center; padding: 24px; color: var(--mm-dim); }
@@ -198,8 +200,8 @@
       try { if (window.parent !== window) document.documentElement.dataset.embedded = '1'; } catch (e) { /* 跨域则忽略 */ }
     })();
   </script>
-  <link rel="stylesheet" href="/js/vendor/mindmap/mindmap-editor.v16.css">
-  <script src="/js/vendor/mindmap/mindmap-editor.v16.js"></script>
+  <link rel="stylesheet" href="/js/vendor/mindmap/mindmap-editor.v17.css">
+  <script src="/js/vendor/mindmap/mindmap-editor.v17.js"></script>
   <script>
     // 兜底诊断：bundle 未加载或运行时抛错时给出可见提示，而不是静默无反应
     (function () {
@@ -231,7 +233,7 @@
       window.addEventListener('load', function () {
         if (!window.MindMapMount) {
           show('导图组件未能加载',
-            '脚本 mindmap-editor.v16.js 加载失败（404 / 部署未完成 / 被拦截）。<br>' +
+            '脚本 mindmap-editor.v17.js 加载失败（404 / 部署未完成 / 被拦截）。<br>' +
             '请 Ctrl+F5 强制刷新；若仍失败，检查 Netlify 最近一次部署是否成功。');
         }
       });
