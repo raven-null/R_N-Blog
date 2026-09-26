@@ -4,7 +4,7 @@
  */
         // 文章详情页应用
         /* 白板编辑器 bundle 版本：与 scripts/build-excalidraw.mjs 的 BUNDLE_VERSION 保持一致 */
-const EXC_BUNDLE_VERSION = 'v22';
+const EXC_BUNDLE_VERSION = 'v23';
 
 const ArticleApp = {
             // 当前文章数据
@@ -45,6 +45,8 @@ const ArticleApp = {
                 }
                 // 初始化留言区
                 this.initComments(blobId || postFile);
+                // 底部胶囊（返回 / 复制链接 / 留言 / 信息）
+                try { this.initArticleCapsule(); } catch (e) { /* 忽略 */ }
                 // 供聊天窗口直接提问时结合当前文章内容
                 window.__currentArticleContext = (this.currentPost && this.currentPost.content) || '';
                 // 异步加载文章列表，不阻塞文章渲染（资讯模式不加载，避免上下篇导航错乱）
@@ -1216,36 +1218,129 @@ const ArticleApp = {
             async initComments(postId) {
                 const section = document.getElementById('comment-section');
                 if (!section) return;
-                // 思维导图文章：留言收在弹窗里，点开胶囊「留言」时才加载
-                if (this.currentPost && this.currentPost.type === 'mindmap') {
-                    this.postId = postId;
-                    section.dataset.mmDeferred = '1';
+                this.postId = postId;
+                // 留言统一收在右侧抽屉里（结构与导图/白板一致），点胶囊「留言」时才拉数据
+                if (document.getElementById('mmDrawer')) {
+                    const drawer = document.getElementById('mmDrawer');
+                    const scrim = document.getElementById('mmDrawerScrim');
+                    const close = document.getElementById('mmDrawerClose');
+                    const openDrawer = () => {
+                        drawer.classList.add('open');
+                        if (scrim) scrim.classList.add('show');
+                        if (!this.commentsLoaded) {
+                            this.commentsLoaded = true;
+                            void this.loadComments();
+                        }
+                    };
+                    const closeDrawer = () => {
+                        drawer.classList.remove('open');
+                        if (scrim) scrim.classList.remove('show');
+                    };
+                    window.__openArticleDrawer = openDrawer;
+                    window.__closeArticleDrawer = closeDrawer;
+                    if (close) close.addEventListener('click', closeDrawer);
+                    if (scrim) scrim.addEventListener('click', closeDrawer);
+                    document.addEventListener('keydown', (e) => {
+                        if (e.key === 'Escape') closeDrawer();
+                    });
+                    this.bindCommentForm();
                     return;
                 }
                 delete section.dataset.mmDeferred;
                 section.style.display = '';
                 this.postId = postId;
                 await this.loadComments();
+                this.bindCommentForm();
+            },
+
+            // 绑定留言表单与回复按钮（抽屉模式下延后到首次打开时绑定）
+            bindCommentForm() {
                 const form = document.getElementById('comment-form');
-                if (form) form.addEventListener('submit', (e) => this.submitComment(e));
+                if (form && !form.dataset.bound) {
+                    form.dataset.bound = '1';
+                    form.addEventListener('submit', (e) => this.submitComment(e));
+                }
                 this.commentImageUrl = '';
                 const fileInput = document.getElementById('comment-image');
-                if (fileInput) fileInput.addEventListener('change', (e) => this.onCommentImageSelect(e));
+                if (fileInput && !fileInput.dataset.bound) {
+                    fileInput.dataset.bound = '1';
+                    fileInput.addEventListener('change', (e) => this.onCommentImageSelect(e));
+                }
                 const removeBtn = document.getElementById('comment-image-remove');
-                if (removeBtn) removeBtn.addEventListener('click', () => this.clearCommentImage());
-                // 回复：点击填入 @昵称 到输入框
+                if (removeBtn && !removeBtn.dataset.bound) {
+                    removeBtn.dataset.bound = '1';
+                    removeBtn.addEventListener('click', () => this.clearCommentImage());
+                }
                 const list = document.getElementById('comment-list');
-                if (list) list.addEventListener('click', (e) => {
-                    const btn = e.target.closest('.comment-reply-btn');
-                    if (!btn) return;
-                    const name = btn.getAttribute('data-name') || '';
-                    const input = document.getElementById('comment-content');
-                    if (input) {
-                        input.value = '@' + name + ' ';
-                        input.focus();
-                        input.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    }
+                if (list && !list.dataset.bound) {
+                    list.dataset.bound = '1';
+                    // 回复：点击填入 @昵称 到输入框
+                    list.addEventListener('click', (e) => {
+                        const btn = e.target.closest('.comment-reply-btn');
+                        if (!btn) return;
+                        const name = btn.getAttribute('data-name') || '';
+                        const input = document.getElementById('comment-content');
+                        if (input) {
+                            input.value = '@' + name + ' ';
+                            input.focus();
+                            input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                    });
+                }
+            },
+
+            // 底部居中胶囊（结构与导图/白板一致）：返回 / 复制链接 / 留言 / 信息
+            initArticleCapsule() {
+                const escT = this.escHtml ? this.escHtml : (v => String(v == null ? '' : v)
+                    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'));
+                const cap = document.getElementById('articleCapsule');
+                if (!cap) return;
+                const info = document.getElementById('articleInfo');
+
+                const back = document.getElementById('capBack');
+                if (back) back.addEventListener('click', () => { location.href = '/'; });
+
+                const copy = document.getElementById('capCopy');
+                if (copy) copy.addEventListener('click', () => {
+                    const label = copy.querySelector('span');
+                    const done = () => {
+                        if (!label) return;
+                        label.textContent = '已复制';
+                        setTimeout(() => { label.textContent = '复制链接'; }, 1800);
+                    };
+                    try {
+                        navigator.clipboard.writeText(location.href).then(done, done);
+                    } catch (e) { done(); }
                 });
+
+                const cmt = document.getElementById('capComments');
+                if (cmt) cmt.addEventListener('click', () => {
+                    if (window.__openArticleDrawer) window.__openArticleDrawer();
+                });
+
+                const infoBtn = document.getElementById('capInfo');
+                if (infoBtn && info) {
+                    const p = this.currentPost || {};
+                    const tags = (p.tags || []).map(t => '<span>' + escT(t) + '</span>').join('');
+                    info.innerHTML =
+                        '<h4>' + escT(p.title || '文章') + '</h4>' +
+                        '<div class="row"><span class="k">作者</span><span>' + escT(p.author || '博主') + '</span></div>' +
+                        '<div class="row"><span class="k">日期</span><span>' + escT(p.date || '') + '</span></div>' +
+                        (p.update ? '<div class="row"><span class="k">更新</span><span>' + escT(p.update) + '</span></div>' : '') +
+                        (p.type === 'mindmap' ? '<div class="row"><span class="k">导图</span><span>' + escT(p.mapId || '') + '</span></div>' : '') +
+                        (p.type === 'whiteboard' ? '<div class="row"><span class="k">白板</span><span>' + escT(p.boardId || '') + '</span></div>' : '') +
+                        '<div class="mm-info-tags">' + (tags || '<span style="opacity:.5">无标签</span>') + '</div>';
+                    infoBtn.addEventListener('click', () => { info.hidden = !info.hidden; });
+                    document.addEventListener('keydown', (e) => {
+                        if (e.key === 'Escape') info.hidden = true;
+                    });
+                }
+            },
+
+            // 胶囊上的留言数
+            updateCommentCount(n) {
+                const el = document.getElementById('capCommentCount');
+                if (el) el.textContent = n ? '（' + n + '）' : '';
             },
 
             // 选择图片 → 本地预览（待提交时再上传）
@@ -1333,6 +1428,7 @@ const ArticleApp = {
                             </div>
                         </div>`;
                     }).join('');
+                    this.updateCommentCount(comments.length);
                 } catch (e) {
                     console.warn('留言加载失败:', e);
                     list.innerHTML = '<div class="comment-empty">留言功能暂时不可用</div>';
