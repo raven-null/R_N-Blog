@@ -1663,11 +1663,25 @@ function boot(el: HTMLElement) {
     const target = findNodeIn(data?.nodeData, id)
     if (!target) return
     target.expanded = !collapse
-    // mind.refresh(data) 会把 expanded 一起落下去（收起的节点不会再渲染子级与展开按钮），
-    // 所以这里不能再拿 DOM 的 class 去「校正」一次——refresh 之后 me-parent 的第二个
-    // 子元素是 me-children（className 为空），会被误判成已展开，把刚收起的节点又展开回来。
     mind.refresh(data)
     dirty = true
+    // 兜底：把画布 DOM 对齐到数据里的 expanded。
+    // 注意 me-parent 的子元素顺序是 [me-tpc, me-epd, me-children]，判断要按元素名找，
+    // 不能按 children[1] 的 className 猜（那正是之前把折叠改坏的原因）。
+    try {
+      const tpc = (mind as any).findEle?.(id)
+      const parent = tpc?.parentNode as HTMLElement | null
+      if (parent) {
+        const epd = parent.querySelector(":scope > me-epd") as HTMLElement | null
+        if (epd) {
+          const wantFold = !collapse
+          ;(epd as any).expanded = wantFold
+          epd.className = wantFold ? "minus" : ""
+        }
+      }
+    } catch {
+      /* 节点被收起后 findEle 会抛「maybe it is collapsed」，这正是收起的正常结果 */
+    }
     outlineRows = collectRows(mind.getData())
     renderOutlineTree()
   }
@@ -1992,8 +2006,15 @@ function boot(el: HTMLElement) {
 
   function bindRowDrag(host: HTMLElement) {
     let dragId: string | null = null
-    const clearMarks = () =>
-      host.querySelectorAll(".mm-oline").forEach((el) => el.classList.remove("dragging", "drop-before", "drop-in", "drop-after"))
+    let dragSource: HTMLElement | null = null
+    let lastMode = ""
+    const clearMarks = () => {
+      host.querySelectorAll(".mm-oline").forEach((el) => {
+        el.classList.remove("dragging", "drop-before", "drop-in", "drop-after")
+        // draggable 只在拖动期间挂在圆点上，收尾要摘掉，避免残留拖拽状态
+        if (el !== dragSource) el.querySelector(".mm-oline-drag")?.removeAttribute("draggable")
+      })
+    }
 
     host.addEventListener("dragstart", (e) => {
       if (mode !== "edit") return
@@ -2006,6 +2027,7 @@ function boot(el: HTMLElement) {
         return
       }
       dragId = row.dataset.node || null
+      dragSource = row
       row.classList.add("dragging")
       try {
         // 故意不用 text/plain：带文本类型时，拖到某些位置松开会被浏览器当成「用这段文字搜索」，
@@ -2029,6 +2051,15 @@ function boot(el: HTMLElement) {
       clearMarks()
       row.classList.add("dragging")
       row.classList.add("drop-" + mode)
+      // 实时告诉用户「松手会变成什么」，免得拖完才发现不是想要的效果
+      if (lastMode !== mode) {
+        lastMode = mode
+        setMsg(
+          mode === "in"
+            ? "松手：变成「" + (outlineRows.find((r) => r.id === row.dataset.node)?.topic || "") + "」的子项"
+            : "松手：插到「" + (outlineRows.find((r) => r.id === row.dataset.node)?.topic || "") + (mode === "before" ? "」的前面" : "」的后面"),
+        )
+      }
     })
     host.addEventListener("drop", (e) => {
       if (!dragId) return
@@ -2039,12 +2070,17 @@ function boot(el: HTMLElement) {
       const mode = row.classList.contains("drop-before") ? "before" : row.classList.contains("drop-after") ? "after" : "in"
       const src = dragId
       dragId = null
+      dragSource = null
+      lastMode = ""
       clearMarks()
       moveRowTo(src, row.dataset.node || "", mode as "before" | "in" | "after")
     })
     host.addEventListener("dragend", () => {
       dragId = null
+      dragSource = null
+      lastMode = ""
       clearMarks()
+      setMsg("")
     })
   }
 
@@ -2052,6 +2088,20 @@ function boot(el: HTMLElement) {
     const host = outlineHost
     if (!host) return
     bindRowDrag(host)
+
+    // Tab / Shift+Tab 必须留在面板里。不拦的话焦点会顺着 Tab 走到画布上，
+    // 而画布的 Tab 快捷键正好是「新建子节点」——这就是「想改位置却建了新节点」的原因。
+    host.addEventListener(
+      "keydown",
+      (e) => {
+        if (mode !== "edit") return
+        if (e.key !== "Tab" && e.key !== "Enter") return
+        if (e.key === "Enter" && e.shiftKey) return // Shift+Enter 留给行内换行
+        e.preventDefault()
+        e.stopPropagation()
+      },
+      true,
+    )
 
     // 点击行（三角与缩略图除外）→ 光标直接落到这一行文字里，省得精准点字
     host.addEventListener("mousedown", (e) => {
@@ -2086,6 +2136,12 @@ function boot(el: HTMLElement) {
       if (!topic) return
       e.preventDefault()
       caretToTextEnd(topic)
+      // 再显式聚焦一次：光标没真正落到行里的话，Tab/Enter 会漏到画布上触发库的快捷键
+      try {
+        topic.focus({ preventScroll: true })
+      } catch {
+        /* 忽略 */
+      }
     })
 
     // 大纲 → 导图：边打边同步（防抖 300ms，不依赖失焦）
