@@ -59,14 +59,15 @@ async function readMeta(store: ReturnType<typeof getBlobStore>, id: string): Pro
     const raw = await store.get(metaKey(id), { type: "text" })
     if (!raw) return null
     const m = JSON.parse(raw) as MapMeta
-    return {
+    const out: MapMeta = {
       title: m.title || "",
       editable: m.editable === 0 ? 0 : 1,
       createdAt: m.createdAt || "",
       updatedAt: m.updatedAt || "",
       rev: Number(m.rev) || 0,
-      ...m,
     }
+    if (m.editKeyHash) out.editKeyHash = m.editKeyHash
+    return out
   } catch {
     return null
   }

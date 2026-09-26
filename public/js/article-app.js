@@ -106,6 +106,7 @@ const ArticleApp = {
                     content: content,
                     type: d.type || 'article',
                     boardId: d.boardId || '',
+                    mapId: d.mapId || '', // 思维导图关联 id
                     frontmatter: {},
                 };
                 this.renderArticle();
@@ -406,6 +407,10 @@ const ArticleApp = {
                 if (!this.currentPost) return;
 
                 // 纯白板文章（type=whiteboard）：整页交互白板，无目录侧栏，跳过 Markdown 管线
+                if (this.currentPost.type === 'mindmap') {
+                    this.renderMindmap();
+                    return;
+                }
                 if (this.currentPost.type === 'whiteboard') {
                     await this.renderWhiteboard();
                     return;
@@ -511,6 +516,27 @@ const ArticleApp = {
             },
 
             // 纯白板文章：沉浸式画布舞台（无文档感：标题/评论收进悬浮控件，画廊式导航）
+            // 思维导图文章：整页展示（iframe 嵌入只读导图页，缩放/折叠/导出由导图页自身负责）
+            // 复用白板的 board-mode 全屏容器样式，保证两种形态的阅读体验一致
+            renderMindmap() {
+                const mapId = String(this.currentPost.mapId || '').trim();
+                const wrap = document.getElementById('article-content');
+                document.body.classList.add('board-mode');
+                if (!wrap) return;
+                if (!mapId || !/^[A-Za-z0-9_-]{1,64}$/.test(mapId)) {
+                    wrap.innerHTML =
+                        '<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px;text-align:center">' +
+                        '<div><div style="font-size:16px;color:var(--text-primary);margin-bottom:8px">导图未绑定</div>' +
+                        '<div style="font-size:13px;color:var(--text-muted)">这篇文章还没有关联思维导图，请在后台编辑页创建后再发布。</div></div></div>';
+                    return;
+                }
+                wrap.innerHTML =
+                    '<div class="mindmap-frame-wrap"><iframe class="mindmap-frame" title="思维导图" ' +
+                    'src="/mindmap.html?note=' + encodeURIComponent(mapId) + '"></iframe></div>';
+                const title = this.currentPost.title || '思维导图';
+                try { document.title = title + ' - 思维导图'; } catch (e) { /* 忽略 */ }
+            },
+
             async renderWhiteboard() {
                 const content = document.getElementById('article-content');
                 if (!this.currentPost) return;

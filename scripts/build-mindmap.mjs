@@ -38,16 +38,20 @@ execFileSync(
   { stdio: "inherit" },
 )
 
-// 2) 若库带独立样式/字体，一并复制（Mind Elixir 5.x 的样式随 JS 注入，这里做兼容处理）
+// 2) 复制库的样式（Mind Elixir 5.x 是 dist/MindElixir.css，12KB，无外部字体依赖）
 const pkgDir = join(root, "node_modules/mind-elixir")
-for (const rel of ["dist/style.css", "style.css"]) {
+const cssCandidates = ["dist/MindElixir.css", "dist/style.css", "style.css"]
+let cssCopied = false
+for (const rel of cssCandidates) {
   const src = join(pkgDir, rel)
   if (existsSync(src)) {
     cpSync(src, join(vendorDir, `mindmap-editor.${BUNDLE_VERSION}.css`))
     console.log(`已复制样式：${rel}`)
+    cssCopied = true
     break
   }
 }
+if (!cssCopied) console.log("警告：未找到库样式文件，页面可能缺少导图基础样式")
 const fontDir = join(pkgDir, "dist/fonts")
 if (existsSync(fontDir)) {
   const target = join(vendorDir, "fonts")
