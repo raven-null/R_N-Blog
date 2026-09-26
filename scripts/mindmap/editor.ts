@@ -146,7 +146,7 @@ function boot(el: HTMLElement) {
   capBtn("bb-view-only", "在当前位置编辑这张导图", ICON_EDIT, "编辑", () => setMode("edit"))
   capBtn("bb-edit-only", "退出编辑，回到只读浏览", ICON_DONE, "完成", () => setMode("view"))
   // 只有「这张导图真的设了口令」才显形，所以单独持有引用
-  const capKeyBtn = capBtn("cap-key", "输入编辑口令", ICON_KEY, "口令", () => {})
+  const capKeyBtn = capBtn("cap-key", "输入编辑口令", ICON_KEY, "口令", () => toggleKeyBar())
   if (embedded) {
     capBtn("", "查看留言", ICON_COMMENT, "留言", () => tell("comments"))
     capBtn("", "导图信息", ICON_INFO, "信息", () => tell("info"))
@@ -235,22 +235,25 @@ function boot(el: HTMLElement) {
     keyInput.value = editKey
     keyInput.addEventListener("input", () => {
       editKey = keyInput ? keyInput.value : ""
+      applyEditable() // 口令一填就能改（对错最终由保存时的服务端裁定）
     })
     wrap.appendChild(label)
     wrap.appendChild(keyInput)
     el.appendChild(wrap)
-    if (capKeyBtn) {
-      capKeyBtn.classList.add("show")
-      capKeyBtn.onclick = () => {
-        wrap.classList.toggle("open")
-        if (wrap.classList.contains("open")) keyInput!.focus()
-      }
-    }
   }
-  /** 这张导图没有口令、或当前就是管理员 → 不需要口令入口 */
+  /** 这张导图设了口令、当前又不是管理员 → 显示口令入口并挂上浮条 */
   function updateKeyBar() {
-    if (capKeyBtn) capKeyBtn.classList.toggle("show", !!keyInput)
-    if (meta && meta.hasKey && !isAdmin()) mountKeyBar()
+    if (!capKeyBtn) return
+    const need = locked() && !isAdmin() && mode === "edit"
+    capKeyBtn.classList.toggle("show", need)
+    if (need) mountKeyBar()
+  }
+  /** 口令浮条默认收起，点胶囊上的「口令」才展开 */
+  function toggleKeyBar() {
+    const wrap = el.querySelector(".mm-key") as HTMLElement | null
+    if (!wrap) return
+    const open = wrap.classList.toggle("open")
+    if (open) (wrap.querySelector("input") as HTMLInputElement | null)?.focus()
   }
 
   /* ---------- 查看 / 编辑 双向切换 ---------- */
@@ -293,14 +296,19 @@ function boot(el: HTMLElement) {
     mode = next
     el.dataset.mode = next
     capsule.classList.toggle("is-edit", editing)
+    // 口令先准备好（applyEditable 要根据它判断权限）
+    if (editing) mountKeyBar()
+    applyEditable()
     if (editing) {
-      setMsg("编辑中：Ctrl + S 保存")
-      updateKeyBar()
+      if (locked() && !editKey) {
+        // 加密导图：先要口令。可以浏览，但改不了，提示说清楚
+        setMsg("此导图已加密：请先输入编辑口令")
+      } else {
+        setMsg("编辑中：Ctrl + S 保存")
+      }
     } else {
       setMsg("已切换到只读浏览")
     }
-    // 只读态不允许改内容
-    applyEditable()
     // 大纲面板只在编辑态可用；退出时先收起
     if (!editing && outlineEl?.classList.contains("open")) {
       outlineWasOpen = true
@@ -313,17 +321,27 @@ function boot(el: HTMLElement) {
     reportMode()
   }
 
-  /** 把当前的编辑权限同步到库实例上（load 会重建节点，需要再调一次） */
+  /** 这张导图是否设了编辑口令 */
+  function locked(): boolean {
+    return !!meta?.hasKey
+  }
+
+  /**
+   * 把编辑权限同步到库实例。库内部到处是 `if (!e.editable) return`（点节点不进编辑、
+   * 右键菜单不弹、按键不增删），而库只暴露了 mind.editable 这一个开关
+   * （下面的 enableEdit/disableEdit 挂在冻结的静态对象上、实例上并没有这两个方法），
+   * 所以直接改它。load 会重建节点，因此 init 之后还要再调一次。
+   */
   function applyEditable() {
     const editing = mode === "edit"
+    // 加密导图在拿到口令前不给改（保存本来也会被服务端拒），避免白改一场
+    const allowed = editing && (!locked() || !!editKey || isAdmin())
     try {
-      // 库内部到处是 `if (!e.editable) return`：点节点不进编辑、右键菜单不弹、按键不触发增删
-      ;(mind as any).editable = editing
+      ;(mind as any).editable = allowed
     } catch {
       /* 忽略 */
     }
-    // 只读态再禁掉文字选择，避免看起来能改（不改 contenteditable：那会让浏览器直接改节点文字）
-    el.classList.toggle("mm-readonly", !editing)
+    el.classList.toggle("mm-readonly", !allowed)
   }
 
   /** 后台登录后 localStorage 里存有 admin_key，带上它服务端才认管理员身份 */
