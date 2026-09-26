@@ -1530,6 +1530,11 @@ function boot(el: HTMLElement) {
   const selectedRows = new Set<string>()
   let outlineHost: HTMLElement | null = null
   let outlineEditing = false
+  // 行内文字是边打边提交的（防抖 300ms）。但回车/删除/Tab 会整表重建，
+  // 若此时待提交的文字还没进数据，重建就会用旧文本把刚打的字盖掉。
+  // 所以结构操作前必须先「结算」待提交的文字。
+  let pendingRowEl: HTMLElement | null = null
+  let pendingTimer: number | null = null
 
   /** 数据 → 行列表（折叠的节点：子项不生成行，符合"收起后看不到"） */
   function collectRows(data: any): OutlineRow[] {
@@ -1612,6 +1617,19 @@ function boot(el: HTMLElement) {
     mind.refresh(data)
     dirty = true
     outlineRows = collectRows(mind.getData())
+  }
+
+  /** 把行上正在编辑的文字立刻写进数据（并同步行列表），返回写了哪一行 */
+  function settlePendingRowText(rowEl?: HTMLElement | null): HTMLElement | null {
+    if (pendingTimer !== null) {
+      window.clearTimeout(pendingTimer)
+      pendingTimer = null
+    }
+    const row = rowEl || pendingRowEl
+    pendingRowEl = null
+    if (!row) return null
+    commitRowText(row)
+    return row
   }
 
   /** 切换折叠（写进数据；渲染状态与导图视图同步） */
@@ -1902,14 +1920,15 @@ function boot(el: HTMLElement) {
     })
 
     // 大纲 → 导图：边打边同步（防抖 300ms，不依赖失焦）
-    let textTimer: number | null = null
     host.addEventListener("input", (e) => {
       if (mode !== "edit") return
       const row = (e.target as HTMLElement | null)?.closest?.(".mm-oline") as HTMLElement | null
       if (!row) return
-      if (textTimer) window.clearTimeout(textTimer)
-      textTimer = window.setTimeout(() => {
-        textTimer = null
+      pendingRowEl = row
+      if (pendingTimer !== null) window.clearTimeout(pendingTimer)
+      pendingTimer = window.setTimeout(() => {
+        pendingTimer = null
+        pendingRowEl = null
         commitRowText(row)
       }, 300)
     })
@@ -1917,13 +1936,11 @@ function boot(el: HTMLElement) {
     host.addEventListener(
       "focusout",
       (e) => {
-        const row = (e.target as HTMLElement | null)?.closest?.(".mm-oline") as HTMLElement | null
+        const target = e.target as HTMLElement | null
+        if (target?.closest?.(".mm-oline-drag")) return
+        const row = target?.closest?.(".mm-oline") as HTMLElement | null
         if (!row) return
-        if (textTimer) {
-          window.clearTimeout(textTimer)
-          textTimer = null
-        }
-        commitRowText(row)
+        settlePendingRowText(row)
       },
       true,
     )
@@ -1943,6 +1960,8 @@ function boot(el: HTMLElement) {
         if (e.shiftKey) return
         e.preventDefault()
         e.stopPropagation()
+        // 关键：先把这一行正在打的字落到数据里，否则重建会把上一行的文字盖回旧值
+        settlePendingRowText(row)
         const cur = outlineRows[idx]
         if (!cur) return
         const fresh: OutlineRow = {
@@ -2012,6 +2031,8 @@ function boot(el: HTMLElement) {
         if (!textNow || selectedAll) {
           e.preventDefault()
           e.stopPropagation()
+          // 删行同样会整表重建，先结算待提交的文字
+          settlePendingRowText(row)
           if (idx === 0) {
             setMsg("中心主题不能删除")
             return
@@ -2031,6 +2052,8 @@ function boot(el: HTMLElement) {
       if (e.key === "Tab") {
         e.preventDefault()
         e.stopPropagation()
+        // 调级会整表重建，先结算待提交的文字
+        settlePendingRowText(row)
         const cur = outlineRows[idx]
         if (!cur || idx === 0) return // 中心主题不动
         if (e.shiftKey) {
