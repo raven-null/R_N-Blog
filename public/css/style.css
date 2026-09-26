@@ -1183,7 +1183,7 @@ body.home-layout {
 }
         /* ===== 白板文章卡片：网格底 + 封面图 + 交互白板标识 ===== */
         .card.card-board .board-cover {
-            position: relative; height: 132px; flex-shrink: 0;
+            position: relative; height: 190px; flex-shrink: 0;
             display: flex; align-items: center; justify-content: center; overflow: hidden;
             background-color: #1b2036;
             background-image:
@@ -1194,7 +1194,12 @@ body.home-layout {
                 linear-gradient(145deg, #29304f, #191d33);
         }
         .card.card-board .board-cover.has-img { background: #0b0d15; }
-        .card.card-board .board-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        /* 封面留白与卡片同色，看起来仍然是整块封面 */
+        .card.card-board .board-cover.has-img img { background: #0b0d15; }
+        /* 封面完整显示：这类卡片导出的截图比例各异（常见正方形），用 cover 会被裁；
+           改用 contain + 深色底，整张图都能看到（留白与网格底同色系，不突兀） */
+        .card.card-board .board-cover img { width: 100%; height: 100%; object-fit: contain; display: block; }
+        .card.card-board .board-cover.has-img img { padding: 0; }
         .card.card-board .board-icon { width: 36px; height: 36px; color: rgba(255,255,255,.42); transition: color .25s ease, transform .25s ease; }
         .card.card-board:hover .board-icon { color: rgba(255,255,255,.72); transform: scale(1.06); }
         .card.card-board .board-chip {
