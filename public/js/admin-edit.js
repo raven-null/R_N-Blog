@@ -50,7 +50,7 @@
         try { var bc = new BroadcastChannel('blog-articles'); bc.postMessage({ type: 'articles-changed' }); bc.close(); } catch (e) { }
     }
     function typeLabel(t) {
-        return t === 'whiteboard' ? '白板' : (t === 'card' ? '随记' : '文章');
+        return t === 'whiteboard' ? '白板' : (t === 'mindmap' ? '导图' : (t === 'card' ? '随记' : '文章'));
     }
 
     // ===== 标签选择器（与后台写文章页同款：chips + 下拉建议 + 回车确认）=====
@@ -217,6 +217,49 @@
         // iframe 内嵌独立白板页：与编辑页样式/布局隔离，避免相互干扰
         host.innerHTML = '<iframe class="ee-frame" title="白板编辑器" src="/excalidraw.html?note=' + encodeURIComponent(bid) + '&edit=1"></iframe>';
     }
+    // ===== 思维导图 =====
+    function mapId() { return (doc && doc.mapId) || ''; }
+    function mmApi(query, opts, retry) {
+        opts = opts || {};
+        if (retry === undefined) retry = 1;
+        return fetch('/api/mindmap?' + query, {
+            method: opts.method || 'GET',
+            headers: { 'Content-Type': 'application/json', 'X-Admin-Key': adminKey },
+            body: opts.body,
+            cache: 'no-store'
+        }).then(function (r) {
+            if (r.status >= 500) throw new Error('HTTP ' + r.status);
+            return r.json();
+        }).catch(function (err) {
+            if (retry > 0) {
+                return new Promise(function (res) { setTimeout(res, 700); }).then(function () {
+                    return mmApi(query, opts, retry - 1);
+                });
+            }
+            throw err;
+        });
+    }
+    function mountMindmap() {
+        var host = $('eeMindmapHost');
+        var mid = mapId();
+        if (!host) return;
+        if (!mid) {
+            host.innerHTML = '<div class="ee-hint">这篇文章还没有绑定导图，无法内嵌编辑；可到「导图管理」新建导图后发布文章。</div>';
+            return;
+        }
+        // iframe 内嵌导图页（与白板同一套交互：底部胶囊、右侧留言抽屉）
+        // from=admin 让导图页收起自己的胶囊，由这里顶栏的按钮统一控制
+        host.innerHTML = '<iframe class="ee-frame" title="导图编辑器" src="/mindmap.html?note=' +
+            encodeURIComponent(mid) + '&edit=1&from=admin"></iframe>';
+    }
+    window.eeSaveMindmap = async function () {
+        var frame = document.querySelector('#eeMindmapHost iframe.ee-frame');
+        var saver = null;
+        try { saver = frame && frame.contentWindow && frame.contentWindow.__mindmapSave; } catch (e) { saver = null; }
+        if (typeof saver !== 'function') return true; // 还没挂载好：不阻塞后续保存
+        return !!(await saver());
+    };
+
     // ===== 白板管理（移植自后台「白板管理」：权限 / 口令 / 名称 / 历史回滚）=====
     function excApi(query, opts, retry) {
         opts = opts || {};
@@ -529,7 +572,9 @@
                 }
             } catch (e) { chunkEdit = null; }
         }
-        docType = doc.type === 'whiteboard' ? 'whiteboard' : (doc.type === 'card' ? 'card' : 'article');
+        docType = doc.type === 'whiteboard' ? 'whiteboard'
+            : (doc.type === 'mindmap' ? 'mindmap'
+            : (doc.type === 'card' ? 'card' : 'article'));
         document.title = '编辑' + typeLabel(docType) + ' · ' + (doc.title || doc.id);
         $('eeTypeBadge').textContent = typeLabel(docType);
         $('eeIdText').textContent = doc.id || '';
@@ -553,14 +598,23 @@
             var excerptCard = $('eeExcerptCard');
             if (excerptCard) excerptCard.style.display = 'none';
         }
+        if (docType === 'mindmap') $('eeViewBtn').textContent = '前台查看';
         if (docType === 'whiteboard') {
             $('eeEditorCol').style.display = 'none'; // 白板不用富文本编辑器，画布直接占左侧编辑位
             $('eeSide').style.display = 'flex';      // 右侧功能区（状态/标签/封面/信息）始终保持
+            if ($('eeMindmap')) $('eeMindmap').style.display = 'none';
             $('eeBoard').style.display = 'flex';
             mountBoard();
             window.eeLoadBoardAdmin();
+        } else if (docType === 'mindmap') {
+            $('eeEditorCol').style.display = 'none'; // 导图同样用整块画布区
+            $('eeSide').style.display = 'flex';
+            if ($('eeBoard')) $('eeBoard').style.display = 'none';
+            $('eeMindmap').style.display = 'flex';
+            mountMindmap();
         } else {
-            $('eeBoard').style.display = 'none';
+            if ($('eeBoard')) $('eeBoard').style.display = 'none';
+            if ($('eeMindmap')) $('eeMindmap').style.display = 'none';
             $('eeEditorCol').style.display = 'flex';
             $('eeSide').style.display = 'flex';
 
@@ -638,6 +692,7 @@
             status: $('eeStatusSel').value,
             type: docType,
             boardId: (doc && doc.boardId) || '',
+            mapId: (doc && doc.mapId) || '',
             author: (doc && doc.author) || ''
         };
         // 白板文章的正文不是编辑器内容：原样回传，避免保存元信息时清空
@@ -664,7 +719,9 @@
     async function doSave(silent) {
         var body = await collect();
         if (!body.title) { toast('请填写标题', 'error'); return false; }
-        if (docType !== 'whiteboard' && !body.content) { toast('请填写正文内容', 'error'); return false; }
+        if (docType !== 'whiteboard' && docType !== 'mindmap' && !body.content) { toast('请填写正文内容', 'error'); return false; }
+        // 画布类内容：先把 iframe 里的改动落盘，再保存文章元数据
+        if (docType === 'mindmap') await window.eeSaveMindmap();
         var btn = $('eeSaveBtn');
         btn.disabled = true;
         var r = await api('action=articles', { method: 'POST', body: JSON.stringify(body) });
@@ -706,7 +763,7 @@
         if (pubTagPicker) pubTagPicker.setTags(currentTags(), true);
         // 编辑密钥字段：仅白板（后续导图同样适用）显示，默认勾选、默认值 Raven_NULL
         var ekField = $('eePubEditKeyField');
-        if (ekField) ekField.style.display = docType === 'whiteboard' ? '' : 'none';
+        if (ekField) ekField.style.display = (docType === 'whiteboard' || docType === 'mindmap') ? '' : 'none';
         window.eeRenderCover();
         var tip = $('eePubTip'); if (tip) tip.textContent = '';
         var box = $('eePublishModal'); if (box) box.classList.add('open');
@@ -724,18 +781,21 @@
         var ok = await doSave(true);
         if (!ok) { if (tip) tip.textContent = '保存失败，请检查标题与内容后重试'; return; }
         // 编辑密钥：默认开启（Raven_NULL），可在弹窗取消
-        if (docType === 'whiteboard' && doc && doc.boardId) {
-            var useKey = $('eeUseEditKey');
-            var keyInput = $('eeEditKey');
-            var kv = ((keyInput && keyInput.value) || '').trim();
+        var useKey = $('eeUseEditKey');
+        var keyInput = $('eeEditKey');
+        var kv = ((keyInput && keyInput.value) || '').trim();
+        // 画布类内容（白板 / 导图）都支持编辑密钥，只是接口不同
+        var keyApi = docType === 'whiteboard' ? excApi : (docType === 'mindmap' ? mmApi : null);
+        var keyId = docType === 'whiteboard' ? (doc && doc.boardId) : (docType === 'mindmap' ? (doc && doc.mapId) : '');
+        if (keyApi && keyId) {
             if (useKey && useKey.checked && kv.length >= 4) {
                 try {
-                    var d = await excApi('action=meta&id=' + encodeURIComponent(doc.boardId), { method: 'POST', body: JSON.stringify({ editKey: kv }) });
+                    var d = await keyApi('action=meta&id=' + encodeURIComponent(keyId), { method: 'POST', body: JSON.stringify({ editKey: kv }) });
                     if (!d || d.status !== 'success') toast((d && d.message) || '编辑密钥设置失败', 'error');
                     else toast('编辑密钥已开启（' + kv + '）', 'success');
                 } catch (e) { /* 忽略：文章已保存成功 */ }
             } else if (useKey && !useKey.checked) {
-                try { await excApi('action=meta&id=' + encodeURIComponent(doc.boardId), { method: 'POST', body: JSON.stringify({ editKey: '' }) }); } catch (e) { /* 忽略 */ }
+                try { await keyApi('action=meta&id=' + encodeURIComponent(keyId), { method: 'POST', body: JSON.stringify({ editKey: '' }) }); } catch (e) { /* 忽略 */ }
             } else if (useKey && useKey.checked) {
                 toast('编辑密钥至少 4 位，本次未设置', 'error');
             }
