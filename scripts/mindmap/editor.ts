@@ -1559,7 +1559,8 @@ function boot(el: HTMLElement) {
 
   function renderOutlineTree() {
     if (!outlineHost) return
-    const editing = outlineEditing && mode === "edit"
+    // 编辑能力只看当前模式，不再依赖"是否点过"的标志（那个标志一旦卡住就整块不能编辑）
+    const editing = mode === "edit"
     outlineHost.innerHTML = outlineRows
       .map((r, i) => {
         const cls = "mm-oline" + (r.level === 0 ? " lv0" : "")
@@ -1671,14 +1672,10 @@ function boot(el: HTMLElement) {
     }
   }
 
-  /** 顶层入口：数据变了就重建行列表；编辑中的行不重建（避免打断输入） */
-  function syncOutlineFromData(force = false) {
-    const data = mind.getData()
-    if (!force && outlineEditing && currentRow()) {
-      // 正在某行里打字：只更新图片等非文字信息不重建
-      return
-    }
-    outlineRows = collectRows(data)
+  /** 顶层入口：数据变了就重建行列表 */
+  function syncOutlineFromData() {
+    if (!outlineHost) return
+    outlineRows = collectRows(mind.getData())
     renderOutlineTree()
   }
 
@@ -1874,6 +1871,15 @@ function boot(el: HTMLElement) {
   // 粘贴图片：库把 paste 交给 mind.pasteHandler；再在根元素补一个捕获监听
   ;(mind as any).pasteHandler = onPaste
   el.addEventListener("paste", (e) => onPaste(e as ClipboardEvent), true)
+
+  // 导图内部一变（拖节点、右键操作、快捷键），把大纲也刷新一遍
+  try {
+    ;(mind as any).bus?.addListener?.("operation", () => {
+      if (panelOpen) refreshOutline()
+    })
+  } catch {
+    /* 忽略 */
+  }
 
   void load()
   updateKeyBar()
