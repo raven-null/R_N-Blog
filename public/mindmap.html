@@ -241,6 +241,63 @@
     /* 「·」与后面文字的间距（用户要求：拉开一点） */
     .mm-oline-bullet { color: var(--mm-accent); flex: none; opacity: 0.75; margin-right: 10px; }
 
+    /* 备注：行尾小方块（有备注 = 实心，没有 = 悬停才显形的加号） */
+    .mm-oline .mm-oline-note {
+      flex: none; width: 16px; height: 16px; margin-left: 6px;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 9px; line-height: 1; border-radius: 4px; cursor: pointer;
+      color: var(--mm-dim); opacity: 0; transition: opacity 0.15s ease, background 0.15s ease;
+    }
+    .mm-oline:hover .mm-oline-note { opacity: 0.55; }
+    .mm-oline .mm-oline-note:hover { opacity: 1; background: rgba(255, 255, 255, 0.1); }
+    .mm-oline .mm-oline-note.has {
+      opacity: 0.95; color: var(--mm-text); background: rgba(255, 255, 255, 0.12);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+    }
+    /* 备注内容不占行高：默认隐藏，鼠标滑到小方块上才以气泡浮出 */
+    .mm-oline .mm-oline-notetext { display: none; }
+    .mm-notetip {
+      position: fixed; z-index: 2147483150; display: none;
+      max-width: 320px; padding: 10px 12px;
+      font-size: 12.5px; line-height: 1.7; color: var(--mm-text); white-space: pre-wrap;
+      background: rgba(22, 22, 27, 0.97); border: 1px solid var(--mm-border); border-radius: 10px;
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+      backdrop-filter: blur(16px) saturate(160%); -webkit-backdrop-filter: blur(16px) saturate(160%);
+    }
+    .mm-notetip.show { display: block; }
+
+    /* 备注编辑面板 */
+    .mm-notebox {
+      position: fixed; z-index: 2147483160; display: none; flex-direction: column;
+      width: 300px; padding: 12px; gap: 8px;
+      background: rgba(20, 20, 24, 0.97); border: 1px solid var(--mm-border); border-radius: 14px;
+      box-shadow: 0 18px 42px rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(18px) saturate(160%); -webkit-backdrop-filter: blur(18px) saturate(160%);
+    }
+    .mm-notebox.show { display: flex; }
+    .mm-notebox-head {
+      display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+      font-size: 12.5px; font-weight: 600; color: var(--mm-text);
+    }
+    .mm-notebox-head span { font-size: 10.5px; font-weight: 400; color: var(--mm-dim); }
+    .mm-notebox-ta {
+      width: 100%; box-sizing: border-box; min-height: 96px; max-height: 220px; resize: vertical;
+      padding: 8px 10px; border-radius: 10px; border: 1px solid var(--mm-border);
+      background: rgba(255, 255, 255, 0.04); color: var(--mm-text);
+      font-size: 13px; line-height: 1.7; font-family: inherit; outline: none;
+    }
+    .mm-notebox-ta:focus { border-color: rgba(255, 255, 255, 0.28); background: rgba(255, 255, 255, 0.06); }
+    .mm-notebox-btns { display: flex; gap: 8px; justify-content: flex-end; }
+    .mm-notebox-btns button {
+      padding: 6px 12px; border-radius: 9px; cursor: pointer; font-size: 12.5px; font-family: inherit;
+      background: rgba(255, 255, 255, 0.06); border: 1px solid var(--mm-border); color: var(--mm-text);
+    }
+    .mm-notebox-btns button:hover { background: rgba(255, 255, 255, 0.12); }
+    .mm-notebox-btns button.primary {
+      background: rgba(255, 255, 255, 0.92); color: #16161a; border-color: transparent; font-weight: 600;
+    }
+    .mm-notebox-btns button.primary:hover { background: #fff; }
+
     /* 大纲行点图片 → 大图预览 */
     #mm-imgview {
       position: fixed; inset: 0; z-index: 2147483200; display: none;
@@ -335,8 +392,8 @@
       try { if (window.parent !== window) document.documentElement.dataset.embedded = '1'; } catch (e) { /* 跨域则忽略 */ }
     })();
   </script>
-  <link rel="stylesheet" href="/js/vendor/mindmap/mindmap-editor.v89.css">
-  <script src="/js/vendor/mindmap/mindmap-editor.v89.js"></script>
+  <link rel="stylesheet" href="/js/vendor/mindmap/mindmap-editor.v90.css">
+  <script src="/js/vendor/mindmap/mindmap-editor.v90.js"></script>
   <script>
     // 兜底诊断：bundle 未加载或运行时抛错时给出可见提示，而不是静默无反应
     (function () {
@@ -368,7 +425,7 @@
       window.addEventListener('load', function () {
         if (!window.MindMapMount) {
           show('导图组件未能加载',
-            '脚本 mindmap-editor.v89.js 加载失败（404 / 部署未完成 / 被拦截）。<br>' +
+            '脚本 mindmap-editor.v90.js 加载失败（404 / 部署未完成 / 被拦截）。<br>' +
             '请 Ctrl+F5 强制刷新；若仍失败，检查 Netlify 最近一次部署是否成功。');
         }
       });

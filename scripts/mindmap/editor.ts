@@ -1577,6 +1577,8 @@ function boot(el: HTMLElement) {
     imgH: number
     kids: number
     expanded: boolean
+    /** 节点备注（幕布式：不占正文，鼠标悬停或点小图标才看到） */
+    note: string
   }
 
   let outlineRows: OutlineRow[] = []
@@ -1607,6 +1609,7 @@ function boot(el: HTMLElement) {
         imgH: Number(img?.height) || 0,
         kids,
         expanded: node?.expanded !== false,
+        note: String(node?.note ?? ""),
       })
       if (node?.expanded === false) return // 收起：子项不显示
       ;(node?.children || []).forEach((c: any) => walk(c, level + 1))
@@ -1622,6 +1625,7 @@ function boot(el: HTMLElement) {
 
   function renderOutlineTree() {
     if (!outlineHost) return
+    hideNoteTip()
     // 编辑能力只看当前模式，不再依赖"是否点过"的标志（那个标志一旦卡住就整块不能编辑）
     const editing = mode === "edit"
     outlineHost.innerHTML = outlineRows
@@ -1641,6 +1645,24 @@ function boot(el: HTMLElement) {
           ? '<img class="mm-oline-img" src="' + r.imgUrl + '" alt="" draggable="false" data-node="' + r.id + '">'
           : ""
         const text = r.topic.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+        // 有备注的行尾挂一个小方块；没有备注时极淡，鼠标划过才显形，方便随时添加
+        const note =
+          '<span class="mm-oline-note' +
+          (r.note ? " has" : "") +
+          '" data-act="note" title="' +
+          (r.note ? "点击编辑备注" : "点击添加备注") +
+          '">' +
+          (r.note ? "▪" : "+") +
+          "</span>"
+        const noteText = r.note
+          ? '<span class="mm-oline-notetext">' +
+            r.note
+              .replace(/&/g, "&amp;")
+              .replace(/</g, "&lt;")
+              .replace(/>/g, "&gt;")
+              .replace(/\n/g, "<br>") +
+            "</span>"
+          : ""
         return (
           '<div class="' + cls + '" data-line="' + i + '" data-node="' + r.id + '"' +
           ' style="padding-left:' +
@@ -1648,7 +1670,9 @@ function boot(el: HTMLElement) {
           tri +
           drag +
           '<span class="mm-oline-topic"' + (editing ? ' contenteditable="true" spellcheck="false"' : "") + '>' + text + "</span>" +
+          note +
           img +
+          noteText +
           "</div>"
         )
       })
@@ -2009,6 +2033,7 @@ function boot(el: HTMLElement) {
         imgH: Number(n.image?.height) || 0,
         kids: 0,
         expanded: n.expanded !== false,
+        note: String(n.note ?? ""),
       })
     })
     const out = outlineRows.slice(0, tIdx + 1).concat(insert, outlineRows.slice(tIdx + 1))
@@ -2027,6 +2052,120 @@ function boot(el: HTMLElement) {
     if (next) caretToTextEnd(next)
     setMsg("已粘贴 " + insert.length + " 项")
     return true
+  }
+
+  /** 写备注：只改 note 字段，不动其它内容 */
+  function setRowNote(id: string, note: string) {
+    if (!id) return
+    const data = mind.getData() as any
+    const node = findNodeIn(data?.nodeData, id)
+    if (!node) return
+    const next = (note || "").trim()
+    if (String(node.note || "") === next) return
+    if (next) node.note = next
+    else delete node.note
+    ;(mind as any).refresh(data)
+    dirty = true
+    outlineRows = collectRows(mind.getData())
+    renderOutlineTree()
+    setMsg(next ? "备注已保存" : "备注已清除")
+  }
+
+  let notePanelEl: HTMLElement | null = null
+  let noteTargetId = ""
+  let noteTipEl: HTMLElement | null = null
+
+  function hideNoteTip() {
+    noteTipEl?.classList.remove("show")
+  }
+
+  /** 悬停备注小方块时浮出气泡显示全文（不占行高，免得把大纲挤乱） */
+  function showNoteTip(icon: HTMLElement, text: string) {
+    if (!text) return
+    if (!noteTipEl) {
+      const tip = document.createElement("div")
+      tip.className = "mm-notetip"
+      document.body.appendChild(tip)
+      noteTipEl = tip
+    }
+    const tip = noteTipEl
+    tip.textContent = text
+    tip.classList.add("show")
+    const r = icon.getBoundingClientRect()
+    const w = tip.offsetWidth || 240
+    const h = tip.offsetHeight || 60
+    tip.style.left = Math.max(8, Math.min(r.left, window.innerWidth - w - 8)) + "px"
+    tip.style.top = Math.max(8, Math.min(r.bottom + 6, window.innerHeight - h - 8)) + "px"
+  }
+
+  function closeNotePanel() {
+    notePanelEl?.classList.remove("show")
+    noteTargetId = ""
+  }
+
+  function ensureNotePanel(): HTMLElement {
+    if (notePanelEl) return notePanelEl
+    const box = document.createElement("div")
+    box.className = "mm-notebox"
+    box.innerHTML =
+      '<div class="mm-notebox-head">节点备注<span>Ctrl+Enter 保存 · Esc 取消</span></div>' +
+      '<textarea class="mm-notebox-ta" placeholder="给这个节点写点说明（回车换行）"></textarea>' +
+      '<div class="mm-notebox-btns">' +
+      '<button type="button" data-act="note-clear">清除备注</button>' +
+      '<button type="button" data-act="note-cancel">取消</button>' +
+      '<button type="button" class="primary" data-act="note-save">保存</button>' +
+      "</div>"
+    document.body.appendChild(box)
+    const ta = box.querySelector(".mm-notebox-ta") as HTMLTextAreaElement
+    ta.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        e.preventDefault()
+        closeNotePanel()
+        return
+      }
+      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault()
+        setRowNote(noteTargetId, ta.value)
+        closeNotePanel()
+      }
+    })
+    box.addEventListener("click", (e) => {
+      const act = (e.target as HTMLElement | null)?.closest?.("[data-act]")?.getAttribute("data-act") || ""
+      if (!act) return
+      if (act === "note-cancel") {
+        closeNotePanel()
+        return
+      }
+      if (act === "note-clear") {
+        setRowNote(noteTargetId, "")
+        closeNotePanel()
+        return
+      }
+      if (act === "note-save") {
+        setRowNote(noteTargetId, ta.value)
+        closeNotePanel()
+      }
+    })
+    notePanelEl = box
+    return box
+  }
+
+  function openNotePanel(id: string, anchor: HTMLElement) {
+    const box = ensureNotePanel()
+    noteTargetId = id
+    const row = outlineRows.find((r) => r.id === id)
+    const ta = box.querySelector(".mm-notebox-ta") as HTMLTextAreaElement
+    ta.value = row?.note || ""
+    box.classList.add("show")
+    const r = anchor.getBoundingClientRect()
+    const w = box.offsetWidth || 300
+    const h = box.offsetHeight || 180
+    box.style.left = Math.max(8, Math.min(r.left, window.innerWidth - w - 8)) + "px"
+    box.style.top = Math.max(8, Math.min(r.bottom + 6, window.innerHeight - h - 8)) + "px"
+    window.setTimeout(() => {
+      ta.focus()
+      ta.setSelectionRange(ta.value.length, ta.value.length)
+    }, 0)
   }
 
   /** 把多选状态画到行上 */
@@ -2148,6 +2287,29 @@ function boot(el: HTMLElement) {
     if (!host) return
     bindRowDrag(host)
 
+    // 备注：鼠标滑到小方块上浮出气泡，点它打开编辑面板
+    host.addEventListener("mouseover", (e) => {
+      const icon = (e.target as HTMLElement | null)?.closest?.(".mm-oline-note") as HTMLElement | null
+      if (!icon) return
+      const row = icon.closest(".mm-oline") as HTMLElement | null
+      const note = outlineRows.find((r) => r.id === (row?.dataset.node || ""))?.note || ""
+      if (note) showNoteTip(icon, note)
+    })
+    host.addEventListener("mouseout", (e) => {
+      if ((e.target as HTMLElement | null)?.closest?.(".mm-oline-note")) hideNoteTip()
+    })
+    host.addEventListener("scroll", hideNoteTip, true)
+    host.addEventListener("mousedown", (e) => {
+      if (mode !== "edit") return
+      const icon = (e.target as HTMLElement | null)?.closest?.(".mm-oline-note") as HTMLElement | null
+      if (!icon) return
+      e.preventDefault()
+      e.stopPropagation()
+      const row = icon.closest(".mm-oline") as HTMLElement | null
+      const id = row?.dataset.node || ""
+      if (id) openNotePanel(id, icon)
+    })
+
     // 大纲行右键菜单：画布的右键菜单只作用于画布节点，大纲行上没有插图入口。
     host.addEventListener("contextmenu", (e) => {
       if (mode !== "edit") return
@@ -2166,6 +2328,7 @@ function boot(el: HTMLElement) {
       if (e.key === "Escape") {
         closeRowMenu()
         closeImageView()
+        closeNotePanel()
       }
     })
 
@@ -2208,6 +2371,7 @@ function boot(el: HTMLElement) {
       if (mode !== "edit") return
       const t = e.target as HTMLElement | null
       if (t?.classList.contains("mm-tri") || t?.classList.contains("mm-oline-img")) return
+      if (t?.closest?.(".mm-oline-note")) return // 备注图标有自己的处理
       // 圆点手柄是拖拽用的，按住它交给原生 DnD，不要抢成「放光标」
       if (t?.closest?.(".mm-oline-drag")) return
       const row = t?.closest?.(".mm-oline") as HTMLElement | null
@@ -2333,6 +2497,7 @@ function boot(el: HTMLElement) {
           imgH: 0,
           kids: 0,
           expanded: true,
+          note: "",
         }
         outlineRows.splice(idx + 1, 0, fresh)
         applyRowsToData(outlineRows)
