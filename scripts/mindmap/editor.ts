@@ -1515,7 +1515,12 @@ function boot(el: HTMLElement) {
     }
     if (!root.topic) root.topic = "中心主题"
     if (!root.children.length) root.children.push({ id: nextId(), topic: "分支主题", children: [] })
-    return { nodeData: root }
+    // 注意：库的数据不止节点树，还有 arrows（连线）与 summaries（概要）。
+    // 这里只回传 nodeData 的话，每次大纲同步都会把它们丢掉——重建后自然就没有连线。
+    const out: any = { nodeData: root }
+    if (Array.isArray(prev?.arrows)) out.arrows = prev.arrows
+    if (Array.isArray(prev?.summaries)) out.summaries = prev.summaries
+    return out
   }
 
   /** 编辑后同步：内容有变化才提交（避免光标一动就重排全图） */
