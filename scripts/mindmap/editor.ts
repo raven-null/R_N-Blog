@@ -1319,6 +1319,66 @@ function boot(el: HTMLElement) {
     ltBar.appendChild(b)
   }
 
+  /** 工具条上的「全部展开 / 全部收起」：递归读取当前是否还有收起的节点 */
+  function mountCollapseAllButton(ltBar: HTMLElement) {
+    if (ltBar.querySelector(".mm-collapseall-btn")) return
+    const b = document.createElement("span")
+    b.className = "mm-collapseall-btn"
+    b.title = "全部展开 / 全部收起"
+    b.innerHTML =
+      '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">' +
+      '<path d="M8 6h13"></path><path d="M8 12h13"></path><path d="M8 18h13"></path>' +
+      '<path d="M3 6v12"></path><path d="M3 9l-1.2 1.4"></path><path d="M3 15l-1.2-1.4"></path>' +
+      "</svg>"
+    b.addEventListener("click", (e) => {
+      e.preventDefault()
+      e.stopPropagation()
+      toggleAllNodes()
+    })
+    ltBar.appendChild(b)
+  }
+
+  /** 还有节点是收起的？有 → 这次全部展开；没有 → 全部收起 */
+  function toggleAllNodes() {
+    if (mode !== "edit") {
+      setMsg("只读模式下不能改展开状态")
+      return
+    }
+    try {
+      const root = mind.getData()?.nodeData as any
+      if (!root) return
+      let hasCollapsed = false
+      const walk = (n: any) => {
+        if (!n || hasCollapsed) return
+        if ((n.children || []).length > 0 && n.expanded === false) {
+          hasCollapsed = true
+          return
+        }
+        ;(n.children || []).forEach(walk)
+      }
+      walk(root)
+      const wantExpand = hasCollapsed
+      const el = (mind as any).findEle?.(root.id)
+      if (el && typeof (mind as any).expandNodeAll === "function") {
+        ;(mind as any).expandNodeAll(el, wantExpand)
+      } else {
+        // 兜底：直接改数据再刷新
+        const setAll = (n: any, v: boolean) => {
+          n.expanded = v
+          ;(n.children || []).forEach((c: any) => setAll(c, v))
+        }
+        const data = mind.getData() as any
+        setAll(data.nodeData, wantExpand)
+        ;(mind as any).refresh(data)
+      }
+      dirty = true
+      syncOutlineFromData()
+      setMsg(wantExpand ? "已展开全部子节点" : "已收起全部子节点")
+    } catch (err: any) {
+      setMsg("操作失败：" + (err?.message || err))
+    }
+  }
+
   function mountOutlineButton() {
     // 库的工具条可能带 lt/rb 等方向类，别只认 .lt（否则找不到就整排图标挂不上）
     const ltBar = (el.querySelector(".mind-elixir-toolbar.lt") ||
@@ -1335,6 +1395,7 @@ function boot(el: HTMLElement) {
     }
     if (ltBar.querySelector(".mm-outline-btn")) {
       mountImportButton(ltBar)
+      mountCollapseAllButton(ltBar)
       return
     }
     // 与库自带图标同结构：<span><svg class="icon">，尺寸/间距/对齐由库的样式统一负责
