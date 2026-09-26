@@ -3163,6 +3163,26 @@ function boot(el: HTMLElement) {
     return out
   }
 
+  // 连线诊断：控制台执行 __mmLinkDiag()，确认连线/概要数据还在、画布也画出来了
+  ;(window as any).__mmLinkDiag = () => {
+    const data = mind.getData() as any
+    const canvas = document.querySelector("#mm-root .map-container") || document.querySelector(".map-container")
+    const arrows = Array.isArray(data?.arrows) ? data.arrows : []
+    const summaries = Array.isArray(data?.summaries) ? data.summaries : []
+    const out = {
+      连线数据条数: arrows.length,
+      连线明细: arrows.map((a: any) => ({ from: a.from, to: a.to, label: a.label || "" })).slice(0, 20),
+      概要数据条数: summaries.length,
+      画布连线节点数: canvas ? canvas.querySelectorAll(".topiclinks > g, #topiclinks > g, svg .topiclinks g").length : -1,
+      画布svg数: canvas ? canvas.querySelectorAll("svg").length : -1,
+      连线容器存在: !!(canvas && canvas.querySelector(".topiclinks, .subLines, .lines")),
+      当前模式: mode,
+    }
+    dbg("[mm] 连线诊断", out)
+    console.log("[mm] 连线诊断", out)
+    return out
+  }
+
   // 直接跑一次折叠（不经过点击），用来区分「点击没生效」还是「折叠本身没生效」
   ;(window as any).__mmFoldTest = () => {
     const tri = document.querySelector(".mm-outline-tree .mm-tri:not(.empty)") as HTMLElement | null
