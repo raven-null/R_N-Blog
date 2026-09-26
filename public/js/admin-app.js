@@ -573,11 +573,11 @@
             if(window.ExcalidrawMount)return;
             if(document.querySelector('script[data-excalidraw-bundle-admin]'))return;
             const css=document.createElement('link');
-            css.rel='stylesheet';css.href='/js/vendor/excalidraw/excalidraw-editor.v19.css';
+            css.rel='stylesheet';css.href='/js/vendor/excalidraw/excalidraw-editor.v20.css';
             css.dataset.excalidrawBundleAdmin='1';
             document.head.appendChild(css);
             const s=document.createElement('script');
-            s.src='/js/vendor/excalidraw/excalidraw-editor.v19.js';
+            s.src='/js/vendor/excalidraw/excalidraw-editor.v20.js';
             s.dataset.excalidrawBundleAdmin='1';
             s.onerror=function(){showToast('白板组件加载失败','error')};
             document.head.appendChild(s);
@@ -596,7 +596,7 @@
                 return;
             }
             currentBoardId=bid;
-            host.innerHTML='<iframe class="wb-frame" title="白板编辑器" src="/excalidraw.html?note='+encodeURIComponent(bid)+'&edit=1&from=admin"></iframe>';
+            host.innerHTML='<iframe class="wb-frame" title="白板编辑器" src="/excalidraw.html?note='+encodeURIComponent(bid)+'&edit=1&from=admin&capsule=0"></iframe>';
             loadBoardMeta();
         }
         // 取 iframe 内编辑器的保存钩子（同源可直接访问）

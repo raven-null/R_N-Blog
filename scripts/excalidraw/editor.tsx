@@ -286,8 +286,9 @@ function NoteApp({
   const [capMenuOpen, setCapMenuOpen] = useState(false)
   const capRef = useRef<HTMLDivElement | null>(null)
   const embedded = typeof window !== "undefined" && window.parent !== window
-  // 白板胶囊只在「独立打开的白板页」出现：前台画布舞台（bare）与后台编辑页各有自己的一排按钮
-  const showCapsule = !bare && !fromAdmin
+  // 白板胶囊默认渲染，显隐交给 CSS（body 上有 exc-no-capsule 时隐藏）：
+  // 前台画布舞台与后台编辑页各有自己的一排按钮，会给 iframe 带上 ?capsule=0。
+  const showCapsule = !bare
   // 信息浮层（独立打开时没有宿主页面的气泡，这里自带一个）
   const [infoOpen, setInfoOpen] = useState(false)
   // 进入编辑时是否要把口令浮条滑出来
@@ -880,7 +881,7 @@ function NoteApp({
         )
       )}
 
-      {/* 底部居中胶囊：独立打开的白板页才出现（前台舞台与后台编辑页各有自己的一排按钮） */}
+      {/* 底部居中胶囊：默认渲染，内嵌场景由 CSS（body.exc-no-capsule / .exc-from-admin）收起 */}
       {showCapsule && (
         <div className={"mm-capsule" + (editMode ? " is-edit" : "")} ref={capRef}>
           {/* 返回博客：独立打开直接回首页 */}

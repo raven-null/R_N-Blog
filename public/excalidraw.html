@@ -7,7 +7,7 @@
   <link rel="icon" id="siteFavicon" href="/images/Default/web-logo.webp" type="image/webp">
   <link rel="apple-touch-icon" href="/images/Default/web-logo.webp">
   <script src="/js/site-icon.js?v=1.0.0"></script>
-  <link rel="stylesheet" href="/js/vendor/excalidraw/excalidraw-editor.v19.css" />
+  <link rel="stylesheet" href="/js/vendor/excalidraw/excalidraw-editor.v20.css" />
   <link rel="stylesheet" href="/css/capsule.css?v=1.0.0" />
   <style>
     /* 液态玻璃体系（与博客 glass.css 同款变量） */
@@ -60,6 +60,10 @@
     }
     .site-header .spacer { flex: 1; }
     #excalidraw-root { position: relative; z-index: 1; flex: 1; min-height: 0; }
+    /* 胶囊固定贴视口底部，不受容器尺寸影响；内嵌场景直接收起 */
+    body .mm-capsule { position: fixed; z-index: 40; }
+    body.exc-no-capsule .mm-capsule,
+    body.exc-from-admin .mm-capsule { display: none !important; }
     /* 底部居中胶囊会压住 Excalidraw 自带工具条，把它挪到左下，并给画布留出底部空间 */
     .excalidraw .App-bottom-bar { bottom: 74px !important; }
     .excalidraw .App-toolbar--mobile,
@@ -113,6 +117,13 @@
       var titleEl = document.getElementById('noteTitle');
       var path = location.pathname;
 
+      // 胶囊显隐：默认显示（独立打开的场景），内嵌时由宿主加 ?capsule=0 关掉
+      try {
+        if (window.parent !== window) document.body.classList.add('exc-embedded');
+        if (qs.get('capsule') === '0') document.body.classList.add('exc-no-capsule');
+        if (qs.get('from') === 'admin') document.body.classList.add('exc-from-admin');
+      } catch (e) { /* 忽略 */ }
+
       if (note) {
         root.setAttribute('data-excalidraw', '');
         root.dataset.note = note;
@@ -138,7 +149,7 @@
       }
     })();
   </script>
-  <script src="/js/vendor/excalidraw/excalidraw-editor.v19.js"></script>
+  <script src="/js/vendor/excalidraw/excalidraw-editor.v20.js"></script>
   <script>
     // 兜底诊断：bundle 加载失败/未生效时给出可见提示（而非空白页）
     window.addEventListener('load', function () {
@@ -149,7 +160,7 @@
             '<div class="empty-tip"><div class="card">' +
             '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2.5 20h19Z"/><path d="M12 10v4.5"/></svg>' +
             '<div class="t">白板组件未能加载</div>' +
-            '<div class="row">脚本 excalidraw-editor.v19.js 加载失败（404 / 部署未完成 / 被拦截）。<br>' +
+            '<div class="row">脚本 excalidraw-editor.v20.js 加载失败（404 / 部署未完成 / 被拦截）。<br>' +
             '请 Ctrl+F5 强制刷新；若仍失败，检查 Netlify 最近一次部署是否成功，<br>' +
             '或打开 F12 → Network 看该脚本的状态码。</div>' +
             '</div></div>';

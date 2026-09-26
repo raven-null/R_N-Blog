@@ -6,7 +6,7 @@
 (function () {
     'use strict';
 
-    var EXC_BUNDLE_VERSION = 'v19'; // 与 scripts/build-excalidraw.mjs 的 BUNDLE_VERSION 保持一致
+    var EXC_BUNDLE_VERSION = 'v20'; // 与 scripts/build-excalidraw.mjs 的 BUNDLE_VERSION 保持一致
     var adminKey = localStorage.getItem('admin_key') || '';
     var params = new URLSearchParams(location.search);
     var docId = params.get('id') || '';
