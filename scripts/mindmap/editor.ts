@@ -1691,6 +1691,8 @@ function boot(el: HTMLElement) {
       '<div class="mm-outline-tree" contenteditable="false"></div>'
     el.appendChild(outlineEl)
     outlineHost = outlineEl.querySelector(".mm-outline-tree") as HTMLElement | null
+    outlineRows = collectRows(mind.getData())
+    renderOutlineTree()
     outlineEl.querySelector(".mm-outline-tree")?.addEventListener("click", (e) => {
       const t = e.target as HTMLElement | null
       if (t?.classList.contains("mm-tri") && t.dataset.act === "fold") {
@@ -1717,10 +1719,115 @@ function boot(el: HTMLElement) {
     buildOutlineBindings()
   }
 
+  /** 行顺序/层级 → 写回数据（Tab 调级走这里） */
+  function applyRowsToData(rows: OutlineRow[], data?: any) {
+    const src = data || (mind.getData() as any)
+    const oldRoot = src?.nodeData
+    if (!oldRoot) return
+    const byId = new Map<string, any>()
+    const collect = (n: any) => {
+      byId.set(String(n.id), n)
+      ;(n.children || []).forEach(collect)
+    }
+    collect(oldRoot)
+    const root: any = { ...(byId.get(rows[0]?.id || "") || oldRoot), children: [] }
+    const stack: Array<{ level: number; node: any }> = [{ level: 0, node: root }]
+    for (let i = 1; i < rows.length; i++) {
+      const r = rows[i]
+      const old = byId.get(r.id)
+      const node: any = { ...(old || {}), id: r.id, topic: r.topic || "新主题", children: [] }
+      while (stack.length > 1 && stack[stack.length - 1].level >= r.level) stack.pop()
+      const parent = stack.length ? stack[stack.length - 1].node : root
+      parent.children.push(node)
+      stack.push({ level: r.level, node })
+    }
+    mind.refresh({ nodeData: root } as any)
+    dirty = true
+    outlineRows = collectRows(mind.getData())
+    updateOutlineImageCount()
+  }
+
   function buildOutlineBindings() {
-    outlineEl?.addEventListener("click", () => {
+    const host = outlineHost
+    if (!host) return
+
+    // 点击行（三角与缩略图除外）→ 光标直接落到这一行文字里，省得精准点字
+    host.addEventListener("mousedown", (e) => {
+      if (mode !== "edit") return
+      const t = e.target as HTMLElement | null
+      if (t?.classList.contains("mm-tri") || t?.classList.contains("mm-oline-img")) return
+      const row = t?.closest?.(".mm-oline") as HTMLElement | null
+      if (!row) return
+      const topic = row.querySelector(".mm-oline-topic") as HTMLElement | null
+      if (!topic) return
+      e.preventDefault() // 自己放光标，避免浏览器把选区放到整个行容器上
+      caretToTextEnd(topic)
+    })
+
+    // 大纲 → 导图：边打边同步（防抖 300ms，不依赖失焦）
+    let textTimer: number | null = null
+    host.addEventListener("input", (e) => {
+      if (mode !== "edit") return
+      const row = (e.target as HTMLElement | null)?.closest?.(".mm-oline") as HTMLElement | null
+      if (!row) return
+      if (textTimer) window.clearTimeout(textTimer)
+      textTimer = window.setTimeout(() => {
+        textTimer = null
+        commitRowText(row)
+      }, 300)
+    })
+    // 失焦兜底提交
+    host.addEventListener(
+      "focusout",
+      (e) => {
+        const row = (e.target as HTMLElement | null)?.closest?.(".mm-oline") as HTMLElement | null
+        if (!row) return
+        if (textTimer) {
+          window.clearTimeout(textTimer)
+          textTimer = null
+        }
+        commitRowText(row)
+      },
+      true,
+    )
+
+    // 键盘：Tab 调级；回车吃掉（大纲不换行）
+    host.addEventListener("keydown", (e) => {
+      if (mode !== "edit") return
       const row = currentRow()
-      if (row) outlineEditing = true
+      if (!row) return
+      const id = row.dataset.node || ""
+      const idx = outlineRows.findIndex((r) => r.id === id)
+      if (idx < 0) return
+
+      if (e.key === "Enter") {
+        e.preventDefault() // 大纲没有换行；文字长了会自动折行
+        return
+      }
+
+      if (e.key === "Tab") {
+        e.preventDefault()
+        e.stopPropagation()
+        const cur = outlineRows[idx]
+        if (!cur || idx === 0) return // 中心主题不动
+        if (e.shiftKey) {
+          cur.level = Math.max(1, cur.level - 1)
+        } else {
+          const prev = outlineRows[idx - 1]
+          const maxLevel = prev ? prev.level + 1 : 1
+          if (cur.level >= maxLevel) {
+            setMsg("已经是上一项的子级了")
+            return
+          }
+          cur.level = Math.min(maxLevel, cur.level + 1)
+        }
+        applyRowsToData(outlineRows)
+        renderOutlineTree()
+        const topic = rowEls()[idx]?.querySelector(".mm-oline-topic") as HTMLElement | null
+        if (topic) caretToTextEnd(topic)
+        setMsg("已调为第 " + (cur.level + 1) + " 级")
+        return
+      }
     })
   }
 
