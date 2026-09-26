@@ -2780,6 +2780,51 @@ function boot(el: HTMLElement) {
   ;(mind as any).pasteHandler = onPaste
   el.addEventListener("paste", (e) => onPaste(e as ClipboardEvent), true)
 
+  /*
+   * 点带图片的节点开始改文字时，库会执行 `e.style.opacity = "0"` 把整个节点内容
+   * （图片也在一起）隐藏掉，所以看起来像「一点图片就没了」。
+   * 这里在 beginEdit 之后把节点内容恢复成半透明：图片留着当参照，编辑框照常压在上面，
+   * 输入的文字依然清晰可读。编辑结束时库自己会把透明度恢复成 1。
+   */
+  try {
+    ;(mind as any).bus?.addListener?.("operation", (ev: any) => {
+      if (ev?.name === "finishEdit") {
+        // 编辑结束：库会把节点内容恢复成不透明，这里顺手清掉临时标记
+        try {
+          document.querySelectorAll("me-tpc").forEach((el) => {
+            const h = el as HTMLElement
+            delete (h as any)._mmEditingOpaque
+            if (h.style.getPropertyPriority("opacity") === "important") h.style.removeProperty("opacity")
+          })
+        } catch {
+          /* 忽略 */
+        }
+        return
+      }
+      if (ev?.name !== "beginEdit") return
+      const node = ev.obj
+      if (!node?.image) return
+      // 编辑框要等库挂上去之后再找
+      window.setTimeout(() => {
+        try {
+          // 从光标所在元素往上找这一次的编辑框，避免误伤别的节点
+          let box: HTMLElement | null = (document.activeElement as HTMLElement | null) || null
+          while (box && box.id !== "input-box") box = box.parentElement
+          if (!box) box = document.querySelector("#input-box") as HTMLElement | null
+          if (!box) return
+          const tpc = box.parentElement?.querySelector("me-tpc") as HTMLElement | null
+          if (!tpc) return
+          (tpc as any)._mmEditingOpaque = "0"
+          tpc.style.setProperty("opacity", "0.28", "important")
+        } catch {
+          /* 忽略 */
+        }
+      }, 0)
+    })
+  } catch {
+    /* 忽略 */
+  }
+
   // 导图内部一变（拖节点、右键操作、快捷键），把大纲也刷新一遍
   try {
     ;(mind as any).bus?.addListener?.("operation", () => {
