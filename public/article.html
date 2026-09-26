@@ -760,6 +760,9 @@
             color: var(--text-muted);
         }
 
+        /* 导图 / 白板文章：这块内嵌评论区不参与显示（留言在那两页自己的右下角抽屉里） */
+        body.board-mode .comment-section,
+        .comment-section[data-canvas-skip] { display: none !important; }
         /* ===== 纯白板文章 · 沉浸式画布舞台（body.board-mode） ===== */
         body.board-mode { overflow: hidden; height: 100%; }
         body.board-mode .article-progress,

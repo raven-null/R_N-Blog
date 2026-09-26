@@ -1046,6 +1046,15 @@ const ArticleApp = {
                 const section = document.getElementById('comment-section');
                 if (!section) return;
                 this.postId = postId;
+                // 导图 / 白板文章：正文是整页画布，留言在那两页自己的抽屉里，这里整块不参与
+                const t = this.currentPost && this.currentPost.type;
+                if (t === 'mindmap' || t === 'whiteboard') {
+                    section.style.display = 'none';
+                    section.setAttribute('data-canvas-skip', '1');
+                    section.removeAttribute('data-reveal');
+                    section.classList.remove('in-view');
+                    return;
+                }
                 section.style.display = '';
                 await this.loadComments();
                 this.bindCommentForm();

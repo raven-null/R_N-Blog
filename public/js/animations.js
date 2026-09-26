@@ -102,6 +102,8 @@ const BlogAnimations = {
             '#comment-list', '#article-content', '#tagsDropdownList', '#galleryTagFloatList'];
 
         const mark = (el) => {
+            // 画布类文章（导图/白板）的评论面板由页面自己决定要不要出现，跳过入场动画
+            if (el.hasAttribute('data-canvas-skip')) return;
             if (!el.hasAttribute('data-reveal')) el.setAttribute('data-reveal', '');
         };
 
