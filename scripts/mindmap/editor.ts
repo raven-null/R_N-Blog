@@ -3237,6 +3237,69 @@ function boot(el: HTMLElement) {
   ;(mind as any).pasteHandler = onPaste
   el.addEventListener("paste", (e) => onPaste(e as ClipboardEvent), true)
 
+  /* ---------------- 按住鼠标中键拖动画布 ---------------- */
+  try {
+    let panning = false
+    let panX = 0
+    let panY = 0
+    let panMoved = 0
+
+    const onPanDown = (e: PointerEvent) => {
+      if (e.button !== 1) return // 中键
+      if (e.ctrlKey || e.metaKey) return // Ctrl+中键 交给缩放
+      panning = true
+      panX = e.clientX
+      panY = e.clientY
+      panMoved = 0
+      // 中键还有「自动滚动」的默认行为，必须掐掉；库只处理左键，这里不会和它打架
+      e.preventDefault()
+      e.stopPropagation()
+      canvasHost.classList.add("mm-panning")
+      try {
+        canvasHost.setPointerCapture(e.pointerId)
+      } catch {
+        /* 忽略 */
+      }
+    }
+
+    const onPanMove = (e: PointerEvent) => {
+      if (!panning) return
+      e.preventDefault()
+      e.stopPropagation()
+      const dx = e.clientX - panX
+      const dy = e.clientY - panY
+      panX = e.clientX
+      panY = e.clientY
+      panMoved += Math.abs(dx) + Math.abs(dy)
+      try {
+        // 用库自己的 move：它会做边界夹取并更新内联 transform，缩放/高亮都不会乱
+        ;(mind as any).move?.(dx, dy)
+      } catch {
+        /* 忽略 */
+      }
+    }
+
+    const onPanUp = () => {
+      if (!panning) return
+      panning = false
+      canvasHost.classList.remove("mm-panning")
+      dbg("[mm] 中键平移结束", { 移动距离: Math.round(panMoved) })
+    }
+
+    canvasHost.addEventListener("pointerdown", onPanDown, true)
+    canvasHost.addEventListener("pointermove", onPanMove, true)
+    canvasHost.addEventListener("pointerup", onPanUp, true)
+    canvasHost.addEventListener("pointercancel", onPanUp, true)
+    window.addEventListener("pointerup", onPanUp, true)
+    // 中键点下去浏览器可能弹「自动滚动」圆盘，压掉它
+    canvasHost.addEventListener("auxclick", (e) => {
+      if (e.button === 1) e.preventDefault()
+    })
+    window.addEventListener("blur", onPanUp)
+  } catch {
+    /* 忽略：拖动只是便利功能，不行也不影响别的 */
+  }
+
   /* ---------------- 按住 Ctrl 拖动鼠标缩放 ---------------- */
   try {
     let zooming = false
