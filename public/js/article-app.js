@@ -4,7 +4,7 @@
  */
         // 文章详情页应用
         /* 白板编辑器 bundle 版本：与 scripts/build-excalidraw.mjs 的 BUNDLE_VERSION 保持一致 */
-const EXC_BUNDLE_VERSION = 'v20';
+const EXC_BUNDLE_VERSION = 'v21';
 
 const ArticleApp = {
             // 当前文章数据
@@ -624,54 +624,11 @@ const ArticleApp = {
                 content.innerHTML =
                     '<div class="board-stage" id="boardStage" data-board="' + boardId + '">' +
                     '<div class="board-canvas"><div id="boardCanvasHost" data-excalidraw data-note="' + boardId + '" data-mode="view"></div></div>' +
-                    '<div class="board-bottom" id="boardBottom">' +
-                    '<div class="board-topbar" id="boardTopbar">' +
-                    '<a class="bt-btn bb-view-only" href="/" title="返回博客"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m3 10.5 9-7.5 9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg></a>' +
-                    '<button class="bt-btn bb-view-only" id="boardEditBtn" title="在当前页面直接编辑此白板"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>编辑</button>' +
-                    '<button class="bt-btn bb-view-only" id="boardInfoBtn" title="白板信息"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="8" r=".4" fill="currentColor"/></svg>信息</button>' +
-                    '<button class="bt-btn bb-view-only" id="boardCommentBtn" title="留言"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>留言</button>' +
-                    '<button class="board-save bb-edit-only" id="boardSaveBtn" title="保存到服务器（桌面端 Ctrl / ⌘ + S）"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="m7 11 5 5 5-5"/><path d="M4 20h16"/></svg><span id="boardSaveLabel">保存</span></button>' +
-                    '<button class="board-done bb-edit-only" id="boardDoneBtn" title="退出编辑（有改动会先问是否保存）"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>完成</button>' +
-                    '<span class="board-tip" id="boardTip"></span>' +
-                    '</div>' +
-                    '</div>' +
-                    '<div class="board-pop" id="boardInfoPop" hidden>' +
-                    '<h4>' + title + '</h4>' +
-                    '<div class="bp-row"><span class="k">作者</span><span>' + escT(p.author || '博主') + '</span></div>' +
-                    '<div class="bp-row"><span class="k">日期</span><span>' + escT(p.date || '') + '</span></div>' +
-                    (p.update ? '<div class="bp-row"><span class="k">更新</span><span>' + escT(p.update) + '</span></div>' : '') +
-                    '<div class="bp-row"><span class="k">画板</span><span style="word-break:break-all">' + escT(boardId) + '</span></div>' +
-                    '<div class="bp-tags">' + (tagChips || '<span style="opacity:.5">无标签</span>') + '</div>' +
-                    '<div class="bp-actions">' +
-                    '<a class="bt-btn" style="background:rgba(255,255,255,.08)" href="/excalidraw.html?note=' + encodeURIComponent(boardId) + '&edit=1" target="_blank" title="在新窗口打开完整编辑器">完整编辑器</a>' +
-                    '<button class="bt-btn" id="boardShareBtn" style="background:rgba(255,255,255,.08)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg>复制链接</button>' +
-                    '</div></div>' +
-                    '<div class="board-scrim" id="boardScrim"></div>' +
-                    '<aside class="board-drawer" id="boardDrawer" aria-hidden="true">' +
-                    '<div class="board-drawer-head"><span class="dh-title">留言</span></div>' +
-                    '<div class="board-drawer-body" id="boardDrawerBody"></div>' +
-                    '</aside>' +
-                    '<div class="board-dlg" id="boardDlg">' +
-                    '<div class="bd-card">' +
-                    '<div class="bd-title">退出编辑</div>' +
-                    '<div class="bd-sub">改动需要先写入服务器才会保留。可点编辑界面下方的「保存」按钮，或按 Ctrl / ⌘ + S。</div>' +
-                    '<div class="bd-btns">' +
-                    '<button class="bd-btn primary" id="bdSaveExit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="m7 11 5 5 5-5"/><path d="M4 20h16"/></svg>保存并退出</button>' +
-                    '<button class="bd-btn" id="bdDiscardExit">不保存，直接退出</button>' +
-                    '<button class="bd-btn" id="bdCancel">取消</button>' +
-                    '</div>' +
-                    '<div class="bd-err" id="bdErr"></div>' +
-                    '</div></div>' +
-                    '<button class="board-navbtn prev" id="boardPrev" hidden title="上一篇"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>' +
-                    '<button class="board-navbtn next" id="boardNext" hidden title="下一篇"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></button>' +
+                    // 浮条 / 评论抽屉 / 退出弹层 / 画廊导航这里不再自建：
+                    // 白板页内部的底部胶囊已接管（留言走它自己的右侧抽屉）
                     '</div>';
 
-                // 评论区移入抽屉
-                const drawerBody = document.getElementById('boardDrawerBody');
-                if (comments && drawerBody) drawerBody.appendChild(comments);
-
-                this.initBoardMode();
-                // 懒加载 Excalidraw bundle（onload 后自动挂载画布容器）
+                // 白板页内部的胶囊负责编辑/保存/留言/信息，父页面不再插手
                 this.loadExcalidrawBundle();
             },
 
@@ -681,9 +638,6 @@ const ArticleApp = {
                 if (!stage) return;
                 const infoPop = document.getElementById('boardInfoPop');
                 const infoBtn = document.getElementById('boardInfoBtn');
-                const drawer = document.getElementById('boardDrawer');
-                const scrim = document.getElementById('boardScrim');
-                const drawerBody = document.getElementById('boardDrawerBody');
 
                 // 评论抽屉（评论区已移入 drawerBody，直接显示）
                 const openDrawer = () => {
