@@ -87,10 +87,13 @@ function boot(el: HTMLElement) {
     el: canvasHost,
     direction: (MindElixir as any).SIDE ?? 2,
     editable: mode === "edit",
-    // 文案本地化：库的顶层 locale 选项已弃用，改为传给 contextMenu / toolBar
-    contextMenu: mode === "edit" ? ({ locale: zhCN } as any) : false,
-    toolBar: mode === "edit" ? ({ locale: zhCN } as any) : false,
-    keypress: mode === "edit",
+    // 关键：工具条和右键菜单只在 init() 时按这里的开关创建，之后改属性不会补建。
+    // 所以必须无条件注册（哪怕当前是只读），否则「查看 → 点编辑」切过来时
+    // 工具条和右键菜单根本不存在，表现就是「编辑了但什么都不能动」。
+    // 中文文案：库的顶层 locale 已弃用，改为传给 contextMenu / toolBar。
+    contextMenu: { locale: zhCN } as any,
+    toolBar: { locale: zhCN } as any,
+    keypress: true,
     theme,
     overflowHidden: false,
     scaleSensitivity: 40,
