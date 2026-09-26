@@ -1407,7 +1407,10 @@ function boot(el: HTMLElement) {
     if (!host) return
     const rows: string[] = []
     const walk = (node: any, depth: number) => {
-      const topic = String(node?.topic ?? "").replace(/\r?\n/g, " ")
+      const rawTopic = String(node?.topic ?? "").replace(/\r?\n/g, " ")
+      // 数据里若已混入「·」前缀（早期版本写进去的），显示时抹掉，免得出现「· · 内容」
+      const topic = rawTopic.replace(/^[·•▪◦]\s*/, "")
+      void rawTopic
       const id = String(node?.id ?? "")
       const img = node?.image
       const imgHtml =
@@ -1620,7 +1623,8 @@ function boot(el: HTMLElement) {
     let isFirst = true
     for (const el of lines) {
       const clone = el.cloneNode(true) as HTMLElement
-      clone.querySelectorAll("img").forEach((im) => im.remove())
+      // 行内的「·」（层级符号）和缩略图都只是给大纲看的显示元素，不能写进节点文字
+      clone.querySelectorAll(".mm-oline-bullet, img").forEach((n2) => n2.remove())
       const topic = (clone.textContent || "").replace(/\s+/g, " ").trim()
       if (!topic && !el.querySelector("img")) continue
       const pad = parseInt(el.style.paddingLeft || "0", 10) || 0
