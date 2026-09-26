@@ -1234,6 +1234,24 @@ function boot(el: HTMLElement) {
 
   /* ---------------- 大纲按钮：图标形式，与库左下工具栏并列（只读时也能看大纲） ---------------- */
   let outlineMountTries = 0
+  /** 工具条上的「导入」按钮（把 Markdown / 纯文本大纲变成分级节点） */
+  function mountImportButton(ltBar: HTMLElement) {
+    if (ltBar.querySelector(".mm-import-btn")) return
+    const b = document.createElement("span")
+    b.className = "mm-import-btn"
+    b.title = "导入 Markdown / 纯文本大纲"
+    b.innerHTML =
+      '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+      '<path d="M12 3v12"></path><path d="M7 10l5 5 5-5"></path><path d="M4 20h16"></path>' +
+      "</svg>"
+    b.addEventListener("click", (e) => {
+      e.preventDefault()
+      e.stopPropagation()
+      openImport()
+    })
+    ltBar.appendChild(b)
+  }
+
   function mountOutlineButton() {
     // 库的工具条可能带 lt/rb 等方向类，别只认 .lt（否则找不到就整排图标挂不上）
     const ltBar = (el.querySelector(".mind-elixir-toolbar.lt") ||
@@ -1248,7 +1266,10 @@ function boot(el: HTMLElement) {
       }
       return
     }
-    if (ltBar.querySelector(".mm-outline-btn")) return
+    if (ltBar.querySelector(".mm-outline-btn")) {
+      mountImportButton(ltBar)
+      return
+    }
     // 与库自带图标同结构：<span><svg class="icon">，尺寸/间距/对齐由库的样式统一负责
     const b = document.createElement("span")
     b.className = "mm-outline-btn"
@@ -2166,6 +2187,114 @@ function boot(el: HTMLElement) {
       ta.focus()
       ta.setSelectionRange(ta.value.length, ta.value.length)
     }, 0)
+  }
+
+  /* ---------------- 第 6 步：Markdown / 纯文本导入 ---------------- */
+  let importEl: HTMLElement | null = null
+
+  function closeImport() {
+    importEl?.classList.remove("show")
+  }
+
+  function ensureImport(): HTMLElement {
+    if (importEl) return importEl
+    const box = document.createElement("div")
+    box.className = "mm-importbox"
+    box.innerHTML =
+      '<div class="mm-notebox-head">导入大纲<span>用缩进、- 或 1. 表示层级</span></div>' +
+      '<textarea class="mm-notebox-ta mm-import-ta" placeholder="把 Markdown 或纯文本大纲粘进来，例如：\n一级主题\n  子主题\n    更深的子主题"></textarea>' +
+      '<div class="mm-notebox-btns">' +
+      '<button type="button" data-act="imp-cancel">取消</button>' +
+      '<button type="button" class="primary" data-act="imp-do">导入为分级节点</button>' +
+      "</div>"
+    document.body.appendChild(box)
+    const ta = box.querySelector(".mm-import-ta") as HTMLTextAreaElement
+    ta.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        e.preventDefault()
+        closeImport()
+        return
+      }
+      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault()
+        importOutline(ta.value)
+      }
+    })
+    box.addEventListener("click", (e) => {
+      const act = (e.target as HTMLElement | null)?.closest?.("[data-act]")?.getAttribute("data-act") || ""
+      if (act === "imp-cancel") closeImport()
+      if (act === "imp-do") importOutline(ta.value)
+    })
+    importEl = box
+    return box
+  }
+
+  function openImport() {
+    if (mode !== "edit") {
+      setMsg("只读模式下不能导入")
+      return
+    }
+    const box = ensureImport()
+    box.classList.add("show")
+    const w = box.offsetWidth || 340
+    const h = box.offsetHeight || 240
+    box.style.left = Math.max(8, (window.innerWidth - w) / 2) + "px"
+    box.style.top = Math.max(8, (window.innerHeight - h) / 2) + "px"
+    const ta = box.querySelector(".mm-import-ta") as HTMLTextAreaElement
+    window.setTimeout(() => ta.focus(), 0)
+  }
+
+  /** 把解析出来的树拍平成行（第一行当作新分支，不碰原来的中心主题） */
+  function flattenImport(root_: any): OutlineRow[] {
+    const rows: OutlineRow[] = []
+    const walk = (n: any, level: number) => {
+      rows.push({
+        id: nextId(),
+        level,
+        topic: String(n.topic || ""),
+        imgUrl: "",
+        imgW: 0,
+        imgH: 0,
+        kids: (n.children || []).length,
+        expanded: true,
+        note: "",
+      })
+      ;(n.children || []).forEach((c: any) => walk(c, level + 1))
+    }
+    walk(root_, 1)
+    return rows
+  }
+
+  function importOutline(rawText: string) {
+    if (mode !== "edit") return
+    const src = String(rawText || "").trim()
+    if (!src) {
+      setMsg("先粘点内容进来")
+      return
+    }
+    const parsed = outlineToData(src)
+    const rows = flattenImport(parsed?.nodeData)
+    if (!rows.length) {
+      setMsg("没解析出内容，检查一下缩进或列表符号")
+      return
+    }
+    settlePendingRowText(null)
+    const current = collectRows(mind.getData())
+    const merged = current.concat(rows)
+    const fixed: OutlineRow[] = []
+    merged.forEach((r, i) => {
+      if (i === 0) {
+        fixed.push({ ...r, level: 0 })
+        return
+      }
+      fixed.push({ ...r, level: Math.min(r.level, fixed[i - 1].level + 1) })
+    })
+    outlineRows = fixed
+    applyRowsToData(outlineRows)
+    refreshTakenIds()
+    renderOutlineTree()
+    closeImport()
+    setMsg("已导入 " + rows.length + " 个节点（挂在中心主题下）")
   }
 
   /** 把多选状态画到行上 */
