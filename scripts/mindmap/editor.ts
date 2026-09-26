@@ -1534,33 +1534,8 @@ function boot(el: HTMLElement) {
       return
     }
 
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault()
-      const level = lineLevel(line)
-      const topic = ((line.querySelector(".mm-oline-topic") as HTMLElement)?.textContent || "").trim()
-      // 空项回车 → 退回上一级（连续两次回车可退出列表）
-      if (!topic) {
-        const up = Math.max(0, level - 1)
-        if (level > 0) {
-          if (up === 0) {
-            line.classList.add("lv0")
-            line.style.paddingLeft = ""
-          } else {
-            line.style.paddingLeft = (up - 1) * 14 + "px"
-          }
-          scheduleSync()
-        }
-        return
-      }
-      const fresh = renderLineShell(level, "")
-      line.parentNode?.insertBefore(fresh, line.nextSibling)
-      ;(fresh.dataset as any).line = ""
-      focusLineEnd(fresh)
-      scheduleSync()
-      return
-    }
-
-    if (e.key === "Enter" && e.shiftKey) {
+    // 回车：不切分文字，直接在下面新建同级一行（空项也一样，可以一直往下加）
+    if (e.key === "Enter") {
       e.preventDefault()
       const fresh = renderLineShell(lineLevel(line), "")
       line.parentNode?.insertBefore(fresh, line.nextSibling)
