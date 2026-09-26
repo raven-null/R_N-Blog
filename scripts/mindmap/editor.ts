@@ -884,10 +884,10 @@ function boot(el: HTMLElement) {
       hit.image = { url, width: 320, height: 200, fit: "contain" }
       ;(mind as any).refresh(data)
       dirty = true
-      if (panelOpen) {
-        updateOutlineImageCount(data)
-        renderOutlineTree() // 行内缩略图立刻出现，不用等下次重建
-      }
+      updateOutlineImageCount(data)
+      // 行列表也同步一份并重建大纲：别等下一次整表重建（那要靠回车之类的操作才触发）
+      outlineRows = collectRows(mind.getData())
+      renderOutlineTree()
       setMsg("图片已贴在导图上，保存时会统一转 WebP 并上传", true)
       // 异步读真实尺寸，顺便校正节点图片比例
       void readFileAsImage(file)
@@ -908,10 +908,9 @@ function boot(el: HTMLElement) {
             h2.image.width = shown.width
             h2.image.height = shown.height
             ;(mind as any).refresh(d2)
-            if (panelOpen) {
-              updateOutlineImageCount(d2)
-              renderOutlineTree()
-            }
+            updateOutlineImageCount(d2)
+            outlineRows = collectRows(mind.getData())
+            renderOutlineTree()
           }
         })
         .catch(() => {
@@ -954,10 +953,9 @@ function boot(el: HTMLElement) {
           imageUrls.set(fid, oldUrl) // 已经能显示，不用重新拉
           hit.image.url = fid
           ;(mind as any).refresh(data)
-          if (panelOpen) {
-            updateOutlineImageCount(data)
-            renderOutlineTree() // 上传完立刻把行内缩略图刷成最终状态
-          }
+          updateOutlineImageCount(data)
+          outlineRows = collectRows(mind.getData())
+          renderOutlineTree() // 上传完立刻把行内缩略图刷成最终状态
         }
       } catch (e: any) {
         failed.push(it.id + "：" + (e?.message || e))
