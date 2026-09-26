@@ -1681,8 +1681,8 @@ function boot(el: HTMLElement) {
         const img = r.imgUrl
           ? '<img class="mm-oline-img" src="' + r.imgUrl + '" alt="" draggable="false" data-node="' + r.id + '">'
           : ""
-        // 编辑态显示纯文本（标记可见，方便改），非编辑态渲染成样式
-        const text = editing ? plainInline(r.topic) : renderInline(r.topic)
+        // 编辑态也渲染成样式：用户永远不用看到 ** == 这类符号（改样式走选区工具栏）
+        const text = renderInline(r.topic)
         // 有备注的行尾挂一个小方块；没有备注时极淡，鼠标划过才显形，方便随时添加
         const note =
           '<span class="mm-oline-note' +
@@ -2519,6 +2519,19 @@ function boot(el: HTMLElement) {
     if (!host) return
     bindRowDrag(host)
 
+    // 选中文字 → 浮出样式工具栏（不再需要手写 ** == 之类）。
+    // 只在鼠标划完选词时出现：键盘选词、点空白处都不会弹出来打扰。
+    host.addEventListener("mouseup", () => window.setTimeout(syncFmtBar, 0))
+    document.addEventListener("selectionchange", () => {
+      const sel = window.getSelection()
+      if (!sel || sel.isCollapsed) hideFmtBar()
+    })
+    window.addEventListener("scroll", hideFmtBar, true)
+    document.addEventListener("mousedown", (e) => {
+      if (fmtBarEl?.contains(e.target as Node)) return
+      hideFmtBar()
+    })
+
     // 备注：鼠标滑到小方块上浮出气泡，点它打开编辑面板
     host.addEventListener("mouseover", (e) => {
       const icon = (e.target as HTMLElement | null)?.closest?.(".mm-oline-note") as HTMLElement | null
@@ -2633,9 +2646,6 @@ function boot(el: HTMLElement) {
       e.preventDefault()
       // 顺序很重要：先聚焦、再放光标。反过来（放完光标再 focus）某些浏览器会把光标
       // 重置掉，currentRow() 就找不到行，回车建行、Tab 调级这些按光标定位的功能会全失效。
-      // 带样式的行：先还原成纯文本标记再放光标，否则光标会落在 span 里改不动标记
-      const plain = readTopic(topic)
-      if (topic.innerHTML !== plainInline(plain)) topic.innerHTML = plainInline(plain)
       try {
         topic.focus({ preventScroll: true })
       } catch {
@@ -3204,6 +3214,132 @@ function boot(el: HTMLElement) {
   // 粘贴图片：库把 paste 交给 mind.pasteHandler；再在根元素补一个捕获监听
   ;(mind as any).pasteHandler = onPaste
   el.addEventListener("paste", (e) => onPaste(e as ClipboardEvent), true)
+
+  /* ---------------- 选区工具栏：选中文字后浮出来套样式 ---------------- */
+  let fmtBarEl: HTMLElement | null = null
+  const FMT_BTNS: Array<{ mark: string; label: string; title: string }> = [
+    { mark: "**", label: "粗", title: "加粗" },
+    { mark: "==", label: "高", title: "高亮" },
+    { mark: "~~", label: "删", title: "删除线" },
+    { mark: "__", label: "下", title: "下划线" },
+  ]
+
+  function hideFmtBar() {
+    fmtBarEl?.classList.remove("show")
+  }
+
+  function ensureFmtBar(): HTMLElement {
+    if (fmtBarEl) return fmtBarEl
+    const bar = document.createElement("div")
+    bar.className = "mm-fmtbar"
+    bar.innerHTML = FMT_BTNS.map((b) =>
+      '<button type="button" data-mark="' + b.mark + '" title="' + b.title + '">' + b.label + "</button>",
+    ).join("")
+    bar.addEventListener("mousedown", (e) => {
+      // 别让工具栏自己的点击把选区清掉
+      e.preventDefault()
+      e.stopPropagation()
+    })
+    bar.addEventListener("click", (e) => {
+      const btn = (e.target as HTMLElement | null)?.closest?.("[data-mark]") as HTMLElement | null
+      const mark = btn?.dataset.mark || ""
+      if (mark) applyMark(mark)
+    })
+    document.body.appendChild(bar)
+    fmtBarEl = bar
+    return bar
+  }
+
+  /** 读到当前选择区文本（在行内且非折叠时返回） */
+  function readSelInRow(): { rowId: string; selText: string; mark: string } | null {
+    const sel = window.getSelection()
+    if (!sel || sel.isCollapsed || !sel.rangeCount) return null
+    const range = sel.getRangeAt(0)
+    const row = (range.startContainer instanceof HTMLElement
+      ? range.startContainer
+      : range.startContainer.parentElement)?.closest?.(".mm-oline") as HTMLElement | null
+    if (!row) return null
+    const topic = row.querySelector(".mm-oline-topic") as HTMLElement | null
+    if (!topic || !topic.contains(range.commonAncestorContainer)) return null
+    const selText = (sel.toString() || "").trim()
+    if (!selText) return null
+    // 选区是否已经包在某个样式里（决定按钮是否高亮）
+    const host = (range.startContainer instanceof HTMLElement
+      ? range.startContainer
+      : range.startContainer.parentElement) as HTMLElement | null
+    const holder = host?.closest?.(".mm-b, .mm-mark, .mm-del, .mm-u") as HTMLElement | null
+    const cls = holder?.className || ""
+    const mark = cls.includes("mm-mark") ? "==" : cls.includes("mm-b") ? "**" : cls.includes("mm-del") ? "~~" : cls.includes("mm-u") ? "__" : ""
+    return { rowId: row.dataset.node || "", selText, mark }
+  }
+
+  /** 选区字符偏移（相对整行文字） */
+  function selOffsets(topic: HTMLElement): { start: number; end: number } | null {
+    const sel = window.getSelection()
+    if (!sel || !sel.rangeCount) return null
+    const range = sel.getRangeAt(0)
+    const before = document.createRange()
+    before.selectNodeContents(topic)
+    try {
+      before.setEnd(range.startContainer, range.startOffset)
+    } catch {
+      return null
+    }
+    const start = before.toString().length
+    const len = (sel.toString() || "").length
+    return { start, end: start + len }
+  }
+
+  /** 给选区套/去标记 */
+  function applyMark(mark: string) {
+    if (mode !== "edit") return
+    const sel = readSelInRow()
+    if (!sel) return
+    const topic = currentRow()?.querySelector(".mm-oline-topic") as HTMLElement | null
+    if (!topic) return
+    const off = selOffsets(topic)
+    if (!off) return
+    const full = readTopic(topic)
+    const seg = full.slice(off.start, off.end)
+    if (!seg) return
+    const already = seg.startsWith(mark) && seg.endsWith(mark) && seg.length > mark.length * 2
+    const next = already
+      ? full.slice(0, off.start) + seg.slice(mark.length, seg.length - mark.length) + full.slice(off.end)
+      : full.slice(0, off.start) + mark + seg + mark + full.slice(off.end)
+    topic.innerHTML = renderInline(next)
+    const rowEl = currentRow() || lastFmtRowEl
+    if (rowEl) commitRowText(rowEl)
+    hideFmtBar()
+    setMsg(already ? "已取消样式" : "已套用样式")
+  }
+
+  let lastFmtRowEl: HTMLElement | null = null
+
+  /** 根据选区更新工具栏显示 */
+  function syncFmtBar() {
+    if (mode !== "edit") {
+      hideFmtBar()
+      return
+    }
+    const row = currentRow()
+    if (row) lastFmtRowEl = row
+    const info = readSelInRow()
+    if (!info) {
+      hideFmtBar()
+      return
+    }
+    const bar = ensureFmtBar()
+    bar.querySelectorAll<HTMLElement>("[data-mark]").forEach((b) => {
+      b.classList.toggle("on", b.dataset.mark === info.mark)
+    })
+    const r = window.getSelection()?.getRangeAt(0).getBoundingClientRect()
+    if (!r) return
+    bar.classList.add("show")
+    const w = bar.offsetWidth || 200
+    const h = bar.offsetHeight || 40
+    bar.style.left = Math.max(8, Math.min(r.left + r.width / 2 - w / 2, window.innerWidth - w - 8)) + "px"
+    bar.style.top = Math.max(8, r.top - h - 8) + "px"
+  }
 
   /* ---------------- 专注模式：只在画布上盯着一个分支看 ---------------- */
   let focusBarEl: HTMLElement | null = null
