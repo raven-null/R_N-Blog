@@ -4,7 +4,7 @@
  */
         // 文章详情页应用
         /* 白板编辑器 bundle 版本：与 scripts/build-excalidraw.mjs 的 BUNDLE_VERSION 保持一致 */
-const EXC_BUNDLE_VERSION = 'v25';
+const EXC_BUNDLE_VERSION = 'v26';
 
 const ArticleApp = {
             // 当前文章数据
@@ -592,7 +592,7 @@ const ArticleApp = {
                     const d = e.data || {};
                     if (d.type === 'mindmap-stage') {
                         if (d.action === 'comments') openComments();
-                        else if (d.action === 'back') location.href = '/';
+                        else if (d.action === 'back') this.goBackOneStep();
                         else if (d.action === 'info' && infoPop) infoPop.hidden = !infoPop.hidden;
                     } else if (d.type === 'mindmap-mode') {
                         stage.dataset.editing = d.mode === 'edit' ? '1' : '';
@@ -1289,6 +1289,17 @@ const ArticleApp = {
                 }
             },
 
+            /** 返回上一级：有来路就后退（列表/首页不重载），没有历史才回首页 */
+            goBackOneStep() {
+                try {
+                    if (window.history.length > 1) {
+                        window.history.back();
+                        return;
+                    }
+                } catch (e) { /* 忽略 */ }
+                location.href = '/';
+            },
+
             // 底部居中胶囊（结构与导图/白板一致）：返回 / 复制链接 / 留言 / 信息
             initArticleCapsule() {
                 const escT = this.escHtml ? this.escHtml : (v => String(v == null ? '' : v)
@@ -1298,7 +1309,7 @@ const ArticleApp = {
                 const info = document.getElementById('articleInfo');
 
                 const back = document.getElementById('capBack');
-                if (back) back.addEventListener('click', () => { location.href = '/'; });
+                if (back) back.addEventListener('click', () => { this.goBackOneStep(); });
 
                 const copy = document.getElementById('capCopy');
                 if (copy) copy.addEventListener('click', () => {

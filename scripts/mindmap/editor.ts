@@ -133,11 +133,11 @@ function boot(el: HTMLElement) {
   const ICON_OUTLINE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="9" y1="6" x2="21" y2="6"/><line x1="9" y1="12" x2="21" y2="12"/><line x1="9" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1.3" fill="currentColor" stroke="none"/><circle cx="4" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="4" cy="18" r="1.3" fill="currentColor" stroke="none"/></svg>'
   const ICON_SAVE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="m7 11 5 5 5-5"/><path d="M4 20h16"/></svg>'
 
-  // 返回博客：放胶囊最左边。文章页嵌入 → 通知父页面回首页；独立打开 → 直接跳首页。
+  // 返回：放胶囊最左边。文章页嵌入 → 请宿主回上一级；独立打开 → 自己回上一级（history.back）。
   // （后台内嵌时整条胶囊都不渲染，各按钮照常构建即可，不必单独判断）
-  capBtn("bb-view-only cap-back", "返回博客首页", ICON_BACK, "返回", () => {
+  capBtn("bb-view-only cap-back", "返回上一页", ICON_BACK, "返回", () => {
     if (embedded) tell("back")
-    else location.href = "/"
+    else goBack()
   })
   // 导出：多个格式收进一个「导出」按钮，点开小菜单选择（只读态）
   const exportBtn = capBtn("bb-view-only cap-export", "导出导图", ICON_DL, "导出", () => toggleExportMenu())
@@ -412,6 +412,19 @@ function boot(el: HTMLElement) {
     const d: any = e.data || {}
     if (d.type === "mindmap-open-comments") setDrawerOpen(true)
   })
+
+  /** 返回上一级：有来路就 history.back（首页/列表不会重载），没有历史才回首页 */
+  function goBack() {
+    try {
+      if (window.history.length > 1) {
+        window.history.back()
+        return
+      }
+    } catch {
+      /* 忽略 */
+    }
+    location.href = "/"
+  }
 
   function tell(action: string) {
     try {

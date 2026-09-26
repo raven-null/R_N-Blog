@@ -759,6 +759,19 @@ function NoteApp({
     }
   }
 
+  /** 返回上一级：有来路就 history.back（首页/列表不会重载），没有历史才回首页 */
+  function goBack() {
+    try {
+      if (window.history.length > 1) {
+        window.history.back()
+        return
+      }
+    } catch {
+      /* 忽略 */
+    }
+    location.href = "/"
+  }
+
   /** 与宿主页面（文章页）通信：返回 / 留言 / 信息 */
   const tell = (action: string) => {
     try {
@@ -962,8 +975,8 @@ function NoteApp({
       {/* 底部居中胶囊：默认渲染，内嵌场景由 CSS（body.exc-no-capsule / .exc-from-admin）收起 */}
       {showCapsule && (
         <div className={"mm-capsule" + (editMode ? " is-edit" : "")} ref={capRef}>
-          {/* 返回博客：独立打开直接回首页 */}
-          <button className="mm-cap-btn bb-view-only cap-back" title="返回博客首页" onClick={() => { if (embedded) tell("back"); else location.href = "/" }}>
+          {/* 返回：嵌入时请宿主回上一级，独立打开自己回上一级（history.back，不重载首页） */}
+          <button className="mm-cap-btn bb-view-only cap-back" title="返回上一页" onClick={() => { if (embedded) tell("back"); else goBack() }}>
             <Ic p={ICONS.home} />
             <span>返回</span>
           </button>
