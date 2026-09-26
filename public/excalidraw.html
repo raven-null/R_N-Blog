@@ -7,7 +7,7 @@
   <link rel="icon" id="siteFavicon" href="/images/Default/web-logo.webp" type="image/webp">
   <link rel="apple-touch-icon" href="/images/Default/web-logo.webp">
   <script src="/js/site-icon.js?v=1.0.0"></script>
-  <link rel="stylesheet" href="/js/vendor/excalidraw/excalidraw-editor.v24.css" />
+  <link rel="stylesheet" href="/js/vendor/excalidraw/excalidraw-editor.v25.css" />
   <link rel="stylesheet" href="/css/capsule.css?v=1.0.0" />
   <link rel="stylesheet" href="/css/drawer.css?v=1.0.0" />
   <style>
@@ -110,6 +110,38 @@
   <main id="excalidraw-root"></main>
 
   <script>
+    // 去掉库菜单里的「Excalidraw links」分组（官方外链入口，本站不需要）
+    (function () {
+      var tried = 0;
+      function hideLinksGroup() {
+        var menu = document.querySelector('.excalidraw .dropdown-menu-container, .excalidraw .dropdown-menu, .excalidraw [class*="dropdown-menu"]');
+        if (!menu) return false;
+        var nodes = menu.querySelectorAll('div,span,p,h1,h2,h3,h4,li');
+        for (var i = 0; i < nodes.length; i++) {
+          var el = nodes[i];
+          if (el.children.length === 0 && (el.textContent || '').trim() === 'Excalidraw links') {
+            // 往上找到承载整个分组的容器（通常就是标题的父级）
+            var group = el.parentElement;
+            for (var up = 0; group && up < 3; up++) {
+              if (group.classList && /group|section|menu/.test(group.className)) break;
+              group = group.parentElement;
+            }
+            if (group) { group.style.display = 'none'; return true; }
+          }
+        }
+        return false;
+      }
+      function run() {
+        if (hideLinksGroup() || tried++ > 40) return;
+        setTimeout(run, 250);
+      }
+      window.addEventListener('load', run);
+      document.addEventListener('DOMContentLoaded', run);
+      // 菜单是点开才渲染的，点开后再兜几次
+      document.addEventListener('click', function () { tried = 0; setTimeout(run, 60); }, true);
+    })();
+  </script>
+  <script>
     (function () {
       var qs = new URLSearchParams(location.search);
       var note = (qs.get('note') || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 64);
@@ -150,7 +182,7 @@
       }
     })();
   </script>
-  <script src="/js/vendor/excalidraw/excalidraw-editor.v24.js"></script>
+  <script src="/js/vendor/excalidraw/excalidraw-editor.v25.js"></script>
   <script>
     // 兜底诊断：bundle 加载失败/未生效时给出可见提示（而非空白页）
     window.addEventListener('load', function () {
@@ -161,7 +193,7 @@
             '<div class="empty-tip"><div class="card">' +
             '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2.5 20h19Z"/><path d="M12 10v4.5"/></svg>' +
             '<div class="t">白板组件未能加载</div>' +
-            '<div class="row">脚本 excalidraw-editor.v24.js 加载失败（404 / 部署未完成 / 被拦截）。<br>' +
+            '<div class="row">脚本 excalidraw-editor.v25.js 加载失败（404 / 部署未完成 / 被拦截）。<br>' +
             '请 Ctrl+F5 强制刷新；若仍失败，检查 Netlify 最近一次部署是否成功，<br>' +
             '或打开 F12 → Network 看该脚本的状态码。</div>' +
             '</div></div>';

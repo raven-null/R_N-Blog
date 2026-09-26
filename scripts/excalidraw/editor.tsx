@@ -1116,7 +1116,8 @@ function NoteApp({
                     saveToActiveFile: false,
                     loadScene: false,
                     clearCanvas: false,
-                    changeViewBackgroundColor: false,
+                    // 背景色属于「看」的范畴，只读时也允许换（深色/黑色都行）
+                    changeViewBackgroundColor: true,
                     toggleTheme: false,
                   },
                 }
@@ -1128,7 +1129,9 @@ function NoteApp({
                     saveToActiveFile: true,
                     loadScene: false,
                     saveAsImage: true,
-                    toggleTheme: false,
+                    // 画布背景色（含黑色）与深色主题都放开
+                    changeViewBackgroundColor: true,
+                    toggleTheme: true,
                   },
                 }
           }
