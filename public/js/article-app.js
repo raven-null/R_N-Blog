@@ -515,26 +515,117 @@ const ArticleApp = {
                 `;
             },
 
-            // 纯白板文章：沉浸式画布舞台（无文档感：标题/评论收进悬浮控件，画廊式导航）
-            // 思维导图文章：整页展示（iframe 嵌入只读导图页，缩放/折叠/导出由导图页自身负责）
-            // 复用白板的 board-mode 全屏容器样式，保证两种形态的阅读体验一致
+            // 思维导图文章：整页沉浸式舞台，导图页用 iframe 承载（缩放/折叠/大纲由导图页自己负责）
+            // 留言不再常驻占位，收进底部胶囊按钮召唤的弹窗里
             renderMindmap() {
                 const mapId = String(this.currentPost.mapId || '').trim();
-                const wrap = document.getElementById('article-content');
-                document.body.classList.add('board-mode');
-                if (!wrap) return;
+                const content = document.getElementById('article-content');
+                document.body.classList.add('board-mode', 'no-toc');
+                if (!content) return;
+
                 if (!mapId || !/^[A-Za-z0-9_-]{1,64}$/.test(mapId)) {
-                    wrap.innerHTML =
-                        '<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px;text-align:center">' +
-                        '<div><div style="font-size:16px;color:var(--text-primary);margin-bottom:8px">导图未绑定</div>' +
-                        '<div style="font-size:13px;color:var(--text-muted)">这篇文章还没有关联思维导图，请在后台编辑页创建后再发布。</div></div></div>';
+                    content.innerHTML =
+                        '<div class="mindmap-stage"><div class="mm-missing">' +
+                        '<div class="t">导图未绑定</div>' +
+                        '<div class="s">这篇还没有关联思维导图，请在后台编辑页创建后再发布。</div></div></div>';
                     return;
                 }
-                wrap.innerHTML =
-                    '<div class="mindmap-frame-wrap"><iframe class="mindmap-frame" title="思维导图" ' +
-                    'src="/mindmap.html?note=' + encodeURIComponent(mapId) + '"></iframe></div>';
-                const title = this.currentPost.title || '思维导图';
-                try { document.title = title + ' - 思维导图'; } catch (e) { /* 忽略 */ }
+
+                const p = this.currentPost;
+                const escT = this.escHtml ? this.escHtml : (s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'));
+                const title = escT(p.title || '思维导图');
+                const tagChips = (p.tags || []).map(t => '<span>' + escT(t) + '</span>').join('');
+                const header = document.getElementById('article-header');
+                if (header) header.innerHTML = '';
+
+                content.innerHTML =
+                    '<div class="mindmap-stage" id="mindmapStage" data-map="' + mapId + '">' +
+                    '<iframe class="mindmap-frame" id="mindmapFrame" title="思维导图" ' +
+                    'src="/mindmap.html?note=' + encodeURIComponent(mapId) + '"></iframe>' +
+                    // 留言弹窗：内容由评论区（#comment-section）填充，导出/发布时互不影响
+                    '<div class="mm-modal" id="mmCommentModal" hidden>' +
+                    '<div class="mm-modal-scrim" data-mm-close="1"></div>' +
+                    '<div class="mm-modal-card">' +
+                    '<div class="mm-modal-head"><span class="t">留言</span>' +
+                    '<button class="mm-modal-x" data-mm-close="1" title="关闭" aria-label="关闭">' +
+                    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>' +
+                    '</button></div>' +
+                    '<div class="mm-modal-body" id="mmCommentBody"></div>' +
+                    '</div></div>' +
+                    '<div class="board-pop" id="mmInfoPop" hidden>' +
+                    '<h4>' + title + '</h4>' +
+                    '<div class="bp-row"><span class="k">作者</span><span>' + escT(p.author || '博主') + '</span></div>' +
+                    '<div class="bp-row"><span class="k">日期</span><span>' + escT(p.date || '') + '</span></div>' +
+                    (p.update ? '<div class="bp-row"><span class="k">更新</span><span>' + escT(p.update) + '</span></div>' : '') +
+                    '<div class="bp-row"><span class="k">导图</span><span style="word-break:break-all">' + escT(mapId) + '</span></div>' +
+                    '<div class="bp-tags">' + (tagChips || '<span style="opacity:.5">无标签</span>') + '</div>' +
+                    '<div class="bp-actions">' +
+                    '<a class="bt-btn" style="background:rgba(255,255,255,.08)" href="/mindmap.html?note=' + encodeURIComponent(mapId) + '&edit=1" target="_blank" title="在新窗口打开完整编辑器">独立打开</a>' +
+                    '<button class="bt-btn" id="mmShareBtn" style="background:rgba(255,255,255,.08)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg>复制链接</button>' +
+                    '</div></div>' +
+                    '</div>';
+
+                this.initMindmapStage(mapId);
+
+                const t = p.title || '思维导图';
+                try { document.title = t + ' - 思维导图'; } catch (e) { /* 忽略 */ }
+            },
+
+            // 导图舞台：胶囊走 postMessage（iframe 内发出的动作在这里落地）
+            initMindmapStage(mapId) {
+                const stage = document.getElementById('mindmapStage');
+                if (!stage) return;
+                const modal = document.getElementById('mmCommentModal');
+                const body = document.getElementById('mmCommentBody');
+                const infoPop = document.getElementById('mmInfoPop');
+
+                // 评论区整块搬进弹窗（复用全部留言逻辑，DOM 结构不变）
+                const comments = document.getElementById('comment-section');
+                if (comments && body) body.appendChild(comments);
+
+                const openComments = () => {
+                    if (!modal) return;
+                    modal.hidden = false;
+                    // 评论区随内容惰性初始化：首屏不加载，点开才拉
+                    if (body && !body.dataset.init) {
+                        body.dataset.init = '1';
+                        try { this.initComments(mapId); } catch (e) { /* 忽略 */ }
+                    }
+                };
+                const closeComments = () => { if (modal) modal.hidden = true; };
+
+                stage.addEventListener('click', (e) => {
+                    // 点遮罩或右上角叉都能关；叉里的 svg / path 也要能命中
+                    const hit = e.target && e.target.closest ? e.target.closest('[data-mm-close]') : null;
+                    if (hit) closeComments();
+                });
+                const shareBtn = document.getElementById('mmShareBtn');
+                if (shareBtn) shareBtn.addEventListener('click', () => {
+                    try {
+                        navigator.clipboard.writeText(location.href);
+                        shareBtn.textContent = '已复制链接';
+                        setTimeout(() => { shareBtn.textContent = '复制链接'; }, 1800);
+                    } catch (err) { /* 剪贴板不可用时忽略 */ }
+                });
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape') {
+                        closeComments();
+                        if (infoPop) infoPop.hidden = true;
+                    }
+                });
+
+                // iframe 内胶囊按钮 → 父页面动作
+                window.addEventListener('message', (e) => {
+                    if (e.origin !== location.origin) return;
+                    const d = e.data || {};
+                    if (d.type === 'mindmap-stage') {
+                        if (d.action === 'comments') openComments();
+                        else if (d.action === 'back') location.href = '/';
+                        else if (d.action === 'info' && infoPop) infoPop.hidden = !infoPop.hidden;
+                    } else if (d.type === 'mindmap-mode') {
+                        stage.dataset.editing = d.mode === 'edit' ? '1' : '';
+                    }
+                });
             },
 
             async renderWhiteboard() {
@@ -1201,6 +1292,13 @@ const ArticleApp = {
             async initComments(postId) {
                 const section = document.getElementById('comment-section');
                 if (!section) return;
+                // 思维导图文章：留言收在弹窗里，点开胶囊「留言」时才加载
+                if (this.currentPost && this.currentPost.type === 'mindmap') {
+                    this.postId = postId;
+                    section.dataset.mmDeferred = '1';
+                    return;
+                }
+                delete section.dataset.mmDeferred;
                 section.style.display = '';
                 this.postId = postId;
                 await this.loadComments();

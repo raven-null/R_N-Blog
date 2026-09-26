@@ -47,7 +47,17 @@ if (root) {
 
 function boot(el: HTMLElement) {
   const note = el.dataset.note || ""
-  const mode: "edit" | "view" = el.dataset.mode === "edit" ? "edit" : "view"
+  let mode: "edit" | "view" = el.dataset.mode === "edit" ? "edit" : "view"
+  // 被前台文章页用 iframe 嵌入时，返回 / 留言 / 信息这些由父页面负责
+  const embedded = window.parent !== window
+  // 后台编辑页也用 iframe，但它有自己的一整套顶栏按钮
+  const gallery = (() => {
+    try {
+      return !!localStorage.getItem("admin_key")
+    } catch {
+      return false
+    }
+  })()
 
   // 深色主题：以官方 DARK_THEME 为底，换成博客的暖色调强调色
   const theme = {
@@ -121,6 +131,54 @@ function boot(el: HTMLElement) {
   }
   el.appendChild(bar)
 
+  /* ---------- 底部居中胶囊：返回 / 编辑 · 完成 / 留言 / 信息 ---------- */
+  const capsule = document.createElement("div")
+  capsule.className = "mm-capsule"
+  const capBtn = (cls: string, title: string, svg: string, text: string, onClick: () => void) => {
+    const b = document.createElement("button")
+    b.type = "button"
+    b.className = "mm-cap-btn" + (cls ? " " + cls : "")
+    b.title = title
+    b.innerHTML = svg + "<span>" + text + "</span>"
+    b.addEventListener("click", onClick)
+    capsule.appendChild(b)
+    return b
+  }
+  const ICON_BACK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m3 10.5 9-7.5 9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>'
+  const ICON_EDIT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>'
+  const ICON_DONE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>'
+  const ICON_COMMENT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>'
+  const ICON_INFO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="8" r=".4" fill="currentColor"/></svg>'
+  const ICON_KEY = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10.5" width="16" height="10" rx="2.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg>'
+
+  // 前台文章页嵌入时才有「返回博客」；后台编辑页嵌入时只保留信息
+  if (embedded && !gallery) capBtn("", "返回博客首页", ICON_BACK, "返回", () => tell("back"))
+  capBtn("bb-view-only", "在当前位置编辑这张导图", ICON_EDIT, "编辑", () => setMode("edit"))
+  capBtn("bb-edit-only", "退出编辑，回到只读浏览", ICON_DONE, "完成", () => setMode("view"))
+  // 只有「这张导图真的设了口令」才显形，所以单独持有引用
+  const capKeyBtn = capBtn("cap-key", "输入编辑口令", ICON_KEY, "口令", () => {})
+  if (embedded) {
+    capBtn("", "查看留言", ICON_COMMENT, "留言", () => tell("comments"))
+    capBtn("", "导图信息", ICON_INFO, "信息", () => tell("info"))
+  }
+  capsule.classList.toggle("is-edit", mode === "edit")
+  el.appendChild(capsule)
+
+  function tell(action: string) {
+    try {
+      window.parent.postMessage({ type: "mindmap-stage", action, note }, "*")
+    } catch {
+      /* 忽略 */
+    }
+  }
+  function reportMode() {
+    try {
+      window.parent.postMessage({ type: "mindmap-mode", mode }, "*")
+    } catch {
+      /* 忽略 */
+    }
+  }
+
   let msgTimer: number | null = null
   function setMsg(text: string, sticky = false) {
     msgEl.textContent = text
@@ -147,9 +205,77 @@ function boot(el: HTMLElement) {
     wrap.appendChild(label)
     wrap.appendChild(keyInput)
     el.appendChild(wrap)
+    if (capKeyBtn) {
+      capKeyBtn.classList.add("show")
+      capKeyBtn.onclick = () => {
+        wrap.classList.toggle("open")
+        if (wrap.classList.contains("open")) keyInput!.focus()
+      }
+    }
   }
+  /** 这张导图没有口令、或当前就是管理员 → 不需要口令入口 */
   function updateKeyBar() {
+    if (capKeyBtn) capKeyBtn.classList.toggle("show", !!keyInput)
     if (meta && meta.hasKey && !isAdmin()) mountKeyBar()
+  }
+
+  /* ---------- 查看 / 编辑 双向切换 ---------- */
+  // MindElixir 的右键菜单 / 工具条 / 快捷键都是在构造时就注册好的，运行时改属性不会解绑；
+  // 所以只读态改为「DOM 层面」处理：data-mode 交给 CSS 收起工具条，并在捕获阶段拦掉修改类动作。
+  const MOD_KEYS = ["Delete", "Backspace", "Enter", "Tab", "F2", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"]
+  let outlineWasOpen = false
+  el.addEventListener(
+    "contextmenu",
+    (e) => {
+      if (mode === "view") e.stopPropagation()
+    },
+    true,
+  )
+  el.addEventListener(
+    "keydown",
+    (e) => {
+      if (mode !== "view") return
+      const mod = e.ctrlKey || e.metaKey
+      if (mod && (e.key === "c" || e.key === "C")) return // 允许复制
+      if (mod || MOD_KEYS.includes(e.key)) e.stopPropagation()
+    },
+    true,
+  )
+
+  function setMode(next: "edit" | "view") {
+    if (next === mode) return
+    const editing = next === "edit"
+    if (editing) {
+      // 进入编辑：把待办的大纲改动丢掉重来，避免上面的旧文本盖掉导图
+      dirtyOutline = false
+      if (flushTimer) {
+        window.clearTimeout(flushTimer)
+        flushTimer = null
+      }
+    } else {
+      flushOutline() // 退出前把大纲里的改动落到导图上
+    }
+    mode = next
+    el.dataset.mode = next
+    capsule.classList.toggle("is-edit", editing)
+    if (editing) {
+      setMsg("编辑中：Ctrl + S 保存")
+      updateKeyBar()
+    } else {
+      setMsg("已切换到只读浏览")
+    }
+    // 只读态不允许直接改文字
+    el.querySelectorAll(".mind-elixir .topic").forEach((n) => n.setAttribute("contenteditable", editing ? "true" : "false"))
+    // 大纲面板只在编辑态可用；退出时先收起
+    if (!editing && outlineEl?.classList.contains("open")) {
+      outlineWasOpen = true
+      setOutlineOpen(false)
+    } else if (editing && outlineWasOpen) {
+      outlineWasOpen = false
+      setOutlineOpen(true)
+    }
+    scheduleFit(280)
+    reportMode()
   }
 
   /** 后台登录后 localStorage 里存有 admin_key，带上它服务端才认管理员身份 */
@@ -199,7 +325,7 @@ function boot(el: HTMLElement) {
       updateKeyBar()
       mountOutlineButton()
       if (mode === "edit") setMsg("Ctrl + S 保存")
-      else setMsg("")
+      else if (!gallery) setMsg("")
     } catch (e: any) {
       setMsg("加载失败：" + (e?.message || e))
     }
@@ -660,8 +786,10 @@ function boot(el: HTMLElement) {
     }
   }
   void load()
-  // 面板默认关闭；上次开着则恢复（仅编辑模式）
-  if (mode === "edit") {
+  updateKeyBar()
+  reportMode()
+  // 面板默认关闭；上次开着则恢复（前台文章页里不自动展开，免得一进来就挤掉半屏）
+  if (mode === "edit" && !embedded) {
     try {
       if (localStorage.getItem("mindmap_outline_open") === "1") setOutlineOpen(true)
     } catch {
