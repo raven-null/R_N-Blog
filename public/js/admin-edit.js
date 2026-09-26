@@ -254,9 +254,16 @@
     }
     window.eeSaveMindmap = async function () {
         var frame = document.querySelector('#eeMindmapHost iframe.ee-frame');
-        var saver = null;
-        try { saver = frame && frame.contentWindow && frame.contentWindow.__mindmapSave; } catch (e) { saver = null; }
+        var saver = null, dirtyFn = null;
+        try {
+            saver = frame && frame.contentWindow && frame.contentWindow.__mindmapSave;
+            dirtyFn = frame && frame.contentWindow && frame.contentWindow.__mindmapDirty;
+        } catch (e) { saver = null; dirtyFn = null; }
         if (typeof saver !== 'function') return true; // 还没挂载好：不阻塞后续保存
+        // 没有未落盘的改动就不用打一次保存（避免每次都产生新版本）
+        try {
+            if (typeof dirtyFn === 'function' && !dirtyFn()) return true;
+        } catch (e) { /* 忽略 */ }
         return !!(await saver());
     };
 
@@ -721,7 +728,12 @@
         if (!body.title) { toast('请填写标题', 'error'); return false; }
         if (docType !== 'whiteboard' && docType !== 'mindmap' && !body.content) { toast('请填写正文内容', 'error'); return false; }
         // 画布类内容：先把 iframe 里的改动落盘，再保存文章元数据
-        if (docType === 'mindmap') await window.eeSaveMindmap();
+        if (docType === 'mindmap') {
+            var mapOk = await window.eeSaveMindmap();
+            if (!mapOk) {
+                toast('导图保存未完成（口令 / 网络 / 未登录？），文章元信息已保存', 'error');
+            }
+        }
         var btn = $('eeSaveBtn');
         btn.disabled = true;
         var r = await api('action=articles', { method: 'POST', body: JSON.stringify(body) });

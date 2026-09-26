@@ -1366,6 +1366,8 @@ function boot(el: HTMLElement) {
   }
   // 粘贴图片：库里 paste 的最后一步会调 mind.pasteHandler
   ;(mind as any).pasteHandler = onPaste
+  // 供宿主判断"有没有没落盘的改动"（后台编辑页保存前提示用）
+  ;(window as any).__mindmapDirty = () => dirty
 
   void load()
   updateKeyBar()
