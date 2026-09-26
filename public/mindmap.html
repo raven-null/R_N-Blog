@@ -56,6 +56,30 @@
     .mm-empty .t { font-size: 17px; color: #fff; font-weight: 600; margin-bottom: 8px; }
     .mm-empty .row { font-size: 13px; line-height: 1.9; }
     .mm-empty code { background: rgba(255, 255, 255, 0.1); padding: 2px 7px; border-radius: 6px; color: #bcd0ff; font-size: 12px; }
+    /* 大纲面板：默认关闭，打开后左侧写大纲、右侧实时成图 */
+    .mm-outline {
+      position: absolute; left: 0; top: 0; bottom: 0; z-index: 30;
+      width: min(380px, 86vw); display: none; flex-direction: column;
+      background: rgba(13, 13, 17, 0.94);
+      border-right: 1px solid var(--mm-border);
+      backdrop-filter: blur(20px) saturate(160%); -webkit-backdrop-filter: blur(20px) saturate(160%);
+    }
+    .mm-outline.open { display: flex; }
+    .mm-outline-head {
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+      padding: 10px 12px; border-bottom: 1px solid var(--mm-border);
+      font-size: 12.5px; color: var(--mm-dim);
+    }
+    .mm-outline-title { font-weight: 600; color: var(--mm-text); }
+    .mm-outline-tip { flex: 1; min-width: 120px; font-size: 11.5px; color: rgba(255, 255, 255, 0.42); }
+    .mm-outline-text {
+      flex: 1; width: 100%; box-sizing: border-box; padding: 12px 14px;
+      border: 0; outline: none; resize: none; background: transparent; color: var(--mm-text);
+      font-size: 13.5px; line-height: 1.85;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+    .mm-outline-text::placeholder { color: rgba(255, 255, 255, 0.28); }
+
     @media (max-width: 640px) {
       .mm-bar { left: 10px; right: 10px; bottom: 10px; justify-content: center; }
       .mm-bar .mm-msg { max-width: 100%; }
@@ -96,8 +120,8 @@
       document.title = (edit ? '编辑导图' : '思维导图') + ' - ' + note;
     })();
   </script>
-  <link rel="stylesheet" href="/js/vendor/mindmap/mindmap-editor.v2.css">
-  <script src="/js/vendor/mindmap/mindmap-editor.v2.js"></script>
+  <link rel="stylesheet" href="/js/vendor/mindmap/mindmap-editor.v3.css">
+  <script src="/js/vendor/mindmap/mindmap-editor.v3.js"></script>
   <script>
     // 兜底诊断：bundle 加载失败时给出可见提示，而不是空白页
     window.addEventListener('load', function () {
@@ -107,7 +131,7 @@
           root.innerHTML =
             '<div class="mm-empty"><div class="card">' +
             '<div class="t">导图组件未能加载</div>' +
-            '<div class="row">脚本 mindmap-editor.v2.js 加载失败（404 / 部署未完成 / 被拦截）。<br>' +
+            '<div class="row">脚本 mindmap-editor.v3.js 加载失败（404 / 部署未完成 / 被拦截）。<br>' +
             '请 Ctrl+F5 强制刷新；若仍失败，检查 Netlify 最近一次部署是否成功。</div>' +
             '</div></div>';
         }

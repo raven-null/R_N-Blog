@@ -68,7 +68,7 @@ function boot(el: HTMLElement) {
   // MindElixir 只接受 HTMLDivElement / 选择器字符串，而且会清空该容器：
   // 这里自建一层干净 div 交给它，外层 el 留给浮条等 UI，互不干扰。
   const canvasHost = document.createElement("div")
-  canvasHost.style.cssText = "position:absolute;inset:0"
+  canvasHost.style.cssText = "position:absolute;inset:0;transition:left .25s ease"
   el.appendChild(canvasHost)
 
   const mind = new MindElixir({
@@ -107,6 +107,7 @@ function boot(el: HTMLElement) {
   }
 
   if (mode === "edit") {
+    btn("大纲", "", () => toggleOutline())
     btn("保存", "primary", () => void save(false))
     btn("导出 PNG", "", () => void exportImage("png"))
     btn("导出 SVG", "", () => void exportImage("svg"))
@@ -202,6 +203,7 @@ function boot(el: HTMLElement) {
   /* ---------------- 保存 ---------------- */
   async function save(force: boolean): Promise<boolean> {
     if (mode !== "edit" || saving) return false
+    flushOutline() // 面板里可能还有未生效的改动
     saving = true
     setMsg("保存中…", true)
     try {
@@ -271,6 +273,136 @@ function boot(el: HTMLElement) {
     setTimeout(() => URL.revokeObjectURL(a.href), 4000)
   }
 
+  /* ---------------- 大纲面板：左写大纲、右实时成图 ---------------- */
+  // 面板默认关闭；打开时导图区让出宽度，右侧实时刷新
+  let panelOpen = false
+  let outlineEl: HTMLElement | null = null
+  let outlineText: HTMLTextAreaElement | null = null
+
+  let uid = 0
+  const nextId = () => "n" + ++uid
+
+  /** 大纲文本 → 导图数据：支持「# 标题」与「缩进的 - / * / 纯文本」两种写法 */
+  function outlineToData(text: string): any {
+    const root: any = { id: "root", topic: "", children: [] }
+    const stack: Array<{ level: number; node: any }> = []
+    let isFirst = true
+    const push = (level: number, topic: string) => {
+      const node = { id: nextId(), topic, children: [] }
+      if (isFirst) {
+        root.topic = topic
+        isFirst = false
+        stack.length = 0
+        stack.push({ level: 0, node: root })
+        return
+      }
+      while (stack.length > 1 && stack[stack.length - 1].level >= level) stack.pop()
+      const parent = stack.length ? stack[stack.length - 1].node : root
+      parent.children.push(node)
+      stack.push({ level, node })
+    }
+    for (const rawLine of text.split(/\r?\n/)) {
+      const line = rawLine.replace(/\s+$/, "")
+      if (!line.trim()) continue
+      const heading = line.match(/^(#{1,6})\s*(.+)$/)
+      if (heading) {
+        push(heading[1].length, heading[2].trim())
+        continue
+      }
+      const indentMatch = line.match(/^(\s*)/)
+      const indent = (indentMatch ? indentMatch[1].replace(/\t/g, "  ") : "").length
+      const topic = line.trim().replace(/^([-*+]\s+)+/, "").trim()
+      if (!topic) continue
+      push(Math.floor(indent / 2) + 2, topic)
+    }
+    if (!root.topic) root.topic = "中心主题"
+    if (!root.children.length) root.children.push({ id: nextId(), topic: "分支主题", children: [] })
+    return { nodeData: root }
+  }
+
+  /** 导图 → 大纲文本（用缩进列表，方便直接编辑；也兼容 Markdown 列表） */
+  function dataToOutline(data: any): string {
+    const lines: string[] = []
+    const walk = (node: any, depth: number) => {
+      const topic = String(node?.topic ?? "").replace(/\r?\n/g, " ")
+      if (depth === 0) lines.push(topic)
+      else lines.push("  ".repeat(depth - 1) + "- " + topic)
+      ;(node?.children || []).forEach((c: any) => walk(c, depth + 1))
+    }
+    walk(data?.nodeData ?? data, 0)
+    return lines.join("\n")
+  }
+
+  let flushTimer: number | null = null
+  let dirtyOutline = false
+  function applyOutline() {
+    if (!outlineText) return
+    dirtyOutline = false
+    try {
+      mind.refresh(outlineToData(outlineText.value))
+      dirty = true
+      setMsg("已按大纲更新导图")
+    } catch (e: any) {
+      setMsg("大纲解析失败：" + (e?.message || e))
+    }
+  }
+  function scheduleApply() {
+    dirtyOutline = true
+    if (flushTimer) window.clearTimeout(flushTimer)
+    flushTimer = window.setTimeout(() => applyOutline(), 350)
+  }
+  function flushOutline() {
+    if (flushTimer) { window.clearTimeout(flushTimer); flushTimer = null }
+    if (dirtyOutline) applyOutline()
+  }
+
+  function buildOutline() {
+    if (outlineEl) return
+    outlineEl = document.createElement("div")
+    outlineEl.className = "mm-outline"
+    outlineEl.innerHTML =
+      '<div class="mm-outline-head">' +
+      '<span class="mm-outline-title">大纲</span>' +
+      '<span class="mm-outline-tip">每行一项，缩进表示层级；改动实时成图</span>' +
+      '<button class="mm-btn" data-act="sync" title="用当前导图内容覆盖大纲">从导图刷新</button>' +
+      '<button class="mm-btn" data-act="close">关闭</button>' +
+      "</div>" +
+      '<textarea class="mm-outline-text" spellcheck="false" placeholder="中心主题&#10;- 分支一&#10;  - 子节点"></textarea>'
+    el.appendChild(outlineEl)
+    outlineText = outlineEl.querySelector(".mm-outline-text") as HTMLTextAreaElement
+    outlineText.addEventListener("input", scheduleApply)
+    outlineText.addEventListener("blur", flushOutline)
+    outlineEl.addEventListener("click", (e) => {
+      const t = e.target as HTMLElement
+      const act = t && t.dataset ? t.dataset.act : ""
+      if (act === "close") setOutlineOpen(false)
+      if (act === "sync") {
+        outlineText!.value = dataToOutline(mind.getData())
+        setMsg("已用导图内容刷新大纲")
+      }
+    })
+  }
+
+  function setOutlineOpen(open: boolean) {
+    buildOutline()
+    panelOpen = open
+    outlineEl!.classList.toggle("open", open)
+    // 导图区让出左侧空间（右侧实时成图）
+    canvasHost.style.left = open ? "min(380px, 86vw)" : "0"
+    if (open && outlineText) {
+      outlineText.value = dataToOutline(mind.getData())
+      setTimeout(() => outlineText!.focus(), 80)
+    }
+    try {
+      localStorage.setItem("mindmap_outline_open", open ? "1" : "0")
+    } catch {
+      /* 忽略 */
+    }
+  }
+  function toggleOutline() {
+    setOutlineOpen(!panelOpen)
+  }
+
   /* ---------------- 交互 ---------------- */
   // Ctrl/Cmd + S 保存
   window.addEventListener("keydown", (e) => {
@@ -293,4 +425,12 @@ function boot(el: HTMLElement) {
   ;(window as any).MindMapInstance = mind
 
   void load()
+  // 面板默认关闭；上次开着则恢复（仅编辑模式）
+  if (mode === "edit") {
+    try {
+      if (localStorage.getItem("mindmap_outline_open") === "1") setOutlineOpen(true)
+    } catch {
+      /* 忽略 */
+    }
+  }
 }
