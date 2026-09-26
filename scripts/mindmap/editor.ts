@@ -854,6 +854,7 @@ function boot(el: HTMLElement) {
       hit.image = { url, width: 320, height: 200, fit: "contain" }
       ;(mind as any).refresh(data)
       dirty = true
+      if (panelOpen) updateOutlineImageCount(data)
       setMsg("图片已贴在导图上，保存时会统一转 WebP 并上传", true)
       // 异步读真实尺寸，顺便校正节点图片比例
       void readFileAsImage(file)
@@ -874,6 +875,7 @@ function boot(el: HTMLElement) {
             h2.image.width = shown.width
             h2.image.height = shown.height
             ;(mind as any).refresh(d2)
+            if (panelOpen) updateOutlineImageCount(d2)
           }
         })
         .catch(() => {
@@ -916,6 +918,7 @@ function boot(el: HTMLElement) {
           imageUrls.set(fid, oldUrl) // 已经能显示，不用重新拉
           hit.image.url = fid
           ;(mind as any).refresh(data)
+          if (panelOpen) updateOutlineImageCount(data)
         }
       } catch (e: any) {
         failed.push(it.id + "：" + (e?.message || e))
@@ -1306,7 +1309,9 @@ function boot(el: HTMLElement) {
       // 去掉前导列表符，方便「· - 内容」这类手滑输入；认 ·、- * +、1. 1)
       let topic = line.trim()
       for (let i = 0; i < 6 && BULLET_RE.test(topic); i++) topic = topic.replace(BULLET_RE, "")
-      add(Math.floor(indent / 2), topic.trim())
+      // 大纲里图片标记属于「显示用」，解析时一律丢掉，不会混进节点文字
+      topic = topic.replace(/\s*\[图片[^\]]*\]\s*$/, "").trim()
+      add(Math.floor(indent / 2), topic)
     }
 
     if (!root.topic) root.topic = "中心主题"
@@ -1323,7 +1328,10 @@ function boot(el: HTMLElement) {
     outlineLineNodeIds = []
     const walk = (node: any, depth: number) => {
       const topic = String(node?.topic ?? "").replace(/\r?\n/g, " ")
-      lines.push(depth === 0 ? topic : OUTLINE_INDENT.repeat(depth - 1) + OUTLINE_BULLET + topic)
+      // 带图片的节点在大纲里标一下，方便一眼看出哪几项有图
+      const img = node?.image
+      const mark = img ? `  [图片${img.width && img.height ? ` ${img.width}×${img.height}` : ""}]` : ""
+      lines.push((depth === 0 ? topic : OUTLINE_INDENT.repeat(depth - 1) + OUTLINE_BULLET + topic) + mark)
       outlineLineNodeIds.push(String(node?.id ?? ""))
       ;(node?.children || []).forEach((c: any) => walk(c, depth + 1))
     }
@@ -1499,8 +1507,9 @@ function boot(el: HTMLElement) {
     outlineEl.className = "mm-outline"
     outlineEl.innerHTML =
       '<div class="mm-outline-head">' +
-      '<span class="mm-outline-title">大纲</span>' +
+      '<span class="mm-outline-title">大纲<span class="cnt" id="mmOutlineImgCnt"></span></span>' +
       "</div>" +
+      '<div class="mm-outline-images" id="mmOutlineImages" hidden></div>' +
       '<textarea class="mm-outline-text" spellcheck="false" placeholder="中心主题&#10;· 分支一&#10;  · 子节点&#10;    · 孙节点"></textarea>'
     el.appendChild(outlineEl)
     outlineText = outlineEl.querySelector(".mm-outline-text") as HTMLTextAreaElement
@@ -1532,6 +1541,23 @@ function boot(el: HTMLElement) {
       if (mode !== "edit") e.preventDefault()
     })
     outlineText.addEventListener("blur", flushOutline)
+    // 点缩略图：选中对应节点（方便直接编辑它）
+    outlineEl.querySelector("#mmOutlineImages")?.addEventListener("click", (e) => {
+      const btn = (e.target as HTMLElement | null)?.closest?.("[data-node]") as HTMLElement | null
+      if (!btn) return
+      const id = btn.dataset.node || ""
+      try {
+        const mindAny = mind as any
+        const tpc = mindAny.findEle?.(id)
+        if (tpc) {
+          mindAny.selectNode?.(tpc)
+          mindAny.scrollIntoView?.(tpc, true)
+          setMsg("已选中该图片所在节点")
+        }
+      } catch {
+        /* 忽略 */
+      }
+    })
   }
 
   let outlineBtnEl: HTMLButtonElement | null = null
@@ -1551,7 +1577,9 @@ function boot(el: HTMLElement) {
     canvasHost.classList.toggle("outline-open", open)
     scheduleFit(320) // 可用宽度变了，重新居中并缩放
     if (open && outlineText) {
-      outlineText.value = dataToOutline(mind.getData())
+      const data = mind.getData()
+      outlineText.value = dataToOutline(data)
+      updateOutlineImageCount(data)
       if (mode === "edit") setTimeout(() => outlineText!.focus(), 80)
     }
     try {
@@ -1582,6 +1610,46 @@ function boot(el: HTMLElement) {
     panel.style.zIndex = "2147483000"
     panel.style.display = panelOpen ? "flex" : "none"
   }
+  /** 大纲标题旁的图片数量 + 缩略图区（点缩略图会选中对应节点） */
+  function updateOutlineImageCount(data: any) {
+    const elCnt = outlineEl?.querySelector("#mmOutlineImgCnt") as HTMLElement | null
+    const box = outlineEl?.querySelector("#mmOutlineImages") as HTMLElement | null
+    const items: Array<{ id: string; topic: string; url: string; w: number; h: number }> = []
+    const walk = (node: any) => {
+      const img = node?.image
+      const url = typeof img?.url === "string" ? img.url : ""
+      if (url) {
+        items.push({
+          id: String(node.id ?? ""),
+          topic: String(node.topic ?? "").slice(0, 24),
+          url,
+          w: Number(img.width) || 0,
+          h: Number(img.height) || 0,
+        })
+      }
+      ;(node?.children || []).forEach(walk)
+    }
+    walk(data?.nodeData ?? data)
+    if (elCnt) elCnt.textContent = items.length ? ` · 图片 ${items.length}` : ""
+    if (!box) return
+    if (!items.length) {
+      box.hidden = true
+      box.innerHTML = ""
+      return
+    }
+    box.hidden = false
+    box.innerHTML = items
+      .map(
+        (it) =>
+          '<button type="button" class="mm-oimg" data-node="' + it.id + '" title="' + (it.topic || "节点") + '">' +
+          '<img src="' + it.url + '" alt="" loading="lazy">' +
+          '<span class="t">' + (it.topic || "未命名") + "</span>" +
+          (it.w && it.h ? '<span class="d">' + it.w + "×" + it.h + "</span>" : "") +
+          "</button>",
+      )
+      .join("")
+  }
+
   function toggleOutline() {
     setOutlineOpen(!panelOpen)
   }
