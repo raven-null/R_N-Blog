@@ -649,14 +649,29 @@ function boot(el: HTMLElement) {
     if (mode !== "edit") return
     const file = pickImageFromClipboard((e as any).clipboardData)
     if (!file) return
-    e.preventDefault()
-    // 正在某个输入框里打字时不抢粘贴（口令框、大纲面板等）
     const t = e.target as HTMLElement | null
     const tag = (t?.tagName || "").toLowerCase()
+
+    // 在大纲面板里粘贴：插到光标所在的那一行对应的节点
+    if (tag === "textarea" && t && t.classList.contains("mm-outline-text")) {
+      e.preventDefault()
+      const line = outlineCaretLine(t as HTMLTextAreaElement)
+      const id = outlineLineNodeIds[line] || ""
+      const node = nodeById(id)
+      if (!node) {
+        setMsg("没定位到大纲这一行的节点，换个位置再粘贴试试")
+        return
+      }
+      void insertImage(file, node)
+      return
+    }
+
+    e.preventDefault()
+    // 其他输入框（编辑口令等）不抢粘贴
     if (tag === "input" || tag === "textarea" || (t && (t as HTMLElement).isContentEditable)) return
     const node = selectedNode()
     if (!node) {
-      setMsg("先点选一个节点，再粘贴图片")
+      setMsg("先点选一个节点（或把光标放到大纲某一行），再粘贴图片")
       return
     }
     void insertImage(file, node)
@@ -977,14 +992,16 @@ function boot(el: HTMLElement) {
   /* ---------------- 大纲按钮：图标形式，与库左下工具栏并列（只读时也能看大纲） ---------------- */
   let outlineMountTries = 0
   function mountOutlineButton() {
-    const ltBar = el.querySelector(".mind-elixir-toolbar.lt")
+    // 库的工具条可能带 lt/rb 等方向类，别只认 .lt（否则找不到就整排图标挂不上）
+    const ltBar = (el.querySelector(".mind-elixir-toolbar.lt") ||
+      el.querySelector(".mind-elixir-toolbar")) as HTMLElement | null
     if (!ltBar) {
       // 工具栏由库的 init() 挂入 DOM，构造后可能还没出现：稍后重试
-      if (outlineMountTries < 25) {
+      if (outlineMountTries < 60) {
         outlineMountTries++
-        window.setTimeout(mountOutlineButton, 120)
+        window.setTimeout(mountOutlineButton, 150)
       } else {
-        console.warn("[导图] 未找到 .mind-elixir-toolbar.lt，大纲按钮未挂载")
+        console.warn("[导图] 未找到工具条，大纲按钮未挂载")
       }
       return
     }
@@ -1097,16 +1114,44 @@ function boot(el: HTMLElement) {
     return { nodeData: root }
   }
 
+  /** 大纲第 N 行对应哪个节点（用于「在大纲里粘贴图片 → 插到光标所在那行」） */
+  let outlineLineNodeIds: string[] = []
+
   /** 导图 → 大纲文本：根行不带前缀，其余行「2 空格 × 层级 + · 」（也兼容 Markdown 列表写法） */
   function dataToOutline(data: any): string {
     const lines: string[] = []
+    outlineLineNodeIds = []
     const walk = (node: any, depth: number) => {
       const topic = String(node?.topic ?? "").replace(/\r?\n/g, " ")
       lines.push(depth === 0 ? topic : OUTLINE_INDENT.repeat(depth - 1) + OUTLINE_BULLET + topic)
+      outlineLineNodeIds.push(String(node?.id ?? ""))
       ;(node?.children || []).forEach((c: any) => walk(c, depth + 1))
     }
     walk(data?.nodeData ?? data, 0)
     return lines.join("\n")
+  }
+
+  /** 按 id 在导图数据里找节点对象 */
+  function nodeById(id: string): any | null {
+    if (!id) return null
+    const root: any = mind.getData()?.nodeData
+    let found: any = null
+    const walk = (n: any) => {
+      if (!n || found) return
+      if (String(n.id) === id) {
+        found = n
+        return
+      }
+      ;(n.children || []).forEach(walk)
+    }
+    walk(root)
+    return found
+  }
+
+  /** 光标在大纲第几行（0 基） */
+  function outlineCaretLine(ta: HTMLTextAreaElement): number {
+    const pos = ta.selectionStart || 0
+    return String(ta.value || "").slice(0, pos).split("\n").length - 1
   }
 
   /* ---------------- 大纲编辑手感 ---------------- */
@@ -1374,8 +1419,13 @@ function boot(el: HTMLElement) {
   } catch {
     /* 忽略 */
   }
-  // 粘贴图片：库里 paste 的最后一步会调 mind.pasteHandler
+  // 粘贴图片：两处都接
+  //   a) 库自己的 paste 监听挂在画布容器上，复制「节点」时由它处理；
+  //      复制「图片」时它会走到 pasteHandler —— 这里接上。
+  //   b) 焦点在大纲面板 / 画布空白处时，事件根本到不了画布容器，所以再在
+  //      根元素上补一个 paste 监听（捕获阶段），保证 Ctrl+V 在哪都能插图。
   ;(mind as any).pasteHandler = onPaste
+  el.addEventListener("paste", (e) => onPaste(e as ClipboardEvent), true)
   // 供宿主判断"有没有没落盘的改动"（后台编辑页保存前提示用）
   ;(window as any).__mindmapDirty = () => dirty
 
