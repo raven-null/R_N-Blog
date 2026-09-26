@@ -1400,57 +1400,144 @@ function boot(el: HTMLElement) {
     walk((mind.getData() as any)?.nodeData)
   }
 
-  /**
-   * 大纲解析：把每一行折算成「相对层级」（根 0、一级分支 1……）
-   * 三种写法都认：缩进（2 空格或 Tab 一级）、Markdown 列表符（- * + 1.）、# 标题。
-   * 层级跳级也安全（逐级找父节点），不会丢行。
+  /*
+   * 大纲解析：把 Markdown / 纯文本折成「相对层级」。两种文档形态都要对：
+   *
+   *  A. 幕布导出（混合）：无符号的独立行 = 一级分类；`- ` 项跟着分类走、比它深一级；
+   *     缩进 2 空格的**无符号**行是上一个节点的补充说明（例如「要求：…」），挂在它下面。
+   *  B. 纯缩进大纲：所有行都没符号，缩进直接决定层级。
+   *
+   * 另外：叠在一起写的符号（幕布会导出 `- 1. 学习顺序…`）要一层层剥净；
+   * `- [ ]` / `- [x]` 这类待办前缀保留原样；空行忽略；跳级安全。
    */
   const OUTLINE_INDENT = "  "
   const OUTLINE_BULLET = "· "
-  const BULLET_RE = /^\s*(?:[·•▪◦]|[-*+]|\d+[.)])\s+/
+  /** 列表符号：`- ` `* ` `+ ` `1. ` `· ` 等（只在行首匹配，正文里的「1.」不受影响） */
+  const BULLET_RE = /^(?:[-*+]|\d+[.)]|[·•▪◦])\s+/
+  /** 幕布待办项前缀 `[ ] ` / `[x] ` */
+  const TODO_RE = /^\[[ xX]\]\s+/
 
   function outlineToData(text: string): any {
     const root: any = { id: "root", topic: "", children: [] }
     const stack: Array<{ level: number; node: any }> = []
     let isFirst = true
+    /** 第一行（中心主题）的缩进，用于判断后面的行是它的子级还是同级 */
+    let firstLineIndent = 0
 
-    const add = (level: number, topic: string) => {
-      if (!topic) return
-      if (isFirst) {
-        // 第一行永远是中心主题，无论是否带缩进 / 列表符
-        root.topic = topic
-        isFirst = false
-        return
+    /* 预扫描：判断是「分类 + 列表」形态（幕布）还是「纯缩进」形态，并取缩进基准 */
+    let bulletAtTop = false
+    let bulletIndented = false
+    let minIndentDepth = 0
+    for (const rawLine of text.split(/\r?\n/)) {
+      if (!rawLine.trim()) continue
+      if (/^\s*#{1,6}\s+/.test(rawLine)) continue
+      const indent = (rawLine.match(/^[\t ]*/) || [""])[0]
+      const d = Math.floor(indent.replace(/\t/g, OUTLINE_INDENT).length / OUTLINE_INDENT.length)
+      if (rawLine.trim().match(BULLET_RE)) {
+        if (d === 0) bulletAtTop = true
+        else bulletIndented = true
       }
-      const node = { id: nextId(), topic, children: [] }
-      while (stack.length > 1 && stack[stack.length - 1].level >= level) stack.pop()
+      if (d > 0 && (minIndentDepth === 0 || d < minIndentDepth)) minIndentDepth = d
+    }
+    // 缩进基准：取文档里「有缩进的行」的最小缩进（没有缩进行时为 0）
+    const base = minIndentDepth
+
+    /** 上一个节点的层级（缩进说明行兜底用） */
+    let prevLevel: number | null = null
+    /** 最近一个「顶格无符号行」（幕布里的分类行）的层级与缩进，用于推断它下面各行的层级 */
+    let pendingClassLevel: number | null = null
+    let pendingClassIndent = 0
+    /** 最近的列表项层级：它下面缩进的无符号行是它的子级（幕布的「要求：…」） */
+    let lastBulletLevel: number | null = null
+
+    const add = (level: number, topic: string): number | null => {
+      const body = String(topic || "").trim()
+      if (!body) return null
+      if (isFirst) {
+        root.topic = body
+        isFirst = false
+        stack.push({ level: 0, node: root })
+        return 0
+      }
+      const node = { id: nextId(), topic: body, children: [] }
+      const lv = Math.max(1, level)
+      while (stack.length > 1 && stack[stack.length - 1].level >= lv) stack.pop()
       const parent = stack.length ? stack[stack.length - 1].node : root
       parent.children.push(node)
-      stack.push({ level, node })
+      stack.push({ level: lv, node })
+      return lv
     }
 
     for (const rawLine of text.split(/\r?\n/)) {
       const line = rawLine.replace(/\s+$/, "")
       if (!line.trim()) continue
+      const indent = (line.match(/^[\t ]*/) || [""])[0]
+      const depth = Math.floor(indent.replace(/\t/g, OUTLINE_INDENT).length / OUTLINE_INDENT.length)
+      const indented = depth > 0
+      const body0 = line.trim()
+      if (isFirst) firstLineIndent = depth // 中心主题的缩进：判断后面各行的相对层级要用
+      const hadBullet = !!body0.match(BULLET_RE)
+      let rest = body0
 
-      const heading = line.match(/^\s*#{1,6}\s*(.+)$/)
+      const heading = rest.match(/^(#{1,6})\s+/)
       if (heading) {
-        const level = Math.max(0, (line.match(/^\s*(#{1,6})/) as RegExpMatchArray)[1].length - 1)
-        add(level, heading[1].trim())
+        const lvl = Math.max(0, heading[1].length - 1)
+        const used = add(lvl, rest.slice(heading[0].length).trim())
+        if (used !== null) pendingClassLevel = used >= 1 ? used : null
         continue
       }
 
-      const indent = (line.match(/^[\t ]*/) as RegExpMatchArray)[0].replace(/\t/g, OUTLINE_INDENT).length
-      // 去掉前导列表符，方便「· - 内容」这类手滑输入；认 ·、- * +、1. 1)
-      let topic = line.trim()
-      for (let i = 0; i < 6 && BULLET_RE.test(topic); i++) topic = topic.replace(BULLET_RE, "")
-      // 大纲里图片标记属于「显示用」，解析时一律丢掉，不会混进节点文字
-      topic = topic.replace(/\s*\[图片[^\]]*\]\s*$/, "").trim()
-      add(Math.floor(indent / 2), topic)
-    }
+      // 叠在一起的符号（`- 1. xxx`）一层层剥干净，否则剩下的 `1.` 会被当成新的一行
+      let guard = 0
+      for (;;) {
+        const bullet = rest.match(BULLET_RE)
+        if (!bullet || guard++ > 6) break
+        rest = rest.slice(bullet[0].length).trim()
+      }
+      // 幕布待办：`[ ]` / `[x]` 当正文前缀留着，勾选状态不丢
+      const todo = rest.match(TODO_RE)
+      if (todo) rest = todo[0].trimEnd() + " " + rest.slice(todo[0].length)
 
+      let level: number
+      if (!hadBullet && !indented && bulletAtTop) {
+        // 幕布形态里顶格的无符号行 = 分类行 → 一级分类
+        // （纯缩进大纲不走这条：那里「顶格」就是最外层，缩进才是层级）
+        level = 1
+        pendingClassLevel = 1
+        pendingClassIndent = 0
+      } else if (!hadBullet) {
+        if (lastBulletLevel !== null) {
+          // 幕布那种「要求：…」：上一个列表项的子级；再缩进就再深一层
+          level = lastBulletLevel + 1 + Math.max(0, depth - base - 1)
+        } else {
+          // 纯缩进大纲：按「全局最小的缩进」折算；首行若与基准同层就直接作它的子级
+          const step = Math.max(0, depth - base)
+          level = step === 0 && firstLineIndent <= base ? 1 : 1 + Math.max(1, step)
+        }
+      } else if (bulletAtTop) {
+        // 幕布形态：列表项跟着分类走；缩进的列表项是上一个列表项的子级
+        if (indented && prevLevel !== null && prevLevel >= 1) {
+          level = prevLevel + 1 + Math.max(0, depth - Math.max(1, base) - 0)
+        } else if (pendingClassLevel !== null) {
+          level = pendingClassLevel + 1
+        } else {
+          level = 1 + depth
+        }
+      } else {
+        // 纯缩进 / 平铺列表：由缩进决定
+        level = 1 + Math.max(0, depth - base)
+      }
+      const used = add(level, rest)
+      if (used !== null) {
+        prevLevel = used
+        if (hadBullet) {
+          lastBulletLevel = used // 列表项：它下面缩进的无符号行是它的子级
+        } else if (!indented) {
+          lastBulletLevel = null // 分类行：后面的缩进行按「相对分类」算
+        }
+      }
+    }
     if (!root.topic) root.topic = "中心主题"
-    if (!root.children.length) root.children.push({ id: nextId(), topic: "分支主题", children: [] })
     return { nodeData: root }
   }
 
