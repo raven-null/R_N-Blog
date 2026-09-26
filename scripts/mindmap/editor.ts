@@ -1494,6 +1494,7 @@ function boot(el: HTMLElement) {
       mind.refresh(outlineToData(outlineText.value))
       dirty = true
       renderOutlineThumbs(mind.getData())
+      renderOutlineFold(mind.getData())
       scheduleFit(60) // 内容变了，重新居中
     } catch (e: any) {
       setMsg("大纲解析失败：" + (e?.message || e))
@@ -1549,6 +1550,47 @@ function boot(el: HTMLElement) {
       .join("")
   }
 
+  /**
+   * 折叠控制条：列出所有「有子项」的节点（按层级缩进），点一下收起/展开。
+   * 与画布上的折叠状态同步（在画布上点圆点收起，这里也会跟着变）。
+   */
+  function renderOutlineFold(data: any) {
+    const box = outlineEl?.querySelector("#mmOutlineFold") as HTMLElement | null
+    if (!box) return
+    const rows: Array<{ id: string; topic: string; level: number; expanded: boolean; kids: number }> = []
+    const walk = (node: any, level: number) => {
+      const kids = (node?.children || []).length
+      if (kids) {
+        rows.push({
+          id: String(node.id ?? ""),
+          topic: String(node.topic ?? "").slice(0, 20),
+          level,
+          expanded: node.expanded !== false,
+          kids,
+        })
+      }
+      ;(node?.children || []).forEach((c: any) => walk(c, level + 1))
+    }
+    walk(data?.nodeData ?? data, 0)
+    if (!rows.length) {
+      box.hidden = true
+      box.innerHTML = ""
+      return
+    }
+    box.hidden = false
+    box.innerHTML = rows
+      .map(
+        (r) =>
+          '<button type="button" class="mm-fold-btn' + (r.expanded ? "" : " collapsed") + '" data-node="' + r.id + '" ' +
+          'title="' + (r.expanded ? "收起子项" : "展开子项") + '">' +
+          '<span class="tri">' + (r.expanded ? "▾" : "▸") + "</span>" +
+          '<span class="t" style="padding-left:' + r.level * 12 + 'px">' + (r.topic || "未命名") + "</span>" +
+          '<span class="n">' + r.kids + "</span>" +
+          "</button>",
+      )
+      .join("")
+  }
+
   function buildOutline() {
     if (outlineEl) return
     outlineEl = document.createElement("div")
@@ -1558,6 +1600,7 @@ function boot(el: HTMLElement) {
       '<span class="mm-outline-title">大纲<span class="cnt" id="mmOutlineImgCnt"></span></span>' +
       "</div>" +
       '<div class="mm-outline-images" id="mmOutlineImages" hidden></div>' +
+      '<div class="mm-outline-fold" id="mmOutlineFold" hidden></div>' +
       '<textarea class="mm-outline-text" spellcheck="false" placeholder="中心主题&#10;· 分支一&#10;  · 子节点&#10;    · 孙节点"></textarea>'
     el.appendChild(outlineEl)
     outlineText = outlineEl.querySelector(".mm-outline-text") as HTMLTextAreaElement
@@ -1589,6 +1632,21 @@ function boot(el: HTMLElement) {
       if (mode !== "edit") e.preventDefault()
     })
     outlineText.addEventListener("blur", flushOutline)
+    // 折叠条：点击切换画布上对应节点的展开/收起
+    outlineEl.querySelector("#mmOutlineFold")?.addEventListener("click", (e) => {
+      const btn = (e.target as HTMLElement | null)?.closest?.("[data-node]") as HTMLElement | null
+      if (!btn) return
+      try {
+        const mindAny = mind as any
+        const tpc = mindAny.findEle?.(btn.dataset.node || "")
+        if (tpc) {
+          mindAny.expandNode?.(tpc) // 库里的 expandNode 是对外暴露的"切换展开/收起"
+          renderOutlineFold(mind.getData())
+        }
+      } catch {
+        /* 忽略 */
+      }
+    })
     // 点缩略图 → 画布上定位到对应节点
     outlineEl.querySelector("#mmOutlineImages")?.addEventListener("click", (e) => {
       const btn = (e.target as HTMLElement | null)?.closest?.("[data-node]") as HTMLElement | null
