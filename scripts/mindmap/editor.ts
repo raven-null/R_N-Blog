@@ -53,14 +53,28 @@ const MARK_CLASS: Record<string, string> = {
   "__": "mm-u",
 }
 
+/** 待办前缀：`[ ] ` / `[x] ` —— 渲染成真正的方框（大纲里可点，画布上只读展示） */
+const TODO_PREFIX_RE = /^\[([ xX])\]\s?/
+
 /** 标记文本 → HTML（换行转 <br>）；大纲与画布共用 */
 function renderInline(text: string): string {
-  return scanInline(text)
-    .map((seg) => {
-      const html = escapeHtml(seg.text).replace(/\n/g, "<br>")
-      return seg.mark ? '<span class="' + MARK_CLASS[seg.mark] + '">' + html + "</span>" : html
+  return text
+    .split("\n")
+    .map((line) => {
+      const todo = line.match(TODO_PREFIX_RE)
+      const box = todo
+        ? '<input type="checkbox" class="mm-todo"' + (todo[1].toLowerCase() === "x" ? " checked" : "") + ">"
+        : ""
+      const body = todo ? line.slice(todo[0].length) : line
+      const html = scanInline(body)
+        .map((seg) => {
+          const inner = escapeHtml(seg.text)
+          return seg.mark ? '<span class="' + MARK_CLASS[seg.mark] + '">' + inner + "</span>" : inner
+        })
+        .join("")
+      return box + html
     })
-    .join("")
+    .join("<br>")
 }
 
 /** 右键菜单/工具栏文案（取自库自带 dist/i18n.js 的 zh_CN；该文件未在 package exports 中，无法直接 import） */
@@ -1878,6 +1892,10 @@ function boot(el: HTMLElement) {
           continue
         }
         if (child.tagName === "IMG") continue
+        if (child.tagName === "INPUT") {
+          out += (child as HTMLInputElement).checked ? "[x] " : "[ ] "
+          continue
+        }
         const cls = child.className || ""
         const mark = cls.includes("mm-mark") ? "==" : cls.includes("mm-b") ? "**" : cls.includes("mm-del") ? "~~" : cls.includes("mm-u") ? "__" : ""
         if (!mark) {
@@ -2266,6 +2284,29 @@ function boot(el: HTMLElement) {
     if (next) caretToTextEnd(next)
     setMsg("已粘贴 " + insert.length + " 项")
     return true
+  }
+
+  /** 点方框：把这一行开头的 `[ ]` / `[x]` 对调，并写回数据 */
+  function toggleTodoInRow(rowEl: HTMLElement) {
+    if (mode !== "edit") {
+      setMsg("只读模式下不能勾选")
+      return
+    }
+    const id = rowEl.dataset.node || ""
+    if (!id) return
+    const data = mind.getData() as any
+    const node = findNodeIn(data?.nodeData, id)
+    if (!node) return
+    const body = String(node.topic || "")
+    const m = body.match(TODO_PREFIX_RE)
+    if (!m) return
+    const done = m[1].toLowerCase() === "x"
+    node.topic = (done ? "[ ] " : "[x] ") + body.slice(m[0].length)
+    ;(mind as any).refresh(data)
+    dirty = true
+    outlineRows = collectRows(mind.getData())
+    renderOutlineTree()
+    setMsg(done ? "已取消勾选" : "已完成")
   }
 
   /** 写备注：只改 note 字段，不动其它内容 */
@@ -2707,6 +2748,14 @@ function boot(el: HTMLElement) {
       const t = e.target as HTMLElement | null
       if (t?.classList.contains("mm-tri") || t?.classList.contains("mm-oline-img")) return
       if (t?.closest?.(".mm-oline-note")) return // 备注图标有自己的处理
+      // 方框：切换勾选状态（不再往下走，免得把光标抢走）
+      if (t?.closest?.(".mm-todo")) {
+        e.preventDefault()
+        e.stopPropagation()
+        const todoRow = t.closest(".mm-oline") as HTMLElement | null
+        if (todoRow) toggleTodoInRow(todoRow)
+        return
+      }
       // 圆点手柄是拖拽用的，按住它交给原生 DnD，不要抢成「放光标」
       if (t?.closest?.(".mm-oline-drag")) return
       const row = t?.closest?.(".mm-oline") as HTMLElement | null
@@ -3488,6 +3537,7 @@ function boot(el: HTMLElement) {
     { mark: "==", label: "高", title: "高亮" },
     { mark: "~~", label: "删", title: "删除线" },
     { mark: "__", label: "下", title: "下划线" },
+    { mark: "todo", label: "框", title: "加单选框（待办）" },
   ]
 
   function hideFmtBar() {
@@ -3556,9 +3606,37 @@ function boot(el: HTMLElement) {
     return { start, end: start + len }
   }
 
+  /** 给当前行（或选中的行）加单选框前缀；已有就去掉 */
+  function addTodoToRow() {
+    if (mode !== "edit") return
+    const row = currentRow() || lastFmtRowEl
+    if (!row) {
+      setMsg("先把光标放到某一行")
+      return
+    }
+    const id = row.dataset.node || ""
+    if (!id) return
+    const data = mind.getData() as any
+    const node = findNodeIn(data?.nodeData, id)
+    if (!node) return
+    const body = String(node.topic || "")
+    const has = TODO_PREFIX_RE.test(body)
+    node.topic = has ? body.replace(TODO_PREFIX_RE, "") : "[ ] " + body
+    ;(mind as any).refresh(data)
+    dirty = true
+    outlineRows = collectRows(mind.getData())
+    renderOutlineTree()
+    hideFmtBar()
+    setMsg(has ? "已去掉单选框" : "已加单选框")
+  }
+
   /** 给选区套/去标记 */
   function applyMark(mark: string) {
     if (mode !== "edit") return
+    if (mark === "todo") {
+      addTodoToRow()
+      return
+    }
     const sel = readSelInRow()
     if (!sel) return
     const topic = currentRow()?.querySelector(".mm-oline-topic") as HTMLElement | null
