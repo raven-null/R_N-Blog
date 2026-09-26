@@ -806,6 +806,26 @@ function boot(el: HTMLElement) {
     }
   }
 
+  /** 重建视图：refresh 之后补算布局与连线，确保父子之间的连线一定画出来 */
+  function redraw(data?: any) {
+    try {
+      if (data) mind.refresh(data)
+      else mind.refresh(mind.getData())
+    } catch {
+      /* 忽略 */
+    }
+    try {
+      ;(mind as any).layout?.()
+    } catch {
+      /* 忽略 */
+    }
+    try {
+      ;(mind as any).linkDiv?.()
+    } catch {
+      /* 忽略 */
+    }
+  }
+
   /* ---------- 图片：先贴上看，保存时统一转 WebP 并上传（与白板一致） ---------- */
   const pendingImages: Array<{ id: string; blob: Blob; name: string }> = []
   const pendingBlobUrl = new Map<string, string>()
@@ -1671,7 +1691,7 @@ function boot(el: HTMLElement) {
     lastOutlineSig = sig
     try {
       const next = readRichOutline()
-      if (next) mind.refresh(next as any)
+      if (next) redraw(next)
       dirty = true
       updateOutlineImageCount(mind.getData())
     } catch (e: any) {
