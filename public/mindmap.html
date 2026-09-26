@@ -83,6 +83,17 @@
 
     /* 大纲面板：默认关闭，打开后左侧写大纲、右侧实时成图。
        用 fixed 相对视口定位，避免被祖先容器（iframe、全屏态、canvasHost 的偏移）困住导致看不到。 */
+    /* 节点图片：库对 me-tpc>img 设了 object-fit:cover，尺寸超过节点宽度就会被裁，
+       这里改成完整显示并限制最大宽高（旧数据里按原图尺寸存的图片也能立刻正常） */
+    #mm-root me-tpc > img {
+      object-fit: contain !important;
+      max-width: 320px !important;
+      max-height: 240px !important;
+      width: auto !important;
+      height: auto !important;
+      border-radius: 8px;
+    }
+
     .mm-outline {
       position: fixed; left: 0; top: 0; z-index: 2147483000;
       width: min(380px, 86vw); height: 100vh;
@@ -146,8 +157,8 @@
       try { if (window.parent !== window) document.documentElement.dataset.embedded = '1'; } catch (e) { /* 跨域则忽略 */ }
     })();
   </script>
-  <link rel="stylesheet" href="/js/vendor/mindmap/mindmap-editor.v34.css">
-  <script src="/js/vendor/mindmap/mindmap-editor.v34.js"></script>
+  <link rel="stylesheet" href="/js/vendor/mindmap/mindmap-editor.v35.css">
+  <script src="/js/vendor/mindmap/mindmap-editor.v35.js"></script>
   <script>
     // 兜底诊断：bundle 未加载或运行时抛错时给出可见提示，而不是静默无反应
     (function () {
@@ -179,7 +190,7 @@
       window.addEventListener('load', function () {
         if (!window.MindMapMount) {
           show('导图组件未能加载',
-            '脚本 mindmap-editor.v34.js 加载失败（404 / 部署未完成 / 被拦截）。<br>' +
+            '脚本 mindmap-editor.v35.js 加载失败（404 / 部署未完成 / 被拦截）。<br>' +
             '请 Ctrl+F5 强制刷新；若仍失败，检查 Netlify 最近一次部署是否成功。');
         }
       });

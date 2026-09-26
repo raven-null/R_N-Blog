@@ -592,9 +592,20 @@ function boot(el: HTMLElement) {
 
 
   /* ---------------- 节点图片（插入时统一转 WebP，与原图同尺寸存服务器） ---------------- */
+  // 存储端：尽量保留细节（原图压到 1600px 存 WebP，前台显示时再缩小，放大了也清楚）
   const MAX_IMAGE_EDGE = 1600
   const WEBP_QUALITY = 0.82
   const MAX_IMAGE_BYTES = 5 * 1024 * 1024
+  // 显示端：节点里图片的展示上限。库给节点里的 img 设了 object-fit:cover，
+  // 尺寸一旦超过节点的 max-width(35em) 就会被裁掉，所以展示尺寸必须单独算小。
+  const DISPLAY_MAX_W = 320
+  const DISPLAY_MAX_H = 240
+
+  /** 按展示上限等比缩放（只缩不放） */
+  function displaySize(w: number, h: number) {
+    const scale = Math.min(1, DISPLAY_MAX_W / Math.max(1, w), DISPLAY_MAX_H / Math.max(1, h))
+    return { width: Math.max(1, Math.round(w * scale)), height: Math.max(1, Math.round(h * scale)) }
+  }
   const imageUrls = new Map<string, string>() // fid → blob URL（刷新后按需从服务器取回）
 
   const fileInput = document.createElement("input")
@@ -707,12 +718,15 @@ function boot(el: HTMLElement) {
       fid = nextFid()
       setMsg(`已转 WebP ${kb(file.size)} → ${kb(blob.size)}，上传中…`, true)
       await uploadImage(blob, fid)
-      node.image = { url: fid, width, height, fit: "contain" }
+      const shown = displaySize(width, height)
+      node.image = { url: fid, width: shown.width, height: shown.height, fit: "contain" }
       imageUrls.set(fid, URL.createObjectURL(blob))
       ;(mind as any).refresh(mind.getData())
       dirty = true
       scheduleFit(80)
-      setMsg(`已插入图片：${width}×${height} · WebP ${kb(blob.size)}（原图 ${kb(file.size)}）${webp ? "" : "（此浏览器不支持 WebP，已按 PNG 存）"}`)
+      setMsg(
+        `已插入图片：展示 ${shown.width}×${shown.height}（原图 ${width}×${height}，WebP ${kb(blob.size)}/${kb(file.size)}）${webp ? "" : "（此浏览器不支持 WebP，已按 PNG 存）"}`,
+      )
     } catch (e: any) {
       setMsg("图片插入失败：" + (e?.message || e))
     }
