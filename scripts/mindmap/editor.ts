@@ -1801,7 +1801,28 @@ function boot(el: HTMLElement) {
       if (idx < 0) return
 
       if (e.key === "Enter") {
-        e.preventDefault() // 大纲没有换行；文字长了会自动折行
+        // 回车：在下面新建一项（同级），光标落到新行
+        // Shift+Enter：这一项里换行（大纲里不常用，但保留）
+        if (e.shiftKey) return
+        e.preventDefault()
+        e.stopPropagation()
+        const cur = outlineRows[idx]
+        if (!cur) return
+        const fresh: OutlineRow = {
+          id: nextId(),
+          level: cur.level,
+          topic: "",
+          imgUrl: "",
+          imgW: 0,
+          imgH: 0,
+          kids: 0,
+          expanded: true,
+        }
+        outlineRows.splice(idx + 1, 0, fresh)
+        applyRowsToData(outlineRows)
+        renderOutlineTree()
+        const next = rowEls()[idx + 1]?.querySelector(".mm-oline-topic") as HTMLElement | null
+        if (next) caretToTextEnd(next)
         return
       }
 
