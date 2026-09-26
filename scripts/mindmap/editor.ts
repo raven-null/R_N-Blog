@@ -184,6 +184,7 @@ function boot(el: HTMLElement) {
       fitView()
       scheduleFit(320)
       updateKeyBar()
+      mountOutlineButton()
       setMsg("")
     } catch (e: any) {
       setMsg("加载失败：" + (e?.message || e))
@@ -274,10 +275,21 @@ function boot(el: HTMLElement) {
   }
 
   /* ---------------- 大纲按钮：图标形式，与库左下工具栏并列 ---------------- */
+  let outlineMountTries = 0
   function mountOutlineButton() {
     if (mode !== "edit") return
     const ltBar = el.querySelector(".mind-elixir-toolbar.lt")
-    if (!ltBar || ltBar.querySelector(".mm-outline-btn")) return
+    if (!ltBar) {
+      // 工具栏由库的 init() 挂入 DOM，构造后可能还没出现：稍后重试
+      if (outlineMountTries < 25) {
+        outlineMountTries++
+        window.setTimeout(mountOutlineButton, 120)
+      } else {
+        console.warn("[导图] 未找到 .mind-elixir-toolbar.lt，大纲按钮未挂载")
+      }
+      return
+    }
+    if (ltBar.querySelector(".mm-outline-btn")) return
     const b = document.createElement("button") as HTMLButtonElement
     b.type = "button"
     b.className = "mm-outline-btn"
@@ -487,7 +499,19 @@ function boot(el: HTMLElement) {
   ;(window as any).__mindmapDirty = () => dirty
   ;(window as any).MindMapInstance = mind
 
+  // 挂载大纲按钮：先试一次，再用 MutationObserver 兜底（工具栏出现/重建时自动挂上）
   mountOutlineButton()
+  if (mode === "edit") {
+    try {
+      const mo = new MutationObserver(() => {
+        if (el.querySelector(".mm-outline-btn")) return
+        mountOutlineButton()
+      })
+      mo.observe(el, { childList: true, subtree: true })
+    } catch {
+      /* 忽略 */
+    }
+  }
   void load()
   // 面板默认关闭；上次开着则恢复（仅编辑模式）
   if (mode === "edit") {
