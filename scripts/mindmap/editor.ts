@@ -2115,9 +2115,20 @@ function boot(el: HTMLElement) {
     if (!host) return
     bindRowDrag(host)
 
-    // Tab / Shift+Tab 必须留在面板里。不拦的话焦点会顺着 Tab 走到画布上，
-    // 而画布的 Tab 快捷键正好是「新建子节点」——这就是「想改位置却建了新节点」的原因。
-    host.addEventListener("keydown", (e) => swallowOutlineKey(e), true)
+    // Tab 必须留在面板里（不然焦点会顺着 Tab 走到画布上，而画布的 Tab 快捷键正好是
+    // 「新建子节点」），但这里**只能 preventDefault**：一旦在捕获阶段 stopPropagation，
+    // 下面冒泡阶段那套「回车建行 / Tab 调级 / 删除」就全收不到事件了。
+    host.addEventListener(
+      "keydown",
+      (e) => {
+        if (mode !== "edit") return
+        if (e.isComposing) return
+        if (e.key !== "Tab" && e.key !== "Enter") return
+        if (e.key === "Enter" && e.shiftKey) return
+        e.preventDefault()
+      },
+      true,
+    )
 
     // 全局兜底：焦点根本不在大纲里时（点过画布、点过面板空白），Tab/Enter 也不能漏到画布上。
     // 注意：焦点在大纲里时不要在这里拦，否则会挡住我们自己的回车/调级处理。
@@ -2126,6 +2137,9 @@ function boot(el: HTMLElement) {
       (e) => {
         if (!panelOpen) return
         if (caretInOutline()) return
+        // 只收拾「焦点落在画布上」这一种情况：画布才是那个把 Tab 当新建子节点的家伙。
+        // 范围不收窄的话，面板开着时对话框里的回车也会被吞掉。
+        if (!canvasHost.contains(e.target as Node)) return
         swallowOutlineKey(e)
       },
       true,
