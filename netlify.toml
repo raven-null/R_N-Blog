@@ -94,6 +94,36 @@
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 
+# 自定义脚本 / 样式：URL 上都带 ?v= 版本号，内容一变就换 URL，因此可以长期强缓存。
+# 这一条能省掉每次导航时的回源校验（Netlify 默认 must-revalidate）。
+[[headers]]
+  for = "/js/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/css/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# 思维导图 bundle：文件名带版本号（v33 → v34 换名即换新）
+[[headers]]
+  for = "/js/vendor/mindmap/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# 站点图标
+[[headers]]
+  for = "/images/*"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"
+
+# Vditor（后台编辑器）：本地固定版本，按需懒加载，可长缓存
+[[headers]]
+  for = "/js/vendor/vditor/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
 # HTML 一律回源校验：防止中间 CDN/浏览器长期缓存旧页面导致改版不生效
 [[headers]]
   for = "/"

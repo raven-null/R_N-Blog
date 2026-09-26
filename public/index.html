@@ -7,21 +7,16 @@
     <title>我的博客</title>
     <link rel="icon" id="siteFavicon" href="/images/Default/web-logo.webp" type="image/webp">
     <link rel="apple-touch-icon" href="/images/Default/web-logo.webp">
-    <script src="/js/site-icon.js?v=1.0.0"></script>
+    <script src="/js/site-icon.js?v=1.0.0" defer></script>
 
     <!-- Styles -->
     <link rel="stylesheet" href="css/style.css?v=3.16.11">
     <link rel="stylesheet" href="css/glass.css?v=1.0.14">
 
-    <!-- Marked.js -->
-    <script src="js/vendor/marked.min.js"></script>
-
-    <!-- Highlight.js -->
-    <link rel="stylesheet" href="css/highlight-github-dark.min.css">
-    <script src="js/vendor/highlight.min.js"></script>
-
+    <!-- 首页只渲染卡片列表（摘要由后端给出），不需要 Markdown 解析与代码高亮：
+         marked / highlight 及其主题样式只在文章页加载 -->
     <!-- Anime.js -->
-    <script src="js/vendor/anime.umd.min.js"></script>
+    <script src="js/vendor/anime.umd.min.js" defer></script>
     <link rel="stylesheet" href="/css/scrollbar.css?v=1.0.1">
     <link rel="stylesheet" href="/css/responsive.css?v=1.0.0">
 </head>
@@ -242,10 +237,9 @@
     </div>
 
     <!-- Scripts -->
-    <script src="js/theme.js?v=3.13.6"></script>
-    <script src="js/markdown.js?v=3.14.2"></script>
-    <script src="js/app.js?v=3.36.6"></script>
-    <script src="js/animations.js?v=3.14.0"></script>
+    <script src="js/theme.js?v=3.13.6" defer></script>
+    <script src="js/app.js?v=3.36.6" defer></script>
+    <script src="js/animations.js?v=3.14.0" defer></script>
 
     <script>
         // ===== Scroll Observer =====
