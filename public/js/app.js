@@ -1015,7 +1015,7 @@ const BlogApp = {
         return this.esc(str).replace(/'/g, '&#39;');
     },
 
-    // 封面加载完成：按真实宽高比调整卡片高度，并保证图片完整显示（不裁剪）
+    // 封面加载完成：把卡片高度完全按图片真实比例设好 —— 图完整铺满、不留白也不裁切
     handleCoverLoad(img) {
         try {
             if (!img) return;
@@ -1025,12 +1025,11 @@ const BlogApp = {
             const box = img.parentElement;
             if (!box || !box.classList.contains('card-img')) return;
             const cardW = box.clientWidth || 320;
-            // 目标高度 = 按真实比例算出来的高度，再夹到卡片的合理区间
-            const target = Math.round(cardW * h / w);
-            const height = Math.max(180, Math.min(360, target));
+            // 高度 = 按真实宽高比算出来的高度，不再夹取区间：卡片多长都行
+            const height = Math.max(80, Math.round(cardW * h / w));
             box.style.height = height + 'px';
-            // 图片按 contain 完整显示：宽高比和容器有差异时，用容器底色兜住留白
-            img.style.objectFit = 'contain';
+            // 图完整填充容器（宽高比已经对齐，所以既不留白也不裁切）
+            img.style.objectFit = 'fill';
         } catch (e) { /* 兜底异常忽略 */ }
     },
 
