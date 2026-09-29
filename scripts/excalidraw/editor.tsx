@@ -14,6 +14,7 @@
  * UI：液态玻璃（与博客 glass.css 同款变量）+ 内联 SVG 图标，不使用 emoji。
  */
 import React, { useEffect, useRef, useState } from "react"
+import { createPortal } from "react-dom"
 import { createRoot } from "react-dom/client"
 import { Excalidraw, exportToBlob } from "@excalidraw/excalidraw"
 
@@ -1056,57 +1057,65 @@ function NoteApp({
           {meta?.hasKey && <div className="row"><span className="k">口令</span><span>已加密</span></div>}
         </div>
       )}
-      {/* 留言抽屉：形态与导图一致（右侧滑出） */}
-      <div className={"mm-drawer-scrim" + (cmtOpen ? " show" : "")} onClick={() => setCmtOpen(false)} />
-      <aside className={"mm-drawer" + (cmtOpen ? " open" : "")}>
-        <div className="mm-drawer-head">
-          <span className="mm-drawer-title">留言{cmts && cmts.length ? <span className="cnt">（{cmts.length}）</span> : null}</span>
-          <button className="mm-drawer-x" title="关闭" aria-label="关闭" onClick={() => setCmtOpen(false)}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
-          </button>
-        </div>
-        <div className="mm-drawer-body">
-          {cmts === null ? (
-            <div className="mm-cmt-empty">加载中…</div>
-          ) : cmts.length === 0 ? (
-            <div className="mm-cmt-empty">还没有留言</div>
-          ) : (
-            cmts.map((c, i) => (
-              <div className="mm-cmt" key={c?.id || i}>
-                <div className="mm-cmt-avatar">{String(c?.name || "客").trim().slice(0, 1) || "客"}</div>
-                <div className="mm-cmt-main">
-                  <div className="mm-cmt-top">
-                    <span className="mm-cmt-name">{c?.name || "访客"}</span>
-                    <span className="mm-cmt-time">{fmtTime(Number(c?.createdAt) || 0)}</span>
+      {/* 留言抽屉：形态与导图一致（右侧滑出）。
+          渲染到 body 下：文章正文的内嵌白板块有 overflow:hidden，抽屉留在壳层里
+          就只能从那一小块里滑出；挂到 body 才能铺满整个视口。
+          body 是 static，absolute 的包含块即初始包含块（视口），无需改 drawer.css。 */}
+      {cmtOpen && typeof document !== "undefined" && createPortal(
+        <>
+          <div className="mm-drawer-scrim show" onClick={() => setCmtOpen(false)} />
+          <aside className="mm-drawer open">
+            <div className="mm-drawer-head">
+              <span className="mm-drawer-title">留言{cmts && cmts.length ? <span className="cnt">（{cmts.length}）</span> : null}</span>
+              <button className="mm-drawer-x" title="关闭" aria-label="关闭" onClick={() => setCmtOpen(false)}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
+              </button>
+            </div>
+            <div className="mm-drawer-body">
+              {cmts === null ? (
+                <div className="mm-cmt-empty">加载中…</div>
+              ) : cmts.length === 0 ? (
+                <div className="mm-cmt-empty">还没有留言</div>
+              ) : (
+                cmts.map((c, i) => (
+                  <div className="mm-cmt" key={c?.id || i}>
+                    <div className="mm-cmt-avatar">{String(c?.name || "客").trim().slice(0, 1) || "客"}</div>
+                    <div className="mm-cmt-main">
+                      <div className="mm-cmt-top">
+                        <span className="mm-cmt-name">{c?.name || "访客"}</span>
+                        <span className="mm-cmt-time">{fmtTime(Number(c?.createdAt) || 0)}</span>
+                      </div>
+                      <div className="mm-cmt-text">{c?.content || ""}</div>
+                      {c?.image ? <img className="mm-cmt-img" src={c.image} alt="留言图片" loading="lazy" /> : null}
+                    </div>
                   </div>
-                  <div className="mm-cmt-text">{c?.content || ""}</div>
-                  {c?.image ? <img className="mm-cmt-img" src={c.image} alt="留言图片" loading="lazy" /> : null}
-                </div>
+                ))
+              )}
+            </div>
+            <form
+              className="mm-drawer-foot"
+              onSubmit={e => {
+                e.preventDefault()
+                void submitComment()
+              }}
+            >
+              <input value={cmtName} maxLength={32} placeholder="昵称 *" required onChange={e => setCmtName(e.target.value)} />
+              <textarea
+                value={cmtText}
+                maxLength={5000}
+                placeholder="写下你的留言… *（纯文本，最长 5000 字）"
+                required
+                onChange={e => setCmtText(e.target.value)}
+              />
+              <div className="row">
+                <span className={"tip" + (cmtTip.includes("失败") || cmtTip.includes("出错") || cmtTip.includes("都要填") ? " err" : "")}>{cmtTip}</span>
+                <button className="send" type="submit" disabled={cmtSending}>{cmtSending ? "发送中" : "发送"}</button>
               </div>
-            ))
-          )}
-        </div>
-        <form
-          className="mm-drawer-foot"
-          onSubmit={e => {
-            e.preventDefault()
-            void submitComment()
-          }}
-        >
-          <input value={cmtName} maxLength={32} placeholder="昵称 *" required onChange={e => setCmtName(e.target.value)} />
-          <textarea
-            value={cmtText}
-            maxLength={5000}
-            placeholder="写下你的留言… *（纯文本，最长 5000 字）"
-            required
-            onChange={e => setCmtText(e.target.value)}
-          />
-          <div className="row">
-            <span className={"tip" + (cmtTip.includes("失败") || cmtTip.includes("出错") || cmtTip.includes("都要填") ? " err" : "")}>{cmtTip}</span>
-            <button className="send" type="submit" disabled={cmtSending}>{cmtSending ? "发送中" : "发送"}</button>
-          </div>
-        </form>
-      </aside>
+            </form>
+          </aside>
+        </>,
+        document.body
+      )}
 
       <div className="exc-canvas">
         <Excalidraw

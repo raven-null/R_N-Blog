@@ -19,16 +19,19 @@
   --mm-accent: #ff9f0a;
 }
 
-/* ---------- 留言抽屉：形态与白板一致（右侧滑出） ---------- */
+/* ---------- 留言抽屉：形态与白板一致（右侧滑出） ----------
+   用 fixed 而不是 absolute：抽屉会被挂到 body 下（文章正文的内嵌白板块有
+   overflow:hidden，留在块内就只能从那一小块里滑出），也可能被挂在某个
+   恰好也是 absolute 的壳层里 —— fixed 一律相对视口，铺满整屏。 */
 .mm-drawer-scrim {
-  position: absolute; inset: 0; z-index: 36;
+  position: fixed; inset: 0; z-index: 36;
   background: rgba(5, 5, 8, 0.5);
   backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
   opacity: 0; pointer-events: none; transition: opacity 0.35s ease;
 }
 .mm-drawer-scrim.show { opacity: 1; pointer-events: auto; }
 .mm-drawer {
-  position: absolute; top: 0; right: 0; bottom: 0; z-index: 38;
+  position: fixed; top: 0; right: 0; bottom: 0; z-index: 38;
   width: min(440px, 94vw);
   /* 关闭时直接不渲染，打开才交给下面的 .open 规则显示（比藏在屏幕外稳） */
   display: none; flex-direction: column;
