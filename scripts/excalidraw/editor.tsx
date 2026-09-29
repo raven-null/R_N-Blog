@@ -266,11 +266,13 @@ function NoteApp({
   mode,
   bare,
   fromAdmin,
+  inEmbed,
 }: {
   note: string
   mode: "edit" | "view"
   bare?: boolean
   fromAdmin?: boolean
+  inEmbed?: boolean
 }) {
   const apiRef = useRef<any>(null)
   const filesSigRef = useRef<Record<string, string>>({}) // 已上传图片指纹（避免重复上传）
@@ -945,7 +947,12 @@ function NoteApp({
   return (
     // 结构与导图页一致：.exc-shell 充当 #mm-root 的角色（固定铺满视口），
     // 所有浮层（胶囊 / 口令浮条 / 状态条）都挂在它下面，定位规则与导图完全相同。
-    <div className="exc-shell" style={{ position: "fixed", inset: 0, zIndex: 1 }}>
+    // 例外：内嵌到文章正文（.excalidraw-embed，position:relative + 固定高度）时铺满嵌入块即可，
+    // 用 absolute 才不会溢出到整篇文章；独立页 / 后台页 / 纯白板文章舞台仍走 fixed。
+    <div
+      className={"exc-shell" + (inEmbed ? " exc-in-embed" : "")}
+      style={inEmbed ? { position: "absolute", inset: 0, zIndex: 1 } : { position: "fixed", inset: 0, zIndex: 1 }}
+    >
       {/* 口令浮条：与导图页同一套样式，进编辑态自动滑出（bare 模式沿用旧的紧凑浮条） */}
       {editMode && meta?.hasKey && !isAdmin && (
         bare ? (
@@ -1193,10 +1200,13 @@ function mountAll() {
     const mode = el.dataset.mode === "edit" ? "edit" : "view"
     const bare = el.dataset.bare === "1"
     const fromAdmin = new URLSearchParams(location.search).get("from") === "admin"
+    // 文章正文内嵌块（```excalidraw fence → .excalidraw-embed）：壳层必须跟随嵌入块的高度，
+    // 不能再 fixed 铺满视口，否则画布溢出整篇文章、胶囊跑到视口底部
+    const inEmbed = !!el.closest(".excalidraw-embed")
     const root = createRoot(el)
     // 记住 root，便于宿主清空/换画板时真正卸载（否则旧实例的 window 级监听会残留）
     ;(el as any).__excRoot = root
-    root.render(<NoteApp note={note} mode={mode} bare={bare} fromAdmin={fromAdmin} />)
+    root.render(<NoteApp note={note} mode={mode} bare={bare} fromAdmin={fromAdmin} inEmbed={inEmbed} />)
   })
 }
 
