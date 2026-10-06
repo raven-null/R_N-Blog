@@ -35,6 +35,13 @@
         });
     }
 
+    // parseEmbed 定义在 markdown-config.js（前台渲染与编辑器共用同一套解析）
+    function parseEmbed(raw) {
+        var mc = window.MarkdownConfig;
+        if (!mc || typeof mc.parseEmbed !== 'function') return null;
+        try { return mc.parseEmbed(raw); } catch (e) { return null; }
+    }
+
     function injectStyle() {
         if (document.getElementById(STYLE_ID)) return;
         var s = document.createElement('style');
@@ -80,7 +87,22 @@
             '.ep-toast{position:fixed;left:50%;bottom:32px;transform:translateX(-50%);z-index:2700;',
             '  max-width:min(560px,92vw);padding:10px 16px;border-radius:10px;font-size:13px;line-height:1.7;',
             '  background:rgba(20,20,28,.96);color:#fff;border:1px solid rgba(255,255,255,.16);',
-            '  box-shadow:0 18px 50px -12px rgba(0,0,0,.8)}'
+            '  box-shadow:0 18px 50px -12px rgba(0,0,0,.8)}',
+            /* 编辑器内的内嵌块卡片（customRenders 产出） */
+            '.ep-card{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:10px;',
+            '  background:linear-gradient(135deg,rgba(79,195,247,.10),rgba(79,195,247,.04));',
+            '  border:1px solid rgba(79,195,247,.32);user-select:none;cursor:default;',
+            '  font-family:-apple-system,"Segoe UI","PingFang SC",sans-serif}',
+            '.ep-card-icon{flex:none;font-size:22px;line-height:1}',
+            '.ep-card-body{flex:1;min-width:0}',
+            '.ep-card-title{font-size:13.5px;font-weight:600;color:#e8e8ea}',
+            '.ep-card-id{font-size:11.5px;color:rgba(255,255,255,.5);',
+            "  font-family:'Courier New',monospace;margin-top:2px}",
+            '.ep-card-badge{flex:none;font-size:11px;padding:3px 9px;border-radius:999px;',
+            '  background:rgba(79,195,247,.18);color:#4fc3f7}',
+            '.ep-card.hint{border-style:dashed;border-color:rgba(255,255,255,.22);',
+            '  background:rgba(255,255,255,.03)}',
+            '.ep-card.hint .ep-card-title{color:rgba(255,255,255,.55);font-weight:500}'
         ].join('\n');
         document.head.appendChild(s);
     }
@@ -178,6 +200,60 @@
         }
     }
 
+    /**
+     * 编辑器内的卡片渲染（注册给 Vditor 的 customRenders）。
+     * render(el, vditor) 的 el 是 `<pre class="vditor-wysiwyg__pre">`（wysiwyg 模式下渲染后的预览层），
+     * 直接把它的内容换成卡片即可 —— 源码仍保留在 Vditor 内部，点击后仍可回到源码编辑。
+     *
+     * 注意：只处理 language === 'embed'，其它语言（js/python/excalidraw…）返回 undefined，
+     * Vditor 会走它自己的代码高亮，不影响既有文章里的代码块。
+     */
+    function cardRender(el, v) {
+        if (!el || el.tagName !== 'PRE') return;
+
+        var code = el.querySelector('code');
+        var cls = code ? (code.className || '') : '';
+        var lm = cls.match(/language-([\w-]+)/);
+        if (!lm || lm[1] !== 'embed') return;
+
+        var stored = code.textContent || '';
+        // 兼容一行式（语言行带声明）：源码文本为空但有代码块标题时，从标题里取
+        if (!stored.trim()) {
+            var holder = el.parentElement;
+            if (holder) {
+                var titleEl = holder.querySelector('.vditor-wysiwyg__block[data-type=code-block] .vditor-wysiwyg__preview code');
+                if (titleEl && titleEl.textContent) stored = titleEl.textContent;
+            }
+        }
+
+        var conf = parseEmbed(stored);
+
+        function paint(node) { el.innerHTML = ''; el.appendChild(node); }
+
+        if (!conf) {
+            var warn = document.createElement('div');
+            warn.className = 'ep-card hint';
+            warn.innerHTML = '<div class="ep-card-icon">⚠️</div><div class="ep-card-body">' +
+                '<div class="ep-card-title">内嵌块未指定画布</div>' +
+                '<div class="ep-card-id">点击本块可编辑源码，或在工具栏点「插入画布」</div></div>';
+            paint(warn);
+            return;
+        }
+
+        var isMap = conf.kind === 'map';
+        var card = document.createElement('div');
+        card.className = 'ep-card';
+        card.title = '点两下可编辑源码';
+        card.innerHTML = '<div class="ep-card-icon">' + (isMap ? '🧠' : '🎨') + '</div>' +
+            '<div class="ep-card-body">' +
+            '<div class="ep-card-title">' + (isMap ? '思维导图' : '白板') +
+            (conf.caption ? ' · ' + esc(conf.caption) : '') + '</div>' +
+            '<div class="ep-card-id">' + esc(conf.id) + (conf.height ? '  ·  高 ' + conf.height + 'px' : '') + '</div>' +
+            '</div>' +
+            '<div class="ep-card-badge">内嵌</div>';
+        paint(card);
+    }
+
     function toast(msg, ms) {
         var t = document.createElement('div');
         t.className = 'ep-toast';
@@ -188,7 +264,9 @@
 
     function insert(vd, k, id) {
         if (!id) return;
-        var block = '```embed ' + k + ':' + id + '\n```\n';
+        // 注意：声明必须放在「内容行」。若写成 ```embed map:xxx（语言行带参数），
+        // Vditor 会把语言行之后的内容当作代码块标题，getValue() 往返时 id 会丢失。
+        var block = '```embed\n' + k + ':' + id + '\n```\n';
         if (vd && typeof vd.insertValue === 'function') {
             try { vd.insertValue(block); } catch (e) { /* 忽略 */ }
         }
@@ -246,6 +324,8 @@
         close: close,
         insert: insert,
         bindToolbar: bindToolbar,
-        setVditor: function (vd) { activeVditor = vd; }
+        setVditor: function (vd) { activeVditor = vd; },
+        /** 注册给 Vditor 的 customRenders，让内嵌块在编辑器里显示为卡片 */
+        customRenders: [{ language: 'embed', render: cardRender }]
     };
 })();

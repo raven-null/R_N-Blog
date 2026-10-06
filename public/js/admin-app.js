@@ -996,6 +996,8 @@
                     '|','undo','redo',
                     {name:'more',toolbar:['code-theme','content-theme','export','help']}
                 ],
+                // 内嵌画布块在编辑器内显示为卡片（逻辑在 /js/embed-picker.js）
+                customRenders: window.EmbedPicker ? window.EmbedPicker.customRenders : [],
                 upload:{
                     accept:'image/*',
                     multiple:true,

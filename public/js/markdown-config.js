@@ -46,30 +46,52 @@
     var ID_ALLOWED = /[^A-Za-z0-9_.\u4e00-\u9fa5-]/g;
 
     /**
-     * 解析内嵌块语法。
-     *   ```embed board:wb-abc123
-     *   ```embed map:mm-xyz789 :h=520 :caption="登录流程"
+     * 解析内嵌块声明。
      *
-     * 也兼容历史写法（lang 直接是画布 id，无 kind 前缀）——由调用方区分。
+     * 推荐写法（Vditor 往返无损）：语言行只写 embed，声明放内容行
+     *     ```embed
+     *     map:mm-xyz789 :h=520 :caption="登录流程"
+     *     ```
+     *
+     * 也兼容一行式（```embed map:xxx）——注意 Vditor 会把语言行之后的部分当
+     * 代码块标题而非内容，导致 getValue() 往返时丢失，故不作为写入格式。
+     *
      * 返回 null 表示不是内嵌块。
      */
     function parseEmbed(raw) {
         var text = String(raw || '').replace(/\r/g, '').trim();
-        var m = text.match(/^(board|map)\s*:\s*([^\s:]+)([\s\S]*)$/);
+        if (!text) return null;
+
+        var kindM = text.match(/^(board|map)\s*:/);
+        var rest;
+        if (kindM) {
+            // 内容行写法：整段就是声明
+            rest = text;
+        } else {
+            // 兼容旧的一行式：首词是 embed，其余是声明（参数在同一个 lang 里）
+            var sp = text.search(/\s/);
+            var first = sp < 0 ? text : text.slice(0, sp);
+            if (first !== 'embed') return null;
+            rest = sp < 0 ? '' : text.slice(sp + 1).trim();
+        }
+
+        var m = rest.match(/^(board|map)\s*:\s*([^\s:]+)([\s\S]*)$/);
         if (!m) return null;
+
         var kind = m[1];
         var id = String(m[2] || '').replace(ID_ALLOWED, '').slice(0, 64);
         if (!id) return null;
-        var rest = m[3] || '';
+
+        var tail = m[3] || '';
         var conf = { kind: kind, id: id, height: 0, caption: '', title: '' };
-        var h = rest.match(/:h=(\d{2,4})/);
+        var h = tail.match(/:h=(\d{2,4})/);
         if (h) {
             var n = parseInt(h[1], 10);
             if (n >= 120 && n <= 2000) conf.height = n;
         }
-        var cap = rest.match(/:caption="([^"]*)"/);
+        var cap = tail.match(/:caption="([^"]*)"/);
         if (cap) conf.caption = cap[1];
-        var ttl = rest.match(/:title="([^"]*)"/);
+        var ttl = tail.match(/:title="([^"]*)"/);
         if (ttl) conf.title = ttl[1];
         return conf;
     }
