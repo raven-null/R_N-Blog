@@ -1,0 +1,162 @@
+/**
+ * 移动端基线（v1.0.0）
+ *
+ * 定位：responsive.css 负责「任意宽度都不横向溢出」的兜底；本文件负责「触摸设备的
+ * 行为基线」——两件事互不重叠，所以分成两个文件，本文件在 responsive.css 之后加载。
+ *
+ * 内容分组：
+ *   1) 触摸基础件（tap 高亮 / 字号自适应 / 过度滚动 / 手势归属）
+ *   2) iOS 表单控件 ≥16px（避免聚焦时整页被强制放大且不缩回）
+ *   3) 安全区（刘海与 home indicator）——前提是视口已声明 viewport-fit=cover
+ *   4) 文章页超宽表格 / 长代码行的横向查看能力
+ *
+ * 引入方式：放在各页面 head 末尾（所有页面样式之后），保证同特异性时优先生效。
+ * 只作用于触屏 / 窄屏，桌面端行为完全不变。
+ */
+
+/* ============ 1. 触摸基础件 ============ */
+
+/* 横屏时不因列表内容自动放大字号 */
+html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+}
+
+/* 去掉安卓 Chrome 的灰蓝点击高亮块（它与玻璃质感冲突） */
+* {
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* 页面级：禁止下拉刷新 / 橡皮筋回弹，更接近原生应用手感 */
+html {
+    overscroll-behavior-y: none;
+}
+
+/* 浮层 / 抽屉 / 灯箱：内部滚到底时不把位移传给背后的页面 */
+.tags-dropdown,
+.search-dropdown,
+.toc-sidebar-inner,
+.toc-list-wrapper,
+.chat-messages,
+.gallery-tag-float-panel,
+.gallery-lightbox,
+.note-viewer,
+.note-viewer-mask,
+.image-picker-list,
+#fpDrawer .fp-body,
+.admin-lightbox,
+.ee-side,
+.vditor-content {
+    overscroll-behavior: contain;
+}
+
+/* 首页筛选条：只接管横向手势，纵向留给页面（否则在它上面上下滑会失效） */
+.nav-links {
+    touch-action: pan-x;
+}
+
+/* 可横滑的正文块：允许纵横双向，避免与纵向滚动打架 */
+.article-content pre,
+.article-content table,
+.article-content .code-block {
+    touch-action: pan-x pan-y;
+}
+
+/* ============ 2. iOS 表单控件 ≥16px ============ */
+/* iOS Safari 在 computed font-size < 16px 的控件聚焦时，会把整页放大到约 1.2 倍，
+   且收起键盘后不会自动缩回——固定高度布局还会被顶出视口。
+   只在触屏 / 窄屏生效，桌面端字号保持不变。 */
+@media (pointer: coarse), (max-width: 820px) {
+
+    input,
+    textarea,
+    select,
+    .comment-form input,
+    .comment-form textarea,
+    .search-dropdown input,
+    .toc-search-input,
+    .tags-dropdown input {
+        font-size: 16px !important;
+    }
+}
+
+/* ============ 3. 安全区（刘海 / home indicator） ============ */
+/* 前提：各页面 <meta name="viewport"> 带 viewport-fit=cover，否则 env() 恒为 0。 */
+:root {
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left: env(safe-area-inset-left, 0px);
+}
+
+/* 右下角悬浮按钮栈：让开手势条与刘海 */
+.theme-toggle,
+.back-to-top,
+.gallery-tag-btn {
+    right: max(16px, var(--safe-right));
+}
+
+/* 聊天入口按钮：让开手势条（.chat-window 面板本身另有全屏/收窄规则，不动） */
+.chat-container {
+    right: max(24px, var(--safe-right));
+    bottom: calc(80px + var(--safe-bottom));
+}
+
+/* 后台：吸顶导航、底部 tab 栏、侧边抽屉 */
+.admin-body {
+    padding-left: var(--safe-left);
+    padding-right: var(--safe-right);
+}
+
+.mobile-tabs {
+    padding-bottom: var(--safe-bottom);
+}
+
+#fpDrawer {
+    padding-right: var(--safe-right);
+}
+
+/* 首页页脚与图库灯箱底部操作条 */
+.footer {
+    padding-bottom: calc(40px + var(--safe-bottom));
+}
+
+.gallery-lightbox-actions {
+    bottom: calc(24px + var(--safe-bottom));
+}
+
+.gallery-lightbox-close {
+    top: calc(20px + var(--safe-top));
+}
+
+/* ============ 4. 超宽表格 / 长代码行的横向查看 ============ */
+/* 原设计是「桌面端隐藏滚动条 + 按住左右拖动」，但拖拽实现原本只绑了鼠标事件，
+   而 scrollbar.css 又用 overflow-x: hidden !important 禁止了横向滚动 —— 触屏设备
+   上超宽表格与长代码行没有任何手段看到右半部分。此处为触屏恢复横向滚动能力。 */
+@media (hover: none), (pointer: coarse) {
+
+    .article-content pre,
+    .article-content table {
+        overflow-x: auto !important;
+        scrollbar-width: thin !important;
+        -ms-overflow-style: auto !important;
+    }
+
+    .article-content pre::-webkit-scrollbar,
+    .article-content table::-webkit-scrollbar {
+        display: block !important;
+        height: 6px !important;
+        width: 0 !important;
+    }
+
+    .article-content pre::-webkit-scrollbar-track,
+    .article-content table::-webkit-scrollbar-track {
+        background: transparent !important;
+    }
+
+    .article-content pre::-webkit-scrollbar-thumb,
+    .article-content table::-webkit-scrollbar-thumb {
+        background: rgba(128, 128, 128, .45) !important;
+        border-radius: 99px !important;
+    }
+}

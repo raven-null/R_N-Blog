@@ -1563,8 +1563,15 @@ const ArticleApp = {
             var startX = 0;
             var startScroll = 0;
             var moved = false;
+            var clickCapture = false;
 
-            document.addEventListener('mousedown', function (e) {
+            // 用 pointer 事件而非鼠标事件：原实现只监听 mousedown/mousemove，
+            // 触屏设备上完全不触发（触摸既不派发 mousemove，也无法「按住拖动」）。
+            // 触摸走原生横向滚动（见 css/mobile.css 为触屏恢复的 overflow-x: auto），
+            // 这里的拖拽只服务鼠标 / 触控笔，避免抢走纵向滚动手势。
+            document.addEventListener('pointerdown', function (e) {
+                if (e.pointerType === 'touch') return;
+                if (e.button !== undefined && e.button !== 0) return;
                 // 命中所有可横向滚动的内容块（后续如需支持更多元素，加进选择器即可）
                 var t = e.target && e.target.closest
                     ? e.target.closest('.article-content table, .article-content pre')
@@ -1575,9 +1582,13 @@ const ArticleApp = {
                 startX = e.clientX;
                 startScroll = t.scrollLeft;
                 moved = false;
+                clickCapture = false;
+                if (t.setPointerCapture) {
+                    try { t.setPointerCapture(e.pointerId); } catch (err) { /* 忽略：捕获失败不影响拖动 */ }
+                }
             });
 
-            document.addEventListener('mousemove', function (e) {
+            document.addEventListener('pointermove', function (e) {
                 if (!scroller) return;
                 var dx = e.clientX - startX;
                 if (!moved) {
@@ -1587,22 +1598,31 @@ const ArticleApp = {
                     if (window.getSelection) window.getSelection().removeAllRanges();
                 }
                 scroller.scrollLeft = startScroll - dx;
+                e.preventDefault();
             });
 
             function endDrag() {
-                if (scroller) scroller.classList.remove('dragging');
+                if (!scroller) {
+                    moved = false;
+                    clickCapture = false;
+                    return;
+                }
+                scroller.classList.remove('dragging');
+                // 拖拽后的第一次 click 视为误触，拦掉（只拦一次）
+                clickCapture = moved;
                 scroller = null;
+                moved = false;
             }
 
-            document.addEventListener('mouseup', endDrag);
-            document.addEventListener('mouseleave', endDrag);
+            document.addEventListener('pointerup', endDrag);
+            document.addEventListener('pointercancel', endDrag);
 
             // 拖拽结束后阻止误触块内的链接
             document.addEventListener('click', function (e) {
-                if (moved) {
+                if (clickCapture) {
                     e.preventDefault();
                     e.stopPropagation();
-                    moved = false;
+                    clickCapture = false;
                 }
             }, true);
         })();

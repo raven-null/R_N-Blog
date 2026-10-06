@@ -34,9 +34,14 @@ body {
 }
 
 /* 首页固定头部布局：body 禁止滚动，由 .scroll-area 内部滚动 */
+/* 高度用 dvh：100vh 在移动浏览器里等于「地址栏收起后」的大高度，而 body 不滚动、
+   地址栏永远不会收起，会导致底部约 50–90px（末屏卡片 + 页脚）恒定为不可达区域。
+   --app-h 由 index.html 的 visualViewport 脚本写入，兜底旧 iOS（<15.4）。 */
 body.home-layout {
     overflow: hidden;
     height: 100vh;
+    height: 100dvh;
+    height: var(--app-h, 100dvh);
 }
 
 
@@ -48,8 +53,11 @@ body.home-layout {
     z-index: 1;
     background: var(--bg-primary);
     height: 100vh;
+    height: 100dvh;
+    height: var(--app-h, 100dvh);
     display: flex;
     flex-direction: column;
+    min-height: 0;
     overflow: hidden;
     transform: translateY(60px);
     opacity: 0;
@@ -1670,15 +1678,31 @@ body.view-gallery-active .gallery-tag-btn {
         margin-bottom: 32px;
     }
 
+    /* 窄屏原本直接 display:none，导致「全部 / 文章 / 白板 / 随记 / 导图」五个
+       形态筛选入口在手机上完全消失——而标签面板走的是另一条互斥路径，替代不了。
+       .nav-links 本身已具备 overflow-x: auto + 隐藏滚动条，这里改成横向滚动即可。 */
     .nav-links {
-        display: none;
+        display: flex;
+        flex: 1;
+        min-width: 0;
+        gap: 16px;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .nav-link {
+        flex: none;
+    }
+
+    .nav-tools {
+        flex: none;
+        gap: 8px;
     }
 
     .nav-inner {
         justify-content: flex-end;
         height: 52px;
         padding: 0 12px;
-        gap: 8px;
+        gap: 12px;
     }
 
     .nav-search-btn {

@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>我的博客</title>
     <link rel="icon" id="siteFavicon" href="/images/Default/web-logo.webp" type="image/webp">
     <link rel="apple-touch-icon" href="/images/Default/web-logo.webp">
@@ -19,6 +19,32 @@
     <script src="js/vendor/anime.umd.min.js" defer></script>
     <link rel="stylesheet" href="/css/scrollbar.css?v=1.0.1">
     <link rel="stylesheet" href="/css/responsive.css?v=1.0.0">
+    <link rel="stylesheet" href="/css/mobile.css?v=1.0.0">
+
+    <!-- 真实视口高度写入 --app-h（兜底 iOS < 15.4 不支持 dvh 的情况）
+         移动浏览器里 100dvh 已能正确反映地址栏，但老引擎只能用 visualViewport 量。
+         必须尽早执行，避免首帧先按错误高度布局。 -->
+    <script>
+        (function () {
+            var raf = 0;
+            function syncAppHeight() {
+                var vv = window.visualViewport;
+                var h = (vv && vv.height) || window.innerHeight || 0;
+                if (h > 0) document.documentElement.style.setProperty('--app-h', Math.round(h) + 'px');
+            }
+            function schedule() {
+                if (raf) return;
+                raf = requestAnimationFrame(function () { raf = 0; syncAppHeight(); });
+            }
+            syncAppHeight();
+            if (window.visualViewport) {
+                window.visualViewport.addEventListener('resize', schedule, { passive: true });
+                window.visualViewport.addEventListener('scroll', schedule, { passive: true });
+            }
+            window.addEventListener('resize', schedule, { passive: true });
+            window.addEventListener('orientationchange', function () { setTimeout(syncAppHeight, 120); });
+        })();
+    </script>
 </head>
 
 <body class="home-layout">
@@ -691,15 +717,25 @@
         });
 
         // Override renderPosts to re-init card observer
-        const originalRenderPosts = BlogApp.renderPosts.bind(BlogApp);
-        BlogApp.renderPosts = function () {
-            originalRenderPosts();
-            setTimeout(() => {
-                document.querySelectorAll('.card:not(.visible)').forEach(card => {
-                    if (window._cardObserver) window._cardObserver.observe(card);
-                });
-            }, 50);
-        };
+        // 注意：这里是顶层语句，本脚本块在 <head> 之后同步执行，而 app.js 带 defer，
+        // 因此 this 时刻 window.BlogApp 可能尚未挂载（app.js 尚未执行 / 请求失败 / 被缓存策略
+        // 拦住）。原先直接写 BlogApp.xxx 会抛 ReferenceError，并让整个内联脚本块之后的代码
+        // 全部不执行。改为在 DOMContentLoaded 上挂载 + 存在性守卫。
+        document.addEventListener('DOMContentLoaded', function () {
+            if (typeof BlogApp === 'undefined' || !BlogApp || typeof BlogApp.renderPosts !== 'function') {
+                console.warn('[index] BlogApp 未就绪，跳过 renderPosts 覆盖；请确认 js/app.js 已成功加载');
+                return;
+            }
+            const originalRenderPosts = BlogApp.renderPosts.bind(BlogApp);
+            BlogApp.renderPosts = function () {
+                originalRenderPosts();
+                setTimeout(() => {
+                    document.querySelectorAll('.card:not(.visible)').forEach(card => {
+                        if (window._cardObserver) window._cardObserver.observe(card);
+                    });
+                }, 50);
+            };
+        });
 
     </script>
 
