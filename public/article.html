@@ -750,6 +750,65 @@
             color: var(--text-muted);
             font-size: 14px;
         }
+
+        /* ===== 内嵌画布块（```embed board:/map: 与历史 ```excalidraw）=====
+           由 markdown-config.js 的 renderer.code 产出占位容器，
+           再经 article-app.js 的 mountEmbeds() 挂载真实画布。 */
+        .article-content .embed-figure {
+            margin: 22px 0;
+        }
+        .article-content .embed-block {
+            position: relative;
+            height: 480px;                    /* 默认高度；单块可用 :h= 覆盖（内联样式优先） */
+            min-height: 260px;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            background: #fff;                 /* 画布为浅色底，避免暗色主题下与画布反差过大 */
+        }
+        .article-content .embed-caption {
+            margin-top: 8px;
+            text-align: center;
+            font-size: 12.5px;
+            color: var(--text-muted);
+        }
+        .article-content .embed-loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            background: var(--bg-tertiary);
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+        .article-content .embed-error {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            text-align: center;
+            font-size: 13px;
+            line-height: 1.7;
+            background: var(--bg-tertiary);
+            color: var(--text-muted);
+        }
+        .article-content .embed-block .excalidraw {
+            height: 100%;
+        }
+        /* 内嵌导图：复用现成导图页（iframe），与白板内嵌统一外观 */
+        .article-content .embed-mindmap-frame {
+            display: block;
+            width: 100%;
+            height: 100%;
+            border: 0;
+            overscroll-behavior: contain;     /* 内层滚动到底不带动页面 */
+        }
+        /* 手机：默认高度改为 60vh（480px 在窄屏偏高），需要 !important 压过 :h= 的内联样式 */
+        @media (max-width: 773px) {
+            .article-content .embed-block {
+                height: 60vh !important;
+            }
+        }
         /* 纯白板文章（type=whiteboard）：整页白板、无目录 */
         body.no-toc .toc-sidebar { display: none !important; }
         .article-content .article-whiteboard {
@@ -2007,13 +2066,13 @@
 
     <!-- JavaScript -->
     <script src="js/theme.js?v=3.13.6" defer></script>
-    <script src="js/markdown-config.js?v=1.0.0" defer></script>
+    <script src="js/markdown-config.js?v=1.1.0" defer></script>
     <script src="js/markdown.js?v=3.14.2" defer></script>
     <script src="js/chat.js?v=3.16.1" defer></script>
     <script src="js/reader.js?v=3.13.7" defer></script>
     <script src="js/animations.js?v=3.14.0" defer></script>
 
-    <script src="js/article-app.js?v=1.4.6" defer></script>
+    <script src="js/article-app.js?v=1.4.7" defer></script>
 
 </body>
 </html>

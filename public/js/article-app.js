@@ -260,7 +260,7 @@ const ArticleApp = {
                     this.enhanceImages(wrap);
                     requestAnimationFrame(() => this.highlightVisibleBlocks(wrap));
                     this.highlightRemainingBlocks(wrap);
-                    this.mountExcalidrawEmbeds(wrap);
+                    this.mountEmbeds(wrap);
                     requestAnimationFrame(() => this.generateTableOfContents());
                 } finally {
                     st.loading = false;
@@ -440,7 +440,7 @@ const ArticleApp = {
                         if (sections.length === 0) {
                             // 全部渲染完成后：高亮剩余代码块 + 挂载 Excalidraw 内嵌 + 生成完整目录
                             this.highlightRemainingBlocks(content);
-                            this.mountExcalidrawEmbeds(content);
+                            this.mountEmbeds(content);
                             requestAnimationFrame(() => this.generateTableOfContents());
                             return;
                         }
@@ -459,7 +459,7 @@ const ArticleApp = {
                     }
                 } else {
                     // 短文无增量渲染：挂载 Excalidraw 内嵌，直接生成目录
-                    this.mountExcalidrawEmbeds(content);
+                    this.mountEmbeds(content);
                     requestAnimationFrame(() => this.generateTableOfContents());
                 }
             },
@@ -630,30 +630,71 @@ const ArticleApp = {
             },
 
             // 画布舞台控件：信息/评论抽屉/画廊导航/闲置自动隐藏
-            mountExcalidrawEmbeds(container) {
-                let found = 0;
+            // 统一内嵌块挂载：把解析层产出的占位容器换成真实画布
+            //   新语法（markdown-config.js 的 renderer.code 产出）：
+            //     <figure class="embed-figure"><div class="embed-block" data-embed="board:wb-xxx" data-h="480">
+            //   历史写法（兼容）：```excalidraw 代码块 → 这里同样归一成 embed-block 再处理
+            // 挂载语义只在这一层，解析层（含 Worker）只负责产出占位 —— 两条管线行为因此一致。
+            mountEmbeds(container) {
+                if (!container) return;
+                let boards = 0;
+                let maps = 0;
+
+                // 历史写法归一：```excalidraw 代码块 → 统一容器
                 container.querySelectorAll('.code-block code.language-excalidraw').forEach(code => {
-                    const id = (code.textContent || '').trim();
                     const block = code.closest('.code-block');
-                    if (!/^[A-Za-z0-9_-]{1,64}$/.test(id)) {
-                        if (block) {
-                            const err = document.createElement('div');
-                            err.className = 'excalidraw-embed excalidraw-error';
-                            err.textContent = '白板 ID 无效：' + (id || '（空）');
-                            block.replaceWith(err);
-                        }
+                    if (!block) return;
+                    const id = (code.textContent || '').trim();
+                    const div = document.createElement('div');
+                    div.className = 'embed-block';
+                    div.dataset.embed = 'board:' + id;
+                    div.dataset.kind = 'board';
+                    div.dataset.id = id;
+                    const fig = document.createElement('figure');
+                    fig.className = 'embed-figure';
+                    fig.appendChild(div);
+                    block.replaceWith(fig);
+                });
+
+                container.querySelectorAll('.embed-block[data-embed]').forEach(el => {
+                    const raw = String(el.dataset.embed || '');
+                    const m = raw.match(/^(board|map)\s*:\s*(.+)$/);
+                    const kind = m ? m[1] : (el.dataset.kind || 'board');
+                    const id = (m ? m[2] : (el.dataset.id || '')).trim();
+
+                    if (!/^[A-Za-z0-9_.\u4e00-\u9fa5-]{1,64}$/.test(id)) {
+                        el.classList.add('embed-error');
+                        el.textContent = (kind === 'map' ? '思维导图' : '白板') + ' ID 无效：' + (id || '（空）');
                         return;
                     }
-                    const div = document.createElement('div');
-                    div.className = 'excalidraw-embed';
-                    div.dataset.excalidraw = '';
-                    div.dataset.note = id;
-                    div.dataset.mode = 'view';
-                    div.textContent = '白板加载中…';
-                    if (block) block.replaceWith(div);
-                    found++;
+
+                    const h = parseInt(el.dataset.h || '0', 10);
+                    if (h >= 120) el.style.height = h + 'px';
+
+                    if (kind === 'map') {
+                        // 复用现成导图页（内嵌态由 mindmap.html 的 data-embedded 处理）
+                        el.textContent = '';
+                        const frame = document.createElement('iframe');
+                        frame.className = 'embed-mindmap-frame';
+                        frame.title = '思维导图';
+                        frame.setAttribute('loading', 'lazy');
+                        frame.src = '/mindmap.html?note=' + encodeURIComponent(id);
+                        el.appendChild(frame);
+                        el.dataset.mounted = '1';
+                        maps++;
+                    } else {
+                        el.dataset.excalidraw = '';
+                        el.dataset.note = id;
+                        el.dataset.mode = 'view';
+                        // 只在尚未挂载时写加载文案：该函数在分章场景会对同一容器重复调用
+                        if (!el.querySelector('.excalidraw') && !el.querySelector('.embed-loading')) {
+                            el.innerHTML = '<div class="embed-loading">白板加载中…</div>';
+                        }
+                        boards++;
+                    }
                 });
-                if (found) this.loadExcalidrawBundle();
+
+                if (boards) this.loadExcalidrawBundle();
             },
 
             // 懒加载 Excalidraw bundle：已加载则直接重扫容器；加载中则等待 onload
@@ -671,7 +712,7 @@ const ArticleApp = {
                 s.dataset.excalidrawBundle = '1';
                 s.onload = () => { if (window.ExcalidrawMount) window.ExcalidrawMount(); };
                 s.onerror = () => {
-                    document.querySelectorAll('.article-content .excalidraw-embed[data-excalidraw]').forEach(el => {
+                    document.querySelectorAll('.article-content .embed-block[data-excalidraw]').forEach(el => {
                         el.textContent = '白板组件加载失败，请刷新重试';
                     });
                 };
@@ -1301,7 +1342,12 @@ const ArticleApp = {
         // 页面加载完成后初始化
         document.addEventListener('DOMContentLoaded', () => {
             ArticleApp.init();
-            AIChat.init();
+            // chat.js 可能未加载或被拦截：不要因此中断整个初始化流程
+            if (window.AIChat && typeof AIChat.init === 'function') {
+                AIChat.init();
+            } else {
+                console.warn('[article-app] AIChat 未加载，跳过聊天初始化');
+            }
 
             // 侧边栏主题切换按钮
             const sidebarThemeBtn = document.getElementById('sidebarThemeToggle');
@@ -1424,8 +1470,11 @@ const ArticleApp = {
         });
 
         // 滚轮缩放图片
+        // 注意：这里在顶层执行，元素缺失会抛 TypeError 并中断本文件后续所有代码
+        // （包括末尾把 ArticleApp 暴露到 window）。故加存在性守卫。
         let currentScale = 1;
-        document.getElementById('lightboxOverlay').addEventListener('wheel', (e) => {
+        const lightboxOverlay = document.getElementById('lightboxOverlay');
+        if (lightboxOverlay) lightboxOverlay.addEventListener('wheel', (e) => {
             e.preventDefault();
             const img = document.getElementById('lightboxImg');
 
@@ -1439,10 +1488,12 @@ const ArticleApp = {
         });
 
         // 拖动已缩放的图片
+        // 同为顶层执行：元素缺失会中断后续代码，加存在性守卫
         let isDragging = false;
         let startX, startY, scrollLeft, scrollTop;
 
-        document.getElementById('lightboxImg').addEventListener('mousedown', (e) => {
+        const lightboxImg = document.getElementById('lightboxImg');
+        if (lightboxImg) lightboxImg.addEventListener('mousedown', (e) => {
             if (currentScale <= 1) return;
             isDragging = true;
             startX = e.clientX;
@@ -1627,3 +1678,12 @@ const ArticleApp = {
             }, true);
         })();
     
+
+// 暴露到全局：内嵌块挂载器（mountEmbeds）等能力需要可被外部复用与自动化测试调用。
+// 此前 ArticleApp 是顶层 const 未挂 window，导致无法从控制台/测试脚本验证挂载逻辑。
+try {
+    window.ArticleApp = ArticleApp;
+} catch (e) {
+    // 暴露失败不应影响页面主流程
+    if (window.console && console.warn) console.warn('[article-app] 暴露 ArticleApp 失败:', e);
+}
