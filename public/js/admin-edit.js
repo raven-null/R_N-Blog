@@ -798,12 +798,19 @@
         var body = await collect();
         if (!body.title) { toast('请填写标题', 'error'); return false; }
         if (docType !== 'whiteboard' && docType !== 'mindmap' && !body.content) { toast('请填写正文内容', 'error'); return false; }
-        // 画布类内容：先把 iframe 里的改动落盘，再保存文章元数据
-        if (docType === 'mindmap') {
-            var mapOk = await window.eeSaveMindmap();
-            if (!mapOk) {
-                toast('导图保存未完成（口令 / 网络 / 未登录？），文章元信息已保存', 'error');
-            }
+        // 先把正文里引用的所有内嵌画布落盘：
+        // 内嵌块的真实内容在画布自己的 store（excalidraw / mindmaps），与文章正文是两套存储。
+        // 若画布保存失败仍提交文章，就会出现「文章存了、画布改动丢了」——故此处必须阻断。
+        var flush = { ok: true, failed: [] };
+        if (window.EmbedPicker && typeof window.EmbedPicker.flushEmbeds === 'function') {
+            try {
+                flush = await window.EmbedPicker.flushEmbeds(vditor);
+            } catch (e) { flush = { ok: true, failed: [] }; }
+        }
+        if (!flush.ok) {
+            toast('引用的画布保存失败：' + flush.failed.join('、') +
+                '。文章未提交，请处理后重试（常见原因：画布设有编辑口令未通过、网络中断）', 'error');
+            return false;
         }
         var btn = $('eeSaveBtn');
         btn.disabled = true;

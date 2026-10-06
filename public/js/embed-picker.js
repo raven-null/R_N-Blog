@@ -254,6 +254,110 @@
         paint(card);
     }
 
+    /**
+     * 把正文里引用的所有画布先落盘。
+     *
+     * 为什么必须做：内嵌块的真实内容存在画布自己的 store（excalidraw / mindmaps），
+     * 与文章正文是两套存储。若文章先提交而画布改动未落盘，就会「文章存了、画布丢了」。
+     *
+     * 依据的钩子（由画布编辑器暴露给宿主页）：
+     *   __excalidrawSave(showTip) -> Promise<boolean>   __excalidrawDirty() -> boolean
+     *   __mindmapSave()          -> Promise<boolean>   __mindmapDirty()    -> boolean
+     *
+     * 返回 { ok, failed: [] }。只有「找到编辑器且保存被拒」才算失败；
+     * 未挂载（元素不存在）视为无需保存，不阻断文章提交。
+     */
+    /**
+     * 画布 id 形状校验。
+     * 画布 id 由前端生成（wb- / mm- 前缀，含 base36 随机段），据此过滤掉
+     * 普通正文里恰好写成 `board: 某某` 的句子，避免误触发画布保存。
+     */
+    function looksLikeCanvasId(id) {
+        return /^(?:wb|mm|map)-[A-Za-z0-9_-]{3,}$/.test(id) || /^(?:wb|mm)-[A-Za-z0-9_-]+$/.test(id);
+    }
+
+    async function flushEmbeds(vd) {
+        var md = '';
+        try { md = vd && typeof vd.getValue === 'function' ? vd.getValue() : ''; } catch (e) { md = ''; }
+        if (!md) return { ok: true, failed: [] };
+
+        // 从正文提取全部内嵌块（正文是权威来源：画布可能未挂载，但引用一定在正文里）
+        // 三种写法（允许行首有 ``` 反引号与 ≤4 空格缩进）：
+        //   1) 内容行         ```embed + 次行 board:xxx   （当前写入格式）
+        //   2) 代码块语言行   ```embed board:xxx          （历史语法）
+        //   3) 代码块语言行   ```excalidraw + 次行 id     （历史语法）
+        // 再叠加 looksLikeCanvasId 形状校验，避免把普通正文里的「board:」当成引用。
+        var patterns = [
+            /^[ \t]{0,4}(?:`{3,})?(?:board|map)\s*:\s*([A-Za-z0-9_.\u4e00-\u9fa5-]{1,64})/gm,
+            /^[ \t]{0,4}(?:`{3,})?embed[ \t]+(?:board|map)\s*:\s*([A-Za-z0-9_.\u4e00-\u9fa5-]{1,64})/gm,
+            /^[ \t]{0,4}(?:`{3,})?(?:excalidraw|mindmap)[ \t]*\n[ \t]{0,4}([A-Za-z0-9_.\u4e00-\u9fa5-]{1,64})/gm
+        ];
+        var blocks = [], seen = {};
+        for (var pi = 0; pi < patterns.length; pi++) {
+            patterns[pi].lastIndex = 0;
+            var mm;
+            while ((mm = patterns[pi].exec(md))) {
+                var cid = mm[1];
+                if (!cid || seen[cid] || !looksLikeCanvasId(cid)) continue;
+                seen[cid] = 1;
+                blocks.push({ kind: cid.indexOf('mm-') === 0 ? 'map' : 'board', id: cid });
+            }
+        }
+        if (!blocks.length) return { ok: true, failed: [] };
+
+        var failed = [];
+        for (var i = 0; i < blocks.length; i++) {
+            var b = blocks[i];
+            var w = findCanvasWindow(b.id, b.kind);
+            if (!w) continue; // 该画布未挂载在页面上：无改动需要落盘
+            var isMap = b.kind === 'map';
+            var saver = w[isMap ? '__mindmapSave' : '__excalidrawSave'];
+            var dirtyFn = w[isMap ? '__mindmapDirty' : '__excalidrawDirty'];
+            if (typeof saver !== 'function') continue;
+            try {
+                if (typeof dirtyFn === 'function' && !dirtyFn()) continue; // 无改动，避免多出新版本
+            } catch (e) { /* 忽略，继续尝试保存 */ }
+            var ok = false;
+            try {
+                // 白板的 save 接受 showTip 参数，宿主触发时不要弹它自己的提示
+                ok = isMap ? !!(await saver()) : !!(await saver(false));
+            } catch (e) {
+                ok = false;
+            }
+            if (!ok) failed.push(b.kind + ':' + b.id);
+        }
+        return { ok: failed.length === 0, failed: failed };
+    }
+
+    /** 找到承载指定画布的编辑器 iframe 的 contentWindow */
+    function findCanvasWindow(id, kind) {
+        if (!id) return null;
+        // 优先：按 kind 选对应容器的 iframe（后台编辑页 / 写文章页的挂载点）
+        var preferred = kind === 'map'
+            ? ['[id$="MapHost"] iframe', '#mmMapHost iframe', '#eeMindmapHost iframe']
+            : ['[id$="BoardHost"] iframe', '#wbBoardHost iframe', '#eeBoardHost iframe'];
+        // 兜底：任何 src 里带该画布 id 的 iframe（不限容器）
+        var fallbacks = ['iframe[src*="' + id + '"]'];
+
+        var groups = [preferred, fallbacks];
+        for (var g = 0; g < groups.length; g++) {
+            for (var s = 0; s < groups[g].length; s++) {
+                var list = null;
+                try { list = document.querySelectorAll(groups[g][s]); } catch (e) { list = null; }
+                if (!list || !list.length) continue;
+                for (var i = 0; i < list.length; i++) {
+                    try {
+                        var w = list[i].contentWindow;
+                        if (!w || !w.document) continue;
+                        if (w.document.readyState === 'uninitialized') continue;
+                        return w;
+                    } catch (e) { /* 跨域：跳过 */ }
+                }
+            }
+        }
+        return null;
+    }
+
     function toast(msg, ms) {
         var t = document.createElement('div');
         t.className = 'ep-toast';
@@ -325,6 +429,8 @@
         insert: insert,
         bindToolbar: bindToolbar,
         setVditor: function (vd) { activeVditor = vd; },
+        /** 把正文引用的所有画布先落盘（保存文章前调用，避免画布改动丢失） */
+        flushEmbeds: flushEmbeds,
         /** 注册给 Vditor 的 customRenders，让内嵌块在编辑器里显示为卡片 */
         customRenders: [{ language: 'embed', render: cardRender }]
     };

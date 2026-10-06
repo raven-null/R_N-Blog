@@ -447,6 +447,16 @@
             let image=document.getElementById('edImage').value.trim();
             if(!title){showToast('请填写文章标题','error');return}
             if(!content){showToast('请填写文章内容','error');return}
+            // 先把正文里引用的内嵌画布落盘：画布内容与文章正文是两套存储，
+            // 若画布保存失败仍提交文章，就会出现「文章存了、画布改动丢了」——故阻断提交。
+            if(window.EmbedPicker&&typeof window.EmbedPicker.flushEmbeds==='function'){
+                let flush={ok:true,failed:[]};
+                try{flush=await window.EmbedPicker.flushEmbeds(vditorInstance)}catch(e){flush={ok:true,failed:[]}}
+                if(!flush.ok){
+                    showToast('引用的画布保存失败：'+flush.failed.join('、')+'。文章未提交，请处理后重试','error');
+                    return;
+                }
+            }
             // 未设置封面图时：图库有图则随机选一张，图库空则报错
             if(!image){
                 const galleryRes=await apiFetch('action=images');
