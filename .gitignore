@@ -6,3 +6,6 @@ node_modules
 .env
 .DS_Store
 /dist
+
+# 接口调试时意外落盘的文章数据快照（11MB+，不该进仓库）
+.arts.json
