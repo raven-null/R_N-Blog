@@ -147,6 +147,7 @@
                 '|', 'list', 'ordered-list', 'check', 'outdent', 'indent',
                 '|', 'quote', 'line', 'code', 'inline-code', 'table',
                 '|', 'upload', 'edit-mode',
+                '|', { name: 'eeEmbedPick', tip: '插入白板 / 思维导图' },
                 '|', 'undo', 'redo',
                 { name: 'more', toolbar: ['code-theme', 'content-theme', 'export', 'help'] }
             ],
@@ -175,6 +176,11 @@
                 }
                 updateInfo();
                 fitEditor();
+                // 工具栏「插入画布」按钮：面板与逻辑在 /js/embed-picker.js（与写文章页共用）
+                if (window.EmbedPicker) {
+                    window.EmbedPicker.setVditor(vditor);
+                    window.EmbedPicker.bindToolbar(vditor);
+                }
             }
         });
         return vditor;
@@ -932,6 +938,7 @@
         load().then(function () { setTimeout(fitEditor, 120); });
     }
     window.addEventListener('resize', function () { setTimeout(fitEditor, 80); });
+
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
     else boot();
 })();

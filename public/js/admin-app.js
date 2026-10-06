@@ -992,6 +992,7 @@
                     '|','list','ordered-list','check','outdent','indent',
                     '|','quote','line','code','inline-code','table',
                     '|','upload','edit-mode',
+                    '|',{name:'eeEmbedPick',tip:'插入白板 / 思维导图'},
                     '|','undo','redo',
                     {name:'more',toolbar:['code-theme','content-theme','export','help']}
                 ],
@@ -1016,6 +1017,11 @@
                 after:()=>{
                     vditorReady=true;
                     switchEditorTheme(currentEditorTheme);
+                    // 工具栏「插入画布」按钮：面板与逻辑在 /js/embed-picker.js（与编辑页共用）
+                    if(window.EmbedPicker){
+                        window.EmbedPicker.setVditor(vditorInstance);
+                        window.EmbedPicker.bindToolbar(vditorInstance);
+                    }
                     if(!vditorResizeBound){
                         vditorResizeBound=true;
                         // 窗口/布局尺寸变化时让编辑器贴合剩余空间
