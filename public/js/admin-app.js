@@ -256,9 +256,13 @@
             if(!artSel.size){showToast('请先勾选文章','error');return}
             const ok=await showConfirm('确定删除选中的 '+artSel.size+' 篇？删除后不可恢复！','批量删除','删除');
             if(!ok)return;
-            for(const id of [...artSel]){await apiFetch('action=articles&id='+encodeURIComponent(id),{method:'DELETE'})}
-            showToast('已删除','success');
-            toggleArtBatch(false);loadArticles();notifyArticlesChanged();
+            // 原先忽略响应状态，接口失败也照样提示「已删除」；改为汇总真实结果
+            const ids=[...artSel];
+            const rs=await Promise.all(ids.map(id=>apiFetch('action=articles&id='+encodeURIComponent(id),{method:'DELETE'}).catch(()=>({status:'error'}))));
+            const okCount=rs.filter(r=>r&&r.status==='success').length;
+            const failCount=rs.length-okCount;
+            showToast(failCount?`${okCount} 篇删除成功，${failCount} 篇失败`:`已删除 ${okCount} 篇`,failCount?'error':'success');
+            toggleArtBatch(false);await loadArticles();notifyArticlesChanged();
         }
         // 卡片操作菜单
         function toggleArtMenu(e,id){
@@ -401,7 +405,7 @@
             const r=await apiFetch(`action=articles&id=${id}`,{method:'DELETE'});
             if(r.status==='success'){
                 showToast(r.removedBoard?`已删除（同时清理白板 ${r.removedBoard} 个数据项）`:isBoard?'已删除（该白板已不存在）':'已删除','success');
-                loadArticles();
+                await loadArticles(); // await 以便失败可被下面的 catch 感知，而不是静默丢失
                 notifyArticlesChanged();
             }else showToast(r.message||'删除失败','error');
         }
@@ -945,7 +949,7 @@
             const ok=await showConfirm('删除这条随记？','删除随记','删除');
             if(!ok)return;
             const r=await apiFetch('action=articles&id='+encodeURIComponent(id),{method:'DELETE'});
-            if(r.status==='success'){showToast('已删除','success');loadRecentNotes();notifyArticlesChanged()}
+            if(r.status==='success'){showToast('已删除','success');loadRecentNotes();await loadArticles();notifyArticlesChanged()}
             else showToast(r.message||'删除失败','error');
         }
 
@@ -1666,7 +1670,9 @@
             if(imgRes.status==='success'){
                 // 显示所有图片
                 allImageData=imgRes.data||[];
-                cachedImages=allImageData;
+                // 拷贝而非共享引用：两者原本指向同一数组，任何一处原地 splice 都会“碰巧”同步，
+                // 掩盖了漏改另一处的 bug（如 deletePickerImage 只改 cachedImages）。
+                cachedImages=allImageData.slice();
             }
             // 刷新图片标签名称（与标签管理的图片标签保持一致）
             await refreshImageTags(tagRes);
@@ -1950,9 +1956,8 @@
             const keys = Array.from(selectedImageKeys);
             
             for(const key of keys){
-                // 乐观删除
-                const idx=allImageData.findIndex(i=>i.key===key);
-                if(idx>=0)allImageData.splice(idx,1);
+                // 乐观删除（两处图片数据一起改）
+                removeImageFromCaches(key);
                 
                 // 后台同步
                 const r=await apiFetch(`action=images&key=${encodeURIComponent(key)}`,{method:'DELETE'});
@@ -1965,7 +1970,7 @@
 
             selectedImageKeys.clear();
             exitBatchMode();
-            renderPanels();
+            refreshImageViews();
             
             if(fail === 0){
                 showToast(`已删除 ${success} 张图片`,'success');
@@ -2085,14 +2090,26 @@
         }
         function closeConfirmModal(){document.getElementById('confirmModal').classList.remove('open')}
 
-        async function deleteImage(key){const confirmed=await showConfirm(`确定删除 ${key}？`,'删除图片','删除');if(!confirmed)return;
-            // 乐观删除：先从本地移除
-            const idx=allImageData.findIndex(i=>i.key===key);
-            if(idx>=0)allImageData.splice(idx,1);
+        // 删除图片后的统一同步：图片管理面板（allImageData）与「从图库选择」遍历的
+        // cachedImages 是两份数据、两个 DOM。只改一处就会出现「这边没了那边还在」。
+        function removeImageFromCaches(key){
+            const before=allImageData.length;
+            allImageData=allImageData.filter(i=>i.key!==key);
+            cachedImages=cachedImages.filter(i=>i.key!==key);
+            return before!==allImageData.length;
+        }
+        function refreshImageViews(){
             renderPanels();
+            if(document.getElementById('imagePickerList'))renderImagePicker();
+        }
+
+        async function deleteImage(key){const confirmed=await showConfirm(`确定删除 ${key}？`,'删除图片','删除');if(!confirmed)return;
+            // 乐观删除：先从本地移除（两处数据源一起改，否则选择器里还能看到）
+            removeImageFromCaches(key);
+            refreshImageViews();
             // 后台同步
             const r=await apiFetch(`action=images&key=${encodeURIComponent(key)}`,{method:'DELETE'});
-            if(r.status==='success'){showToast('已删除','success')}else{showToast(r.message||'删除失败','error');await loadData()}
+            if(r.status==='success'){showToast('已删除','success')}else{showToast(r.message||'删除失败','error');await loadData();refreshImageViews()}
         }
 
         // ===== 图片灯箱 =====
@@ -2148,9 +2165,8 @@
             if(!key)return;
             const confirmed=await showConfirm(`确定删除 ${key}？`,'删除图片','删除');
             if(!confirmed)return;
-            const idx=allImageData.findIndex(i=>i.key===key);
-            if(idx>=0)allImageData.splice(idx,1);
-            renderPanels();
+            removeImageFromCaches(key);
+            refreshImageViews();
             const r=await apiFetch(`action=images&key=${encodeURIComponent(key)}`,{method:'DELETE'});
             if(r.status==='success'){
                 showToast('已删除','success');
@@ -2231,11 +2247,9 @@
             const r=await apiFetch(`action=images&key=${encodeURIComponent(key)}`,{method:'DELETE'});
             if(r.status==='success'){
                 showToast('已删除','success');
-                // 两个列表可能是同一数组引用，必须同时过滤（allImageData 未更新会让图片继续显示在图片管理里）
-                cachedImages=cachedImages.filter(i=>i.key!==key);
-                allImageData=allImageData.filter(i=>i.key!==key);
-                renderImagePicker();
-                if(document.getElementById('unclassifiedGrid'))renderPanels();
+                // 选择器与图片管理共用删除后的同步逻辑，避免只清一处
+                removeImageFromCaches(key);
+                refreshImageViews();
             }else{
                 showToast(r.message||'删除失败','error');
             }
