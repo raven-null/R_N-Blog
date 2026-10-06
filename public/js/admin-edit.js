@@ -209,7 +209,7 @@
         var host = $('eeBoardHost');
         var bid = (doc && doc.boardId) || '';
         if (!bid) {
-            host.innerHTML = '<div class="ee-hint">这篇文章还没有绑定画板，无法内嵌编辑；可到「白板管理」新建画板后发布文章。</div>';
+            host.innerHTML = '<div class="ee-hint">这篇文章还没有绑定画板，无法内嵌编辑；可在此页下方新建画板，或在写文章页切到「白板」形态新建。</div>';
             return;
         }
         var openBtn = $('eeBoardOpen'); // 顶部条已移除，元素可能不存在
@@ -245,7 +245,7 @@
         var mid = mapId();
         if (!host) return;
         if (!mid) {
-            // 没绑定：给出「选一张已有的 / 新建一张」的入口，不用再去导图管理页绕一圈
+            // 没绑定：直接给出「选一张已有的 / 新建一张」的入口
             var bar = $('eeMindmapBar');
             if (bar) bar.style.display = 'flex';
             host.innerHTML = '<div class="ee-hint">这篇文章还没绑定导图。选一张已有的，或用「新建一张导图」——' +

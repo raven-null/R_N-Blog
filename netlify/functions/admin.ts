@@ -373,6 +373,10 @@ export default async (req: Request) => {
         chunked: chunkCount > 0,
         chunkCount,
         boardId,
+        // 导图关联 id 必须一并写进索引：前台列表/去重读的都是索引而不是单条记录。
+        // 此前漏写导致 admin-app.js 的导图去重（a.mapId === currentMapId）永远匹配不到，
+        // 结果是每次「发布」都新建一篇文章而不是更新同一篇。
+        mapId: mapId || undefined,
       }
 
       if (existing >= 0) {
@@ -418,6 +422,28 @@ export default async (req: Request) => {
           }
           removedBoard = list.blobs.length
         } catch { /* 白板清理失败不阻断删文章 */ }
+      }
+
+      // 导图文章：同步删除关联导图（data + meta + 全部历史快照），并连带清理
+      // 该导图占用的节点图片（导图节点图片借用的是 excalidraw store 的 notes/<id>/files/ 空间）
+      const mapId = record && (record as any).type === "mindmap" && typeof (record as any).mapId === "string"
+        ? String((record as any).mapId)
+        : ""
+      if (mapId) {
+        try {
+          const mapStore = getBlobStore("mindmaps", "strong")
+          const list = await mapStore.list({ prefix: `notes/${mapId}/` })
+          for (const item of list.blobs) {
+            try { await mapStore.delete(item.key) } catch { /* ignore */ }
+          }
+        } catch { /* 导图清理失败不阻断删文章 */ }
+        try {
+          const fileStore = getBlobStore("excalidraw", "strong")
+          const files = await fileStore.list({ prefix: `notes/${mapId}/files/` })
+          for (const item of files.blobs) {
+            try { await fileStore.delete(item.key) } catch { /* ignore */ }
+          }
+        } catch { /* 图片清理失败不阻断删文章 */ }
       }
 
       const index = await getArticleIndex(store)

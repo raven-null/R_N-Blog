@@ -592,7 +592,7 @@
             if(!host)return;
             const bid=(id||currentBoardId||'').trim();
             if(!/^[A-Za-z0-9_-]{1,64}$/.test(bid)){
-                host.innerHTML='<div class="wb-hint">点「新建画板」开始绘制；已有画板可在「白板管理」中打开</div>';
+                host.innerHTML='<div class="wb-hint">点「新建画板」开始绘制；已有画板可在文章管理的「白板」筛选里打开</div>';
                 return;
             }
             currentBoardId=bid;
@@ -618,7 +618,7 @@
             currentBoardName='';
             boardMeta=null;
             syncBoardPermBtns();
-            if(host)host.innerHTML='<div class="wb-hint">点「新建画板」开始绘制；已有画板可在「白板管理」中打开</div>';
+            if(host)host.innerHTML='<div class="wb-hint">点「新建画板」开始绘制；已有画板可在文章管理的「白板」筛选里打开</div>';
             try{delete window.__excalidrawSave;delete window.__excalidrawDirty}catch(e){}
         }
         function wbNew(silent){

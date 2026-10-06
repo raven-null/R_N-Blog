@@ -63,85 +63,15 @@ const MarkdownParser = {
     },
     
     // 解析Markdown内容
+    // 自定义配置（==高亮==、图片 URL 重写/图注/灯箱、.code-block 包裹）统一放在
+    // public/js/markdown-config.js，由主线程与 Web Worker 共用 —— 否则长文走 Worker
+    // 时这些能力会静默失效（详见该文件头部说明）。
     parseMarkdown(content) {
-        // 使用marked库（需要在HTML中引入）
-        if (typeof marked !== 'undefined') {
-            // 配置marked
-            marked.setOptions({
-                breaks: true,
-                gfm: true
-            });
-
-            // 高亮扩展：==文字==
-            marked.use({
-                extensions: [{
-                    name: 'highlight',
-                    level: 'inline',
-                    start(src) { return src.indexOf('=='); },
-                    tokenizer(src) {
-                        const match = src.match(/^==(.+?)==/);
-                        if (match) {
-                            return {
-                                type: 'highlight',
-                                raw: match[0],
-                                text: match[1]
-                            };
-                        }
-                    },
-                    renderer(token) {
-                        return `<mark>${token.text}</mark>`;
-                    }
-                }]
-            });
-
-            // 自定义渲染器
-            const renderer = new marked.Renderer();
-
-            // 图片：添加说明文字，支持绝对路径和相对路径，点击可放大查看
-            renderer.image = function({href, title, text}) {
-                const titleAttr = title ? ` title="${title}"` : '';
-                const altText = text || '';
-                const captionHtml = altText ? `<figcaption class="img-caption">${altText}</figcaption>` : '';
-                // 旧动态接口 URL → 缓存友好 URL（.webp 结尾，CDN 可缓存）
-                let src = href;
-                if (src.startsWith('/api/article-image?key=')) {
-                    src = '/images/a/' + src.slice('/api/article-image?key='.length).split('&')[0];
-                } else if (src.startsWith('/api/admin-image?key=')) {
-                    const isThumb = src.includes('&thumb=1');
-                    const key = src.slice('/api/admin-image?key='.length).split('&')[0];
-                    src = (isThumb ? '/images/t/' : '/images/g/') + key;
-                } else if (src.startsWith('/images/g-thumb/')) {
-                    src = '/images/t/' + src.slice('/images/g-thumb/'.length);
-                }
-                // 图库图片（可能归类 R18）：管理员浏览时附加密钥参数才能加载，普通访客由后端 403
-                if (src.startsWith('/images/g/') || src.startsWith('/images/t/')) {
-                    let ak = '';
-                    try { ak = localStorage.getItem('admin_key') || ''; } catch (e) {}
-                    if (ak) src += (src.includes('?') ? '&' : '?') + 'adminKey=' + encodeURIComponent(ak);
-                }
-                const onerror = "this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22100%22%3E%3Crect fill=%22%23222%22 width=%22200%22 height=%22100%22/%3E%3Ctext fill=%22%23666%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 font-size=%2214%22%3E图片加载失败%3C/text%3E%3C/svg%3E'";
-                return `<figure class="img-figure"><img src="${src}" alt="${altText}"${titleAttr} loading="lazy" decoding="async" onerror="${onerror}" onclick="openLightbox(this)" style="cursor:zoom-in">${captionHtml}</figure>`;
-            };
-
-            // 代码块：添加复制按钮
-            renderer.code = function({text, lang}) {
-                const language = lang || '';
-                const escapedCode = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-                return `<div class="code-block">
-                    <div class="code-header">
-                        <span class="code-lang">${language}</span>
-                        <button class="copy-btn" onclick="copyCode(this)" title="复制代码">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                            <span>复制</span>
-                        </button>
-                    </div>
-                    <pre><code class="language-${language}">${escapedCode}</code></pre>
-                </div>`;
-            };
-
+        if (typeof marked !== 'undefined' && window.MarkdownConfig) {
+            const renderer = window.MarkdownConfig.apply(marked);
             return marked.parse(content, { renderer });
         }
-        
+
         // 如果没有marked库，使用简单的解析
         return this.simpleParse(content);
     },
