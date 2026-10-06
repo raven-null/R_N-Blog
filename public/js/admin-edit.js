@@ -147,7 +147,7 @@
                 '|', 'list', 'ordered-list', 'check', 'outdent', 'indent',
                 '|', 'quote', 'line', 'code', 'inline-code', 'table',
                 '|', 'upload', 'edit-mode',
-                '|', { name: 'eeEmbedPick', tip: '插入白板 / 思维导图' },
+                '|', window.EmbedPickerToolbarItem || { name: 'eeEmbedPick', tip: '插入白板 / 思维导图', click: function () {} },
                 '|', 'undo', 'redo',
                 { name: 'more', toolbar: ['code-theme', 'content-theme', 'export', 'help'] }
             ],

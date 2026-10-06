@@ -38,7 +38,16 @@
             const editId=new URLSearchParams(location.search).get('edit');
             if(editId){location.replace('/admin-edit.html?id='+encodeURIComponent(editId));return}
         }
-        async function apiFetch(p,o={}){if(p.startsWith('action=images')&&(!o.method||o.method==='GET'))p+='&_='+Date.now();const r=await fetch(`/api/admin?${p}`,{...o,headers:{'Content-Type':'application/json','X-Admin-Key':adminKey,...(o.headers||{})}});return r.json()}
+        // 后台所有请求都必须绕过 HTTP/CDN 缓存：服务端虽对带 X-Admin-Key 的请求回 no-store，
+        // 但 CDN 缓存键不含请求头，列表/图片等 GET 仍可能被游客请求预热过的副本命中
+        // （s-maxage=5 + stale-while-revalidate=120 → 最多 125s 内读到旧列表，表现为“删了还在”）。
+        // 故 GET 一律附加时间戳 + cache:'no-store' 双保险。
+        async function apiFetch(p,o={}){
+            const isGet=!o.method||o.method==='GET';
+            if(isGet&&!p.includes('_='))p+='&_='+Date.now();
+            const r=await fetch(`/api/admin?${p}`,{...o,cache:isGet?'no-store':o.cache,headers:{'Content-Type':'application/json','X-Admin-Key':adminKey,...(o.headers||{})}});
+            return r.json();
+        }
         // 图片显示 URL：附加管理员密钥参数（<img> 无法带 header，R18 图片需密钥参数才能加载）
         function displayUrl(u){if(!u||!adminKey)return u;return u+(u.includes('?')?'&':'?')+'adminKey='+encodeURIComponent(adminKey)}
         function toggleSidebar(){document.getElementById('sidebar').classList.toggle('collapsed')}
@@ -46,7 +55,15 @@
         // ===== 文章（卡片工作台） =====
         let artStatus = 'all', artType = 'all', artSort = false, artBatch = false;
         const artSel = new Set();
-        async function loadArticles(){const r=await apiFetch('action=articles');if(r.status==='success'){allArticles=r.data||[];artSel.clear();renderArticles()}}
+        // 版本守卫：删除/保存后会“主动 loadArticles() + BroadcastChannel 广播再 loadArticles()”，
+        // 两次并发请求若先发后到，旧响应会覆盖新列表（表现为删除后列表又冒出来）。只接受最后一次的结果。
+        let articlesReqSeq=0;
+        async function loadArticles(){
+            const seq=++articlesReqSeq;
+            const r=await apiFetch('action=articles');
+            if(seq!==articlesReqSeq)return; // 已有更新的请求在途/已返回，丢弃本次结果
+            if(r.status==='success'){allArticles=r.data||[];artSel.clear();renderArticles()}
+        }
         function artKw(){const i=document.getElementById('articleSearchInput');return (i&&i.value||'').trim().toLowerCase()}
         function filteredArticles(){
             const kw=artKw();
@@ -1017,7 +1034,7 @@
                     '|','list','ordered-list','check','outdent','indent',
                     '|','quote','line','code','inline-code','table',
                     '|','upload','edit-mode',
-                    '|',{name:'eeEmbedPick',tip:'插入白板 / 思维导图'},
+                    '|',window.EmbedPickerToolbarItem||{name:'eeEmbedPick',tip:'插入白板 / 思维导图',click:function(){}},
                     '|','undo','redo',
                     {name:'more',toolbar:['code-theme','content-theme','export','help']}
                 ],
@@ -2214,8 +2231,11 @@
             const r=await apiFetch(`action=images&key=${encodeURIComponent(key)}`,{method:'DELETE'});
             if(r.status==='success'){
                 showToast('已删除','success');
+                // 两个列表可能是同一数组引用，必须同时过滤（allImageData 未更新会让图片继续显示在图片管理里）
                 cachedImages=cachedImages.filter(i=>i.key!==key);
+                allImageData=allImageData.filter(i=>i.key!==key);
                 renderImagePicker();
+                if(document.getElementById('unclassifiedGrid'))renderPanels();
             }else{
                 showToast(r.message||'删除失败','error');
             }
@@ -2859,6 +2879,7 @@
                 showToast(`已删除「${name}」，影响 ${r.imageChanges} 张图片、${r.articleChanges} 篇文章`,'success');
                 await loadTags(); // 立即刷新标签
                 await loadData(); // 刷新图片数据
+                await loadArticles(); // 标签删除会改写文章的 tags，文章列表也要刷新
             }else showToast(r.message||'删除失败','error');
         }
 

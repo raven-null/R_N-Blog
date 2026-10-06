@@ -610,24 +610,41 @@
         if (wrap) wrap.classList.remove('open');
     }
 
-    /** 给工具栏按钮补图标并绑定点击（Vditor 对未知按钮名不渲染图标） */
+    /**
+     * 给工具栏按钮补图标。
+     * 点击行为由工具栏项自己的 click 方法负责（见 EmbedPickerToolbarItem），
+     * 这里**不再额外绑定事件**，否则会与 click 重复触发（打开两次面板）。
+     */
     function bindToolbar(vd) {
         var btn = null;
         try {
             btn = document.querySelector('[data-type="eeEmbedPick"]') ||
                 (vd && vd.toolbar && vd.toolbar.elements && vd.toolbar.elements.eeEmbedPick);
         } catch (e) { /* 忽略 */ }
-        if (!btn || btn.dataset.epBound) return;
-        btn.dataset.epBound = '1';
+        if (!btn || btn.dataset.epIcon) return;
+        btn.dataset.epIcon = '1';
         btn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" ' +
             'stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
             '<rect x="3" y="3" width="18" height="18" rx="2"></rect>' +
             '<path d="M8 12h8M12 8v8"></path></svg>';
-        btn.addEventListener('click', function (ev) {
-            ev.preventDefault();
-            open(activeVditor || vd);
-        });
+        btn.setAttribute('aria-label', '插入白板 / 思维导图');
     }
+
+    /**
+     * 工具栏项定义（供两个编辑器复用）。
+     *
+     * 关键：Vditor 的工具栏项构造函数会**直接调用** `n.click(e, t)` 且不判空——
+     *     r.element.children[0].addEventListener(事件, function (e) {
+     *         e.preventDefault(), 已禁用 || n.click(e, t)
+     *     })
+     * 因此自定义按钮必须提供 click 方法，否则点击时报
+     * `Uncaught TypeError: n.click is not a function`。
+     */
+    window.EmbedPickerToolbarItem = {
+        name: 'eeEmbedPick',
+        tip: '插入白板 / 思维导图',
+        click: function () { open(activeVditor); }
+    };
 
     window.EmbedPicker = {
         open: open,
