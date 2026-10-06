@@ -102,7 +102,36 @@
             '  background:rgba(79,195,247,.18);color:#4fc3f7}',
             '.ep-card.hint{border-style:dashed;border-color:rgba(255,255,255,.22);',
             '  background:rgba(255,255,255,.03)}',
-            '.ep-card.hint .ep-card-title{color:rgba(255,255,255,.55);font-weight:500}'
+            '.ep-card.hint .ep-card-title{color:rgba(255,255,255,.55);font-weight:500}',
+            '.ep-edit-btn{flex:none;padding:5px 12px;border-radius:999px;cursor:pointer;',
+            '  border:1px solid rgba(79,195,247,.5);background:rgba(79,195,247,.12);color:#4fc3f7;',
+            '  font-size:12px;font-family:inherit;transition:background .15s}',
+            '.ep-edit-btn:hover{background:rgba(79,195,247,.24)}',
+            /* 画布编辑抽屉 */
+            '.ep-drawer-mask{position:fixed;inset:0;z-index:2600;background:rgba(5,5,9,.5);',
+            '  backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);display:none}',
+            '.ep-drawer-mask.open{display:block}',
+            '.ep-drawer{position:fixed;top:0;right:0;bottom:0;width:min(980px,94vw);z-index:2601;',
+            '  display:flex;flex-direction:column;background:#0b0b0e;',
+            '  border-left:1px solid rgba(255,255,255,.14);box-shadow:-24px 0 60px -20px rgba(0,0,0,.8);',
+            '  transform:translateX(103%);transition:transform .3s cubic-bezier(.22,1,.36,1);',
+            '  font-family:-apple-system,"Segoe UI","PingFang SC",sans-serif}',
+            '.ep-drawer.open{transform:none}',
+            '.ep-drawer-head{flex:none;display:flex;align-items:center;gap:10px;padding:12px 16px;',
+            '  border-bottom:1px solid rgba(255,255,255,.1);background:rgba(20,20,28,.9)}',
+            '.ep-drawer-title{flex:1;min-width:0;font-size:14px;font-weight:600;color:#e8e8ea;',
+            '  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+            '.ep-drawer-id{font-size:11.5px;color:rgba(255,255,255,.45);',
+            "  font-family:'Courier New',monospace}",
+            '.ep-drawer-head button{padding:6px 14px;border-radius:8px;cursor:pointer;',
+            '  border:1px solid rgba(255,255,255,.16);background:transparent;color:rgba(255,255,255,.75);',
+            '  font-size:13px;font-family:inherit;transition:all .15s}',
+            '.ep-drawer-head button:hover{color:#fff;border-color:rgba(255,255,255,.4)}',
+            '#epDrawerHost{flex:1;min-height:0;position:relative}',
+            '#epDrawerHost iframe{width:100%;height:100%;border:0;display:block;background:#0b0b0e}',
+            '.ep-drawer-loading{position:absolute;inset:0;display:flex;align-items:center;',
+            '  justify-content:center;padding:20px;text-align:center;font-size:13px;line-height:1.8;',
+            '  color:rgba(255,255,255,.6);background:#0b0b0e}'
         ].join('\n');
         document.head.appendChild(s);
     }
@@ -243,14 +272,28 @@
         var isMap = conf.kind === 'map';
         var card = document.createElement('div');
         card.className = 'ep-card';
-        card.title = '点两下可编辑源码';
+        card.title = '点「编辑 / 查看」打开画布；双击本块可编辑源码';
         card.innerHTML = '<div class="ep-card-icon">' + (isMap ? '🧠' : '🎨') + '</div>' +
             '<div class="ep-card-body">' +
             '<div class="ep-card-title">' + (isMap ? '思维导图' : '白板') +
             (conf.caption ? ' · ' + esc(conf.caption) : '') + '</div>' +
             '<div class="ep-card-id">' + esc(conf.id) + (conf.height ? '  ·  高 ' + conf.height + 'px' : '') + '</div>' +
-            '</div>' +
-            '<div class="ep-card-badge">内嵌</div>';
+            '</div>';
+        // 编辑入口：抽屉内嵌完整画布编辑器（不能依赖闭包里的 el，Vditor 重渲染会换掉它）
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'ep-edit-btn';
+        btn.textContent = '编辑 / 查看';
+        btn.setAttribute('contenteditable', 'false');
+        btn.addEventListener('click', function (ev) {
+            ev.preventDefault();
+            ev.stopPropagation();
+            var holder = btn.closest ? btn.closest('.ep-card, pre') : null;
+            var c = (holder && holder.__epConf) || conf;
+            openDrawer(c);
+        });
+        card.appendChild(btn);
+        card.__epConf = conf;
         paint(card);
     }
 
@@ -334,8 +377,8 @@
         if (!id) return null;
         // 优先：按 kind 选对应容器的 iframe（后台编辑页 / 写文章页的挂载点）
         var preferred = kind === 'map'
-            ? ['[id$="MapHost"] iframe', '#mmMapHost iframe', '#eeMindmapHost iframe']
-            : ['[id$="BoardHost"] iframe', '#wbBoardHost iframe', '#eeBoardHost iframe'];
+            ? ['[id$="MapHost"] iframe', '#epDrawerHost iframe', '#mmMapHost iframe', '#eeMindmapHost iframe']
+            : ['[id$="BoardHost"] iframe', '#epDrawerHost iframe', '#wbBoardHost iframe', '#eeBoardHost iframe'];
         // 兜底：任何 src 里带该画布 id 的 iframe（不限容器）
         var fallbacks = ['iframe[src*="' + id + '"]'];
 
@@ -356,6 +399,118 @@
             }
         }
         return null;
+    }
+
+    /* =====================================================================
+     * 画布编辑抽屉
+     * 点编辑器内卡片上的「编辑 / 查看」→ 右侧抽屉内嵌完整画布编辑器，
+     * 与后台既有的编辑器同源同参数（白板 from=admin&capsule=0，导图 from=admin）。
+     * 关闭时先把改动落盘，避免「关了抽屉、改动丢了」。
+     * ===================================================================== */
+    var DRAWER_ID = 'epDrawer';
+    var drawerConf = null;
+
+    function buildDrawer() {
+        if (document.getElementById(DRAWER_ID)) return;
+        var mask = document.createElement('div');
+        mask.className = 'ep-drawer-mask';
+        var box = document.createElement('aside');
+        box.id = DRAWER_ID;
+        box.className = 'ep-drawer';
+        box.innerHTML =
+            '<div class="ep-drawer-head">' +
+            '<div class="ep-drawer-title" id="epDrawerTitle">画布</div>' +
+            '<div class="ep-drawer-id" id="epDrawerId"></div>' +
+            '<button type="button" id="epDrawerClose">完成</button>' +
+            '</div>' +
+            '<div id="epDrawerHost"></div>';
+        document.body.appendChild(mask);
+        document.body.appendChild(box);
+
+        mask.addEventListener('click', function () { closeDrawer(); });
+        box.querySelector('#epDrawerClose').addEventListener('click', function () { closeDrawer(); });
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && box.classList.contains('open')) closeDrawer();
+        });
+    }
+
+    function openDrawer(conf) {
+        if (!conf || !conf.id) return;
+        injectStyle();
+        buildDrawer();
+        drawerConf = conf;
+        var isMap = conf.kind === 'map';
+        var title = document.getElementById('epDrawerTitle');
+        var idEl = document.getElementById('epDrawerId');
+        var host = document.getElementById('epDrawerHost');
+        if (title) title.textContent = (isMap ? '思维导图' : '白板') + (conf.caption ? ' · ' + conf.caption : '');
+        if (idEl) idEl.textContent = conf.id;
+        if (host) {
+            host.innerHTML = '<iframe title="' + (isMap ? '导图编辑器' : '白板编辑器') + '" src="' +
+                (isMap
+                    ? '/mindmap.html?note=' + encodeURIComponent(conf.id) + '&edit=1&from=admin'
+                    : '/excalidraw.html?note=' + encodeURIComponent(conf.id) + '&edit=1&from=admin&capsule=0') +
+                '"></iframe>';
+            // 画布编辑器体积大（白板 bundle 4MB+），弱网下可能迟迟不出现。
+            // 给一个延迟提示，避免用户看到一片空白以为坏了。
+            var tipTimer = setTimeout(function () {
+                var fr = host.querySelector('iframe');
+                if (!fr) return;
+                var hint = document.createElement('div');
+                hint.className = 'ep-drawer-loading';
+                hint.textContent = '画布编辑器加载中…（首次打开需要下载组件，弱网会慢一些）';
+                host.appendChild(hint);
+                fr.addEventListener('load', function () { hint.remove(); }, { once: true });
+            }, 1200);
+            var frameEl = host.querySelector('iframe');
+            if (frameEl) frameEl.addEventListener('load', function () { clearTimeout(tipTimer); }, { once: true });
+        }
+        document.querySelector('.ep-drawer-mask').classList.add('open');
+        document.getElementById(DRAWER_ID).classList.add('open');
+    }
+
+    async function closeDrawer() {
+        var box = document.getElementById(DRAWER_ID);
+        if (!box || !box.classList.contains('open')) return;
+        var conf = drawerConf;
+        drawerConf = null;
+        // 先把抽屉里画布的未落盘改动存掉，避免直接关闭丢改动
+        if (conf) {
+            var res = await saveDrawerCanvas(conf);
+            if (!res.ok) {
+                toast('画布保存未完成（' + res.reason + '），已保留抽屉以免丢失改动', 5200);
+                return; // 不关闭，让用户自己处理
+            }
+            if (res.saved) toast('画布改动已保存', 2200);
+        }
+        var mask = document.querySelector('.ep-drawer-mask');
+        if (mask) mask.classList.remove('open');
+        box.classList.remove('open');
+        var host = document.getElementById('epDrawerHost');
+        if (host) host.innerHTML = ''; // 卸载 iframe，释放画布资源
+    }
+
+    /**
+     * 保存抽屉当前画布。
+     * 返回 { ok, saved, reason }：ok=false 表示保存失败（调用方应保留抽屉）；
+     * saved 表示确实发生了保存（否则只是没有改动，无需提示）。
+     */
+    async function saveDrawerCanvas(conf) {
+        var w = findCanvasWindow(conf.id, conf.kind);
+        if (!w) return { ok: true, saved: false, reason: '未挂载' };
+        var isMap = conf.kind === 'map';
+        var saver = w[isMap ? '__mindmapSave' : '__excalidrawSave'];
+        var dirtyFn = w[isMap ? '__mindmapDirty' : '__excalidrawDirty'];
+        if (typeof saver !== 'function') return { ok: true, saved: false, reason: '编辑器未就绪' };
+        var dirty = true;
+        try { if (typeof dirtyFn === 'function') dirty = !!dirtyFn(); } catch (e) { dirty = true; }
+        if (!dirty) return { ok: true, saved: false, reason: '无改动' };
+        try {
+            var ok = isMap ? !!(await saver()) : !!(await saver(false));
+            return ok ? { ok: true, saved: true } : { ok: false, reason: '保存被拒（口令或权限）' };
+        } catch (e) {
+            return { ok: false, reason: (e && e.message) || '网络错误' };
+        }
     }
 
     function toast(msg, ms) {
@@ -431,6 +586,9 @@
         setVditor: function (vd) { activeVditor = vd; },
         /** 把正文引用的所有画布先落盘（保存文章前调用，避免画布改动丢失） */
         flushEmbeds: flushEmbeds,
+        /** 画布编辑抽屉：openDrawer({kind,id,caption}) / closeDrawer() */
+        openDrawer: openDrawer,
+        closeDrawer: closeDrawer,
         /** 注册给 Vditor 的 customRenders，让内嵌块在编辑器里显示为卡片 */
         customRenders: [{ language: 'embed', render: cardRender }]
     };
