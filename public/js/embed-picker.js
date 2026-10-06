@@ -88,7 +88,24 @@
             '  max-width:min(560px,92vw);padding:10px 16px;border-radius:10px;font-size:13px;line-height:1.7;',
             '  background:rgba(20,20,28,.96);color:#fff;border:1px solid rgba(255,255,255,.16);',
             '  box-shadow:0 18px 50px -12px rgba(0,0,0,.8)}',
-            /* 编辑器内的内嵌块卡片（customRenders 产出） */
+            /* 编辑器内直接渲染的画布块（与阅读页同一套渲染，不是卡片占位） */
+            '.ep-canvas-card{display:block;margin:14px 0;border-radius:10px;overflow:hidden;',
+            '  border:1px solid rgba(79,195,247,.3);background:#0b0b0e;',
+            '  font-family:-apple-system,"Segoe UI","PingFang SC",sans-serif}',
+            '.ep-canvas-bar{display:flex;align-items:center;gap:10px;padding:7px 12px;',
+            '  background:rgba(79,195,247,.09);border-bottom:1px solid rgba(79,195,247,.2)}',
+            '.ep-canvas-tag{flex:none;font-size:12px;font-weight:600;color:#4fc3f7}',
+            '.ep-canvas-id{flex:none;font-size:11.5px;color:rgba(255,255,255,.45);',
+            "  font-family:'Courier New',monospace}",
+            '.ep-canvas-cap{flex:1;min-width:0;font-size:12px;color:rgba(255,255,255,.6);',
+            '  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+            '.ep-canvas{position:relative;height:480px;background:#fff}',
+            '.ep-canvas .ep-inline-board{position:absolute;inset:0}',
+            '.ep-inline-frame{display:block;width:100%;height:100%;border:0}',
+            '.ep-canvas-loading{display:flex;align-items:center;justify-content:center;height:100%;',
+            '  padding:16px;text-align:center;font-size:13px;line-height:1.8;',
+            '  color:rgba(255,255,255,.6);background:#0b0b0e}',
+            '@media (max-width:773px){.ep-canvas{height:60vh}}',
             '.ep-card{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:10px;',
             '  background:linear-gradient(135deg,rgba(79,195,247,.10),rgba(79,195,247,.04));',
             '  border:1px solid rgba(79,195,247,.32);user-select:none;cursor:default;',
@@ -271,30 +288,91 @@
 
         var isMap = conf.kind === 'map';
         var card = document.createElement('div');
-        card.className = 'ep-card';
-        card.title = '点「编辑 / 查看」打开画布；双击本块可编辑源码';
-        card.innerHTML = '<div class="ep-card-icon">' + (isMap ? '🧠' : '🎨') + '</div>' +
-            '<div class="ep-card-body">' +
-            '<div class="ep-card-title">' + (isMap ? '思维导图' : '白板') +
-            (conf.caption ? ' · ' + esc(conf.caption) : '') + '</div>' +
-            '<div class="ep-card-id">' + esc(conf.id) + (conf.height ? '  ·  高 ' + conf.height + 'px' : '') + '</div>' +
-            '</div>';
-        // 编辑入口：抽屉内嵌完整画布编辑器（不能依赖闭包里的 el，Vditor 重渲染会换掉它）
+        card.className = 'ep-canvas-card';
+        card.setAttribute('contenteditable', 'false');
+        card.dataset.kind = conf.kind;
+        card.dataset.id = conf.id;
+
+        // 顶部细条：类型 / id / 图注 / 编辑入口（画布本身在下方铺满）
+        var bar = document.createElement('div');
+        bar.className = 'ep-canvas-bar';
+        bar.setAttribute('contenteditable', 'false');
+        bar.innerHTML = '<span class="ep-canvas-tag">' + (isMap ? '思维导图' : '白板') + '</span>' +
+            '<span class="ep-canvas-id">' + esc(conf.id) + '</span>' +
+            (conf.caption ? '<span class="ep-canvas-cap">' + esc(conf.caption) + '</span>' : '');
         var btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'ep-edit-btn';
-        btn.textContent = '编辑 / 查看';
+        btn.textContent = '在抽屉中编辑';
         btn.setAttribute('contenteditable', 'false');
         btn.addEventListener('click', function (ev) {
             ev.preventDefault();
             ev.stopPropagation();
-            var holder = btn.closest ? btn.closest('.ep-card, pre') : null;
+            var holder = btn.closest ? btn.closest('.ep-canvas-card') : null;
             var c = (holder && holder.__epConf) || conf;
             openDrawer(c);
         });
-        card.appendChild(btn);
+        bar.appendChild(btn);
+        card.appendChild(bar);
+
+        // 画布本体：白板用 bundle 直挂（与阅读页同一套 data-excalidraw + ExcalidrawMount），
+        // 导图用 iframe 复用现成页面 —— 编辑页与阅读页看到的是同一个渲染结果。
+        var canvas = document.createElement('div');
+        canvas.className = 'ep-canvas';
+        canvas.setAttribute('contenteditable', 'false');
+        if (conf.height) canvas.style.height = conf.height + 'px';
+        initInlineCanvas(canvas, conf);
+        card.appendChild(canvas);
+
         card.__epConf = conf;
+        // 阻止画布内的键盘事件冒泡到 Vditor：否则在画布里按 Del / 输入会被当成正文编辑
+        card.addEventListener('keydown', function (e) {
+            if (e.target && e.target.closest && e.target.closest('.excalidraw, iframe')) e.stopPropagation();
+        }, true);
+        card.addEventListener('keypress', function (e) {
+            if (e.target && e.target.closest && e.target.closest('.excalidraw, iframe')) e.stopPropagation();
+        }, true);
         paint(card);
+    }
+
+    /** 在编辑器内直接挂载画布（阅读页的内嵌方式，编辑页复用） */
+    function initInlineCanvas(host, conf) {
+        if (!host) return;
+        if (conf.kind === 'map') {
+            host.innerHTML = '<iframe class="ep-inline-frame" title="思维导图" loading="lazy" src="' +
+                '/mindmap.html?note=' + encodeURIComponent(conf.id) + '"></iframe>';
+            return;
+        }
+        // 白板：与阅读页一致 —— 容器带 data-excalidraw，bundle 加载后由 ExcalidrawMount() 扫到并挂载
+        var el = document.createElement('div');
+        el.className = 'ep-inline-board';
+        el.setAttribute('data-excalidraw', '');
+        el.setAttribute('data-note', conf.id);
+        el.setAttribute('data-mode', 'view');
+        el.innerHTML = '<div class="ep-canvas-loading">白板加载中…（首次需下载组件，弱网会慢）</div>';
+        host.appendChild(el);
+        loadExcalidrawBundleFor();
+    }
+
+    /** 编辑器内嵌白板也要用到 bundle；与 admin-edit.js / admin-app.js 各自的加载器共用同一份产物 */
+    function loadExcalidrawBundleFor() {
+        if (window.ExcalidrawMount) { window.ExcalidrawMount(); return; }
+        if (document.querySelector('script[data-excalidraw-bundle-embed]')) return;
+        var css = document.createElement('link');
+        css.rel = 'stylesheet';
+        css.href = '/js/vendor/excalidraw/excalidraw-editor.v30.css';
+        css.dataset.excalidrawBundleEmbed = '1';
+        document.head.appendChild(css);
+        var s = document.createElement('script');
+        s.src = '/js/vendor/excalidraw/excalidraw-editor.v30.js';
+        s.dataset.excalidrawBundleEmbed = '1';
+        s.onload = function () { if (window.ExcalidrawMount) window.ExcalidrawMount(); };
+        s.onerror = function () {
+            document.querySelectorAll('.ep-inline-board').forEach(function (el) {
+                el.innerHTML = '<div class="ep-canvas-loading">白板组件加载失败，请刷新重试</div>';
+            });
+        };
+        document.head.appendChild(s);
     }
 
     /**
