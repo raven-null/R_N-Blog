@@ -769,9 +769,15 @@
     <!-- ===== 登录页（动画角色版，改造自 MIT 协议的 animated-characters-login-page）=====
          样式：/css/login.css（全部选择器限定在 #loginPage 内，lg- 前缀隔离）
          交互：/js/login.js（只负责动画与表单，认证仍由 admin-app.js 的 doLogin() 负责）
-         对外契约：#loginPage / #adminKeyInput / #loginError 三个 id 保持原样 -->
+         对外契约：#loginPage / #adminKeyInput / #loginError 三个 id 保持原样
+
+         结构（两层，勿破坏闭合顺序）：
+           #loginPage
+             ├─ .lg-left-panel   品牌 + 角色舞台 + 页脚链接
+             └─ .lg-right-panel  登录表单容器
+    -->
     <div id="loginPage">
-        <!-- 左侧：品牌 + 4 个动画角色 -->
+        <!-- 左栏：品牌 + 角色舞台 + 页脚 -->
         <div class="lg-left-panel">
             <div class="lg-logo">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -833,8 +839,9 @@
                 <a href="/">返回博客首页</a>
                 <span>渡鸦_NULL · 个人博客</span>
             </div>
+        </div>
 
-        <!-- 右侧：登录表单 -->
+        <!-- 右栏：登录表单 -->
         <div class="lg-right-panel">
             <div class="lg-form-container">
                 <div class="lg-sparkle-icon">
@@ -882,7 +889,8 @@
 
                 <div class="lg-signup-link">
                     <a href="/">← 返回博客首页</a>
-                </div>            </div>
+                </div>
+            </div>
         </div>
     </div>
     <div class="admin" id="adminApp">
