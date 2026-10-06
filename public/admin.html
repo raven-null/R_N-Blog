@@ -16,15 +16,7 @@
         *{margin:0;padding:0;box-sizing:border-box}
         :root{--bg:#080808;--bg-card:#111;--bg-input:#1a1a1a;--bg-hover:#1c1c1c;--bg-active:#1a2a3a;--text:#fff;--text-muted:rgba(255,255,255,.85);--accent:#4fc3f7;--accent-dim:rgba(79,195,247,.1);--border:#252525;--border-light:#333;--danger:#ef5350;--success:#66bb6a;--warning:#ffa726;--radius:10px;--radius-sm:6px;--shadow:0 8px 32px rgba(0,0,0,.5);--sidebar-w:220px;--sidebar-collapsed:52px}
         body{font-family:-apple-system,'Segoe UI','PingFang SC',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
-        .login-page{display:flex;align-items:center;justify-content:center;min-height:100vh;background:radial-gradient(ellipse at 30% 40%,#0d1520 0%,#080808 70%)}
-        .login-box{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:48px 40px;width:380px;text-align:center;box-shadow:var(--shadow)}
-        .login-box h1{font-size:24px;margin-bottom:6px;color:var(--accent);font-weight:700;letter-spacing:2px}
-        .login-box p{font-size:13px;color:var(--text-muted);margin-bottom:28px}
-        .login-box input{width:100%;padding:12px 16px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:14px;margin-bottom:16px;transition:border .2s}
-        .login-box input:focus{outline:none;border-color:var(--accent)}
-        .login-box button{width:100%;padding:12px;background:var(--accent);color:#000;border:none;border-radius:var(--radius-sm);font-size:14px;font-weight:600;cursor:pointer;transition:all .15s}
-        .login-box button:hover{opacity:.85}
-        .login-error{color:var(--danger);font-size:13px;margin-bottom:12px;display:none}
+        /* 旧登录框样式已移除，改由 /css/login.css 接管（选择器限定在 #loginPage 内） */
 
         .admin{display:none;height:100vh}
         /* 侧边栏底部按钮组（刷新 / 首页 / 退出）：与上方导航项同款样式（图标 + 文字 + 左对齐 + 同款 hover） */
@@ -460,8 +452,7 @@
             .admin-body{display:block;height:100vh;padding-top:56px}
             .content{padding:16px 12px 80px}
             .admin{height:auto;min-height:100vh}
-            /* 登录页 */
-            .login-box{width:90%;max-width:360px;padding:32px 24px}
+            /* 登录页：移动端样式统一由 /css/login.css 的媒体查询接管 */
             /* 页面标题栏 */
             .page-bar{flex-direction:column;align-items:flex-start;gap:10px;margin-bottom:14px}
             .page-bar-actions{width:100%;justify-content:flex-start}
@@ -771,10 +762,120 @@
     <link rel="stylesheet" href="/css/scrollbar.css?v=1.0.1">
     <link rel="stylesheet" href="/css/responsive.css?v=1.0.0">
     <link rel="stylesheet" href="/css/mobile.css?v=1.0.0">
+    <link rel="stylesheet" href="/css/login.css?v=1.0.0">
 </head>
 <body>
-    <div class="login-page" id="loginPage">
-        <div class="login-box"><h1>管理后台</h1><p>博客管理</p><div class="login-error" id="loginError">密钥错误</div><input type="password" id="adminKeyInput" placeholder="输入管理密钥" onkeydown="if(event.key==='Enter')doLogin()"><button onclick="doLogin()">进入后台</button></div>
+    <!-- ===== 登录页（动画角色版，改造自 MIT 协议的 animated-characters-login-page）=====
+         样式：/css/login.css（全部选择器限定在 #loginPage 内，lg- 前缀隔离）
+         交互：/js/login.js（只负责动画与表单，认证仍由 admin-app.js 的 doLogin() 负责）
+         对外契约：#loginPage / #adminKeyInput / #loginError 三个 id 保持原样 -->
+    <div id="loginPage">
+        <!-- 左侧：品牌 + 4 个动画角色 -->
+        <div class="lg-left-panel">
+            <div class="lg-logo">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 2L15 9H9L12 2Z" />
+                    <path d="M12 22L9 15H15L12 22Z" />
+                    <path d="M2 12L9 9V15L2 12Z" />
+                    <path d="M22 12L15 15V9L22 12Z" />
+                </svg>
+                <span>渡鸦_NULL</span>
+            </div>
+
+            <div class="lg-characters-wrapper">
+                <div class="lg-characters-scene">
+                    <!-- 紫色角色 -->
+                    <div class="lg-character lg-char-purple" id="lg-char-purple">
+                        <div class="lg-eyes" id="lg-purple-eyes" style="left:45px;top:40px;gap:28px">
+                            <div class="lg-eyeball" id="lg-purple-eye-l" style="width:18px;height:18px">
+                                <div class="lg-pupil" id="lg-purple-pupil-l" style="width:7px;height:7px"></div>
+                            </div>
+                            <div class="lg-eyeball" id="lg-purple-eye-r" style="width:18px;height:18px">
+                                <div class="lg-pupil" id="lg-purple-pupil-r" style="width:7px;height:7px"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 黑色角色 -->
+                    <div class="lg-character lg-char-black" id="lg-char-black">
+                        <div class="lg-eyes" id="lg-black-eyes" style="left:26px;top:32px;gap:20px">
+                            <div class="lg-eyeball" id="lg-black-eye-l" style="width:16px;height:16px">
+                                <div class="lg-pupil" id="lg-black-pupil-l" style="width:6px;height:6px"></div>
+                            </div>
+                            <div class="lg-eyeball" id="lg-black-eye-r" style="width:16px;height:16px">
+                                <div class="lg-pupil" id="lg-black-pupil-r" style="width:6px;height:6px"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 橙色角色（半圆） -->
+                    <div class="lg-character lg-char-orange" id="lg-char-orange">
+                        <div class="lg-eyes" id="lg-orange-eyes" style="left:82px;top:90px;gap:28px">
+                            <div class="lg-bare-pupil" id="lg-orange-pupil-l"></div>
+                            <div class="lg-bare-pupil" id="lg-orange-pupil-r"></div>
+                        </div>
+                        <div class="lg-orange-mouth" id="lg-orange-mouth" style="left:90px;top:120px"></div>
+                    </div>
+
+                    <!-- 黄色角色（圆角矩形） -->
+                    <div class="lg-character lg-char-yellow" id="lg-char-yellow">
+                        <div class="lg-eyes" id="lg-yellow-eyes" style="left:52px;top:40px;gap:20px">
+                            <div class="lg-bare-pupil" id="lg-yellow-pupil-l"></div>
+                            <div class="lg-bare-pupil" id="lg-yellow-pupil-r"></div>
+                        </div>
+                        <div class="lg-yellow-mouth" id="lg-yellow-mouth" style="left:40px;top:88px"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧：登录表单 -->
+        <div class="lg-right-panel">
+            <div class="lg-form-container">
+                <div class="lg-sparkle-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#1a1a2e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z" />
+                    </svg>
+                </div>
+
+                <div class="lg-form-header">
+                    <h1>欢迎回来</h1>
+                    <p>请输入管理密钥以继续</p>
+                </div>
+
+                <form id="lg-login-form" onsubmit="return false;">
+                    <div class="lg-form-group">
+                        <label for="adminKeyInput">管理密钥</label>
+                        <div class="lg-input-wrapper">
+                            <input type="password" id="adminKeyInput" placeholder="••••••••" autocomplete="current-password" />
+                            <button type="button" class="lg-toggle-password" id="lg-toggle-password" aria-label="显示或隐藏密钥">
+                                <svg id="lg-eye-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                </svg>
+                                <svg id="lg-eye-off-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none">
+                                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                                    <line x1="1" y1="1" x2="23" y2="23"></line>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="lg-error-msg" id="loginError" role="alert"></div>
+
+                    <button type="submit" class="lg-btn-login" id="lg-btn-login">
+                        <span class="lg-btn-text">进入后台</span>
+                        <div class="lg-btn-hover-content">
+                            <span>进入后台</span>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="5" y1="12" x2="19" y2="12" />
+                                <polyline points="12 5 19 12 12 19" />
+                            </svg>
+                        </div>
+                    </button>
+                </form>
+            </div>
+        </div>
     </div>
     <div class="admin" id="adminApp">
                 <!-- 移动端顶部导航 -->
@@ -1813,5 +1914,6 @@ body.admin-write-full .admin-actions.mobile-float{display:none}
     <!-- 液态玻璃 + 苹果动画 -->
     <script src="js/vendor/anime.umd.min.js"></script>
     <script src="js/animations.js?v=3.14.0"></script>
+<script src="js/login.js?v=1.0.0"></script>
 </body>
 </html>

@@ -1,0 +1,681 @@
+/* ==========================================================================
+   渡鸦_NULL · 博客后台登录页样式
+   --------------------------------------------------------------------------
+   改造自一个 MIT 协议的开源动画登录页（4 个纯 CSS 角色：紫色矩形 / 黑色矩形 /
+   橙色半圆 / 黄色圆角矩形；眼睛跟随鼠标、随机眨眼、输入密码时转头回避、
+   登录失败时沮丧摇头）。
+
+   样式隔离策略（本文件会被引入已有的 admin.html，该页已有 .login-page / .logo /
+   .left-panel / .error-msg / .btn-login 等大量样式与重置规则）：
+     · 所有选择器都限定在 #loginPage 作用域内，组件类名统一 lg- 前缀；
+     · 角色相关 id 统一 lg- 前缀（lg-char-purple / lg-purple-eyes ...），
+       动画关键帧也改名 lg-shakeHead，避免与宿主页面冲突；
+     · 只有 #loginPage / #adminKeyInput / #loginError 三个对外 id 不加前缀；
+     · 不使用 `*, *::before, *::after` 全局重置，重置只作用于 #loginPage 及其后代。
+
+   零外部依赖：无字体外链、无图片引用、无任何 url() 网络请求。
+   字体改用系统字体栈；600 / 700 字重由系统字体原生提供（Segoe UI Semibold-Bold、
+   PingFang SC Medium-Semibold、Microsoft YaHei Bold），不依赖 Inter，无需合成加粗。
+
+   高度单位：全部写成 `100vh` 在前 + `100dvh` 在后，旧浏览器回退到 100vh。
+   ========================================================================== */
+
+/* ==========================================================================
+   1. 作用域内的最小重置（不触碰后台页面其它区域）
+   ========================================================================== */
+
+#loginPage,
+#loginPage *,
+#loginPage *::before,
+#loginPage *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* ==========================================================================
+   2. 页面容器：左右两栏
+   ========================================================================== */
+
+#loginPage {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: 100%;
+  height: 100vh; /* 旧浏览器兜底 */
+  height: 100dvh; /* 动态视口高度（移动端地址栏收起/展开） */
+  overflow-x: hidden;
+  overflow-y: auto; /* 极矮屏幕下登录表单仍可滚动，不会卡死 */
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+    "Microsoft YaHei", "Microsoft YaHei UI", sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  color: #1a1a2e;
+  background: #1a1a2e;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 说明（关于源项目 body 上的 height: 100vh）：
+   源文件除 #login-page 外还给 body 写了 height: 100vh，这里【故意不接管 body】。
+   原因：body 规则无法限定在 #loginPage 作用域内，而登录成功后后台只是把
+   #loginPage 设为 display:none、body 上并不会变得「没有登录页」，任何
+   body { height/overflow } 都会残留下来影响 #adminApp 的滚动与背景。
+   而 #loginPage 自身已用 100vh + 100dvh 双写铺满视口，视觉上完全等价。
+   如需在 body 层面也做 dvh 兜底，请改既有 admin.html 的 body 规则
+   （min-height:100vh → 追加一行 min-height:100dvh），而不是由本文件越界处理。 */
+
+/* ==========================================================================
+   3. 左栏：品牌 + 角色舞台 + 页脚
+   ========================================================================== */
+
+#loginPage .lg-left-panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 40px 48px;
+  overflow: hidden;
+  background: linear-gradient(135deg, #d4d0dc 0%, #c8c4d0 50%, #bbb7c5 100%);
+}
+
+/* 装饰性模糊光斑（原来是 .left-panel::before / ::after） */
+#loginPage .lg-left-panel::after {
+  content: "";
+  position: absolute;
+  top: 20%;
+  right: 15%;
+  width: 260px;
+  height: 260px;
+  border-radius: 50%;
+  background: rgba(180, 170, 200, 0.25);
+  filter: blur(80px);
+}
+
+#loginPage .lg-left-panel::before {
+  content: "";
+  position: absolute;
+  bottom: 15%;
+  left: 10%;
+  width: 350px;
+  height: 350px;
+  border-radius: 50%;
+  background: rgba(200, 195, 210, 0.2);
+  filter: blur(100px);
+}
+
+/* ---- 品牌 ---- */
+#loginPage .lg-logo {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+}
+
+#loginPage .lg-logo svg {
+  width: 28px;
+  height: 28px;
+  padding: 4px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.15);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+#loginPage .lg-logo span {
+  letter-spacing: 0.5px;
+}
+
+/* ---- 页脚链接 ---- */
+#loginPage .lg-footer-links {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 24px;
+  font-size: 13px;
+  color: rgba(80, 70, 90, 0.7);
+}
+
+#loginPage .lg-footer-links a {
+  color: inherit;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+#loginPage .lg-footer-links a:hover {
+  color: #333;
+}
+
+/* ==========================================================================
+   4. 角色舞台（纯 CSS 造型）
+   ========================================================================== */
+
+#loginPage .lg-characters-wrapper {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex: 1 1 auto;
+  align-items: flex-end;
+  justify-content: center;
+  height: 420px;
+  min-height: 0;
+}
+
+#loginPage .lg-characters-scene {
+  position: relative;
+  flex: none;
+  width: 480px;
+  height: 360px;
+  transform-origin: bottom center;
+}
+
+/* 角色基类：位置/尺寸变化走 0.7s 缓动（摇头用动画，另见 lg-shakeHead） */
+#loginPage .lg-character {
+  position: absolute;
+  bottom: 0;
+  transform-origin: bottom center;
+  transition: transform 0.7s ease-in-out, height 0.7s ease-in-out;
+}
+
+/* 紫色矩形 */
+#loginPage .lg-char-purple {
+  left: 60px;
+  z-index: 1;
+  width: 170px;
+  height: 370px;
+  border-radius: 10px 10px 0 0;
+  background: #6c3ff5;
+}
+
+/* 黑色矩形 */
+#loginPage .lg-char-black {
+  left: 220px;
+  z-index: 2;
+  width: 115px;
+  height: 290px;
+  border-radius: 8px 8px 0 0;
+  background: #2d2d2d;
+}
+
+/* 橙色半圆 */
+#loginPage .lg-char-orange {
+  left: 0;
+  z-index: 3;
+  width: 230px;
+  height: 190px;
+  border-radius: 115px 115px 0 0;
+  background: #ff9b6b;
+}
+
+/* 黄色圆角矩形 */
+#loginPage .lg-char-yellow {
+  left: 290px;
+  z-index: 4;
+  width: 135px;
+  height: 215px;
+  border-radius: 68px 68px 0 0;
+  background: #e8d754;
+}
+
+#loginPage .lg-eyes {
+  position: absolute;
+  display: flex;
+  transition: left 0.7s ease-in-out, top 0.7s ease-in-out;
+}
+
+#loginPage .lg-eyeball {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 50%;
+  background: #fff;
+  transition: height 0.15s ease;
+}
+
+#loginPage .lg-pupil {
+  border-radius: 50%;
+  background: #2d2d2d;
+  transition: transform 0.1s ease-out;
+}
+
+#loginPage .lg-bare-pupil {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #2d2d2d;
+  transition: transform 0.7s ease-in-out;
+}
+
+#loginPage .lg-yellow-mouth {
+  position: absolute;
+  width: 50px;
+  height: 4px;
+  border-radius: 2px;
+  background: #2d2d2d;
+  transition: left 0.7s ease-in-out, top 0.7s ease-in-out, transform 0.7s ease-in-out;
+}
+
+/* 橙色角色的沮丧嘴（登录失败时出现） */
+#loginPage .lg-orange-mouth {
+  position: absolute;
+  width: 28px;
+  height: 14px;
+  border: 3px solid #2d2d2d;
+  border-top: none;
+  border-radius: 0 0 14px 14px;
+  opacity: 0;
+  transition: left 0.7s ease-in-out, top 0.7s ease-in-out, opacity 0.7s ease-in-out;
+}
+
+#loginPage .lg-orange-mouth.lg-visible {
+  opacity: 1;
+}
+
+/* 摇头（登录失败）：只作用于脸部件，幅度递减后归于静止 */
+@keyframes lg-shakeHead {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+
+  10% {
+    translate: -9px 0;
+  }
+
+  20% {
+    translate: 7px 0;
+  }
+
+  30% {
+    translate: -6px 0;
+  }
+
+  40% {
+    translate: 5px 0;
+  }
+
+  50% {
+    translate: -4px 0;
+  }
+
+  60% {
+    translate: 3px 0;
+  }
+
+  70% {
+    translate: -2px 0;
+  }
+
+  80% {
+    translate: 1px 0;
+  }
+
+  90% {
+    translate: -0.5px 0;
+  }
+}
+
+#loginPage .lg-eyes.lg-shake-head,
+#loginPage .lg-yellow-mouth.lg-shake-head,
+#loginPage .lg-orange-mouth.lg-shake-head {
+  animation: lg-shakeHead 0.8s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+/* ==========================================================================
+   5. 右栏：登录表单
+   ========================================================================== */
+
+#loginPage .lg-right-panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  background: #fff;
+}
+
+#loginPage .lg-form-container {
+  width: 100%;
+  max-width: 400px;
+}
+
+#loginPage .lg-sparkle-icon {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+
+#loginPage .lg-sparkle-icon svg {
+  width: 32px;
+  height: 32px;
+}
+
+#loginPage .lg-form-header {
+  margin-bottom: 34px;
+  text-align: center;
+}
+
+#loginPage .lg-form-header h1 {
+  margin-bottom: 6px;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  color: #1a1a2e;
+}
+
+#loginPage .lg-form-header p {
+  font-size: 14px;
+  color: #888;
+}
+
+#loginPage .lg-form-group {
+  margin-bottom: 20px;
+}
+
+#loginPage .lg-form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #333;
+}
+
+#loginPage .lg-input-wrapper {
+  position: relative;
+}
+
+#loginPage .lg-input-wrapper input {
+  width: 100%;
+  height: 48px;
+  padding: 0 40px 0 0; /* 右侧留出显示/隐藏按钮的位置 */
+  border: none;
+  border-bottom: 1.5px solid #e0e0e0;
+  background: transparent;
+  font-family: inherit;
+  font-size: 15px;
+  color: #1a1a2e;
+  outline: none;
+  transition: border-color 0.3s;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+#loginPage .lg-input-wrapper input:focus {
+  border-bottom-color: #5b21b6;
+}
+
+#loginPage .lg-input-wrapper input::placeholder {
+  color: #ccc;
+}
+
+#loginPage .lg-input-wrapper input[type="password"]:not(:placeholder-shown) {
+  letter-spacing: 2px;
+}
+
+/* 隐藏 Edge / IE 自带的密码显示、清除按钮 */
+#loginPage .lg-input-wrapper input::-ms-reveal,
+#loginPage .lg-input-wrapper input::-ms-clear {
+  display: none;
+}
+
+/* 密码显示 / 隐藏切换（源项目已有交互，保留） */
+#loginPage .lg-toggle-password {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  padding: 6px;
+  border: none;
+  background: none;
+  color: #666;
+  cursor: pointer;
+  transform: translateY(-50%);
+  transition: color 0.2s;
+}
+
+#loginPage .lg-toggle-password:hover {
+  color: #333;
+}
+
+#loginPage .lg-toggle-password svg {
+  display: block;
+}
+
+#loginPage .lg-toggle-password:focus-visible {
+  border-radius: 4px;
+  outline: 2px solid #5b21b6;
+  outline-offset: 2px;
+}
+
+/* ==========================================================================
+   6. 错误提示（对外 id：#loginError，不加前缀）
+   后台失败时会做 el.style.display = 'block' + el.textContent = '密钥错误'，
+   inline 样式优先级最高，一定能显示；这里再补一条「有内容就显示」的兜底，
+   使得任何只写文本、不写 display 的调用方式也能正常可见。
+   ========================================================================== */
+
+#loginError {
+  display: none;
+  margin-bottom: 16px;
+  padding: 10px 14px;
+  border: 1px solid rgba(220, 38, 38, 0.2);
+  border-radius: 10px;
+  background: rgba(220, 38, 38, 0.08);
+  font-size: 13px;
+  line-height: 1.5;
+  color: #dc2626;
+}
+
+#loginError:not(:empty) {
+  display: block;
+}
+
+/* ==========================================================================
+   7. 提交按钮
+   ========================================================================== */
+
+#loginPage .lg-btn-login {
+  position: relative;
+  width: 100%;
+  height: 50px;
+  overflow: hidden;
+  border: 1.5px solid #1a1a2e;
+  border-radius: 25px;
+  background: #1a1a2e;
+  color: #fff;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.3s, border-color 0.3s;
+}
+
+#loginPage .lg-btn-login .lg-btn-text {
+  display: inline-block;
+  transition: transform 0.3s, opacity 0.3s;
+}
+
+#loginPage .lg-btn-login .lg-btn-hover-content {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 25px;
+  background: #5b21b6;
+  color: #fff;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+#loginPage .lg-btn-login:hover .lg-btn-text {
+  opacity: 0;
+  transform: translateX(40px);
+}
+
+#loginPage .lg-btn-login:hover .lg-btn-hover-content {
+  opacity: 1;
+}
+
+#loginPage .lg-btn-login:focus-visible {
+  outline: 2px solid #5b21b6;
+  outline-offset: 3px;
+}
+
+/* ==========================================================================
+   8. 表单下方返回博客首页
+   ========================================================================== */
+
+#loginPage .lg-signup-link {
+  margin-top: 32px;
+  font-size: 13px;
+  text-align: center;
+  color: #888;
+}
+
+#loginPage .lg-signup-link a {
+  color: #1a1a2e;
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+#loginPage .lg-signup-link a:hover {
+  color: #5b21b6;
+  text-decoration: underline;
+}
+
+/* ==========================================================================
+   9. 中等宽度：左栏变窄，角色舞台等比缩小（避免角色被裁掉）
+   ========================================================================== */
+
+@media (max-width: 1180px) {
+  #loginPage .lg-left-panel {
+    padding: 32px 32px;
+  }
+
+  #loginPage .lg-characters-scene {
+    transform: scale(0.82);
+  }
+}
+
+@media (max-width: 1020px) {
+  #loginPage .lg-characters-scene {
+    transform: scale(0.66);
+  }
+}
+
+/* ==========================================================================
+   10. 响应式：≤900px 隐藏左栏（角色区）改单栏（沿用源项目策略）
+   ========================================================================== */
+
+@media (max-width: 900px) {
+  #loginPage {
+    grid-template-columns: 1fr;
+  }
+
+  #loginPage .lg-left-panel {
+    display: none;
+  }
+
+  #loginPage .lg-right-panel {
+    padding: 36px 28px;
+  }
+}
+
+/* 窄屏（≤480px）：内边距 / 字号收紧，保证 375px 宽可用 */
+@media (max-width: 480px) {
+  #loginPage .lg-right-panel {
+    padding: 28px 18px;
+  }
+
+  #loginPage .lg-sparkle-icon {
+    margin-bottom: 18px;
+  }
+
+  #loginPage .lg-sparkle-icon svg {
+    width: 28px;
+    height: 28px;
+  }
+
+  #loginPage .lg-form-header {
+    margin-bottom: 26px;
+  }
+
+  #loginPage .lg-form-header h1 {
+    font-size: 22px;
+    letter-spacing: -0.2px;
+  }
+
+  #loginPage .lg-form-header p {
+    font-size: 13px;
+  }
+
+  #loginPage .lg-form-group label {
+    margin-bottom: 6px;
+    font-size: 12.5px;
+  }
+
+  #loginPage .lg-input-wrapper input {
+    height: 46px;
+    font-size: 16px; /* 16px 可避免 iOS Safari 聚焦时自动放大页面 */
+  }
+
+  #loginPage .lg-btn-login {
+    height: 48px;
+    font-size: 15px;
+  }
+
+  #loginPage .lg-signup-link {
+    margin-top: 24px;
+    font-size: 12.5px;
+  }
+
+  #loginError {
+    padding: 9px 12px;
+    font-size: 12.5px;
+  }
+}
+
+/* ==========================================================================
+   11. prefers-reduced-motion：减少动效降级
+   关闭角色的持续动画（眨眼、跟随鼠标的倾斜、摇头、缓动过渡），
+   保留静态造型与「输入中 / 密码可见 / 登录失败」等状态区分。
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  #loginPage .lg-character,
+  #loginPage .lg-eyes,
+  #loginPage .lg-eyeball,
+  #loginPage .lg-pupil,
+  #loginPage .lg-bare-pupil,
+  #loginPage .lg-yellow-mouth,
+  #loginPage .lg-orange-mouth,
+  #loginPage .lg-footer-links a,
+  #loginPage .lg-toggle-password,
+  #loginPage .lg-btn-login,
+  #loginPage .lg-btn-login .lg-btn-text,
+  #loginPage .lg-btn-login .lg-btn-hover-content {
+    transition: none;
+  }
+
+  /* 摇头动画关闭；失败的沮丧造型仍由「低头姿态 + 橙色角色下垂的嘴」表达 */
+  #loginPage .lg-eyes.lg-shake-head,
+  #loginPage .lg-yellow-mouth.lg-shake-head,
+  #loginPage .lg-orange-mouth.lg-shake-head {
+    animation: none;
+  }
+
+  /* 按钮 hover 只做颜色/透明度切换，不做箭头滑动位移 */
+  #loginPage .lg-btn-login:hover .lg-btn-text {
+    transform: none;
+  }
+}
