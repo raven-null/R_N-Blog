@@ -759,25 +759,10 @@
     async function collect() {
         var title = $('eeTitle').value.trim();
         var tags = currentTags();
-        var body = {
-            id: doc ? doc.id : docId,
-            title: title,
-            tags: tags,
-            excerpt: docType === 'article' ? $('eeExcerpt').value.trim() : '',
-            image: docType === 'card' ? '' : $('eeImage').value.trim(),
-            status: $('eeStatusSel').value,
-            type: docType,
-            boardId: (doc && doc.boardId) || '',
-            // 注意：mapId 不能传空串，服务端在 type=mindmap 时会用它覆盖，等于清掉关联
-            author: (doc && doc.author) || ''
-        };
-        // 导图文章：仅当确实绑定了导图才回传 mapId（空值会清掉关联）
-        if (docType === 'mindmap' && doc && doc.mapId) body.mapId = doc.mapId;
-        // 白板文章的正文不是编辑器内容：原样回传，避免保存元信息时清空
-        if (docType === 'whiteboard') {
-            body.content = (doc && doc.content) || '';
-        } else if (chunkEdit) {
-            // 分章文章：把已编辑的章节与未加载的章节按顺序拼成全文提交（后端会重新分章）
+
+        // 先取正文（分章文章需按顺序拼全文）
+        var content;
+        if (chunkEdit) {
             chunkEdit.chunks[chunkEdit.current] = getEditorContent();
             var parts = [];
             for (var i = 0; i < chunkEdit.total; i++) {
@@ -788,17 +773,50 @@
                 }
                 parts.push(text || '');
             }
-            body.content = parts.join('\n\n');
+            content = parts.join('\n\n');
         } else {
-            body.content = getEditorContent();
+            content = getEditorContent();
         }
+
+        // ===== 内容形态判定 =====
+        // 规则：正文去掉块标记后为空、且只引用了一个块 → 保留独立画布形态（阅读页整页展示）；
+        // 否则按 article（阅读页内联渲染）。已在 embed-picker.js 里实现，含两个例外：
+        // 随记保持随记；写文章页显式选了白板/导图形态时尊重该选择。
+        var finalType = docType;
+        if (window.EmbedPicker && typeof window.EmbedPicker.deriveContentType === 'function') {
+            try { finalType = window.EmbedPicker.deriveContentType(docType, content); } catch (e) { finalType = docType; }
+        }
+
+        // 关联 id：优先用正文里引用的块（单块）→ 独立画布形态；
+        // 否则沿用原有关联（白板/导图文章照常）。mapId 不传空串——服务端在 type=mindmap 时用它覆盖，等于清掉关联。
+        var boardId = (doc && doc.boardId) || '';
+        var mapId = (doc && doc.mapId) || '';
+        if (window.EmbedPicker && typeof window.EmbedPicker.extractBlockRefs === 'function') {
+            var refs = [];
+            try { refs = window.EmbedPicker.extractBlockRefs(content) || []; } catch (e) { refs = []; }
+            if (finalType === 'whiteboard' && refs.length === 1 && refs[0].kind === 'board') boardId = refs[0].id;
+            if (finalType === 'mindmap' && refs.length === 1 && refs[0].kind === 'map') mapId = refs[0].id;
+        }
+
+        var body = {
+            id: doc ? doc.id : docId,
+            title: title,
+            tags: tags,
+            excerpt: finalType === 'article' ? $('eeExcerpt').value.trim() : '',
+            image: finalType === 'card' ? '' : $('eeImage').value.trim(),
+            status: $('eeStatusSel').value,
+            type: finalType,
+            boardId: finalType === 'whiteboard' ? boardId : ((doc && doc.boardId) || ''),
+            content: content,
+            author: (doc && doc.author) || ''
+        };
+        if (finalType === 'mindmap' && mapId) body.mapId = mapId;
         return body;
     }
     async function doSave(silent) {
         var body = await collect();
         if (!body.title) { toast('请填写标题', 'error'); return false; }
-        if (docType !== 'whiteboard' && docType !== 'mindmap' && !body.content) { toast('请填写正文内容', 'error'); return false; }
-        // 先把正文里引用的所有内嵌画布落盘：
+        if (body.type !== 'whiteboard' && body.type !== 'mindmap' && !body.content) { toast('请填写正文内容', 'error'); return false; }
         // 内嵌块的真实内容在画布自己的 store（excalidraw / mindmaps），与文章正文是两套存储。
         // 若画布保存失败仍提交文章，就会出现「文章存了、画布改动丢了」——故此处必须阻断。
         var flush = { ok: true, failed: [] };

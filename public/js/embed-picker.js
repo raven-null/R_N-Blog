@@ -319,33 +319,84 @@
         return /^(?:wb|mm|map)-[A-Za-z0-9_-]{3,}$/.test(id) || /^(?:wb|mm)-[A-Za-z0-9_-]+$/.test(id);
     }
 
-    async function flushEmbeds(vd) {
-        var md = '';
-        try { md = vd && typeof vd.getValue === 'function' ? vd.getValue() : ''; } catch (e) { md = ''; }
-        if (!md) return { ok: true, failed: [] };
-
-        // 从正文提取全部内嵌块（正文是权威来源：画布可能未挂载，但引用一定在正文里）
-        // 三种写法（允许行首有 ``` 反引号与 ≤4 空格缩进）：
+    /**
+     * 从正文提取内嵌块引用（供保存前落盘、以及内容形态判定共用）。
+     * 返回 [{ kind: 'board'|'map', id }]
+     */
+    function extractBlockRefs(md) {
+        if (!md) return [];
+        // 三种写法（允许行首反引号与 ≤4 空格缩进）：
         //   1) 内容行         ```embed + 次行 board:xxx   （当前写入格式）
         //   2) 代码块语言行   ```embed board:xxx          （历史语法）
         //   3) 代码块语言行   ```excalidraw + 次行 id     （历史语法）
-        // 再叠加 looksLikeCanvasId 形状校验，避免把普通正文里的「board:」当成引用。
+        // 叠加 looksLikeCanvasId 形状校验，避免把普通正文里的「board:」当成引用。
         var patterns = [
             /^[ \t]{0,4}(?:`{3,})?(?:board|map)\s*:\s*([A-Za-z0-9_.\u4e00-\u9fa5-]{1,64})/gm,
             /^[ \t]{0,4}(?:`{3,})?embed[ \t]+(?:board|map)\s*:\s*([A-Za-z0-9_.\u4e00-\u9fa5-]{1,64})/gm,
             /^[ \t]{0,4}(?:`{3,})?(?:excalidraw|mindmap)[ \t]*\n[ \t]{0,4}([A-Za-z0-9_.\u4e00-\u9fa5-]{1,64})/gm
         ];
-        var blocks = [], seen = {};
+        var out = [], seen = {};
         for (var pi = 0; pi < patterns.length; pi++) {
             patterns[pi].lastIndex = 0;
-            var mm;
-            while ((mm = patterns[pi].exec(md))) {
-                var cid = mm[1];
-                if (!cid || seen[cid] || !looksLikeCanvasId(cid)) continue;
-                seen[cid] = 1;
-                blocks.push({ kind: cid.indexOf('mm-') === 0 ? 'map' : 'board', id: cid });
+            var m;
+            while ((m = patterns[pi].exec(md))) {
+                var id = m[1];
+                if (!id || seen[id] || !looksLikeCanvasId(id)) continue;
+                seen[id] = 1;
+                out.push({ kind: id.indexOf('mm-') === 0 ? 'map' : 'board', id: id });
             }
         }
+        return out;
+    }
+
+    /**
+     * 去掉内嵌块标记后，是否还剩正文文字。
+     * 关键在于把「代码块整体」剥掉（含语言行与内容行的画布 id），否则
+     * ```excalidraw + 次行 id 这种历史写法会把 id 当成正文，导致形态判定失效。
+     */
+    function hasProse(md) {
+        if (!md) return false;
+        var ID = '[A-Za-z0-9_.\\u4e00-\\u9fa5-]{1,64}';
+        var stripped = md
+            // 一行式：```embed board:xxx
+            .replace(new RegExp('^[ \\t]{0,4}(?:`{3,})?embed[ \\t]+(?:board|map)\\s*:\\s*' + ID + '[ \\t]*$', 'gm'), '')
+            // 内容行：```embed + 次行 board:xxx
+            .replace(new RegExp('^[ \\t]{0,4}(?:`{3,})?embed[ \\t]*\\n[ \\t]{0,4}(?:board|map)\\s*:\\s*' + ID + '[ \\t]*$', 'gm'), '')
+            // 历史语法：```excalidraw / ```mindmap + 次行 id
+            .replace(new RegExp('^[ \\t]{0,4}(?:`{3,})?(?:excalidraw|mindmap)[ \\t]*\\n[ \\t]{0,4}' + ID + '[ \\t]*$', 'gm'), '')
+            // 残留的单独 fence 行
+            .replace(/^[ \t]{0,4}`{3,}[ \t]*$/gm, '');
+        return stripped.replace(/\s/g, '').length > 0;
+    }
+
+    /**
+     * 内容形态判定（方案 5.2 的规则）：
+     *   正文去掉块标记后为空 且 只引用了一个块  → 保留独立画布形态（整页展示）
+     *   否则                                  → article（阅读页内联渲染）
+     *
+     * 两个刻意的例外（避免误判）：
+     *   1) 用户已明确选择 card（随记）→ 保持随记
+     *   2) 用户显式选了 whiteboard/mindmap 却还没插入任何块 → 保持其选择，
+     *      以免仅因「正文暂时为空」就把类型改掉
+     */
+    function deriveContentType(currentType, md) {
+        if (currentType === 'card') return 'card';
+        // 用户显式选了画布形态（写文章页的形态切换器）→ 尊重其选择，不因正文暂时为空而改类型
+        if (currentType === 'whiteboard' || currentType === 'mindmap') return currentType;
+        var refs = extractBlockRefs(md);
+        var prose = hasProse(md);
+        if (!prose && refs.length === 1) {
+            return refs[0].kind === 'map' ? 'mindmap' : 'whiteboard';
+        }
+        return 'article';
+    }
+
+    async function flushEmbeds(vd) {
+        var md = '';
+        try { md = vd && typeof vd.getValue === 'function' ? vd.getValue() : ''; } catch (e) { md = ''; }
+        if (!md) return { ok: true, failed: [] };
+
+        var blocks = extractBlockRefs(md);
         if (!blocks.length) return { ok: true, failed: [] };
 
         var failed = [];
@@ -586,6 +637,10 @@
         setVditor: function (vd) { activeVditor = vd; },
         /** 把正文引用的所有画布先落盘（保存文章前调用，避免画布改动丢失） */
         flushEmbeds: flushEmbeds,
+        /** 从正文提取内嵌块引用（保存前落盘 / 内容形态判定共用） */
+        extractBlockRefs: extractBlockRefs,
+        /** 内容形态判定：返回 'article' | 'whiteboard' | 'mindmap' | 'card' */
+        deriveContentType: deriveContentType,
         /** 画布编辑抽屉：openDrawer({kind,id,caption}) / closeDrawer() */
         openDrawer: openDrawer,
         closeDrawer: closeDrawer,

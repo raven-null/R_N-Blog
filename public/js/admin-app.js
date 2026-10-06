@@ -474,9 +474,24 @@
             }
             const body={title,excerpt,tags,content,status,image};
             if(editingId)body.id=editingId;
-            // 保留原内容类型（随记/白板文章不能被编辑器保存回退成普通文章）
-            if(editingType)body.type=editingType;
+            // ===== 内容形态判定 =====
+            // 随记保持随记；显式选了白板/导图形态（写文章页的形态切换器）尊重该选择；
+            // 其余由 embed-picker 推导：正文为空且只引用一个块 → 独立画布形态，否则 article。
+            let finalType=editingType||'article';
+            if(finalType!=='card'&&window.EmbedPicker&&typeof window.EmbedPicker.deriveContentType==='function'){
+                const explicit=(writeMode==='board')?'whiteboard':(writeMode==='mindmap'?'mindmap':'');
+                const base=explicit||finalType;
+                try{ finalType=window.EmbedPicker.deriveContentType(base,content); }catch(e){ finalType=base; }
+            }
+            body.type=finalType;
             if(editingBoardId)body.boardId=editingBoardId;
+            // 独立画布形态：把正文里引用的那个块落到关联字段（单块且类型匹配时）
+            if(window.EmbedPicker&&typeof window.EmbedPicker.extractBlockRefs==='function'){
+                let refs=[];
+                try{ refs=window.EmbedPicker.extractBlockRefs(content)||[]; }catch(e){ refs=[]; }
+                if(finalType==='whiteboard'&&refs.length===1&&refs[0].kind==='board')body.boardId=refs[0].id;
+                if(finalType==='mindmap'){ if(refs.length===1&&refs[0].kind==='map')body.mapId=refs[0].id; else if(currentMapId)body.mapId=currentMapId; }
+            }
             const r=await apiFetch('action=articles',{method:'POST',body:JSON.stringify(body)});
             if(r.status==='success'){
                 const meta=(r.data&&r.data.data)?r.data.data:(r.data||{});
