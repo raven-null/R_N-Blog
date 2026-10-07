@@ -484,6 +484,9 @@
             /* 页面标题栏 */
             .page-bar{flex-direction:column;align-items:flex-start;gap:10px;margin-bottom:14px}
             .page-bar-actions{width:100%;justify-content:flex-start}
+            /* 文章管理顶栏：窄屏下工具条与创建按钮各占整行 */
+            .art-page-bar .art-toolbar{width:100%;flex:0 0 auto}
+            .art-page-bar .page-bar-actions{width:100%;margin-left:0}
             /* 文章管理表格 → 卡片 */
             .article-table,.article-table thead,.article-table tbody,.article-table tr,.article-table th,.article-table td{display:block;width:100%}
             .article-table thead{display:none}
@@ -968,6 +971,10 @@
                 <div id="tab-articles">
                     <style>
                         .art-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:0 20px 12px}
+                        /* 顶栏那一行：工具条与「＋创建 / 导入」并排，去掉各自的独立外边距 */
+                        .art-page-bar{align-items:center;gap:14px;margin-bottom:16px;flex-wrap:wrap}
+                        .art-page-bar .art-toolbar{flex:1 1 auto;min-width:0;padding:0}
+                        .art-page-bar .page-bar-actions{flex:0 0 auto;margin-left:auto}
                         .art-seg{display:flex;gap:4px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:999px;padding:3px}
                         .art-chip{border:none;background:transparent;color:var(--text-muted);font-size:12.5px;padding:4px 13px;border-radius:999px;cursor:pointer;font-family:inherit;transition:background .2s,color .2s}
                         .art-chip:hover{color:var(--text-secondary)}
@@ -1032,33 +1039,34 @@
                         .art-card.orphan .ac-badge{background:rgba(255,167,38,.24);border-color:rgba(255,167,38,.5);color:#ffe0ac}
                         .art-card.orphan .ac-cover.noimg{background:linear-gradient(135deg,rgba(255,167,38,.16),rgba(255,167,38,.06))}
                     </style>
-                    <div class="page-bar"><h2>文章管理</h2><div class="page-bar-actions">
-                        <button class="btn" onclick="openCreatePicker()">＋ 创建</button>
-                        <label class="btn btn-ghost" style="cursor:pointer">导入 .md<input type="file" accept=".md,.markdown" onchange="importAndEdit(this.files[0])" style="display:none"></label>
-                    </div></div>
-
-                    <!-- 筛选工具栏 -->
-                    <div class="art-toolbar">
-                        <div class="art-seg" id="artStatusSeg">
-                            <button class="art-chip active" onclick="setArtStatus('all')">全部 <span class="cnt" id="artCntAll"></span></button>
-                            <button class="art-chip" onclick="setArtStatus('published')">已发布 <span class="cnt" id="artCntPub"></span></button>
-                            <button class="art-chip" onclick="setArtStatus('draft')">草稿 <span class="cnt" id="artCntDraft"></span></button>
+                    <!-- 顶栏：筛选工具栏 + 创建入口挤在同一行（原「文章管理」标题已去掉） -->
+                    <div class="page-bar art-page-bar">
+                        <div class="art-toolbar">
+                            <div class="art-seg" id="artStatusSeg">
+                                <button class="art-chip active" onclick="setArtStatus('all')">全部 <span class="cnt" id="artCntAll"></span></button>
+                                <button class="art-chip" onclick="setArtStatus('published')">已发布 <span class="cnt" id="artCntPub"></span></button>
+                                <button class="art-chip" onclick="setArtStatus('draft')">草稿 <span class="cnt" id="artCntDraft"></span></button>
+                            </div>
+                            <div class="art-seg" id="artTypeSeg">
+                                <button class="art-chip active" data-type="all" onclick="setArtType('all')">全部类型</button>
+                                <button class="art-chip" data-type="article" onclick="setArtType('article')">文章</button>
+                                <button class="art-chip" data-type="whiteboard" onclick="setArtType('whiteboard')">白板</button>
+                                <button class="art-chip" data-type="card" onclick="setArtType('card')">随记</button>
+                                <button class="art-chip" data-type="mindmap" onclick="setArtType('mindmap')">导图</button>
+                            </div>
+                            <div class="art-search">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                                <input type="text" id="articleSearchInput" placeholder="搜索标题、标签、ID…" oninput="filterArticles()">
+                                <button class="clear" id="artSearchClear" onclick="clearArticleSearch()" title="清空">&times;</button>
+                            </div>
+                            <div class="art-tools">
+                                <button class="btn btn-ghost" id="artSortBtn" onclick="toggleArtSort()">排序模式</button>
+                                <button class="btn btn-ghost" id="artBatchBtn" onclick="toggleArtBatch()">批量选择</button>
+                            </div>
                         </div>
-                        <div class="art-seg" id="artTypeSeg">
-                            <button class="art-chip active" data-type="all" onclick="setArtType('all')">全部类型</button>
-                            <button class="art-chip" data-type="article" onclick="setArtType('article')">文章</button>
-                            <button class="art-chip" data-type="whiteboard" onclick="setArtType('whiteboard')">白板</button>
-                            <button class="art-chip" data-type="card" onclick="setArtType('card')">随记</button>
-                            <button class="art-chip" data-type="mindmap" onclick="setArtType('mindmap')">导图</button>
-                        </div>
-                        <div class="art-search">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-                            <input type="text" id="articleSearchInput" placeholder="搜索标题、标签、ID…" oninput="filterArticles()">
-                            <button class="clear" id="artSearchClear" onclick="clearArticleSearch()" title="清空">&times;</button>
-                        </div>
-                        <div class="art-tools">
-                            <button class="btn btn-ghost" id="artSortBtn" onclick="toggleArtSort()">排序模式</button>
-                            <button class="btn btn-ghost" id="artBatchBtn" onclick="toggleArtBatch()">批量选择</button>
+                        <div class="page-bar-actions">
+                            <button class="btn" onclick="openCreatePicker()">＋ 创建</button>
+                            <label class="btn btn-ghost" style="cursor:pointer">导入 .md<input type="file" accept=".md,.markdown" onchange="importAndEdit(this.files[0])" style="display:none"></label>
                         </div>
                     </div>
 
