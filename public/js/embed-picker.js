@@ -1,5 +1,5 @@
 /**
- * 插入画布面板（白板 / 思维导图）—— 后台写文章页与文章编辑页共用
+ * 插入画布面板（白板 / 思维导图）—— 后台写文章页与文章编辑页共用（v1.8.0）
  * ===========================================================================
  * 职责：
  *   · 自己注入样式与弹窗 DOM（两个页面只需引入本文件 + 一个工具栏按钮）
@@ -47,7 +47,11 @@
         var s = document.createElement('style');
         s.id = STYLE_ID;
         s.textContent = [
-            '#embedPickerModal{position:fixed;inset:0;z-index:2600;display:none}',
+            /* 弹层统一取「顶层」数值（2147483000 档）：宿主页会为了抬高 Vditor 下拉面板，
+               把编辑器祖先链设成 z-index:3000（见 admin-edit.html），普通小数值（如 2600）
+               会被编辑器正文整块盖住，点工具栏按钮就像没反应。这里直接用同档最大值，
+               并让抽屉比弹窗再高一级、提示比两者都高。 */
+            '#embedPickerModal{position:fixed;inset:0;z-index:2147483000;display:none}',
             '#embedPickerModal.open{display:flex;align-items:center;justify-content:center}',
             '#embedPickerModal .ep-mask{position:absolute;inset:0;background:rgba(5,5,9,.6);',
             '  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}',
@@ -86,7 +90,7 @@
             '#embedPickerModal .ep-close:hover{color:#fff}',
             '#embedPickerModal .ep-quota{margin-top:9px;font-size:12px;color:rgba(255,255,255,.5)}',
             '#embedPickerModal .ep-quota.full{color:#ffa726}',
-            '.ep-toast{position:fixed;left:50%;bottom:32px;transform:translateX(-50%);z-index:2700;',
+            '.ep-toast{position:fixed;left:50%;bottom:32px;transform:translateX(-50%);z-index:2147483100;',
             '  max-width:min(560px,92vw);padding:10px 16px;border-radius:10px;font-size:13px;line-height:1.7;',
             '  background:rgba(20,20,28,.96);color:#fff;border:1px solid rgba(255,255,255,.16);',
             '  box-shadow:0 18px 50px -12px rgba(0,0,0,.8)}',
@@ -127,10 +131,10 @@
             '  font-size:12px;font-family:inherit;transition:background .15s}',
             '.ep-edit-btn:hover{background:rgba(79,195,247,.24)}',
             /* 画布编辑抽屉 */
-            '.ep-drawer-mask{position:fixed;inset:0;z-index:2600;background:rgba(5,5,9,.5);',
+            '.ep-drawer-mask{position:fixed;inset:0;z-index:2147483000;background:rgba(5,5,9,.5);',
             '  backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);display:none}',
             '.ep-drawer-mask.open{display:block}',
-            '.ep-drawer{position:fixed;top:0;right:0;bottom:0;width:min(980px,94vw);z-index:2601;',
+            '.ep-drawer{position:fixed;top:0;right:0;bottom:0;width:min(980px,94vw);z-index:2147483001;',
             '  display:flex;flex-direction:column;background:#0b0b0e;',
             '  border-left:1px solid rgba(255,255,255,.14);box-shadow:-24px 0 60px -20px rgba(0,0,0,.8);',
             '  transform:translateX(103%);transition:transform .3s cubic-bezier(.22,1,.36,1);',
