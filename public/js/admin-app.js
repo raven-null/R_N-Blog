@@ -63,6 +63,113 @@
             const r=await apiFetch('action=articles');
             if(seq!==articlesReqSeq)return; // 已有更新的请求在途/已返回，丢弃本次结果
             if(r.status==='success'){allArticles=r.data||[];artSel.clear();renderArticles()}
+            loadOrphanCanvases(); // 文章列表到手后才能算出哪些画板没被引用
+        }
+        /* ===== 未归入文章的画板 =====
+           画板（白板 / 导图）的图形数据有独立存储，与文章记录是两条数据。
+           只在画布里画完、没在编写页点「保存」时，就会出现「画板库里有、文章管理里没有」。
+           这里把这类孤儿画板列出来并支持一键归入，避免它们彻底看不见。 */
+        let orphanCanvases=[],orphanCollapsed=false;
+        async function loadOrphanCanvases(){
+            const seq=articlesReqSeq;
+            const used=new Set();
+            allArticles.forEach(function(a){
+                if(a.id)used.add(a.id);
+                if(a.boardId)used.add(a.boardId);
+                if(a.mapId)used.add(a.mapId);
+            });
+            const out=[];
+            const grab=async function(q,type){
+                try{
+                    const r=await fetch(q,{headers:{'X-Admin-Key':adminKey},cache:'no-store'});
+                    const d=await r.json();
+                    if(!d||d.status!=='success')return;
+                    (d.data||d.items||[]).forEach(function(it){
+                        if(!it||!it.id||used.has(it.id))return;
+                        out.push({id:it.id,type:type,title:it.title||'',updatedAt:it.updatedAt||it.date||''});
+                    });
+                }catch(e){/* 列表拿不到就不显示这一块，不影响文章列表 */}
+            };
+            await grab('/api/excalidraw?action=list','whiteboard');
+            await grab('/api/mindmap?action=list','mindmap');
+            if(seq!==articlesReqSeq)return; // 期间又刷新过文章，丢弃旧结果
+            out.sort(function(a,b){return String(b.updatedAt||'').localeCompare(String(a.updatedAt||''))});
+            orphanCanvases=out;
+            renderOrphans();
+        }
+        function filteredOrphans(){
+            if(artStatus!=='all')return []; // 孤儿画板没有发布状态，只在「全部」下展示
+            const kw=artKw();
+            return orphanCanvases.filter(function(o){
+                if(artType!=='all'&&artType!==o.type)return false;
+                if(kw&&!((o.title||'')+' '+o.id).toLowerCase().includes(kw))return false;
+                return true;
+            });
+        }
+        function orphanCardHtml(o){
+            const isMap=o.type==='mindmap';
+            const label=isMap?'导图':'白板';
+            const ph=isMap?'图':'白';
+            const id=escJs(o.id);
+            return '<div class="art-card orphan" data-id="'+escAttr(o.id)+'" onclick="artOrphanClick(\''+id+'\',event)">'+
+                '<div class="ac-cover noimg"><span class="ac-ph">'+ph+'</span><span class="ac-badge">未归入文章</span></div>'+
+                '<div class="ac-body">'+
+                '<div class="ac-title"><span class="tt">'+esc(o.title||'(未命名'+label+')')+'</span></div>'+
+                '<div class="ac-desc">'+label+'数据已存在，但还没有对应的文章记录</div>'+
+                '<div class="ac-meta"><span>'+esc(o.id)+'</span>'+(o.updatedAt?'<span class="up">更新 '+esc(o.updatedAt)+'</span>':'')+'</div>'+
+                '</div>'+
+                '<div class="ac-ops">'+
+                '<button class="btn btn-sm" onclick="artAdoptCanvas(\''+id+'\',\''+o.type+'\',event)">归入文章管理</button>'+
+                '<span class="sp"></span>'+
+                '<button class="btn btn-ghost btn-sm" title="只看画布，不建文章" onclick="artOpenCanvasRaw(\''+id+'\',\''+o.type+'\',event)">打开画布</button>'+
+                '</div></div>';
+        }
+        function renderOrphans(){
+            const wrap=document.getElementById('artOrphanWrap');
+            const grid=document.getElementById('artOrphanGrid');
+            if(!wrap||!grid)return;
+            const list=filteredOrphans();
+            if(!list.length||artSort){wrap.style.display='none';return}
+            wrap.style.display='';
+            wrap.classList.toggle('collapsed',orphanCollapsed);
+            const btn=document.getElementById('artOrphanToggle');
+            if(btn)btn.textContent=orphanCollapsed?'展开 '+list.length+' 个':'收起';
+            const cnt=document.getElementById('artOrphanCnt');
+            if(cnt)cnt.textContent=list.length;
+            grid.innerHTML=list.map(orphanCardHtml).join('');
+            requestAnimationFrame(function(){
+                grid.querySelectorAll('.art-card').forEach(function(c,i){setTimeout(function(){c.classList.add('visible')},i*28)});
+            });
+        }
+        function toggleArtOrphans(){
+            orphanCollapsed=!orphanCollapsed;
+            renderOrphans();
+        }
+        function artOrphanClick(id,e){
+            if(e.target.closest('.ac-ops,.ac-check'))return;
+            artAdoptCanvas(id,(orphanCanvases.find(function(o){return o.id===id})||{}).type||'whiteboard');
+        }
+        function artOpenCanvasRaw(id,type,e){
+            if(e)e.stopPropagation();
+            const q=type==='mindmap'
+                ?'/mindmap.html?note='+encodeURIComponent(id)+'&edit=1&from=admin'
+                :'/excalidraw.html?note='+encodeURIComponent(id)+'&edit=1&from=admin';
+            window.open(q,'_blank');
+        }
+        /* 归入：为孤儿画板建一条草稿记录（文章 id 就用画布 id，一块画布对应一篇内容），
+           然后跳到编写页继续完善。草稿不发布就不会出现在前台。 */
+        async function artAdoptCanvas(id,type,e){
+            if(e)e.stopPropagation();
+            const o=orphanCanvases.find(function(x){return x.id===id})||{};
+            const isMap=type==='mindmap';
+            const title=(o.title||'').trim()||(isMap?'未命名导图':'未命名白板');
+            const body={id:id,title:title,content:'',excerpt:'',image:'',status:'draft',type:type,tags:[]};
+            if(isMap)body.mapId=id; else body.boardId=id;
+            const r=await apiFetch('action=articles',{method:'POST',body:JSON.stringify(body)});
+            if(r.status!=='success'){showToast(r.message||'归入失败','error');return}
+            showToast('已归入文章管理（草稿）：'+title,'success');
+            notifyArticlesChanged();
+            location.href='/admin-edit.html?id='+encodeURIComponent(id);
         }
         function artKw(){const i=document.getElementById('articleSearchInput');return (i&&i.value||'').trim().toLowerCase()}
         function filteredArticles(){
@@ -147,6 +254,7 @@
             editArticle(id);
         }
         function renderArticles(){
+            renderOrphans(); // 筛选条件变化同样作用于「未归入文章的画板」区
             const list=filteredArticles();
             const cnt=function(st){return allArticles.filter(function(a){return a.status===st}).length};
             const setT=function(id,v){const el=document.getElementById(id);if(el)el.textContent=v};

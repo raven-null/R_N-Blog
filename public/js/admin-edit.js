@@ -752,6 +752,43 @@
             } catch (e) { /* 解析失败就当空文档，不阻塞 */ }
         }
         await applyDoc();
+        watchNewCanvasSave();
+    }
+
+    /**
+     * 新建白板 / 导图时盯着画布：画布自己保存成功后，若这篇内容还没落库，就自动补一条草稿记录。
+     * 画板数据（excalidraw / mindmaps 两个 store）与文章记录是两套存储，只存画板不存文章，
+     * 结果就是「画了半天，文章管理页里什么都没有」。这里只在「确实画过」时建档：
+     * dirty 由 true 变 false 才算保存过，单纯打开看一眼不会建记录。
+     */
+    function watchNewCanvasSave() {
+        if (!isNew || (docType !== 'whiteboard' && docType !== 'mindmap')) return;
+        var isBoard = docType === 'whiteboard';
+        var sawDirty = false;
+        var timer = setInterval(function () {
+            if (savedOnce || !isNew) { clearInterval(timer); return; }
+            var frame = document.querySelector(isBoard ? '#eeBoardHost iframe' : '#eeMindmapHost iframe');
+            var dirty;
+            try {
+                var fn = frame && frame.contentWindow && frame.contentWindow[isBoard ? '__excalidrawDirty' : '__mindmapDirty'];
+                if (typeof fn !== 'function') return;
+                dirty = fn();
+            } catch (e) { return; } // 还没挂载好 / 拿不到：下一轮再看
+            if (dirty === true) { sawDirty = true; return; }
+            if (sawDirty && dirty === false) {
+                clearInterval(timer);
+                autoAdoptCanvas();
+            }
+        }, 1500);
+    }
+    async function autoAdoptCanvas() {
+        if (savedOnce) return;
+        var t = $('eeTitle');
+        if (t && !t.value.trim()) t.value = '未命名' + typeLabel(docType);
+        var ok = await doSave(true);
+        if (ok) {
+            toast('画板已保存，已自动建好文章记录（草稿）——可在文章管理里找到，发布前记得改标题', 'success');
+        }
     }
 
     /** 把 doc 渲染到页面上（编辑已有 / 新建 共用） */

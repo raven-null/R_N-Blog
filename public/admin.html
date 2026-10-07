@@ -1021,6 +1021,16 @@
                         .art-sort-list tr.dragging{opacity:.4}
                         .art-sort-list .drag-handle{cursor:grab;color:var(--text-muted);letter-spacing:-2px}
                         .art-empty{padding:60px 0;text-align:center;color:var(--text-muted);font-size:13px}
+                        /* 未归入文章的画板 */
+                        .art-orphans{margin:22px 20px 28px;padding-top:16px;border-top:1px dashed var(--border-light)}
+                        .art-orphans.collapsed .art-grid{display:none}
+                        .art-orphan-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+                        .art-orphan-head .aoh-title{font-size:13px;font-weight:600;color:var(--text-primary)}
+                        .art-orphan-head .aoh-title b{color:#ffa726}
+                        .art-orphan-head .aoh-tip{flex:1;min-width:200px;font-size:11.5px;color:var(--text-muted);line-height:1.6}
+                        .art-card.orphan{border-style:dashed;border-color:rgba(255,167,38,.45)}
+                        .art-card.orphan .ac-badge{background:rgba(255,167,38,.24);border-color:rgba(255,167,38,.5);color:#ffe0ac}
+                        .art-card.orphan .ac-cover.noimg{background:linear-gradient(135deg,rgba(255,167,38,.16),rgba(255,167,38,.06))}
                     </style>
                     <div class="page-bar"><h2>文章管理</h2><div class="page-bar-actions">
                         <button class="btn" onclick="openCreatePicker()">＋ 创建</button>
@@ -1076,6 +1086,16 @@
                             <div class="art-sort-list"><table><tbody id="artSortTbody"></tbody></table></div>
                         </div>
                         <div class="art-empty" id="artEmpty" style="display:none"></div>
+                    </div>
+
+                    <!-- 未归入文章的画板：画板数据存在但没有文章记录（例如只在画布里画完、没点保存） -->
+                    <div class="art-orphans" id="artOrphanWrap" style="display:none">
+                        <div class="art-orphan-head">
+                            <span class="aoh-title">未归入文章的画板 <b id="artOrphanCnt">0</b></span>
+                            <span class="aoh-tip">这些画板的图形数据已经有了，但还没有对应的文章记录，所以不在上面的列表里。点卡片即可归入为一篇草稿。</span>
+                            <button class="btn btn-ghost btn-sm" id="artOrphanToggle" onclick="toggleArtOrphans()">收起</button>
+                        </div>
+                        <div class="art-grid" id="artOrphanGrid"></div>
                     </div>
                 </div>
 
@@ -1531,7 +1551,7 @@
 
         <script src="js/embed-picker.js?v=1.8.0"></script>
 <script src="js/tag-picker.js?v=1.0.0"></script>
-        <script src="js/admin-app.js?v=1.14.0"></script>
+        <script src="js/admin-app.js?v=1.15.0"></script>
 
     <!-- 前台预览抽屉（iframe 内嵌，零跳出） -->
     <style>
