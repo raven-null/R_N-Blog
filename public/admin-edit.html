@@ -259,6 +259,35 @@ font-size:13px;font-family:inherit;outline:none;
     .ee-foot .saved{margin-left:auto;color:var(--success)}
     /* ===== 侧栏 ===== */
     .ee-side{width:clamp(220px,26vw,320px);flex-shrink:0;display:flex;flex-direction:column;gap:10px;overflow-y:auto;padding-right:2px;order:9}
+    /* ===== 侧栏折叠 ===== */
+    /* 吸顶：侧栏本身可滚动，折叠按钮不该被卡片顶走 */
+    .ee-side-head{
+        position:sticky;top:0;z-index:2;flex:none;padding:1px 2px 6px;
+        display:flex;align-items:center;justify-content:space-between;gap:8px;
+        background:var(--bg);
+    }
+    .ee-side-head>span{font-size:12px;color:var(--text-muted);letter-spacing:.5px}
+    .ee-side-toggle{
+        display:inline-flex;align-items:center;gap:4px;padding:4px 11px;border-radius:99px;
+        font-size:12px;font-family:inherit;cursor:pointer;
+        background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text-secondary);
+        transition:all .18s ease;
+    }
+    .ee-side-toggle:hover{background:rgba(255,255,255,.14);color:#fff}
+    .ee-side-toggle .chev{font-size:14px;line-height:1;transform:translateY(-1px)}
+    /* !important 用来压掉 applyDoc() 里写的 style.display = 'flex' */
+    .ee-main.side-collapsed .ee-side{display:none!important}
+    .ee-side-open{display:none}
+    .ee-main.side-collapsed .ee-side-open{
+        display:inline-flex;align-items:center;gap:4px;
+        /* z-index 要高于 .ee-editor-card 的 3000，否则会被编辑器正文压住（同「弹层被盖住」那个坑） */
+        position:fixed;right:0;top:50%;transform:translateY(-50%);z-index:3100;
+        padding:14px 7px;border-radius:10px 0 0 10px;cursor:pointer;font-family:inherit;
+        font-size:12px;letter-spacing:1px;writing-mode:vertical-rl;
+        background:rgba(115,170,255,.18);border:1px solid rgba(115,170,255,.34);border-right:none;color:#cfe2ff;
+        box-shadow:-8px 0 24px -12px rgba(0,0,0,.8);transition:background .18s ease,color .18s ease;
+    }
+    .ee-main.side-collapsed .ee-side-open:hover{background:rgba(115,170,255,.36);color:#fff}
     .ee-card{
         background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
         padding:12px 14px;display:flex;flex-direction:column;gap:8px;
@@ -549,6 +578,10 @@ font-size:13px;font-family:inherit;outline:none;
         </section>
 
         <aside class="ee-side" id="eeSide">
+            <div class="ee-side-head">
+                <span>属性</span>
+                <button type="button" class="ee-side-toggle" id="eeSideToggle" onclick="eeToggleSide()" title="折叠侧栏（Ctrl+.）">折叠 <span class="chev">›</span></button>
+            </div>
             <div class="ee-card">
                 <label>状态</label>
                 <select id="eeStatusSel" onchange="eeMarkDirty()">
@@ -606,6 +639,9 @@ font-size:13px;font-family:inherit;outline:none;
                 <div class="ee-hint">权限、口令、名称改动即时生效；回滚会用所选快照覆盖当前画布，当前版本仍保留在历史中。</div>
             </div>
         </aside>
+
+        <!-- 侧栏折叠后的边缘展开把手 -->
+        <button type="button" class="ee-side-open" id="eeSideOpen" onclick="eeToggleSide()" title="展开侧栏（Ctrl+.）" aria-hidden="true">‹ 属性</button>
 
         <!-- 白板 -->
         <section class="ee-board" id="eeBoard" style="display:none">
@@ -680,6 +716,6 @@ font-size:13px;font-family:inherit;outline:none;
     <script src="js/markdown-config.js?v=1.2.0"></script>
 <script src="js/embed-picker.js?v=1.8.0"></script>
 <script src="js/tag-picker.js?v=1.0.0"></script>
-    <script src="js/admin-edit.js?v=1.7.0"></script>
+    <script src="js/admin-edit.js?v=1.8.0"></script>
 </body>
 </html>

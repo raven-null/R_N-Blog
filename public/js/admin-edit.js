@@ -136,6 +136,44 @@
         if (!el || el.classList.contains('vditor--fullscreen')) return;
         el.style.height = editorHeight() + 'px';
     }
+
+    // ===== 侧栏折叠 =====
+    // 折叠状态存在 localStorage，刷新后保持。显隐由 .ee-main.side-collapsed 这个类控制
+    // （CSS 里带 !important，因为 applyDoc() 会直接写 style.display='flex'）。
+    var SIDE_KEY = 'ee_side_collapsed';
+    function sideCollapsed() {
+        try { return localStorage.getItem(SIDE_KEY) === '1'; } catch (e) { return false; }
+    }
+    function applySideCollapsed() {
+        var main = document.querySelector('.ee-main');
+        if (!main) return;
+        var collapsed = sideCollapsed();
+        main.classList.toggle('side-collapsed', collapsed);
+        var btn = $('eeSideToggle');
+        if (btn) {
+            btn.innerHTML = collapsed ? '展开 <span class="chev">‹</span>' : '折叠 <span class="chev">›</span>';
+            btn.title = (collapsed ? '展开' : '折叠') + '侧栏（Ctrl+.）';
+        }
+        var handle = $('eeSideOpen');
+        if (handle) handle.setAttribute('aria-hidden', collapsed ? 'false' : 'true');
+        // 编辑区宽度变了，让编辑器重新贴合
+        setTimeout(fitEditor, 60);
+    }
+    window.eeToggleSide = function () {
+        var main = document.querySelector('.ee-main');
+        if (!main) return;
+        var next = !main.classList.contains('side-collapsed');
+        try { localStorage.setItem(SIDE_KEY, next ? '1' : '0'); } catch (e) { /* 隐私模式等，忽略 */ }
+        applySideCollapsed();
+        toast(next ? '侧栏已折叠（Ctrl+. 展开）' : '侧栏已展开');
+    };
+    // Ctrl/Cmd + . 切换；用捕获阶段，避免被 Vditor 的快捷键吞掉
+    document.addEventListener('keydown', function (e) {
+        if ((e.ctrlKey || e.metaKey) && (e.key === '.' || e.code === 'Period')) {
+            e.preventDefault();
+            window.eeToggleSide();
+        }
+    }, true);
     function updateInfo() {
         if (!vditor) return;
         var v = vditor.getValue() || '';
@@ -1046,6 +1084,8 @@
     function boot() {
         if (booted) return;
         booted = true;
+        // 侧栏折叠状态先应用（不依赖接口，避免加载慢时侧栏先闪一下再收起）
+        applySideCollapsed();
         // 标题改动同样计入未保存状态
         var t = $('eeTitle');
         if (t) t.addEventListener('input', window.eeMarkDirty);
