@@ -84,6 +84,8 @@
             '#embedPickerModal .ep-close{padding:10px 16px;border-radius:8px;border:1px solid rgba(255,255,255,.14);',
             '  background:transparent;color:rgba(255,255,255,.6);font-size:13px;font-family:inherit;cursor:pointer}',
             '#embedPickerModal .ep-close:hover{color:#fff}',
+            '#embedPickerModal .ep-quota{margin-top:9px;font-size:12px;color:rgba(255,255,255,.5)}',
+            '#embedPickerModal .ep-quota.full{color:#ffa726}',
             '.ep-toast{position:fixed;left:50%;bottom:32px;transform:translateX(-50%);z-index:2700;',
             '  max-width:min(560px,92vw);padding:10px 16px;border-radius:10px;font-size:13px;line-height:1.7;',
             '  background:rgba(20,20,28,.96);color:#fff;border:1px solid rgba(255,255,255,.16);',
@@ -168,9 +170,10 @@
             '</div>' +
             '<div class="ep-list" id="epList"><div class="ep-hint">正在加载…</div></div>' +
             '<div class="ep-foot">' +
-            '<button type="button" class="ep-new" id="epNew">＋ 新建并插入</button>' +
+            '<button type="button" class="ep-new" id="epNew">＋ 新建空白画布并插入</button>' +
             '<button type="button" class="ep-close" id="epClose">关闭</button>' +
             '</div>' +
+            '<div class="ep-quota" id="epQuota"></div>' +
             '</div>';
         document.body.appendChild(wrap);
 
@@ -338,20 +341,73 @@
     /** 在编辑器内直接挂载画布（阅读页的内嵌方式，编辑页复用） */
     function initInlineCanvas(host, conf) {
         if (!host) return;
-        if (conf.kind === 'map') {
-            host.innerHTML = '<iframe class="ep-inline-frame" title="思维导图" loading="lazy" src="' +
-                '/mindmap.html?note=' + encodeURIComponent(conf.id) + '"></iframe>';
+        // 先放占位，滚到可见时才真正挂载 —— 一篇文章可能引用多个画布，
+        // 白板 bundle 4.27MB，若全部立即挂载会拖垮编辑页的打开与滚动。
+        host.innerHTML = '<div class="ep-canvas-loading">滚动到这里时加载' +
+            (conf.kind === 'map' ? '思维导图' : '白板') + '…</div>';
+        observeCanvas(host, conf);
+    }
+
+    var mountedCanvas = {};      // 本次页面内已挂载过的画布（Vditor 重渲染换 DOM 时用来判断重挂）
+    var canvasObserver = null;
+
+    function getCanvasObserver() {
+        if (canvasObserver || typeof IntersectionObserver === 'undefined') return canvasObserver;
+        canvasObserver = new IntersectionObserver(function (entries) {
+            for (var i = 0; i < entries.length; i++) {
+                if (!entries[i].isIntersecting) continue;
+                var host = entries[i].target;
+                canvasObserver.unobserve(host);
+                mountInlineCanvas(host);
+            }
+        }, { root: null, rootMargin: '320px 0px' });  // 提前 320px 预挂，滚动时已经就绪
+        return canvasObserver;
+    }
+
+    /** 真正把画布挂进容器（幂等：已挂过就只让 bundle 重扫新容器） */
+    function mountInlineCanvas(host) {
+        var conf = host.__epConf;
+        if (!conf) return;
+        var id = conf.kind + ':' + conf.id;
+        if (mountedCanvas[id]) {
+            // 该画布挂过，但 Vditor 重渲染换掉了 DOM → 让 bundle 重新挂到新容器
+            if (conf.kind === 'board') {
+                if (window.ExcalidrawMount) window.ExcalidrawMount();
+                else loadExcalidrawBundleFor();
+            } else {
+                renderInlineFrame(host, conf);
+            }
             return;
         }
-        // 白板：与阅读页一致 —— 容器带 data-excalidraw，bundle 加载后由 ExcalidrawMount() 扫到并挂载
+        if (conf.kind === 'map') {
+            renderInlineFrame(host, conf);
+        } else {
+            renderInlineBoard(host, conf);
+            loadExcalidrawBundleFor();
+        }
+        mountedCanvas[id] = 1;
+    }
+
+    function renderInlineFrame(host, conf) {
+        host.innerHTML = '<iframe class="ep-inline-frame" title="思维导图" loading="lazy" src="' +
+            '/mindmap.html?note=' + encodeURIComponent(conf.id) + '"></iframe>';
+    }
+
+    function renderInlineBoard(host, conf) {
+        host.innerHTML = '';
         var el = document.createElement('div');
         el.className = 'ep-inline-board';
         el.setAttribute('data-excalidraw', '');
         el.setAttribute('data-note', conf.id);
         el.setAttribute('data-mode', 'view');
-        el.innerHTML = '<div class="ep-canvas-loading">白板加载中…（首次需下载组件，弱网会慢）</div>';
         host.appendChild(el);
-        loadExcalidrawBundleFor();
+    }
+
+    function observeCanvas(host, conf) {
+        host.__epConf = conf;
+        var io = getCanvasObserver();
+        if (!io) { mountInlineCanvas(host); return; }  // 不支持 IntersectionObserver 时直接挂载
+        io.observe(host);
     }
 
     /** 编辑器内嵌白板也要用到 bundle；与 admin-edit.js / admin-app.js 各自的加载器共用同一份产物 */
@@ -650,8 +706,41 @@
         setTimeout(function () { t.remove(); }, ms || 3200);
     }
 
+    // 单篇文章允许引用的画布数量上限。
+    // 目的是保护打开与滚动性能：白板 bundle 4.27MB，即使有懒挂载，
+    // 一块白板展开后仍要占内存与 GPU，数量失控会拖垮编辑与阅读。
+    var MAX_CANVAS_PER_ARTICLE = 5;
+
+    /** 正文里已有的画布引用数 */
+    function countRefsInEditor() {
+        var md = '';
+        try { md = activeVditor && typeof activeVditor.getValue === 'function' ? activeVditor.getValue() : ''; } catch (e) { md = ''; }
+        return extractBlockRefs(md).length;
+    }
+
+    /**
+     * 额度检查。
+     * 返回 { ok, used, max, reason }：ok=false 时调用方应提示并中止插入。
+     * 只在「插入新的块」时校验；已有文章的历史内容不受影响（避免打不开老文章）。
+     */
+    function checkQuota() {
+        var used = countRefsInEditor();
+        if (used >= MAX_CANVAS_PER_ARTICLE) {
+            return {
+                ok: false, used: used, max: MAX_CANVAS_PER_ARTICLE,
+                reason: '一篇文章最多引用 ' + MAX_CANVAS_PER_ARTICLE + ' 个画布（当前已有 ' + used +
+                    ' 个）。请先删掉不用的内嵌块，或在独立页面里发布新的白板 / 导图。'
+            };
+        }
+        return { ok: true, used: used, max: MAX_CANVAS_PER_ARTICLE };
+    }
+
     function insert(vd, k, id) {
         if (!id) return;
+        // 先记住目标编辑器，checkQuota 与后续插入必须针对同一个编辑器（否则会读错正文里的引用数）
+        if (vd) activeVditor = vd;
+        var q = checkQuota();
+        if (!q.ok) { toast(q.reason, 5200); return; }
         // 注意：声明必须放在「内容行」。若写成 ```embed map:xxx（语言行带参数），
         // Vditor 会把语言行之后的内容当作代码块标题，getValue() 往返时 id 会丢失。
         var block = '```embed\n' + k + ':' + id + '\n```\n';
@@ -663,14 +752,36 @@
         toast('已插入' + (k === 'map' ? '思维导图' : '白板') + '，保存后在文章里显示');
     }
 
+    /** 新建一块画布并直接插入（不再只是插一个空引用，见 createAndInsert） */
     function onCreate() {
         var k = kind;
         var isMap = k === 'map';
-        var newId = (isMap ? 'mm-' : 'wb-') + Math.random().toString(36).slice(2, 10);
         var label = isMap ? '思维导图' : '白板';
+        var q = checkQuota();
+        if (!q.ok) { toast(q.reason, 5200); return; }
+
+        var name = '';
+        try {
+            name = (window.prompt('给新建的' + label + '起个名字（可留空）', '') || '').trim().slice(0, 60);
+        } catch (e) { name = ''; }
+
+        var newId = (isMap ? 'mm-' : 'wb-') + Math.random().toString(36).slice(2, 10);
+        var conf = { kind: k, id: newId, title: name, caption: '' };
         insert(activeVditor, k, newId);
-        toast('已插入新' + label + '引用（' + newId + '）。请切到「' + label +
-            '」形态绘制并保存——只插入引用而不绘制，前台会显示为空' + label + '。', 6500);
+        toast('已插入新' + label + (name ? '「' + name + '」' : '') +
+            '。点该块上的「在抽屉中编辑」开始绘制，关闭抽屉时会自动保存。', 6500);
+        // 直接打开抽屉让用户马上开始画（新建的画布本来就是空的）
+        setTimeout(function () { openDrawer(conf); }, 120);
+    }
+
+    function updateQuota() {
+        var el = document.getElementById('epQuota');
+        if (!el) return;
+        var q = checkQuota();
+        el.textContent = q.ok
+            ? '本文已引用 ' + q.used + ' / ' + q.max + ' 个画布'
+            : '已达上限 ' + q.max + ' 个（当前 ' + q.used + ' 个）—— 请先删掉不用的内嵌块';
+        el.classList.toggle('full', !q.ok);
     }
 
     function open(vd) {
@@ -681,6 +792,7 @@
         if (!wrap) return;
         wrap.classList.add('open');
         switchTab('board');
+        updateQuota();
     }
 
     function close() {
@@ -736,6 +848,9 @@
         extractBlockRefs: extractBlockRefs,
         /** 内容形态判定：返回 'article' | 'whiteboard' | 'mindmap' | 'card' */
         deriveContentType: deriveContentType,
+        /** 单篇文章的画布数量上限与当前用量检查 */
+        MAX_CANVAS_PER_ARTICLE: MAX_CANVAS_PER_ARTICLE,
+        checkQuota: checkQuota,
         /** 画布编辑抽屉：openDrawer({kind,id,caption}) / closeDrawer() */
         openDrawer: openDrawer,
         closeDrawer: closeDrawer,
