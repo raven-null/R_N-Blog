@@ -72,6 +72,33 @@
         .mobile-tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0;background:transparent;border:none;color:var(--text-muted);cursor:pointer;font-size:10px;font-family:inherit;transition:color .15s}
         .mobile-tab svg{width:20px;height:20px}
         .mobile-tab.active{color:var(--accent)}
+        /* 移动端导航中间的「创建」：抬成圆形主按钮，与普通 tab 区分 */
+        .mobile-tab-add{flex:0 0 60px}
+        .mobile-tab-add svg{width:22px;height:22px;padding:5px;box-sizing:content-box;border-radius:50%;background:linear-gradient(135deg,var(--accent),#39b0e8);color:#0b0b10;box-shadow:0 4px 14px -4px rgba(79,195,247,.6)}
+        .mobile-tab-add span{color:var(--accent)}
+        /* ===== 创建内容：形态选择弹窗 ===== */
+        .cp-modal{position:fixed;inset:0;z-index:400;display:none}
+        .cp-modal.open{display:block}
+        .cp-mask{position:absolute;inset:0;background:rgba(4,5,10,.62);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+        .cp-box{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(560px,calc(100vw - 28px));max-height:calc(100dvh - 40px);overflow:auto;background:var(--bg-card);border:1px solid var(--border);border-radius:18px;padding:22px 22px 24px;box-shadow:0 30px 80px -20px rgba(0,0,0,.85);animation:cpIn .18s ease}
+        @keyframes cpIn{from{opacity:0;transform:translate(-50%,-46%)}to{opacity:1;transform:translate(-50%,-50%)}}
+        .cp-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+        .cp-head h3{font-size:17px;font-weight:600;color:var(--text-primary)}
+        .cp-x{background:transparent;border:none;color:var(--text-muted);font-size:22px;line-height:1;cursor:pointer;padding:2px 6px;border-radius:8px;transition:all .15s}
+        .cp-x:hover{background:var(--bg-hover);color:var(--text-primary)}
+        .cp-sub{font-size:12.5px;color:var(--text-muted);margin:6px 0 18px;line-height:1.7}
+        .cp-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+        .cp-card{display:flex;flex-direction:column;gap:6px;text-align:left;padding:16px 16px 15px;border-radius:14px;cursor:pointer;font-family:inherit;background:var(--bg-tertiary);border:1px solid var(--border);color:var(--text-secondary);transition:all .18s var(--spring)}
+        .cp-card:hover{transform:translateY(-2px);border-color:var(--accent);background:var(--bg-hover)}
+        .cp-card .ci{width:34px;height:34px;border-radius:11px;display:flex;align-items:center;justify-content:center;margin-bottom:2px}
+        .cp-card .ci svg{width:18px;height:18px}
+        .cp-card b{font-size:14px;font-weight:600;color:var(--text-primary)}
+        .cp-card i{font-style:normal;font-size:11.5px;color:var(--text-muted);line-height:1.6}
+        .cp-card[data-ct="article"] .ci{background:rgba(192,192,192,.16);color:#d7dae6}
+        .cp-card[data-ct="card"] .ci{background:rgba(255,159,10,.16);color:#ffb020}
+        .cp-card[data-ct="whiteboard"] .ci{background:rgba(115,170,255,.16);color:#73aaff}
+        .cp-card[data-ct="mindmap"] .ci{background:rgba(80,220,180,.16);color:#50dcb4}
+        @media(max-width:520px){.cp-box{padding:18px 16px 18px}.cp-grid{gap:10px}.cp-card{padding:13px 12px}}
         .page-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
         .page-bar h2{font-size:18px;font-weight:600}
         .page-bar-actions{display:flex;gap:8px;align-items:center}
@@ -897,8 +924,9 @@
                 <!-- 移动端顶部导航 -->
         <nav class="mobile-tabs" id="mobileTabs">
             <button class="mobile-tab active" data-tab="articles" onclick="switchTab('articles')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span>文章</span></button>
-            <button class="mobile-tab" data-tab="write" onclick="switchTab('write')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg><span>写文章</span></button>
             <button class="mobile-tab" data-tab="comments" onclick="switchTab('comments')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span>评论</span></button>
+            <!-- 中间：创建内容（移动端唯一入口，点开弹出形态选择） -->
+            <button class="mobile-tab mobile-tab-add" onclick="openCreatePicker()" title="创建内容（文章 / 随记 / 白板 / 导图）"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg><span>创建</span></button>
             <button class="mobile-tab" data-tab="images" onclick="switchTab('images')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><span>图片</span></button>
             <button class="mobile-tab" data-tab="tags" onclick="switchTab('tags')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg><span>标签</span></button>
             <button class="mobile-tab" data-tab="settings" onclick="switchTab('settings')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span>设置</span></button>
@@ -908,7 +936,7 @@
                 <div class="sidebar-top"><span>菜单</span><button class="sidebar-toggle" onclick="toggleSidebar()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg></button></div>
                 <div class="sidebar-nav">
                     <div class="sidebar-item active" onclick="switchTab('articles')" data-tab="articles"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span>文章管理</span></div>
-                    <div class="sidebar-item" onclick="switchTab('write')" data-tab="write"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg><span>写文章</span></div>
+                    <div class="sidebar-item" onclick="openCreatePicker()" data-tab="create"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><span>创建内容</span></div>
                     <div class="sidebar-item" onclick="switchTab('comments')" data-tab="comments"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span>评论管理</span></div>
                     <div class="sidebar-item" onclick="switchTab('images')" data-tab="images"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><span>图片管理</span></div>
                     <div class="sidebar-item" onclick="switchTab('tags')" data-tab="tags"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg><span>标签管理</span></div>
@@ -995,7 +1023,7 @@
                         .art-empty{padding:60px 0;text-align:center;color:var(--text-muted);font-size:13px}
                     </style>
                     <div class="page-bar"><h2>文章管理</h2><div class="page-bar-actions">
-                        <button class="btn" onclick="switchTab('write')">写文章</button>
+                        <button class="btn" onclick="openCreatePicker()">＋ 创建</button>
                         <label class="btn btn-ghost" style="cursor:pointer">导入 .md<input type="file" accept=".md,.markdown" onchange="importAndEdit(this.files[0])" style="display:none"></label>
                     </div></div>
 
@@ -1048,310 +1076,6 @@
                             <div class="art-sort-list"><table><tbody id="artSortTbody"></tbody></table></div>
                         </div>
                         <div class="art-empty" id="artEmpty" style="display:none"></div>
-                    </div>
-                </div>
-
-                <!-- 写文章（极简沉浸式） -->
-                <div id="tab-write" style="display:none">
-                                            <style>
-                        /* ===== 写文章（对齐设计稿：深蓝紫玻璃编辑器） ===== */
-                        #tab-write{display:flex;flex-direction:column;height:calc(100dvh - 52px);min-height:0;overflow:visible;box-sizing:border-box;margin:-24px -28px;padding:12px 30px 10px}
-                        .wm-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:0 0 10px;flex-shrink:0}
-                        .tab-left-wrap{display:flex;align-items:center;gap:2px;flex-wrap:wrap}
-                        .back-tab-btn{
-                            padding:7px 13px;border-radius:99px;
-                            background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);
-                            font-size:13px;color:#b8b9c9;cursor:pointer;font-family:inherit;
-                            transition:all .22s ease;margin-right:4px;
-                        }
-                        .back-tab-btn:hover{background:rgba(255,255,255,.12);color:#e6e7f2}
-                        .back-tab-btn:active{transform:scale(.97)}
-                        /* 形态切换：玻璃分段选择器（Uiverse 风格；4 项，滑块随选中项移动） */
-        .glass-radio-group{
-            display:flex;position:relative;width:fit-content;
-            background:rgba(255,255,255,.06);border-radius:12px;overflow:hidden;
-            backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
-            box-shadow:
-                inset 1px 1px 4px rgba(255,255,255,.18),
-                inset -1px -1px 6px rgba(0,0,0,.3),
-                0 4px 12px rgba(0,0,0,.15);
-        }
-        .glass-radio-group input{display:none}
-        .glass-radio-group label{
-            min-width:64px;display:flex;align-items:center;justify-content:center;
-            padding:7px 16px;font-size:13px;font-weight:600;letter-spacing:.3px;
-            color:var(--text-muted);cursor:pointer;position:relative;z-index:2;
-            user-select:none;transition:color .3s ease-in-out;
-        }
-        .glass-radio-group label:hover{color:#fff}
-        .glass-radio-group input:checked+label{color:#fff}
-        .glass-glider{
-            position:absolute;top:0;bottom:0;left:0;width:calc(100% / 4);
-            border-radius:12px;z-index:1;
-            transition:
-                transform .5s cubic-bezier(.37,1.95,.66,.56),
-                background .4s ease-in-out,
-                box-shadow .4s ease-in-out;
-        }
-        #wmArticle:checked ~ .glass-glider{
-            transform:translateX(0%);
-            background:linear-gradient(135deg,rgba(192,192,192,.35),#e0e0e0);
-            box-shadow:0 0 18px rgba(192,192,192,.45),0 0 10px rgba(255,255,255,.35) inset;
-        }
-        #wmNote:checked ~ .glass-glider{
-            transform:translateX(100%);
-            background:linear-gradient(135deg,rgba(255,159,10,.35),#ff9f0a);
-            box-shadow:0 0 18px rgba(255,159,10,.45),0 0 10px rgba(255,235,150,.35) inset;
-        }
-        #wmBoard:checked ~ .glass-glider{
-            transform:translateX(200%);
-            background:linear-gradient(135deg,rgba(115,170,255,.35),#a0d8ff);
-            box-shadow:0 0 18px rgba(160,216,255,.45),0 0 10px rgba(200,240,255,.35) inset;
-        }
-        #wmMindmap:checked ~ .glass-glider{
-            transform:translateX(300%);
-            background:linear-gradient(135deg,rgba(80,220,180,.35),#7ff0d0);
-            box-shadow:0 0 18px rgba(80,220,180,.45),0 0 10px rgba(180,255,240,.35) inset;
-        }
-
-        .tab-item-wrap{position:relative;padding-bottom:6px}
-                        .tab-item{
-                            padding:7px 15px;border-radius:99px;border:none;background:transparent;
-                            font-size:13.5px;cursor:pointer;color:#b8b9c9;font-family:inherit;
-                            transition:color .2s ease,background .2s ease;
-                        }
-                        .tab-item:hover{color:#fff;background:rgba(255,255,255,.06)}
-                        .tab-item.active{color:#fff}
-                        .tab-item-wrap .indicator{
-                            position:absolute;bottom:0;left:50%;transform:translateX(-50%) scaleX(.4);
-                            width:26px;height:3px;background:#73aaff;border-radius:99px;opacity:0;
-                            transition:all .25s cubic-bezier(.25,.46,.45,.94);
-                        }
-                        .tab-item-wrap.active-wrap .indicator{opacity:1;transform:translateX(-50%) scaleX(1)}
-                        .header-right-group{display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex-shrink:0}
-                        .theme-dots{display:flex;gap:6px;align-items:center;padding-right:2px}
-                        .dot{width:15px;height:15px;border-radius:50%;border:2px solid transparent;cursor:pointer;transition:all .2s var(--spring)}
-                        .dot:hover{transform:scale(1.15)}
-                        .dot.active{border-color:#73aaff;box-shadow:0 0 0 2px rgba(115,170,255,.2)}
-                        .dot.black{background:#000}
-                        .dot.white{background:#f5f5f5}
-                        .dot.beige{background:#f0e9d2}
-                        .dot.green{background:#b2ddbc}
-                        .dot.blue{background:#c6d4ee}
-                        .glass-action-btn{
-                            padding:7px 15px;border-radius:99px;
-                            background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);
-                            font-size:13px;cursor:pointer;color:#d7d8e6;font-family:inherit;
-                            transition:all .22s ease;
-                        }
-                        .glass-action-btn:hover{background:rgba(255,255,255,.15);color:#fff}
-                        .glass-action-btn:active{transform:scale(.97)}
-                        .glass-action-btn.publish-btn{
-                            background:linear-gradient(135deg,rgba(59,130,246,.35),rgba(115,170,255,.28));
-                            border:1px solid rgba(115,170,255,.45);color:#eaf2ff;
-                            box-shadow:0 2px 10px rgba(70,130,240,.16);
-                        }
-                        .glass-action-btn.publish-btn:hover{background:linear-gradient(135deg,rgba(59,130,246,.5),rgba(115,170,255,.42));color:#fff}
-                        .dot-light-input{
-                            width:210px;padding:6px 13px;border-radius:99px;
-                            background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);
-                            color:#e4e6f7;font-size:13px;outline:none;font-family:inherit;transition:border-color .2s ease;
-                        }
-                        .dot-light-input:focus{border-color:rgba(115,170,255,.55)}
-                        .dot-light-input::placeholder{color:#8c8fa8}
-                        /* 视图容器与切换动画 */
-                        .view-container{flex:1;min-height:0;position:relative;overflow:visible}
-                        .tab-view{
-                            position:absolute;inset:0;display:flex;flex-direction:column;
-                            opacity:0;transform:scale(.98) translateY(8px);pointer-events:none;
-                            transition:all .35s cubic-bezier(.25,.46,.45,.94);
-                        }
-                        .tab-view.active{opacity:1;transform:none;pointer-events:auto}
-                        /* 文章视图 */
-                        .header-bar{
-                            background:linear-gradient(135deg,#252b48,#2e2240);
-                            border-radius:12px;padding:11px 18px;flex-shrink:0;
-                            border:1px solid rgba(255,255,255,.07);transition:box-shadow .22s ease;
-                        }
-                        .header-bar:focus-within{box-shadow:0 0 0 1px rgba(115,170,255,.5)}
-                        .title-input{width:100%;background:transparent;border:none;font-size:22px;font-weight:600;color:#e4e6f7;outline:none;font-family:inherit}
-                        .title-input::placeholder{color:rgba(228,230,247,.35);font-weight:400}
-                        .editor-wrap{display:flex;flex-direction:column;flex:1;min-height:0;margin-top:10px}
-                        .editor-wrap .vditor{
-                            display:flex;flex-direction:column;
-                            border-radius:12px!important;overflow:visible;
-                            box-shadow:0 12px 32px -14px rgba(0,0,0,.55)!important;
-                        }
-                        .editor-wrap .vditor-toolbar{flex:none;padding-left:2px!important;border-radius:12px 12px 0 0!important}
-                        .editor-wrap .vditor-toolbar [data-type="outline"]{display:none!important}
-                        .editor-wrap .vditor-content{flex:1;min-height:0}
-                        .editor-wrap .vditor-ir,
-                        .editor-wrap .vditor-wysiwyg,
-                        .editor-wrap .vditor-sv{flex:1;min-width:1px;overflow-y:auto;overscroll-behavior:contain}
-                        .footer-count{
-                            margin-top:10px;background:rgba(25,27,44,.9);padding:8px 14px;border-radius:12px;
-                            font-size:12.5px;color:#999bb3;display:flex;align-items:center;gap:14px;flex-shrink:0;
-                            border:1px solid rgba(255,255,255,.07);
-                        }
-                        .footer-count .save-hint{margin-left:auto;color:var(--success,#7bd88f)}
-                        .wm-hint{font-size:12px;color:var(--text-muted,#8c8fa8);line-height:1.7}
-                        /* 随记视图 */
-                        .note-wrap{display:flex;flex-direction:column;gap:10px;flex:1;min-height:0;overflow-y:auto;padding:2px 0 10px}
-                        .note-input-item{
-                            background:linear-gradient(135deg,#252b48,#2e2240);border-radius:12px;
-                            padding:12px 16px;border:1px solid rgba(255,255,255,.07);
-                            transition:box-shadow .22s ease;flex-shrink:0;
-                        }
-                        .note-input-item:focus-within{box-shadow:0 0 0 1px rgba(115,170,255,.4)}
-                        .note-input{width:100%;background:transparent;border:none;outline:none;color:#e4e6f7;font-size:15px;font-family:inherit;resize:none}
-                        .note-input::placeholder{color:rgba(228,230,247,.35)}
-                        .note-title-input{font-size:16px;font-weight:600}
-                        .note-textarea{min-height:200px;line-height:1.9}
-                        .wm-recent{margin-top:14px;display:flex;flex-direction:column;gap:8px}
-                        .wm-recent-item{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:9px 14px;font-size:12.5px}
-                        .wm-recent-item .txt{flex:1;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
-                        .wm-recent-item .date{color:var(--text-muted);font-size:11px}
-                        /* 白板视图 */
-                        .canvas-wrap{flex:1;min-height:0;display:flex;flex-direction:column}
-                        .wm-board-host{flex:1;min-height:0;background:rgba(18,20,32,.55);border-radius:12px;overflow:hidden;position:relative;border:1px dashed rgba(255,255,255,.12)}
-                        .wm-board-host .wb-hint{height:100%;display:flex;align-items:center;justify-content:center;color:#9aa0b8;font-size:13px;padding:0 20px;text-align:center;line-height:1.8}
-                        .wm-board-host>[data-excalidraw]{height:100%}
-                        .wb-frame{width:100%;height:100%;border:0;display:block;background:#0b0b0e}
-                        @media(max-width:1024px){
-                            #tab-write{margin:-20px -20px;padding:10px 24px 8px}
-                        }
-                        @media(max-width:768px){
-                            #tab-write{height:auto;min-height:calc(100dvh - 210px);margin:-16px -12px;padding:8px 14px 12px;overflow:visible}
-                            .view-container{position:relative;height:auto;overflow:visible;display:flex;flex-direction:column;flex:1}
-                            .tab-view{position:relative;inset:auto;display:none;opacity:1;transform:none;pointer-events:auto;transition:none;flex:1;min-height:0}
-                            .tab-view.active{display:flex}
-                            #view-article{min-height:calc(100dvh - 300px)}
-                            .header-right-group{width:100%}
-                            .dot-light-input{flex:1;min-width:130px}
-                        }
-                        /* ===== 全屏写作（隐藏后台框架，内容占满） ===== */
-                        body.admin-write-full{overflow:hidden}
-                        body.admin-write-full .sidebar,
-                        body.admin-write-full .mobile-tabs{display:none!important}
-body.admin-write-full .admin-actions.mobile-float{display:none}
-                        body.admin-write-full .admin-body{height:100vh;height:100dvh}
-                        body.admin-write-full .content{padding:0;overflow:hidden}
-                        body.admin-write-full #tab-write{display:flex!important;flex-direction:column;height:100vh;height:100dvh;margin:0;padding:12px 24px 14px;box-sizing:border-box}
-                        @media(max-width:768px){
-                            body.admin-write-full #tab-write{height:100vh;height:100dvh;margin:0;padding:6px 12px 10px}
-                            body.admin-write-full .view-container{height:auto;flex:1}
-                        }
-                    </style>
-
-                    <!-- 顶部：返回 + 形态 tab ｜ 右侧按形态切换 -->
-                    <div class="wm-bar top-tab-bar">
-                        <div class="tab-left-wrap">
-                            <!-- 形态切换：玻璃分段选择器（滑块随选中项移动） -->
-                            <div class="glass-radio-group" id="writeModeGroup">
-                                <input type="radio" name="write-mode" id="wmArticle" data-mode="article" checked>
-                                <label for="wmArticle">文章</label>
-                                <input type="radio" name="write-mode" id="wmNote" data-mode="note">
-                                <label for="wmNote">随记</label>
-                                <input type="radio" name="write-mode" id="wmBoard" data-mode="board">
-                                <label for="wmBoard">白板</label>
-                                <input type="radio" name="write-mode" id="wmMindmap" data-mode="mindmap">
-                                <label for="wmMindmap">导图</label>
-                                <div class="glass-glider"></div>
-                            </div>
-                        </div>
-
-                        <!-- 文章：主题点 + 导入/导出/保存并预览/发布/全屏 -->
-                        <div class="header-right-group" id="rightGroupArticle">
-                            <div class="theme-dots">
-                                <div class="dot black" data-theme="dark" title="纯黑" onclick="switchEditorTheme('dark')"></div>
-                                <div class="dot white" data-theme="light" title="白纸" onclick="switchEditorTheme('light')"></div>
-                                <div class="dot beige" data-theme="sepia" title="米色纸" onclick="switchEditorTheme('sepia')"></div>
-                                <div class="dot green" data-theme="green" title="护眼绿" onclick="switchEditorTheme('green')"></div>
-                                <div class="dot blue" data-theme="blue" title="淡蓝" onclick="switchEditorTheme('blue')"></div>
-                            </div>
-                            <div class="action-group" style="display:flex;gap:6px;flex-wrap:wrap">
-                                <label class="glass-action-btn" style="cursor:pointer">导入<input type="file" accept=".md,.markdown" onchange="importAndEdit(this.files[0])" style="display:none"></label>
-                                <button class="glass-action-btn" onclick="exportMarkdown()">导出</button>
-                                <button class="glass-action-btn" onclick="openArticleImages()" title="查看文章中粘贴/上传的图片">文中图片 <span id="articleImgCount">0</span></button>
-                                <button class="glass-action-btn" onclick="saveArticlePreview()">保存并预览</button>
-                                <button class="glass-action-btn publish-btn" onclick="openPublishModal()">发布 ▾</button>
-                                <button class="glass-action-btn" id="writeFullBtn" onclick="toggleWriteFull()" title="全屏写作">全屏写作</button>
-                            </div>
-                        </div>
-
-                        <!-- 随记：保存 -->
-                        <div class="header-right-group" id="rightGroupNote" style="display:none">
-                            <div class="action-group" style="display:flex;gap:6px">
-                                <button class="glass-action-btn publish-btn" onclick="openPublishModal()">发布</button>
-                                <button class="glass-action-btn" onclick="switchTab('articles');setArtType('card')">随记管理</button>
-                            </div>
-                        </div>
-
-                        <!-- 白板：ID + 新建/载入/保存/管理 -->
-                        <div class="header-right-group" id="rightGroupBoard" style="display:none">
-                            <button class="glass-action-btn" onclick="wbNew()">新建画板</button>
-                            <button class="glass-action-btn" id="wbEditToggleBtn" onclick="wbToggleEditable()">设为只读</button>
-                            <button class="glass-action-btn" id="wbSetKeyBtn" onclick="wbSetKey()">设口令</button>
-                            <button class="glass-action-btn publish-btn" onclick="openPublishModal()">发布</button>
-                        </div>
-
-                        <!-- 导图：新建/权限/口令/发布 -->
-                        <div class="header-right-group" id="rightGroupMindmap" style="display:none">
-                            <button class="glass-action-btn" onclick="mmNew()">新建导图</button>
-                            <button class="glass-action-btn" id="mmOpenWindowBtn" onclick="mmOpenWindow()" title="在新窗口打开，编辑区域更大">新窗口</button>
-                            <button class="glass-action-btn" id="mmEditToggleBtn" onclick="mmToggleEditable()">设为只读</button>
-                            <button class="glass-action-btn" id="mmSetKeyBtn" onclick="mmSetKey()">设口令</button>
-                            <button class="glass-action-btn publish-btn" onclick="openPublishModal()">发布</button>
-                        </div>
-                    </div>
-
-                    <!-- 主体：四个形态视图 -->
-                    <div class="view-container">
-                        <!-- 文章视图 -->
-                        <div id="view-article" class="tab-view active">
-                            <div class="header-bar">
-                                <input id="edTitle" class="title-input" placeholder="输入文章标题..." maxlength="100" autocomplete="off">
-                            </div>
-                            <div class="editor-wrap" id="writeModeArticle">
-                                <div id="vditor" class="vditor-wrap"></div>
-                            </div>
-                            <div class="footer-count">
-                                <span id="editorInfo">0 字</span>
-                                <span class="save-hint" id="saveHint"></span>
-                            </div>
-                        </div>
-
-                        <!-- 随记视图 -->
-                        <div id="view-note" class="tab-view">
-                            <div class="note-wrap" id="writeModeNote">
-                                <div class="note-input-item">
-                                    <input id="wmNoteTitle" class="note-input note-title-input" placeholder="标题（可选，留空取内容开头）" maxlength="60">
-                                </div>
-                                <div class="note-input-item">
-                                    <textarea id="wmNoteContent" class="note-input note-textarea" placeholder="记录点什么… 支持 **粗体**、`行内代码`、[链接](https://…)"></textarea>
-                                </div>
-                                <div class="note-input-item">
-                                    <div id="wmNoteTagsPicker"></div>
-                                </div>
-                                <div class="wm-recent" id="wmRecentNotes"></div>
-                            </div>
-                        </div>
-
-                        <!-- 白板视图 -->
-                        <!-- 导图视图 -->
-                        <div id="view-mindmap" class="tab-view">
-                            <div class="wm-board-host" id="mmMapHost">
-                                <div class="wb-hint">点「新建导图」开始，或在文章管理里打开已有导图</div>
-                            </div>
-                        </div>
-
-                        <div id="view-board" class="tab-view">
-                            <div class="canvas-wrap" id="writeModeBoard">
-                                <div class="wm-board-host" id="wbBoardHost">
-                                    <div class="wb-hint">点击「新建画板」开始绘制，画完点「保存画板」</div>
-                                </div>
-                            </div>
-                        </div>
                     </div>
                 </div>
 
@@ -1678,6 +1402,40 @@ body.admin-write-full .admin-actions.mobile-float{display:none}
         <div class="aid-foot">点击图片可插入到光标处。</div>
     </aside>
 
+    <!-- ===== 创建内容：先选形态，再跳到独立编写页 ===== -->
+    <div class="cp-modal" id="createPicker" role="dialog" aria-modal="true" aria-label="创建内容">
+        <div class="cp-mask" onclick="closeCreatePicker()"></div>
+        <div class="cp-box">
+            <div class="cp-head">
+                <h3>创建什么？</h3>
+                <button class="cp-x" onclick="closeCreatePicker()" aria-label="关闭">&times;</button>
+            </div>
+            <div class="cp-sub">选好之后跳到编写页，那里可以随时插入白板与思维导图。</div>
+            <div class="cp-grid">
+                <button class="cp-card" data-ct="article" onclick="pickCreateType('article')">
+                    <span class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg></span>
+                    <b>文章</b>
+                    <i>带标题、摘要、封面与标签的长文，正文里可以插图、插白板、插导图。</i>
+                </button>
+                <button class="cp-card" data-ct="card" onclick="pickCreateType('card')">
+                    <span class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><line x1="7" y1="9" x2="17" y2="9"/><line x1="7" y1="13" x2="14" y2="13"/></svg></span>
+                    <b>随记</b>
+                    <i>短想法、随手记录，首页随记区展示，不需要摘要与封面。</i>
+                </button>
+                <button class="cp-card" data-ct="whiteboard" onclick="pickCreateType('whiteboard')">
+                    <span class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/><path d="M8 11l3-3 2.5 2.5L17 7"/></svg></span>
+                    <b>白板</b>
+                    <i>一块自由画布，适合画流程、架构、手写推导，可整页展示。</i>
+                </button>
+                <button class="cp-card" data-ct="mindmap" onclick="pickCreateType('mindmap')">
+                    <span class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="2.6"/><circle cx="18" cy="6" r="2.6"/><circle cx="18" cy="18" r="2.6"/><path d="M7.4 10.8l8.3-3.6M7.4 13.2l8.3 3.6"/></svg></span>
+                    <b>思维导图</b>
+                    <i>先搭结构再写正文，也能作为文章里的讲解工具嵌入。</i>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <div class="exc-modal" id="excModal">
         <div class="exc-modal-overlay" onclick="closeExcModal()"></div>
         <div class="exc-modal-box">
@@ -1773,7 +1531,7 @@ body.admin-write-full .admin-actions.mobile-float{display:none}
 
         <script src="js/embed-picker.js?v=1.7.0"></script>
 <script src="js/tag-picker.js?v=1.0.0"></script>
-        <script src="js/admin-app.js?v=1.13.0"></script>
+        <script src="js/admin-app.js?v=1.14.0"></script>
 
     <!-- 前台预览抽屉（iframe 内嵌，零跳出） -->
     <style>
@@ -1895,7 +1653,6 @@ body.admin-write-full .admin-actions.mobile-float{display:none}
 
         /* ===== 弹窗面板显示在最顶层：抬升祖先链层级 + 面板取最大 z-index =====
            （编辑器容器带 backdrop-filter 会形成层叠上下文，只改面板自身无效） */
-        html body #tab-write,
         html body .view-container,
         html body .editor-wrap,
         html body .ee-main,

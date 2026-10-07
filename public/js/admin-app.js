@@ -429,16 +429,14 @@
                     if(im)image=im[1].trim();
                     content=m[2];
                 }
-                editingId=null;
-                switchTab('write');
-                document.getElementById('edTitle').value=title;
-                document.getElementById('edExcerpt').value=excerpt;
-                document.getElementById('edImage').value=image;
-                renderCoverPreview();
-                selectedArticleTags=tags;
-                renderTagPickerChips();
-                setEditorContent(content);
-                showToast(`已导入: ${f.name}`,'success');
+                // 交给独立编写页接手：整篇 markdown 塞不进 URL，暂存 sessionStorage 再跳转
+                try{
+                    sessionStorage.setItem('ee_import',JSON.stringify({title,excerpt,tags,image,content}));
+                }catch(e){
+                    showToast('导入内容过大，暂存失败','error');
+                    return;
+                }
+                location.href='/admin-edit.html?new=1&type=article&import=1';
             };
             r.readAsText(f);
         }
@@ -2341,17 +2339,47 @@
         }
 
         // ===== Tab =====
+        // ===== 创建内容：先弹形态选择，再跳到独立编写页 =====
+        // 写文章已从后台拆成独立页面 /admin-edit.html（新建模式 ?new=1&type=…），
+        // 后台只负责「选形态 → 跳过去」，不再内嵌编辑器。
+        const CREATE_TYPES=['article','card','whiteboard','mindmap'];
+        function openCreatePicker(){
+            const box=document.getElementById('createPicker');
+            if(!box){pickCreateType('article');return}
+            box.classList.add('open');
+            document.body.style.overflow='hidden';
+        }
+        function closeCreatePicker(){
+            const box=document.getElementById('createPicker');
+            if(!box)return;
+            box.classList.remove('open');
+            document.body.style.overflow='';
+        }
+        function pickCreateType(type){
+            const t=CREATE_TYPES.indexOf(type)>=0?type:'article';
+            location.href='/admin-edit.html?new=1&type='+encodeURIComponent(t);
+        }
+        document.addEventListener('keydown',function(e){
+            if(e.key!=='Escape')return;
+            const box=document.getElementById('createPicker');
+            if(box&&box.classList.contains('open'))closeCreatePicker();
+        });
+
         function switchTab(tab){
+            // 「写文章」页已下线：任何残留入口都改成弹形态选择
+            if(tab==='write'){openCreatePicker();return}
             currentAdminTab=tab;
             document.querySelectorAll('.sidebar-item').forEach(el=>el.classList.toggle('active',el.dataset.tab===tab));
             document.querySelectorAll('.mobile-tab').forEach(el=>el.classList.toggle('active',el.dataset.tab===tab));
-            ['articles','write','comments','images','tags','settings'].forEach(t=>document.getElementById('tab-'+t).style.display=t===tab?(t==='write'?'flex':'block'):'none');
+            ['articles','comments','images','tags','settings'].forEach(t=>{
+                const el=document.getElementById('tab-'+t);
+                if(el)el.style.display=t===tab?'block':'none';
+            });
             if(tab==='articles')loadArticles();
             if(tab==='comments')loadComments();
             if(tab==='settings')loadSettings();
             if(tab==='images'){loadData();loadTags()}
             if(tab==='tags'){loadTags();loadData()}
-            if(tab==='write'){ensureEditor();if(!editingId)resetEditor();loadArticleTagNames();setWriteMode(writeMode)}
         }
 
         // ===== 白板接口与弹窗（供写文章页白板权限/口令使用）=====
