@@ -290,14 +290,16 @@ font-size:13px;font-family:inherit;outline:none;
     .vditor-theme-sepia{--editor-bg:rgba(244,236,216,.95);--editor-text:#3e332a;--editor-pre-bg:rgba(210,195,170,.5)}
     .vditor-theme-green{--editor-bg:rgba(199,237,204,.9);--editor-text:#1a3a1a;--editor-pre-bg:rgba(170,210,175,.5)}
     .vditor-theme-blue{--editor-bg:rgba(220,232,245,.9);--editor-text:#1a2a3a;--editor-pre-bg:rgba(190,205,225,.5)}
-    /* 顶栏的「预览 / 发布 / 保存」按钮组
-       三个是同一类动作，拼成一个盒子（贴边、只留分隔线），比三个独立圆角按钮更像一组。 */
+    /* 顶栏「预览 / 发布 / 保存」按钮组（现在挂在侧栏里）
+       三个是同一类动作，拼成一个盒子（贴边、只留分隔线），比三个独立圆角按钮更像一组。
+       在侧栏里撑满一行、按钮等分；圆角跟侧栏卡片一致（10px），不用胶囊形。 */
     .ee-action-box{
-        display:inline-flex;align-items:stretch;overflow:hidden;
-        border-radius:999px;border:1px solid rgba(115,170,255,.38);background:rgba(255,255,255,.05);
+        display:flex;width:100%;align-items:stretch;overflow:hidden;flex:none;
+        border-radius:10px;border:1px solid rgba(115,170,255,.38);background:rgba(255,255,255,.05);
     }
     .ee-action-box .ee-btn{
-        border:0;border-radius:0;background:transparent;margin:0;padding:7px 15px;font-size:13px;
+        flex:1;border:0;border-radius:0;background:transparent;margin:0;
+        padding:9px 6px;font-size:13px;text-align:center;
     }
     .ee-action-box .ee-btn+.ee-btn{border-left:1px solid rgba(255,255,255,.14)}
     .ee-action-box .ee-btn:hover{background:rgba(255,255,255,.13);color:#fff}
@@ -654,19 +656,12 @@ font-size:13px;font-family:inherit;outline:none;
             <span class="ee-id" id="eeIdText"></span>
         </div>
         <div class="ee-right">
-            <!-- 字数 / 保存状态原来在编辑器下方那条 .ee-foot 里，现在并到顶栏右侧 -->
+            <!-- 字数 / 保存状态原来在编辑器下方那条 .ee-foot 里，现在并到顶栏右侧。
+                 预览 / 发布 / 保存 三个按钮已挪到侧栏（「更多设置」上方）。 -->
             <span class="ee-stat" id="eeInfo">0 字</span>
             <span class="ee-stat saved" id="eeSaved"></span>
             <button class="ee-btn" id="eeViewBtn" onclick="eeOpenFront()" style="display: none;">前台查看</button>
             <button class="ee-btn danger" id="eeDeleteBtn" onclick="eeDelete()" style="display: none;">删除</button>
-            <!-- 预览 / 发布 / 保存合成一个盒子：它们是同一类动作（把内容落库、或看效果），
-                 连成一体比散着三个圆角按钮更像一组。预览原来挂在侧栏，一并挪过来。
-                 发布不再弹窗：状态 / 标签 / 封面都在侧栏，缺什么由 doSave 用胶囊提示拦下。 -->
-            <div class="ee-action-box">
-                <button class="ee-btn" id="eePreviewBtn" onclick="eeSavePreview()" title="保存后到前台看效果">预览</button>
-                <button class="ee-btn primary" id="eePublishBtn" onclick="eePublishNow()">发布</button>
-                <button class="ee-btn primary" id="eeSaveBtn" onclick="eeSave()">保存</button>
-            </div>
         </div>
     </header>
 
@@ -718,7 +713,14 @@ font-size:13px;font-family:inherit;outline:none;
                 </div>
                 <input type="hidden" id="eeImage">
             </div>
-            <!-- 上面是每次发文都要碰的（状态 / 标签 / 封面）；下面这批十天半个月才动一次，
+            <!-- 预览 / 发布 / 保存：同一类动作，拼成一个盒子（贴边、只留分隔线）。
+                 放在「更多设置」上方 —— 它是每次发文都要点的，不该藏在折叠区里。 -->
+            <div class="ee-action-box">
+                <button class="ee-btn" id="eePreviewBtn" onclick="eeSavePreview()" title="保存后到前台看效果">预览</button>
+                <button class="ee-btn primary" id="eePublishBtn" onclick="eePublishNow()">发布</button>
+                <button class="ee-btn primary" id="eeSaveBtn" onclick="eeSave()">保存</button>
+            </div>
+            <!-- 上面是每次发文都要碰的（状态 / 标签 / 封面 / 预览发布保存）；下面这批十天半个月才动一次，
                  收进折叠区，免得侧栏永远是一长列要滚半天 -->
             <details class="ee-side-more" id="eeSideMore">
                 <summary>更多设置<span class="chev">›</span></summary>
