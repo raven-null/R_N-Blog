@@ -6,6 +6,7 @@
  * v1.10.1：顶栏重排 —— 字数/保存状态搬进顶栏、删掉类型与状态徽标、「保存并预览」挪进侧栏
  * v1.11.0：发布不再弹窗（侧栏已有状态/标签/封面，缺东西用胶囊提示）；
  *          弹窗里独有的导图编辑口令搬到侧栏「导图口令」卡片
+ * v1.12.0：编辑器改造 —— 精简顶部工具栏、接入右键菜单与大纲、侧栏分组、去掉块悬停操作条
  */
 (function () {
     'use strict';
@@ -200,14 +201,17 @@
             theme: 'dark',
             lang: 'zh_CN',
             placeholder: '正文内容……支持 Markdown，粘贴/拖拽图片会自动上传',
+            // 顶部只留常用的：其余（删除线 / 行内代码 / 任务 / 缩进 / 分割线 /
+            // 编辑模式 / 主题 / 导出…）都进了右键菜单，见 /js/editor-menu.js。
+            // 表格故意留在工具栏：它点开会弹「几行几列」的面板，那个面板是贴着
+            // 工具栏按钮定位的，从右键菜单里调用会让面板跑到顶部去。
             toolbar: [
-                'emoji', 'headings', 'bold', 'italic', 'strike', 'link',
-                '|', 'list', 'ordered-list', 'check', 'outdent', 'indent',
-                '|', 'quote', 'line', 'code', 'inline-code', 'table',
-                '|', 'upload', 'edit-mode',
+                'headings', 'bold', 'italic', 'link',
+                '|', 'list', 'ordered-list', 'quote',
+                '|', 'code', 'table', 'upload',
                 '|', window.EmbedPickerToolbarItem || { name: 'eeEmbedPick', tip: '插入白板 / 思维导图', click: function () {} },
                 '|', 'undo', 'redo',
-                { name: 'more', toolbar: ['code-theme', 'content-theme', 'export', 'help'] }
+                { name: 'more', toolbar: ['strike', 'inline-code', 'check', 'outdent', 'indent', 'line', 'edit-mode', 'code-theme', 'content-theme', 'export', 'help'] }
             ],
             // 内嵌画布块在编辑器内显示为卡片（逻辑在 /js/embed-picker.js）
             customRenders: window.EmbedPicker ? window.EmbedPicker.customRenders : [],
@@ -243,10 +247,29 @@
                 }
                 // 正文就位后再刷一次侧栏画布清单（setValue 是异步渲染的）
                 refreshCanvasList();
+                stripVditorPopover();
+                // 右键菜单（剪贴板 / 格式 / 插入 / 段落操作），见 /js/editor-menu.js
+                if (window.EditorMenu) window.EditorMenu.attach(vditor);
+                // 大纲（正文结构导航），见 /js/editor-outline.js
+                if (window.EditorOutline) window.EditorOutline.attach(vditor);
             }
         });
         return vditor;
     }
+    /**
+     * 摘掉 Vditor 的「块悬停操作条」（.vditor-panel--none，里面是上移 / 下移 / 删除）。
+     * 功能已经并进右键菜单，所以整条不要了。
+     * 除了 CSS 隐藏，这里再从 DOM 摘一次：Vditor 处理 ⇧⌘X 时是
+     *     wysiwyg.popover.querySelector('[data-type="remove"]')
+     * 拿到按钮才调 click()，摘掉之后那个快捷键会自然失效而不是「看不见却能删」。
+     */
+    function stripVditorPopover() {
+        var pops = document.querySelectorAll('#eeVditor .vditor-panel--none');
+        for (var i = 0; i < pops.length; i++) {
+            if (pops[i].parentNode) pops[i].parentNode.removeChild(pops[i]);
+        }
+    }
+
     function setEditorContent(md) {
         var ed = initEditor();
         if (!ed) return;

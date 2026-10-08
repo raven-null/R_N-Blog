@@ -1,5 +1,5 @@
 /**
- * 插入画布面板（白板 / 思维导图）—— 后台写文章页与文章编辑页共用（v1.9.1）
+ * 插入画布面板（白板 / 思维导图）—— 后台写文章页与文章编辑页共用（v1.10.0）
  * ===========================================================================
  * 职责：
  *   · 自己注入样式与弹窗 DOM（两个页面只需引入本文件 + 一个工具栏按钮）
@@ -816,6 +816,71 @@
         return { ok: true, used: used, max: MAX_CANVAS_PER_ARTICLE };
     }
 
+    /**
+     * 把 markdown 切成「块」，并记下每块在原文里的字符区间。
+     *
+     * 块 = 由单个换行连起来的一串非空行（即段落 / 列表 / 引用 / 代码块），
+     * 块与块之间是空行。刻意返回区间而不是直接 split 再 join：
+     * 那样会把原文里连续多个空行压成一个，等于顺手改了用户自己写的格式。
+     */
+    function mdBlockRanges(md) {
+        var out = [], re = /[^\n]+(?:\n(?!\s*\n)[^\n]*)*/g, m;
+        while ((m = re.exec(md)) !== null) {
+            out.push({ start: m.index, end: m.index + m[0].length, text: m[0] });
+        }
+        return out;
+    }
+
+    /** 编辑器 DOM 里的块（跳过空块，好让两边的块数对得上） */
+    function domBlocks(vd) {
+        var root = editorRootEl(vd);
+        if (!root) return null;
+        return Array.prototype.filter.call(root.children, function (el) {
+            if (el.tagName === 'BR') return false;
+            if ((el.textContent || '').trim() !== '') return true;
+            // 文字为空的块也可能有内容：图片、代码块、表格、分割线、我们自己的画布卡片
+            return !!el.querySelector('img, pre, table, hr, ul, ol, blockquote, .ep-canvas-card');
+        });
+    }
+
+    /**
+     * 真正的编辑区元素（各段落是它的直接子元素）。
+     * Vditor 的 wysiwyg 有两层：.vditor-wysiwyg 是外层容器（只有一个 pre 子元素），
+     * 真正可编辑的是里面的 pre.vditor-reset。取错层会让「DOM 第 N 块 ↔ markdown 第 N 块」
+     * 永远对不上，插入位置只能一路退回文末。
+     */
+    function editorRootEl(vd) {
+        return document.querySelector('#eeVditor .vditor-wysiwyg > .vditor-reset')
+            || document.querySelector('#eeVditor .vditor-wysiwyg > pre')
+            || document.querySelector('#eeVditor .vditor-ir > .vditor-reset')
+            || document.querySelector('#eeVditor .vditor-ir')
+            || null;
+    }
+
+    /**
+     * 光标所在块在 markdown 块序列里的下标；定位不了就返回 -1。
+     *
+     * 思路：不猜文本。Vditor 的 getValue() 就是按 DOM 顶层块逐个生成 markdown 的，
+     * 所以「DOM 第 N 块」↔「markdown 第 N 块」顺序一致 —— 前提是两边块数相同。
+     * 块数对不上（正文里有空行分隔的代码块等边界情况）就老实返回 -1，
+     * 由调用方退回文末，绝不在错的位置硬插。
+     */
+    function caretBlockIndex(vd, ranges) {
+        var boxes = domBlocks(vd);
+        if (!boxes || !boxes.length) return -1;
+        if (boxes.length !== ranges.length) return -1;
+        var root = boxes[0].parentNode;
+        var sel = null;
+        try { sel = window.getSelection(); } catch (e) { sel = null; }
+        if (!sel || sel.rangeCount === 0) return -1;
+        var node = sel.getRangeAt(0).startContainer;
+        if (!root.contains(node)) return -1;
+        var cur = node.nodeType === 1 ? node : node.parentElement;
+        while (cur && cur.parentElement !== root) cur = cur.parentElement;
+        var idx = boxes.indexOf(cur);
+        return typeof idx === 'number' ? idx : -1;
+    }
+
     function insert(vd, k, id) {
         if (!id) return;
         // 先记住目标编辑器，checkQuota 与后续插入必须针对同一个编辑器（否则会读错正文里的引用数）
@@ -829,14 +894,25 @@
         //   1) Vditor 的 customRenders 只在「内容整体重新渲染」时触发，insertValue 只改源码 DOM，
         //      编辑器里会露出 ```embed 代码块而不是画布；
         //   2) 实测 insertValue 插入这段源码还会把已有正文挤到代码块后面、并多出孤立的反引号。
-        // 所以这里直接「读全文 → 文末追加引用块 → setValue」：源码干净，且 setValue 必然触发渲染。
+        // 所以走「读全文 → 在目标位置拼上引用块 → setValue」：源码干净，且 setValue 必然触发渲染。
         // 实测该往返是幂等的（反复 setValue(getValue()) 不会累积垃圾）。
         var placed = false;
+        var where = '正文末尾';
         if (vd && typeof vd.getValue === 'function' && typeof vd.setValue === 'function') {
             var md = '';
             try { md = vd.getValue() || ''; } catch (e) { md = ''; }
-            var head = md.replace(/[\s\u00a0]+$/, '');
-            var next = head ? head + '\n\n' + block : block;
+            var next = '';
+            var ranges = mdBlockRanges(md);
+            var at = caretBlockIndex(vd, ranges);
+            if (at >= 0) {
+                // 插到光标所在那一段的后面（用户说的是「插到正文中间」，落在当前段之后最符合直觉）
+                var cut = ranges[at].end;
+                next = md.slice(0, cut) + '\n\n' + block + md.slice(cut);
+                where = '光标所在段落之后';
+            } else {
+                var head = md.replace(/[\s\u00a0]+$/, '');
+                next = head ? head + '\n\n' + block : block;
+            }
             try { vd.setValue(next); placed = true; } catch (e) { placed = false; }
         }
         if (!placed && vd && typeof vd.insertValue === 'function') {
@@ -844,7 +920,7 @@
         }
         if (typeof window.eeMarkDirty === 'function') window.eeMarkDirty();
         close();
-        toast('已插入' + (k === 'map' ? '思维导图' : '白板') + '（在正文末尾），可直接在编辑区查看');
+        toast('已插入' + (k === 'map' ? '思维导图' : '白板') + '（' + where + '），可直接在编辑区查看');
     }
 
     /** 新建一块画布并直接插入（不再只是插一个空引用，见 createAndInsert） */

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -270,6 +270,15 @@ font-size:13px;font-family:inherit;outline:none;
     .ee-editor-card .vditor-reset table th{background-color:rgba(128,128,128,.16)!important}
     .ee-editor-card .vditor-reset table th,
     .ee-editor-card .vditor-reset table td{border-color:rgba(128,128,128,.35)!important}
+    /* 去掉 Vditor 的「块悬停操作条」：鼠标移到段落 / 列表项旁边时左侧冒出来的
+       up（上移）/ remove（删除）小条，又小又挡道。它的功能（上下移块、删块）
+       已经并进右键菜单，所以这里整条去掉。
+       .vditor-panel--none 这个变体只服务于它 —— emoji 面板 / 标题下拉走的是
+       --arrow 变体，不受影响（CSS 和 JS 里都确认过只有这一处在用它）。
+       除了隐藏，admin-edit.js 的 after 回调里还会把它从 DOM 摘掉：
+       Vditor 的 ⇧⌘X 快捷键是 popover.querySelector('[data-type="remove"]')
+       拿到按钮才 click，摘掉后那个快捷键也就自然失效了。 */
+    .ee-editor-card .vditor-panel--none{display:none!important}
     /* 编辑器主题（与后台一致） */
     .vditor-theme-dark{--editor-bg:rgba(26,26,26,.8);--editor-text:#fff;--editor-pre-bg:rgba(8,8,8,.6)}
     .vditor-theme-light{--editor-bg:rgba(255,255,255,.95);--editor-text:#1a1a1a;--editor-pre-bg:#f0f0f0}
@@ -279,6 +288,22 @@ font-size:13px;font-family:inherit;outline:none;
     /* 「保存并预览」从顶栏挪进侧栏（顶栏留给发布 / 保存这类主操作） */
     .ee-side-actions{flex:none;display:flex;margin-bottom:10px}
     .ee-side-actions .ee-btn{flex:1;text-align:center}
+    /* ===== 侧栏折叠区「更多设置」 =====
+       侧栏原来是一长列七八张卡片，每次发文都要在里面滚着找状态/标签/封面。
+       把十天半个月才动一次的（摘要 / 信息 / 内嵌画布 / 白板管理 / 导图口令）
+       收进这里，上面只留常改的。用原生 details，键盘和无障碍都白拿。 */
+    .ee-side-more{flex:none}
+    .ee-side-more>summary{
+        display:flex;align-items:center;justify-content:space-between;gap:8px;
+        padding:8px 12px;border-radius:10px;cursor:pointer;list-style:none;
+        background:rgba(255,255,255,.04);border:1px solid var(--border);
+        color:var(--text-secondary);font-size:12.5px;transition:background .18s ease,color .18s ease;
+    }
+    .ee-side-more>summary::-webkit-details-marker{display:none}
+    .ee-side-more>summary:hover{background:rgba(255,255,255,.09);color:#fff}
+    .ee-side-more>summary .chev{font-size:14px;line-height:1;transition:transform .18s ease}
+    .ee-side-more[open]>summary .chev{transform:rotate(90deg)}
+    .ee-side-more-body{display:flex;flex-direction:column;gap:10px;padding-top:10px}
     /* ===== 侧栏 ===== */
     .ee-side{width:clamp(220px,26vw,320px);flex-shrink:0;display:flex;flex-direction:column;gap:10px;overflow-y:auto;padding-right:2px;order:9}
     /* ===== 侧栏折叠 ===== */
@@ -642,10 +667,6 @@ font-size:13px;font-family:inherit;outline:none;
                 <label>标签</label>
                 <div id="eeTagsPicker"></div>
             </div>
-            <div class="ee-card" id="eeExcerptCard">
-                <label>摘要（留空自动提取）</label>
-                <textarea id="eeExcerpt" rows="3" oninput="eeMarkDirty()"></textarea>
-            </div>
             <div class="ee-card" id="eeCoverCard">
                 <label>封面图</label>
                 <div class="ee-cover" id="eeCover">
@@ -659,48 +680,59 @@ font-size:13px;font-family:inherit;outline:none;
                 </div>
                 <input type="hidden" id="eeImage">
             </div>
-            <div class="ee-card">
-                <label>信息</label>
-                <div class="ee-meta-list" id="eeMeta"></div>
-            </div>
-            <div class="ee-card" id="eeCanvasCard">
-                <label>本文内嵌画布</label>
-                <div class="ee-canvas-list" id="eeCanvasList"></div>
-            </div>
-            <div class="ee-card" id="eeBoardAdminCard" style="display:none">
-                <label>白板管理</label>
-                <div class="ee-ba-row"><span>画板 ID</span><span class="ee-ba-value" id="eeBaId">—</span></div>
-                <input id="eeBaTitle" placeholder="白板名称（后台白板管理列表显示）">
-                <div class="ee-ba-row"><span>访问权限</span><span class="ee-ba-value" id="eeBaEditable">—</span></div>
-                <div class="ee-cover-actions">
-                    <button class="ee-btn" id="eeBaEditOn" onclick="eeSetBoardEditable(1)">开放编辑</button>
-                    <button class="ee-btn" id="eeBaEditOff" onclick="eeSetBoardEditable(0)">设为只读</button>
-                    <button class="ee-btn" onclick="eeSaveBoardTitle()">保存名称</button>
+            <!-- 上面是每次发文都要碰的（状态 / 标签 / 封面）；下面这批十天半个月才动一次，
+                 收进折叠区，免得侧栏永远是一长列要滚半天 -->
+            <details class="ee-side-more" id="eeSideMore">
+                <summary>更多设置<span class="chev">›</span></summary>
+                <div class="ee-side-more-body">
+                    <div class="ee-card" id="eeExcerptCard">
+                        <label>摘要（留空自动提取）</label>
+                        <textarea id="eeExcerpt" rows="3" oninput="eeMarkDirty()"></textarea>
+                    </div>
+                    <div class="ee-card">
+                        <label>信息</label>
+                        <div class="ee-meta-list" id="eeMeta"></div>
+                    </div>
+                    <div class="ee-card" id="eeCanvasCard">
+                        <label>本文内嵌画布</label>
+                        <div class="ee-canvas-list" id="eeCanvasList"></div>
+                    </div>
+                    <div class="ee-card" id="eeBoardAdminCard" style="display:none">
+                        <label>白板管理</label>
+                        <div class="ee-ba-row"><span>画板 ID</span><span class="ee-ba-value" id="eeBaId">—</span></div>
+                        <input id="eeBaTitle" placeholder="白板名称（后台白板管理列表显示）">
+                        <div class="ee-ba-row"><span>访问权限</span><span class="ee-ba-value" id="eeBaEditable">—</span></div>
+                        <div class="ee-cover-actions">
+                            <button class="ee-btn" id="eeBaEditOn" onclick="eeSetBoardEditable(1)">开放编辑</button>
+                            <button class="ee-btn" id="eeBaEditOff" onclick="eeSetBoardEditable(0)">设为只读</button>
+                            <button class="ee-btn" onclick="eeSaveBoardTitle()">保存名称</button>
+                        </div>
+                        <div class="ee-ba-row"><span>编辑口令</span><span class="ee-ba-value" id="eeBaKey">—</span></div>
+                        <input id="eeBaKeyInput" type="password" placeholder="新口令（至少 4 位）">
+                        <div class="ee-cover-actions">
+                            <button class="ee-btn" onclick="eeSaveBoardKey()">保存口令</button>
+                            <button class="ee-btn danger" onclick="eeClearBoardKey()">清除口令</button>
+                        </div>
+                        <div class="ee-ba-row"><span>历史版本</span><span class="ee-ba-value" id="eeBaRev">—</span></div>
+                        <select id="eeBaRevSel"><option value="">点「刷新历史」加载</option></select>
+                        <div class="ee-cover-actions">
+                            <button class="ee-btn" onclick="eeLoadBoardHistory()">刷新历史</button>
+                            <button class="ee-btn danger" onclick="eeRollbackBoard()">回滚到所选版本</button>
+                        </div>
+                        <div class="ee-hint">权限、口令、名称改动即时生效；回滚会用所选快照覆盖当前画布，当前版本仍保留在历史中。</div>
+                    </div>
+                    <div class="ee-card" id="eeMapKeyCard" style="display:none">
+                        <label>导图口令</label>
+                        <div class="ee-ba-row"><span>编辑口令</span><span class="ee-ba-value" id="eeMapKey">—</span></div>
+                        <input id="eeMapKeyInput" type="password" placeholder="新口令（至少 4 位）" autocomplete="new-password">
+                        <div class="ee-cover-actions">
+                            <button class="ee-btn" onclick="eeSaveMapKey()">保存口令</button>
+                            <button class="ee-btn danger" onclick="eeClearMapKey()">清除口令</button>
+                        </div>
+                        <div class="ee-hint">开启后他人需要输入口令才能编辑这张导图（与白板的「编辑口令」是同一机制，只是接口不同）。</div>
+                    </div>
                 </div>
-                <div class="ee-ba-row"><span>编辑口令</span><span class="ee-ba-value" id="eeBaKey">—</span></div>
-                <input id="eeBaKeyInput" type="password" placeholder="新口令（至少 4 位）">
-                <div class="ee-cover-actions">
-                    <button class="ee-btn" onclick="eeSaveBoardKey()">保存口令</button>
-                    <button class="ee-btn danger" onclick="eeClearBoardKey()">清除口令</button>
-                </div>
-                <div class="ee-ba-row"><span>历史版本</span><span class="ee-ba-value" id="eeBaRev">—</span></div>
-                <select id="eeBaRevSel"><option value="">点「刷新历史」加载</option></select>
-                <div class="ee-cover-actions">
-                    <button class="ee-btn" onclick="eeLoadBoardHistory()">刷新历史</button>
-                    <button class="ee-btn danger" onclick="eeRollbackBoard()">回滚到所选版本</button>
-                </div>
-                <div class="ee-hint">权限、口令、名称改动即时生效；回滚会用所选快照覆盖当前画布，当前版本仍保留在历史中。</div>
-            </div>
-            <div class="ee-card" id="eeMapKeyCard" style="display:none">
-                <label>导图口令</label>
-                <div class="ee-ba-row"><span>编辑口令</span><span class="ee-ba-value" id="eeMapKey">—</span></div>
-                <input id="eeMapKeyInput" type="password" placeholder="新口令（至少 4 位）" autocomplete="new-password">
-                <div class="ee-cover-actions">
-                    <button class="ee-btn" onclick="eeSaveMapKey()">保存口令</button>
-                    <button class="ee-btn danger" onclick="eeClearMapKey()">清除口令</button>
-                </div>
-                <div class="ee-hint">开启后他人需要输入口令才能编辑这张导图（与白板的「编辑口令」是同一机制，只是接口不同）。</div>
-            </div>
+            </details>
         </aside>
 
         <!-- 侧栏折叠后的边缘展开把手 -->
@@ -738,8 +770,10 @@ font-size:13px;font-family:inherit;outline:none;
 
     <div class="ee-toast" id="eeToast"></div>
     <script src="js/markdown-config.js?v=1.2.0"></script>
-<script src="js/embed-picker.js?v=1.9.1"></script>
+<script src="js/embed-picker.js?v=1.10.0"></script>
+<script src="js/editor-menu.js?v=1.0.0"></script>
+<script src="js/editor-outline.js?v=1.0.0"></script>
 <script src="js/tag-picker.js?v=1.0.0"></script>
-    <script src="js/admin-edit.js?v=1.11.0"></script>
+    <script src="js/admin-edit.js?v=1.12.0"></script>
 </body>
 </html>
