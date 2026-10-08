@@ -21,6 +21,11 @@ const ALLOWED_MIME: Record<string, string> = {
   "image/svg+xml": "svg",
 }
 
+interface CanvasRef {
+  kind: "board" | "map"
+  id: string
+}
+
 interface ArticleMeta {
   id: string
   filename: string
@@ -33,11 +38,14 @@ interface ArticleMeta {
   image: string
   wordCount: number
   status: "published" | "draft"
-  type?: "article" | "whiteboard" | "card" // 内容形态（缺省 article）
+  type?: "article" | "whiteboard" | "card" | "mindmap" // 内容形态（缺省 article）
   chunked?: boolean // 长文章已分章存储（主记录不存全文）
   chunkCount?: number // 分章数量
   boardId?: string // type=whiteboard 时关联的 Excalidraw 笔记 id
   mapId?: string // type=mindmap 时关联的思维导图 id
+  /** 正文里内嵌的画布（```embed board:xxx / map:yyy）；后台卡片据此直接跳去单独修改那块画布。
+   *  空数组 = 已扫描过、没有内嵌画布；缺字段 = 还没扫过（由 action=sync-canvas-refs 补）。 */
+  canvasRefs?: CanvasRef[]
 }
 
 // ===================== 认证 =====================
@@ -69,6 +77,74 @@ async function getArticleIndexStrong(store: ReturnType<typeof getBlobStore>): Pr
   const raw = await getBlobStore(ARTICLE_STORE, "strong").get("index", { type: "text" })
   if (!raw) return []
   try { return JSON.parse(raw) } catch { return [] }
+}
+
+// ===================== 内嵌画布引用 =====================
+
+/** 画布 id 的合法形状：wb- / mm- 前缀 + base36 随机段（与 embed-picker.js 的约定一致） */
+const CANVAS_ID_RE = /^(?:wb|mm)-[A-Za-z0-9-]{2,61}$/
+
+/**
+ * 从正文里提取内嵌画布引用。支持三种历史写法：
+ *   1. ```embed 换行 board:<id>      —— 现在的写法（Vditor 往返不会丢 id）
+ *   2. ```embed board:<id>           —— 单行写法（Vditor 会把后半截当代码块标题，但仍要认）
+ *   3. ```excalidraw 换行 <id>       —— 更早的写法
+ * 与 public/js/embed-picker.js 的 extractBlockRefs 保持同样的识别范围。
+ */
+function extractCanvasRefs(md: string): CanvasRef[] {
+  if (!md) return []
+  const out: CanvasRef[] = []
+  const seen = new Set<string>()
+  const push = (kind: "board" | "map", id: string) => {
+    const key = kind + ":" + id
+    if (seen.has(key)) return
+    seen.add(key)
+    out.push({ kind, id })
+  }
+  const ID = "[A-Za-z0-9_.\\u4e00-\\u9fa5-]{1,64}"
+  // 1) ```embed 之后的第一行是 board:<id> / map:<id>（后面可跟 :h= / :caption= 等）
+  const p1 = new RegExp("```embed[^\\n]*\\n\\s*(board|map)\\s*:\\s*(" + ID + ")", "g")
+  // 2) ```embed board:<id>（同一行）
+  const p2 = new RegExp("```embed\\s+(board|map)\\s*:\\s*(" + ID + ")", "g")
+  // 3) ```excalidraw 之后的第一行是裸 id
+  const p3 = new RegExp("```excalidraw[^\\n]*\\n\\s*(" + ID + ")", "g")
+  for (const re of [p1, p2]) {
+    let m: RegExpExecArray | null
+    while ((m = re.exec(md))) {
+      const id = m[2]
+      if (!CANVAS_ID_RE.test(id)) continue
+      push(m[1] === "map" ? "map" : "board", id)
+    }
+  }
+  let m3: RegExpExecArray | null
+  while ((m3 = p3.exec(md))) {
+    const id = m3[1]
+    if (!CANVAS_ID_RE.test(id)) continue
+    push(id.startsWith("mm-") ? "map" : "board", id)
+  }
+  return out
+}
+
+/** 取一篇文章的正文（分章文章把各块拼回来） */
+async function readArticleContent(store: ReturnType<typeof getBlobStore>, id: string): Promise<string> {
+  const chunkStore = getBlobStore(CHUNK_STORE, "strong")
+  const raw = await store.get(id, { type: "text" })
+  const rec = raw ? JSON.parse(raw) : null
+  if (!rec) return ""
+  if (!rec.chunked) return String(rec.content || "")
+  try {
+    const idxRaw = await chunkStore.get(`${id}/index`, { type: "text" })
+    const toc = idxRaw ? JSON.parse(idxRaw) : null
+    const total = Number(toc?.total) || 0
+    const parts: string[] = []
+    for (let i = 0; i < total; i++) {
+      const text = await chunkStore.get(`${id}/${i}`, { type: "text" })
+      if (text) parts.push(text)
+    }
+    return parts.join("\n\n")
+  } catch {
+    return String(rec.content || "")
+  }
 }
 
 // ===================== 长文章分章 =====================
@@ -200,6 +276,32 @@ export default async (req: Request) => {
     return json(200, { status: "success", data: main }, req, { "Cache-Control": "no-store" })
   }
 
+  // ===== 一次性补齐索引里的内嵌画布引用（老数据 POST 时还没有这个字段） =====
+  // 只改索引 meta，不碰文章记录本身——避免顺带刷新 update 时间、打乱排序。
+  if (path === "sync-canvas-refs") {
+    if (!(await checkAuth(req))) return json(401, { status: "error", message: "未授权" }, req)
+    const store = getBlobStore(ARTICLE_STORE, "strong")
+    const index = await getArticleIndexStrong(store)
+    let scanned = 0
+    let found = 0
+    for (const meta of index) {
+      if ((meta.type || "article") !== "article") continue
+      if (Array.isArray(meta.canvasRefs)) continue // 已经扫过
+      scanned++
+      let content = ""
+      try {
+        content = await readArticleContent(store, meta.id)
+      } catch {
+        content = ""
+      }
+      const refs = extractCanvasRefs(content)
+      meta.canvasRefs = refs
+      if (refs.length) found++
+    }
+    if (scanned) await saveArticleIndex(store, index)
+    return json(200, { status: "success", data: { scanned, found } }, req)
+  }
+
   // ===== 文章管理（公开读取） =====
 
   if (path === "articles") {
@@ -318,8 +420,7 @@ export default async (req: Request) => {
       // 长文章自动分章：主记录不再保存全文，阅读端按章加载（30k 字/章）
       let chunkCount = 0
       if (type === "article") {
-        if ((content || "").length > CHUNK_THRESHOLD) {
-          const chunks = splitChapters(content)
+        if ((content || "").length > CHUNK_THRESHOLD) {          const chunks = splitChapters(content)
           chunkCount = chunks.length
           await clearArticleChunks(articleId)
           for (let i = 0; i < chunks.length; i++) {
@@ -377,6 +478,9 @@ export default async (req: Request) => {
         // 此前漏写导致 admin-app.js 的导图去重（a.mapId === currentMapId）永远匹配不到，
         // 结果是每次「发布」都新建一篇文章而不是更新同一篇。
         mapId: mapId || undefined,
+        // 正文里内嵌的画布：后台卡片据此给出「直接去改这块白板」的链接。
+        // 只对 article 有意义（白板/导图形态本身就是一整块画布，卡片点进去就是它）。
+        canvasRefs: type === "article" ? extractCanvasRefs(content || "") : [],
       }
 
       if (existing >= 0) {

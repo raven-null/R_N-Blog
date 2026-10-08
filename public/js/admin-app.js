@@ -64,6 +64,24 @@
             if(seq!==articlesReqSeq)return; // 已有更新的请求在途/已返回，丢弃本次结果
             if(r.status==='success'){allArticles=r.data||[];artSel.clear();renderArticles()}
             loadOrphanCanvases(); // 文章列表到手后才能算出哪些画板没被引用
+            syncCanvasRefsOnce(); // 老文章索引里还没有内嵌画布引用，补扫一次
+        }
+        /**
+         * 卡片上的「白板 / 导图 ↗」直达链接依赖索引里的 canvasRefs。
+         * 这个字段是后加的，老文章没有 → 每次会话静默补扫一次（幂等，只补缺的）。
+         */
+        async function syncCanvasRefsOnce(){
+            try{ if(sessionStorage.getItem('art_canvas_refs_synced')==='1')return }catch(e){}
+            const need=allArticles.some(function(a){return (a.type||'article')==='article'&&!Array.isArray(a.canvasRefs)});
+            if(!need)return;
+            try{ sessionStorage.setItem('art_canvas_refs_synced','1') }catch(e){/* 存不了就每次扫，无妨 */}
+            try{
+                const r=await apiFetch('action=sync-canvas-refs',{method:'POST'});
+                if(r&&r.status==='success'&&r.data&&r.data.scanned>0){
+                    if(r.data.found>0)showToast('已为 '+r.data.found+' 篇文章补上内嵌画布链接','success');
+                    await loadArticles();
+                }
+            }catch(e){/* 补扫失败不影响列表 */}
         }
         /* ===== 未归入文章的画板 =====
            画板（白板 / 导图）的图形数据有独立存储，与文章记录是两条数据。
@@ -205,6 +223,21 @@
             filterArticles();
         }
         function artTypeLabel(t){if(t==='whiteboard')return '白板';if(t==='card')return '随记';if(t==='mindmap')return '导图';return ''}
+        // 四种形态各自的封面色块（没设封面图时用），顺带当类型标识
+        const ART_COVER={
+            article:['hsl(222 26% 25%)','hsl(230 20% 17%)'],
+            whiteboard:['hsl(210 34% 27%)','hsl(226 24% 18%)'],
+            card:['hsl(38 32% 26%)','hsl(24 22% 18%)'],
+            mindmap:['hsl(168 30% 25%)','hsl(182 24% 17%)']
+        };
+        const ART_PH={article:'文',whiteboard:'白',card:'记',mindmap:'图'};
+        /** 单独打开正文里内嵌的那块画布（不改文章，只改画布） */
+        function artOpenCanvas(id,kind,e){
+            if(e){e.stopPropagation();e.preventDefault()}
+            const isMap=kind==='map';
+            const url=(isMap?'/mindmap.html?note=':'/excalidraw.html?note=')+encodeURIComponent(id)+'&edit=1&from=admin';
+            window.open(url,'_blank','noopener');
+        }
         function artCardHtml(a){
             const isPub=a.status==='published';
             const type=a.type||'article';
@@ -217,19 +250,39 @@
             if(a.image&&type!=='card'){
                 cover='<div class="ac-cover" style="background-image:url('+escAttr(a.image)+')">'+badge+dot+'</div>';
             }else{
-                const ph=type==='whiteboard'?'白':(type==='card'?'记':'文');
-                cover='<div class="ac-cover noimg" style="background:linear-gradient(135deg,hsl('+(type==='whiteboard'?210:type==='card'?38:222)+' 26% 24%),hsl('+(type==='whiteboard'?230:type==='card'?20:230)+' 20% 17%))"><span class="ac-ph">'+ph+'</span>'+badge+dot+'</div>';
+                const c=ART_COVER[type]||ART_COVER.article;
+                cover='<div class="ac-cover noimg" style="background:linear-gradient(135deg,'+c[0]+','+c[1]+')"><span class="ac-ph">'+(ART_PH[type]||'文')+'</span>'+badge+dot+'</div>';
             }
-            const meta='<span>'+(a.wordCount||0)+' 字</span><span>'+esc(a.date||'')+'</span>'+(a.update?'<span class="up">更新 '+esc(a.update)+'</span>':'');
+            // 元信息：字数只对文章有意义——白板 / 随记 / 导图不是「写字」写出来的；
+            // 画布类改成显示画布 id（能对着画布管理那边认出来是哪一块）
+            const bits=[];
+            if(type==='article')bits.push('<span>'+(a.wordCount||0)+' 字</span>');
+            if(type==='whiteboard'||type==='mindmap'){
+                const cid=a.boardId||a.mapId||'';
+                if(cid)bits.push('<span class="ac-cid" title="画布 ID">'+esc(cid)+'</span>');
+            }
+            bits.push('<span>'+esc(a.date||'')+'</span>');
+            if(a.update)bits.push('<span class="up">更新 '+esc(a.update)+'</span>');
+            // 正文里内嵌的画布：给一个直达链接，单独去改那块画布而不必先打开文章
+            const refs=(type==='article'&&Array.isArray(a.canvasRefs))?a.canvasRefs:[];
+            const canvases=refs.length
+                ?'<div class="ac-canvases">'+refs.map(function(r){
+                    const isMap=r.kind==='map';
+                    return '<button type="button" class="ac-canvas'+(isMap?' map':'')+'" '+
+                        'title="'+(isMap?'单独编辑这张思维导图':'单独编辑这块白板')+'" '+
+                        'onclick="artOpenCanvas(\''+escJs(r.id)+'\',\''+(isMap?'map':'board')+'\',event)">'+
+                        '<span class="k">'+(isMap?'导图':'白板')+'</span>'+esc(r.id)+'<span class="arw">↗</span></button>';
+                }).join('')+'</div>'
+                :'';
             const pubBtn=isPub
                 ? '<button class="btn btn-ghost btn-sm" onclick="toggleArticleStatus(\''+id+'\',\'draft\')">下架</button>'
                 : '<button class="btn btn-sm" onclick="toggleArticleStatus(\''+id+'\',\'published\')">发布</button>';
-            return '<div class="art-card" data-id="'+escAttr(a.id)+'" onclick="artCardClick(\''+id+'\',event)">'+
+            return '<div class="art-card t-'+type+'" data-id="'+escAttr(a.id)+'" data-type="'+type+'" onclick="artCardClick(\''+id+'\',event)">'+
                 cover+
                 '<div class="ac-body">'+
                 '<div class="ac-title"><span class="tt">'+esc(a.title||'(未命名)')+'</span>'+chunkBadge+'</div>'+
-                (type==='article'?'<div class="ac-desc">'+esc(String(a.excerpt||'').slice(0,130))+'</div>':'')+
-                '<div class="ac-meta">'+meta+'</div>'+
+                '<div class="ac-meta">'+bits.join('')+'</div>'+
+                canvases+
                 '</div>'+
                 '<div class="ac-ops">'+pubBtn+
                 '<span class="sp"></span>'+

@@ -991,20 +991,35 @@
                         .art-card{position:relative;display:flex;flex-direction:column;overflow:hidden;cursor:pointer;background:var(--bg-card);border:1px solid var(--border);border-radius:16px;transition:transform .3s cubic-bezier(.16,1,.3,1),border-color .25s,box-shadow .25s,opacity .3s;opacity:0;transform:translateY(10px)}
                         .art-card.visible{opacity:1;transform:none}
                         .art-card:hover{border-color:var(--border-light);transform:translateY(-3px);box-shadow:0 14px 34px -18px var(--shadow)}
-                        .art-card .ac-cover{height:88px;background-size:cover;background-position:center;position:relative;flex:none}
+                        .art-card .ac-cover{height:96px;background-size:cover;background-position:center;position:relative;flex:none}
                         .art-card.noimg .ac-cover{display:flex;align-items:center;justify-content:center}
-                        .ac-cover .ac-ph{font-size:26px;font-weight:800;letter-spacing:2px;opacity:.25}
+                        .ac-cover .ac-ph{font-size:28px;font-weight:800;letter-spacing:2px;opacity:.28}
                         .ac-cover .ac-badge{position:absolute;left:8px;bottom:8px;font-size:10.5px;padding:2px 9px;border-radius:999px;border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.35);color:#e6ecff}
                         .ac-status{position:absolute;top:8px;right:8px;width:8px;height:8px;border-radius:50%}
                         .ac-status.pub{background:#4cc2ff;box-shadow:0 0 8px rgba(76,194,255,.8)}
                         .ac-status.draft{background:#ffb020;box-shadow:0 0 8px rgba(255,176,32,.7)}
-                        .ac-body{padding:12px 14px 8px;display:flex;flex-direction:column;gap:6px;flex:1;min-width:0}
+                        .ac-body{padding:12px 14px 12px;display:flex;flex-direction:column;gap:7px;flex:1;min-width:0}
                         .ac-title{display:flex;align-items:center;gap:6px;font-weight:600;font-size:14px;color:var(--text-primary);line-height:1.4}
                         .ac-title .tt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
                         .ac-title .tt-b{flex:none;font-size:10px;padding:1px 8px;border-radius:999px;border:1px solid var(--border-light);color:var(--text-muted);font-weight:400}
-                        .ac-desc{font-size:12px;color:var(--text-muted);line-height:1.6;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}
-                        .ac-meta{display:flex;align-items:center;gap:10px;font-size:11px;color:var(--text-muted);margin-top:6px}
-                        .ac-meta .up{margin-left:auto}
+                        /* .ac-desc（摘要两行）已按需求去掉：文章卡片不再显示简介，卡片高度也更整齐 */
+                        .ac-meta{display:flex;align-items:center;gap:10px;font-size:11px;color:var(--text-muted);min-width:0}
+                        .ac-meta .up{margin-left:auto;flex:none}
+                        .ac-meta .ac-cid{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:52%}
+                        /* 正文里内嵌的画布：直达链接（单独改那块画布，不用先打开文章） */
+                        .ac-canvases{display:flex;flex-wrap:wrap;gap:6px}
+                        .ac-canvas{
+                            display:inline-flex;align-items:center;gap:5px;max-width:100%;
+                            padding:3px 10px;border-radius:999px;cursor:pointer;font-family:inherit;
+                            font-size:11px;line-height:1.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+                            background:rgba(115,170,255,.14);border:1px solid rgba(115,170,255,.32);color:#cfe2ff;
+                            transition:background .16s,color .16s,border-color .16s;
+                        }
+                        .ac-canvas .k{flex:none;opacity:.85}
+                        .ac-canvas .arw{flex:none;opacity:.7}
+                        .ac-canvas:hover{background:rgba(115,170,255,.3);border-color:rgba(115,170,255,.6);color:#fff}
+                        .ac-canvas.map{background:rgba(80,220,180,.14);border-color:rgba(80,220,180,.32);color:#bdf3e5}
+                        .ac-canvas.map:hover{background:rgba(80,220,180,.3);border-color:rgba(80,220,180,.6);color:#fff}
                         .ac-ops{display:flex;align-items:center;gap:6px;padding:8px 10px;border-top:1px solid var(--border)}
                         .ac-ops .sp{flex:1}
                         .ac-more{position:relative}
@@ -1559,7 +1574,7 @@
 
         <script src="js/embed-picker.js?v=1.8.0"></script>
 <script src="js/tag-picker.js?v=1.0.0"></script>
-        <script src="js/admin-app.js?v=1.15.0"></script>
+        <script src="js/admin-app.js?v=1.16.0"></script>
 
     <!-- 前台预览抽屉（iframe 内嵌，零跳出） -->
     <style>
