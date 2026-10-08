@@ -9,6 +9,8 @@
  * v1.12.0：编辑器改造 —— 精简顶部工具栏、接入右键菜单与大纲、侧栏分组、去掉块悬停操作条
  * v1.12.1：标题从编辑区上方搬进侧栏（四种形态统一，白板/导图原本没有写标题的地方）
  * v1.13.0：白板/导图隐藏「本文内嵌画布」；白板去掉独立改名入口（名称跟随标题并自动同步）
+ * v1.14.0：侧栏细节 —— 去掉画板 ID 行、口令改行内「添加」（已设置才出现「清除」）、
+ *          导图口令卡片去掉标题与说明、信息卡片移到折叠区最后
  */
 (function () {
     'use strict';
@@ -481,9 +483,15 @@
         card.style.display = '';
         try {
             var d = await mmApi('id=' + encodeURIComponent(mid) + '&metaOnly=1');
-            $('eeMapKey').textContent = (d && d.status === 'success' && d.meta && d.meta.hasKey) ? '已设置' : '未设置';
+            var hasKey = !!(d && d.status === 'success' && d.meta && d.meta.hasKey);
+            $('eeMapKey').textContent = hasKey ? '已设置' : '未设置';
+            // 只有设过口令才给「清除」按钮 —— 没设过时它点了也没意义
+            var clr = $('eeMapKeyClear');
+            if (clr) clr.style.display = hasKey ? '' : 'none';
         } catch (e) {
             $('eeMapKey').textContent = '读取失败';   // 接口不可用时降级，不抛未捕获异常
+            var clr2 = $('eeMapKeyClear');
+            if (clr2) clr2.style.display = 'none';
         }
     }
     async function mapMetaSet(body, okMsg) {
@@ -515,17 +523,21 @@
         var bid = boardId();
         if (docType !== 'whiteboard' || !bid) { card.style.display = 'none'; return; }
         card.style.display = '';
-        $('eeBaId').textContent = bid;
         try {
             var d = await excApi('id=' + encodeURIComponent(bid) + '&metaOnly=1');
             if (d.status === 'success' && d.meta) {
                 $('eeBaEditable').textContent = d.meta.editable === 1 ? '公开可编辑' : '只读';
                 $('eeBaKey').textContent = d.meta.hasKey ? '已设置' : '未设置';
                 markEditableButtons(d.meta.editable === 1 ? 1 : 0);
+                // 只有设过口令才给「清除」按钮 —— 没设过时它点了也没意义
+                var clr = $('eeBaKeyClear');
+                if (clr) clr.style.display = d.meta.hasKey ? '' : 'none';
             } else {
                 $('eeBaEditable').textContent = '画板不存在';
                 $('eeBaKey').textContent = '—';
                 markEditableButtons(-1);
+                var clr2 = $('eeBaKeyClear');
+                if (clr2) clr2.style.display = 'none';
             }
         } catch (e) {
             // 接口不可用（部署中 / 连接被关闭）时降级显示，不抛未捕获异常
@@ -533,6 +545,8 @@
             $('eeBaKey').textContent = '—';
             $('eeBaRev').textContent = '接口暂时不可用';
             markEditableButtons(-1);
+            var clr3 = $('eeBaKeyClear');
+            if (clr3) clr3.style.display = 'none';
             toast('白板信息读取失败（网络或部署中），可点「刷新历史」重试', 'error');
         }
         window.eeLoadBoardHistory();

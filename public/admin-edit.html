@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -309,6 +309,10 @@ font-size:13px;font-family:inherit;outline:none;
     .ee-side-more>summary .chev{font-size:14px;line-height:1;transition:transform .18s ease}
     .ee-side-more[open]>summary .chev{transform:rotate(90deg)}
     .ee-side-more-body{display:flex;flex-direction:column;gap:10px;padding-top:10px}
+    /* 口令一行：输入框占满，右边跟「添加」；已设过口令时再出现「清除」 */
+    .ee-ba-key-row{display:flex;gap:6px;align-items:center}
+    .ee-ba-key-row input{flex:1;min-width:0}
+    .ee-ba-key-row .ee-btn{flex:none;height:32px;padding:0 11px;font-size:12.5px}
     /* ===== 侧栏 ===== */
     .ee-side{width:clamp(220px,26vw,320px);flex-shrink:0;display:flex;flex-direction:column;gap:10px;overflow-y:auto;padding-right:2px;order:9}
     /* ===== 侧栏折叠 ===== */
@@ -699,30 +703,26 @@ font-size:13px;font-family:inherit;outline:none;
                         <label>摘要（留空自动提取）</label>
                         <textarea id="eeExcerpt" rows="3" oninput="eeMarkDirty()"></textarea>
                     </div>
-                    <div class="ee-card">
-                        <label>信息</label>
-                        <div class="ee-meta-list" id="eeMeta"></div>
-                    </div>
                     <div class="ee-card" id="eeCanvasCard">
                         <label>本文内嵌画布</label>
                         <div class="ee-canvas-list" id="eeCanvasList"></div>
                     </div>
                     <div class="ee-card" id="eeBoardAdminCard" style="display:none">
                         <label>白板管理</label>
-                        <div class="ee-ba-row"><span>画板 ID</span><span class="ee-ba-value" id="eeBaId">—</span></div>
                         <!-- 白板名称的改名入口已去掉：侧栏顶部的「标题」就是它的名字，
                              保存时会自动同步到白板的 meta.title（后台白板管理列表读的是那个）。
-                             以前这里能改第二遍，两处对不上还得猜哪个生效。 -->
+                             画板 ID 那一行也去掉了 —— 它对作者没有可操作价值。 -->
                         <div class="ee-ba-row"><span>访问权限</span><span class="ee-ba-value" id="eeBaEditable">—</span></div>
                         <div class="ee-cover-actions">
                             <button class="ee-btn" id="eeBaEditOn" onclick="eeSetBoardEditable(1)">开放编辑</button>
                             <button class="ee-btn" id="eeBaEditOff" onclick="eeSetBoardEditable(0)">设为只读</button>
                         </div>
                         <div class="ee-ba-row"><span>编辑口令</span><span class="ee-ba-value" id="eeBaKey">—</span></div>
-                        <input id="eeBaKeyInput" type="password" placeholder="新口令（至少 4 位）">
-                        <div class="ee-cover-actions">
-                            <button class="ee-btn" onclick="eeSaveBoardKey()">保存口令</button>
-                            <button class="ee-btn danger" onclick="eeClearBoardKey()">清除口令</button>
+                        <!-- 输入框 + 行内「添加」；已经设过口令时右侧再出现「清除」 -->
+                        <div class="ee-ba-key-row">
+                            <input id="eeBaKeyInput" type="password" placeholder="新口令（至少 4 位）" autocomplete="new-password">
+                            <button class="ee-btn" onclick="eeSaveBoardKey()">添加</button>
+                            <button class="ee-btn danger" id="eeBaKeyClear" onclick="eeClearBoardKey()" style="display:none">清除</button>
                         </div>
                         <div class="ee-ba-row"><span>历史版本</span><span class="ee-ba-value" id="eeBaRev">—</span></div>
                         <select id="eeBaRevSel"><option value="">点「刷新历史」加载</option></select>
@@ -730,17 +730,20 @@ font-size:13px;font-family:inherit;outline:none;
                             <button class="ee-btn" onclick="eeLoadBoardHistory()">刷新历史</button>
                             <button class="ee-btn danger" onclick="eeRollbackBoard()">回滚到所选版本</button>
                         </div>
-                        <div class="ee-hint">权限、口令、名称改动即时生效；回滚会用所选快照覆盖当前画布，当前版本仍保留在历史中。</div>
+                        <div class="ee-hint">权限、口令改动即时生效；回滚会用所选快照覆盖当前画布，当前版本仍保留在历史中。</div>
                     </div>
                     <div class="ee-card" id="eeMapKeyCard" style="display:none">
-                        <label>导图口令</label>
                         <div class="ee-ba-row"><span>编辑口令</span><span class="ee-ba-value" id="eeMapKey">—</span></div>
-                        <input id="eeMapKeyInput" type="password" placeholder="新口令（至少 4 位）" autocomplete="new-password">
-                        <div class="ee-cover-actions">
-                            <button class="ee-btn" onclick="eeSaveMapKey()">保存口令</button>
-                            <button class="ee-btn danger" onclick="eeClearMapKey()">清除口令</button>
+                        <div class="ee-ba-key-row">
+                            <input id="eeMapKeyInput" type="password" placeholder="新口令（至少 4 位）" autocomplete="new-password">
+                            <button class="ee-btn" onclick="eeSaveMapKey()">添加</button>
+                            <button class="ee-btn danger" id="eeMapKeyClear" onclick="eeClearMapKey()" style="display:none">清除</button>
                         </div>
-                        <div class="ee-hint">开启后他人需要输入口令才能编辑这张导图（与白板的「编辑口令」是同一机制，只是接口不同）。</div>
+                    </div>
+                    <!-- 信息是纯展示，放最后：翻它的频率最低，挡在前面反而碍事 -->
+                    <div class="ee-card">
+                        <label>信息</label>
+                        <div class="ee-meta-list" id="eeMeta"></div>
                     </div>
                 </div>
             </details>
@@ -785,6 +788,6 @@ font-size:13px;font-family:inherit;outline:none;
 <script src="js/editor-menu.js?v=1.0.0"></script>
 <script src="js/editor-outline.js?v=1.0.0"></script>
 <script src="js/tag-picker.js?v=1.0.0"></script>
-    <script src="js/admin-edit.js?v=1.13.0"></script>
+    <script src="js/admin-edit.js?v=1.14.0"></script>
 </body>
 </html>
