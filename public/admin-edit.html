@@ -258,6 +258,18 @@ font-size:13px;font-family:inherit;outline:none;
     .ee-editor-card .vditor-sv .ep-canvas-card{color:#1b1b1f}
     .ee-editor-card .vditor-ir pre,.ee-editor-card .vditor-wysiwyg pre,.ee-editor-card .vditor-sv pre{background:var(--editor-pre-bg,rgba(8,8,8,.6))!important}
     .ee-editor-card .vditor-ir a:not(.ep-canvas-card *),.ee-editor-card .vditor-wysiwyg a:not(.ep-canvas-card *){color:var(--accent)!important}
+    /* 表格：Vditor 的表格底色是**写死的浅色**，不是 CSS 变量 ——
+           .vditor-reset table tr            { background-color: #fafbfc }
+           .vditor-reset table tbody tr:nth-child(2n) { background-color: #fff }
+       而上面那条 * 规则把表格文字统一接管成了 --editor-text：深色主题下 --editor-text 是 #fff，
+       于是白字配 #fafbfc / #fff 的白底，整张表糊成一片（其它四个主题文字都是深色，
+       所以只有 dark 主题会踩到）。这里把底色也接管过来，观感对齐阅读页：
+       行透明 + 表头淡底 + 中性半透明边框。 */
+    .ee-editor-card .vditor-reset table tr,
+    .ee-editor-card .vditor-reset table tbody tr:nth-child(2n){background-color:transparent!important}
+    .ee-editor-card .vditor-reset table th{background-color:rgba(128,128,128,.16)!important}
+    .ee-editor-card .vditor-reset table th,
+    .ee-editor-card .vditor-reset table td{border-color:rgba(128,128,128,.35)!important}
     /* 编辑器主题（与后台一致） */
     .vditor-theme-dark{--editor-bg:rgba(26,26,26,.8);--editor-text:#fff;--editor-pre-bg:rgba(8,8,8,.6)}
     .vditor-theme-light{--editor-bg:rgba(255,255,255,.95);--editor-text:#1a1a1a;--editor-pre-bg:#f0f0f0}
