@@ -1,5 +1,5 @@
 /**
- * 插入画布面板（白板 / 思维导图）—— 后台写文章页与文章编辑页共用（v1.8.0）
+ * 插入画布面板（白板 / 思维导图）—— 后台写文章页与文章编辑页共用（v1.8.1）
  * ===========================================================================
  * 职责：
  *   · 自己注入样式与弹窗 DOM（两个页面只需引入本文件 + 一个工具栏按钮）
@@ -748,12 +748,26 @@
         // 注意：声明必须放在「内容行」。若写成 ```embed map:xxx（语言行带参数），
         // Vditor 会把语言行之后的内容当作代码块标题，getValue() 往返时 id 会丢失。
         var block = '```embed\n' + k + ':' + id + '\n```\n';
-        if (vd && typeof vd.insertValue === 'function') {
+        // 为什么不用 insertValue：
+        //   1) Vditor 的 customRenders 只在「内容整体重新渲染」时触发，insertValue 只改源码 DOM，
+        //      编辑器里会露出 ```embed 代码块而不是画布；
+        //   2) 实测 insertValue 插入这段源码还会把已有正文挤到代码块后面、并多出孤立的反引号。
+        // 所以这里直接「读全文 → 文末追加引用块 → setValue」：源码干净，且 setValue 必然触发渲染。
+        // 实测该往返是幂等的（反复 setValue(getValue()) 不会累积垃圾）。
+        var placed = false;
+        if (vd && typeof vd.getValue === 'function' && typeof vd.setValue === 'function') {
+            var md = '';
+            try { md = vd.getValue() || ''; } catch (e) { md = ''; }
+            var head = md.replace(/[\s\u00a0]+$/, '');
+            var next = head ? head + '\n\n' + block : block;
+            try { vd.setValue(next); placed = true; } catch (e) { placed = false; }
+        }
+        if (!placed && vd && typeof vd.insertValue === 'function') {
             try { vd.insertValue(block); } catch (e) { /* 忽略 */ }
         }
         if (typeof window.eeMarkDirty === 'function') window.eeMarkDirty();
         close();
-        toast('已插入' + (k === 'map' ? '思维导图' : '白板') + '，保存后在文章里显示');
+        toast('已插入' + (k === 'map' ? '思维导图' : '白板') + '（在正文末尾），可直接在编辑区查看');
     }
 
     /** 新建一块画布并直接插入（不再只是插一个空引用，见 createAndInsert） */
