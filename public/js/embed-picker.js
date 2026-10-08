@@ -1,5 +1,5 @@
 /**
- * 插入画布面板（白板 / 思维导图）—— 后台写文章页与文章编辑页共用（v1.8.1）
+ * 插入画布面板（白板 / 思维导图）—— 后台写文章页与文章编辑页共用（v1.8.2）
  * ===========================================================================
  * 职责：
  *   · 自己注入样式与弹窗 DOM（两个页面只需引入本文件 + 一个工具栏按钮）
@@ -263,6 +263,10 @@
      */
     function cardRender(el, v) {
         if (!el || el.tagName !== 'PRE') return;
+        // 打开已有文章时卡片由正文渲染一路触发，可能从没走过 open()，
+        // 这里兜底注入样式：否则 .ep-canvas 没有 height、.ep-inline-board 没有
+        // position:absolute，白板会按 fixed 铺满整页（同 renderInlineBoard 的坑）。
+        injectStyle();
 
         var code = el.querySelector('code');
         var cls = code ? (code.className || '') : '';
@@ -400,7 +404,12 @@
     function renderInlineBoard(host, conf) {
         host.innerHTML = '';
         var el = document.createElement('div');
-        el.className = 'ep-inline-board';
+        // 必须带 excalidraw-embed：bundle 里内嵌判定是
+        //     inEmbed = !!el.closest('.excalidraw-embed')
+        // 判定为 false 时 .exc-shell 用 position:fixed;inset:0 —— 白板会脱离卡片、
+        // 铺满整个视口把编辑页盖住（就是「插入白板后页面乱了」）。
+        // 判定为 true 时用 position:absolute;inset:0，正好填满下面的 .ep-inline-board。
+        el.className = 'ep-inline-board excalidraw-embed';
         el.setAttribute('data-excalidraw', '');
         el.setAttribute('data-note', conf.id);
         el.setAttribute('data-mode', 'view');

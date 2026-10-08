@@ -730,8 +730,10 @@
             border: 1px solid var(--border);
         }
 
-        /* Excalidraw 内嵌白板（```excalidraw fence 渲染后的容器） */
-        .article-content .excalidraw-embed {
+        /* Excalidraw 内嵌白板（历史 ```excalidraw fence 渲染后的容器）
+           注意排除 .embed-block：现在新的内嵌块也会带 excalidraw-embed（那是 bundle
+           判定「内嵌态」的依据），但高度/边距由下面的 .embed-block 规则接管。 */
+        .article-content .excalidraw-embed:not(.embed-block) {
             height: 70vh;
             min-height: 420px;
             max-height: 900px;
@@ -754,6 +756,15 @@
         /* ===== 内嵌画布块（```embed board:/map: 与历史 ```excalidraw）=====
            由 markdown-config.js 的 renderer.code 产出占位容器，
            再经 article-app.js 的 mountEmbeds() 挂载真实画布。 */
+
+        /* 内嵌白板会让页面长出横向滚动条，这里兜一下：
+           Excalidraw 内部的 .SVGLayer 是 position:fixed 且宽度按窗口算（1440px），
+           卡片左侧还有目录占位时 right 就跑到 1769 —— fixed 元素不受祖先 overflow:hidden
+           裁剪（上面的 .embed-block 规则拦不住它），只能用 overflow-x: clip 让浏览器
+           不再把它算进 scrollWidth。视觉上画布本来就该被卡片裁掉，不影响渲染。 */
+        .article-content {
+            overflow-x: clip;
+        }
         .article-content .embed-figure {
             margin: 22px 0;
         }
@@ -2072,7 +2083,7 @@
     <script src="js/reader.js?v=3.13.7" defer></script>
     <script src="js/animations.js?v=3.14.0" defer></script>
 
-    <script src="js/article-app.js?v=1.4.7" defer></script>
+    <script src="js/article-app.js?v=1.4.8" defer></script>
 
 </body>
 </html>

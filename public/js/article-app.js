@@ -683,6 +683,10 @@ const ArticleApp = {
                         el.dataset.mounted = '1';
                         maps++;
                     } else {
+                        // excalidraw-embed 是 bundle 的内嵌判定依据（inEmbed = !!el.closest('.excalidraw-embed')）。
+                        // 缺了它 .exc-shell 会用 position:fixed;inset:0 铺满整个视口 —— 嵌在正文中间的
+                        // 白板会盖住整篇文章。（整页白板形态看不出来，因为那时铺满正好是想要的效果。）
+                        el.classList.add('excalidraw-embed');
                         el.dataset.excalidraw = '';
                         el.dataset.note = id;
                         el.dataset.mode = 'view';
