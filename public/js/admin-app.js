@@ -29,7 +29,28 @@
 
         function doLogin(){const k=document.getElementById('adminKeyInput').value.trim();if(!k)return;adminKey=k;localStorage.setItem('admin_key',k);apiFetch('action=login',{method:'POST',body:JSON.stringify({key:k})}).then(r=>{if(r.status==='success')showAdmin();else{document.getElementById('loginError').style.display='block';document.getElementById('loginError').textContent=r.message||'密钥错误'}}).catch(()=>{document.getElementById('loginError').style.display='block';document.getElementById('loginError').textContent='连接失败'})}
         function doLogout(){adminKey='';localStorage.removeItem('admin_key');localStorage.removeItem('gallery_key');location.reload()}
+        /**
+         * 登录态没验过（key 失效 / 网络失败）时把页面交回登录页。
+         *
+         * 这里刻意**不 reload**：以前是 doLogout() 直接 location.reload()，
+         * 于是「key 失效 → 整页重刷 → 再显示登录页」，白白多等一轮加载。
+         * 现在只是把门帘摘掉、把登录页放出来，并把原因写在表单上。
+         */
+        function loginFailed(msg){
+            adminKey='';
+            try{ localStorage.removeItem('admin_key'); }catch(e){ /* 忽略 */ }
+            document.documentElement.classList.remove('has-admin-key');
+            const gate=document.getElementById('bootGate');
+            if(gate) gate.remove();
+            const lp=document.getElementById('loginPage');
+            if(lp) lp.style.display='';
+            const err=document.getElementById('loginError');
+            if(err&&msg){ err.style.display='block'; err.textContent=msg; }
+        }
         function showAdmin(){
+            document.documentElement.classList.remove('has-admin-key');   // 摘掉门帘
+            const gate=document.getElementById('bootGate');
+            if(gate) gate.remove();
             document.getElementById('loginPage').style.display='none';
             document.getElementById('adminApp').style.display='block';
             document.getElementById('sidebar').classList.add('collapsed');
@@ -3253,5 +3274,10 @@
             restoreSettingsOrder();
         });
 
-        (function(){if(adminKey)apiFetch('action=login',{method:'POST',body:JSON.stringify({key:adminKey})}).then(r=>{if(r.status==='success')showAdmin();else doLogout()}).catch(()=>doLogout())})();
+        (function(){
+            if(!adminKey){ loginFailed(''); return; }   // 没登录态：直接把登录页放出来
+            apiFetch('action=login',{method:'POST',body:JSON.stringify({key:adminKey})})
+                .then(r=>{ if(r.status==='success') showAdmin(); else loginFailed('登录已失效，请重新输入密钥'); })
+                .catch(()=> loginFailed('连接失败，请重试'));
+        })();
     

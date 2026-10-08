@@ -8,6 +8,7 @@
  *          弹窗里独有的导图编辑口令搬到侧栏「导图口令」卡片
  * v1.12.0：编辑器改造 —— 精简顶部工具栏、接入右键菜单与大纲、侧栏分组、去掉块悬停操作条
  * v1.12.1：标题从编辑区上方搬进侧栏（四种形态统一，白板/导图原本没有写标题的地方）
+ * v1.13.0：白板/导图隐藏「本文内嵌画布」；白板去掉独立改名入口（名称跟随标题并自动同步）
  */
 (function () {
     'use strict';
@@ -518,12 +519,10 @@
         try {
             var d = await excApi('id=' + encodeURIComponent(bid) + '&metaOnly=1');
             if (d.status === 'success' && d.meta) {
-                $('eeBaTitle').value = d.meta.title || '';
                 $('eeBaEditable').textContent = d.meta.editable === 1 ? '公开可编辑' : '只读';
                 $('eeBaKey').textContent = d.meta.hasKey ? '已设置' : '未设置';
                 markEditableButtons(d.meta.editable === 1 ? 1 : 0);
             } else {
-                $('eeBaTitle').value = '';
                 $('eeBaEditable').textContent = '画板不存在';
                 $('eeBaKey').textContent = '—';
                 markEditableButtons(-1);
@@ -543,10 +542,18 @@
         boardMetaSet({ editable: v }, v === 1 ? '已开放编辑' : '已设为只读');
     };
 
-    window.eeSaveBoardTitle = function () {
-        var t = ($('eeBaTitle').value || '').trim();
-        boardMetaSet({ title: t }, t ? '白板名称已保存' : '白板名称已清空');
-    };
+    // 白板名称不再是独立入口：它就是侧栏顶部的「标题」，
+    // 保存文章时由 syncBoardTitleFromArticle() 同步到白板 meta.title。
+    /**
+     * 把文章标题同步成白板的 meta.title。
+     * 只在白板上做：导图那边后端 meta 支不支持 title 没确认，不冒险；
+     * 而且导图侧栏本来也没有第二个改名入口，不存在两处打架的问题。
+     */
+    async function syncBoardTitleFromArticle(type, title) {
+        if (type !== 'whiteboard' || !title) return;
+        if (!boardId()) return;
+        try { await boardMetaSet({ title: title }); } catch (e) { /* 忽略：同步失败不回收文章保存 */ }
+    }
 
     window.eeSaveBoardKey = async function () {
         var k = ($('eeBaKeyInput').value || '').trim();
@@ -875,6 +882,11 @@
             var excerptCard = $('eeExcerptCard');
             if (excerptCard) excerptCard.style.display = 'none';
         }
+        // 白板 / 导图本身就是一块画布，「本文内嵌画布」这个清单对它们没有意义
+        if (docType === 'whiteboard' || docType === 'mindmap') {
+            var canvasCard = $('eeCanvasCard');
+            if (canvasCard) canvasCard.style.display = 'none';
+        }
         if (docType === 'mindmap') $('eeViewBtn').textContent = '前台查看';
         // 新建：还没有记录可删、也还没法从前台打开
         if (isNew) {
@@ -1080,6 +1092,9 @@
         }
         dirty = false;
         if (chunkEdit) refreshChunkToc();
+        // 白板名称跟随标题：侧栏已经去掉单独的改名入口，这里顺手同步到白板 meta.title
+        // （后台「白板管理」列表读的是那个）。同步失败不影响文章已保存这个事实。
+        syncBoardTitleFromArticle(body.type, body.title);
         var now = new Date().toLocaleTimeString();
         $('eeSaved').textContent = '已保存 ' + now;
         $('eeSaved').style.color = '#7bd88f';

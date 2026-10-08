@@ -1,8 +1,15 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <script>
+        /* 有登录态时，在**渲染前**就给 <html> 打标记，下面的 CSS 立刻把登录页藏掉。
+           不这么做的话，每次进后台（包括从文章编辑页点「← 返回后台」）都会先闪一下
+           登录页，要等 admin-app.js 验完密钥才切走 —— 慢网下那一闪很显眼。
+           验证失败时由 admin-app.js 的 loginFailed() 摘掉这个标记，把登录页放出来。 */
+        try { if (localStorage.getItem('admin_key')) document.documentElement.classList.add('has-admin-key'); } catch (e) { /* 忽略 */ }
+    </script>
     <title>管理后台</title>
     <link rel="icon" id="siteFavicon" href="/images/Default/web-logo.webp" type="image/webp">
     <link rel="apple-touch-icon" href="/images/Default/web-logo.webp">
@@ -17,6 +24,11 @@
         *{margin:0;padding:0;box-sizing:border-box}
         :root{--bg:#080808;--bg-card:#111;--bg-input:#1a1a1a;--bg-hover:#1c1c1c;--bg-active:#1a2a3a;--text:#fff;--text-muted:rgba(255,255,255,.85);--accent:#4fc3f7;--accent-dim:rgba(79,195,247,.1);--border:#252525;--border-light:#333;--danger:#ef5350;--success:#66bb6a;--warning:#ffa726;--radius:10px;--radius-sm:6px;--shadow:0 8px 32px rgba(0,0,0,.5);--sidebar-w:220px;--sidebar-collapsed:52px}
         body{font-family:-apple-system,'Segoe UI','PingFang SC',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+        /* 已登录时跳过登录页，改为显示一个门帘，等密钥验完再进后台（见 head 里的内联脚本） */
+        html.has-admin-key #loginPage{display:none!important}
+        html:not(.has-admin-key) #bootGate{display:none!important}
+        #bootGate{position:fixed;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;
+            background:var(--bg);color:var(--text-muted);font-size:13.5px;letter-spacing:1px}
         /* 旧登录框样式已移除，改由 /css/login.css 接管（选择器限定在 #loginPage 内） */
 
         .admin{display:none;height:100vh}
@@ -821,6 +833,7 @@
              ├─ .lg-left-panel   品牌 + 角色舞台 + 页脚链接
              └─ .lg-right-panel  登录表单容器
     -->
+    <div id="bootGate">正在进入后台…</div>
     <div id="loginPage">
         <!-- 左栏：品牌 + 角色舞台 + 页脚 -->
         <div class="lg-left-panel">
@@ -1589,7 +1602,7 @@
 
         <script src="js/embed-picker.js?v=1.10.0"></script>
 <script src="js/tag-picker.js?v=1.0.0"></script>
-        <script src="js/admin-app.js?v=1.16.0"></script>
+        <script src="js/admin-app.js?v=1.17.0"></script>
 
     <!-- 前台预览抽屉（iframe 内嵌，零跳出） -->
     <style>

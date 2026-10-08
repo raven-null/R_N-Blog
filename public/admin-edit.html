@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -710,12 +710,13 @@ font-size:13px;font-family:inherit;outline:none;
                     <div class="ee-card" id="eeBoardAdminCard" style="display:none">
                         <label>白板管理</label>
                         <div class="ee-ba-row"><span>画板 ID</span><span class="ee-ba-value" id="eeBaId">—</span></div>
-                        <input id="eeBaTitle" placeholder="白板名称（后台白板管理列表显示）">
+                        <!-- 白板名称的改名入口已去掉：侧栏顶部的「标题」就是它的名字，
+                             保存时会自动同步到白板的 meta.title（后台白板管理列表读的是那个）。
+                             以前这里能改第二遍，两处对不上还得猜哪个生效。 -->
                         <div class="ee-ba-row"><span>访问权限</span><span class="ee-ba-value" id="eeBaEditable">—</span></div>
                         <div class="ee-cover-actions">
                             <button class="ee-btn" id="eeBaEditOn" onclick="eeSetBoardEditable(1)">开放编辑</button>
                             <button class="ee-btn" id="eeBaEditOff" onclick="eeSetBoardEditable(0)">设为只读</button>
-                            <button class="ee-btn" onclick="eeSaveBoardTitle()">保存名称</button>
                         </div>
                         <div class="ee-ba-row"><span>编辑口令</span><span class="ee-ba-value" id="eeBaKey">—</span></div>
                         <input id="eeBaKeyInput" type="password" placeholder="新口令（至少 4 位）">
@@ -784,6 +785,6 @@ font-size:13px;font-family:inherit;outline:none;
 <script src="js/editor-menu.js?v=1.0.0"></script>
 <script src="js/editor-outline.js?v=1.0.0"></script>
 <script src="js/tag-picker.js?v=1.0.0"></script>
-    <script src="js/admin-edit.js?v=1.12.1"></script>
+    <script src="js/admin-edit.js?v=1.13.0"></script>
 </body>
 </html>
