@@ -12,6 +12,7 @@
  * v1.14.0：侧栏细节 —— 去掉画板 ID 行、口令改行内「添加」（已设置才出现「清除」）、
  *          导图口令卡片去掉标题与说明、信息卡片移到折叠区最后
  * v1.15.0：侧栏隐藏滚动条；「保存并预览」改成顶栏的「预览」，与发布 / 保存合成一个按钮组
+ * v1.15.1：「本文内嵌画布」只给文章用（随记 / 白板 / 导图 都隐藏，且不再去拉画布名字）
  */
 (function () {
     'use strict';
@@ -897,8 +898,8 @@
             var excerptCard = $('eeExcerptCard');
             if (excerptCard) excerptCard.style.display = 'none';
         }
-        // 白板 / 导图本身就是一块画布，「本文内嵌画布」这个清单对它们没有意义
-        if (docType === 'whiteboard' || docType === 'mindmap') {
+        // 「本文内嵌画布」只给文章用：白板和导图本身就是一块画布，随记是短内容、不内嵌画布
+        if (docType !== 'article') {
             var canvasCard = $('eeCanvasCard');
             if (canvasCard) canvasCard.style.display = 'none';
         }
@@ -1240,6 +1241,7 @@
     function refreshCanvasList() {
         var box = $('eeCanvasList');
         if (!box) return;
+        if (docType !== 'article') return;   // 只有文章用这个清单，别的形态连名字都不必去拉
         var refs = currentCanvasRefs();
         if (!refs.length) {
             box.innerHTML = '<div class="ee-hint">正文里还没有白板 / 导图。工具栏点「插入画布」加一块。</div>';
