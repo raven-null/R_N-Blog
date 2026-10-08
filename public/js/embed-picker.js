@@ -1,5 +1,5 @@
 /**
- * 插入画布面板（白板 / 思维导图）—— 后台写文章页与文章编辑页共用（v1.9.0）
+ * 插入画布面板（白板 / 思维导图）—— 后台写文章页与文章编辑页共用（v1.9.1）
  * ===========================================================================
  * 职责：
  *   · 自己注入样式与弹窗 DOM（两个页面只需引入本文件 + 一个工具栏按钮）
@@ -340,6 +340,15 @@
             // full: 全屏铺满窗口编辑（关闭时同样会先把画布落盘）
             openDrawer({ kind: c.kind, id: c.id, caption: c.caption, height: c.height, full: true });
         });
+        // 鼠标移向按钮时就开始预热（触屏上 pointersdown 也能捞到一点提前量），
+        // 这样真正点下去时抽屉里往往已经加载好了，只是滑出来。
+        function warm() {
+            var holder = expand.closest ? expand.closest('.ep-canvas-card') : null;
+            var c = (holder && holder.__epConf) || conf;
+            prewarmDrawer(c, true);
+        }
+        expand.addEventListener('mouseenter', warm);
+        expand.addEventListener('pointerdown', warm);
         card.appendChild(expand);
 
         card.__epConf = conf;
@@ -644,6 +653,48 @@
         });
     }
 
+    /** iframe 的 URL（预热与实际打开必须完全一致，否则浏览器缓存与「复用」判断都会落空） */
+    function drawerSrc(conf, full) {
+        var isMap = conf.kind === 'map';
+        return isMap
+            ? '/mindmap.html?note=' + encodeURIComponent(conf.id) + '&edit=1&from=admin' + (full ? '&full=1' : '')
+            : '/excalidraw.html?note=' + encodeURIComponent(conf.id) + '&edit=1&from=admin&capsule=0' + (full ? '&full=1' : '');
+    }
+
+    /**
+     * 预热：趁用户还没点，「先把 iframe 放进抽屉里（抽屉保持收起）」。
+     *
+     * 为什么要这么做：白板编辑器是独立 iframe 文档，它要**自己再执行一遍 4.27MB 的
+     * Excalidraw bundle**（宿主页面里卡片那份实例跟它不共享），再加上拉白板数据、
+     * 初始化画布 —— 点开时才从头做，等待就很明显。提前放进抽屉加载完，
+     * 点「扩大」时只是把抽屉滑出来（纯 CSS 过渡），几乎瞬间到位。
+     *
+     * 只在白板上做：导图 bundle 才 156KB，预热收益不值这份内存。
+     * 单槽设计：预热了另一块就替换掉，避免多块白板同时常驻。
+     */
+    var prewarmed = null;   // { key, src } —— 只用于排查；判断复用一律看 DOM 里的 iframe
+
+    function prewarmDrawer(conf, full) {
+        if (!conf || !conf.id || conf.kind !== 'board') return;
+        var src = drawerSrc(conf, full);
+        injectStyle();
+        buildDrawer();
+        var host = document.getElementById('epDrawerHost');
+        if (!host) return;
+        // 判断依据只看 DOM：抽屉关闭时 iframe 会被销毁，光记状态会误判成「已经预热好了」
+        var cur = host.querySelector('iframe');
+        if (cur && cur.getAttribute('src') === src) return;
+        // 尺寸要跟真正打开时一致（全屏 / 侧栏），否则画布会按错的宽度初始化
+        var box = document.getElementById(DRAWER_ID);
+        if (box) box.classList.toggle('ep-drawer-full', !!full);
+        host.innerHTML = '';                       // 换掉上一块预热的（未加载完的 iframe 会被回收）
+        var fr = document.createElement('iframe');
+        fr.title = '白板编辑器';
+        fr.src = src;
+        host.appendChild(fr);
+        prewarmed = { key: conf.kind + ':' + conf.id + (full ? ':full' : ''), src: src };
+    }
+
     function openDrawer(conf) {
         if (!conf || !conf.id) return;
         injectStyle();
@@ -662,24 +713,23 @@
         if (title) title.textContent = (isMap ? '思维导图' : '白板') + (conf.caption ? ' · ' + conf.caption : '');
         if (idEl) idEl.textContent = conf.id;
         if (host) {
-            host.innerHTML = '<iframe title="' + (isMap ? '导图编辑器' : '白板编辑器') + '" src="' +
-                (isMap
-                    ? '/mindmap.html?note=' + encodeURIComponent(conf.id) + '&edit=1&from=admin' + (full ? '&full=1' : '')
-                    : '/excalidraw.html?note=' + encodeURIComponent(conf.id) + '&edit=1&from=admin&capsule=0' + (full ? '&full=1' : '')) +
-                '"></iframe>';
-            // 画布编辑器体积大（白板 bundle 4MB+），弱网下可能迟迟不出现。
-            // 给一个延迟提示，避免用户看到一片空白以为坏了。
-            var tipTimer = setTimeout(function () {
-                var fr = host.querySelector('iframe');
-                if (!fr) return;
+            var src = drawerSrc(conf, full);
+            var existing = host.querySelector('iframe');
+            // 命中预热（hover 时已经建好并且加载完了）→ 直接滑出抽屉，不再重建 iframe
+            var ready = !!(existing && existing.getAttribute('src') === src);
+            if (!ready) {
+                // 没预热命中（比如用户直接点了另一块白板）→ 现场建，照旧给加载提示。
+                // 提示立即出现：以前等 1200ms 才显示，点下去没反应的那一秒最像「卡住了」。
+                host.innerHTML = '<iframe title="' + (isMap ? '导图编辑器' : '白板编辑器') + '" src="' + src + '"></iframe>';
+                var frameEl = host.querySelector('iframe');
                 var hint = document.createElement('div');
                 hint.className = 'ep-drawer-loading';
-                hint.textContent = '画布编辑器加载中…（首次打开需要下载组件，弱网会慢一些）';
+                hint.textContent = (isMap ? '正在打开导图编辑器…' : '正在打开白板编辑器…') +
+                    '（首次要加载画布组件，之后会快很多）';
                 host.appendChild(hint);
-                fr.addEventListener('load', function () { hint.remove(); }, { once: true });
-            }, 1200);
-            var frameEl = host.querySelector('iframe');
-            if (frameEl) frameEl.addEventListener('load', function () { clearTimeout(tipTimer); }, { once: true });
+                if (frameEl) frameEl.addEventListener('load', function () { hint.remove(); }, { once: true });
+                prewarmed = { key: conf.kind + ':' + conf.id + (full ? ':full' : ''), src: src };
+            }
         }
         document.querySelector('.ep-drawer-mask').classList.add('open');
         document.getElementById(DRAWER_ID).classList.add('open');
