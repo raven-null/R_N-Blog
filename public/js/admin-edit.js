@@ -3,6 +3,7 @@
  * 用途：对已发布/草稿的文章、随记、白板进行再次编辑，不再占用后台「写文章」页
  * 白板文章额外提供白板管理：访问权限 / 编辑口令 / 白板名称 / 历史版本回滚（v1.3.0）
  * v1.10.0：侧栏新增「本文内嵌画布」清单（显示画布名称，点击定位到正文块）
+ * v1.10.1：顶栏重排 —— 字数/保存状态搬进顶栏、删掉类型与状态徽标、「保存并预览」挪进侧栏
  */
 (function () {
     'use strict';
@@ -135,7 +136,9 @@
     function editorHeight() {
         var col = $('eeEditorCol');
         var h = col ? col.clientHeight : 0;
-        h = h - 76; // 标题卡 + 底栏 + 间距
+        // 标题卡 + 与编辑器之间的间距（原来还要减掉编辑器下方那条 .ee-foot，
+        // 它已经搬到顶栏了，减多了会在编辑器底下留一截空白）
+        h = h - 64;
         return Math.max(360, h);
     }
     function fitEditor() {
@@ -678,13 +681,7 @@
             return '<span>' + r[0] + '：<b>' + r[1] + '</b></span>';
         }).join('');
     }
-    function renderStatusBadge() {
-        var st = doc ? (doc.status || 'published') : 'published';
-        var badge = $('eeStatusBadge');
-        badge.textContent = st === 'published' ? '已发布' : '草稿';
-        badge.className = 'ee-badge ' + (st === 'published' ? 'status-pub' : 'status-draft');
-        // 顶部按钮固定为「发布」（下拉里选草稿即为下架），不再随状态改文案
-    }
+    // 顶栏那两个「文章 / 草稿」徽标已按需求删掉，状态看侧栏的「状态」下拉即可。
 
     // ===== 加载 =====
     async function load() {
@@ -803,7 +800,6 @@
     /** 把 doc 渲染到页面上（编辑已有 / 新建 共用） */
     async function applyDoc() {
         document.title = (isNew ? '新建' : '编辑') + typeLabel(docType) + ' · ' + (doc.title || doc.id || '未命名');
-        $('eeTypeBadge').textContent = typeLabel(docType);
         $('eeIdText').textContent = doc.id || (isNew ? '尚未保存' : '');
         $('eeTitle').value = doc.title || '';
         initTagPickers();
@@ -814,7 +810,6 @@
         $('eeStatusSel').value = doc.status || (isNew ? 'draft' : 'published');
         renderCover();
         renderMeta();
-        renderStatusBadge();
         if (docType === 'card') $('eeViewBtn').textContent = '首页查看';
         // 随记没有封面图；摘要只有文章有（白板保留封面图）
         if (docType === 'card') {
@@ -1090,7 +1085,6 @@
             }
         }
         window.eeClosePublish();
-        renderStatusBadge();
         toast(status === 'draft' ? '已存为草稿（下架）' : '已发布', 'success');
     };
     window.eeToggleStatus = async function () {
@@ -1103,7 +1097,6 @@
         if (r.status !== 'success') { toast(word + '失败：' + (r.message || ''), 'error'); return; }
         doc.status = next;
         $('eeStatusSel').value = next;
-        renderStatusBadge();
         notifyChanged();
         toast('已' + word, 'success');
     };

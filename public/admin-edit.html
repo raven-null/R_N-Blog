@@ -48,6 +48,9 @@
     .ee-badge.status-pub{background:rgba(123,216,143,.14);border-color:rgba(123,216,143,.3);color:#c7f0d2}
     .ee-badge.status-draft{background:rgba(255,176,32,.14);border-color:rgba(255,176,32,.3);color:#ffe0ac}
     .ee-id{font-size:12px;color:var(--text-muted);font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+    /* 字数 / 保存状态：原来在编辑器下方那条 .ee-foot 里，现在并进顶栏右侧。
+       注意别用 margin-left:auto —— 那会把后面的按钮顶开。 */
+    .ee-stat{font-size:12.5px;color:var(--text-muted);white-space:nowrap}
     .ee-btn{
         padding:7px 14px;border-radius:99px;font-size:13px;font-family:inherit;cursor:pointer;
         background:rgba(255,255,255,.08);border:1px solid var(--border);color:var(--text-secondary);
@@ -261,12 +264,9 @@ font-size:13px;font-family:inherit;outline:none;
     .vditor-theme-sepia{--editor-bg:rgba(244,236,216,.95);--editor-text:#3e332a;--editor-pre-bg:rgba(210,195,170,.5)}
     .vditor-theme-green{--editor-bg:rgba(199,237,204,.9);--editor-text:#1a3a1a;--editor-pre-bg:rgba(170,210,175,.5)}
     .vditor-theme-blue{--editor-bg:rgba(220,232,245,.9);--editor-text:#1a2a3a;--editor-pre-bg:rgba(190,205,225,.5)}
-    .ee-foot{
-        margin-top:10px;display:flex;align-items:center;gap:14px;flex-shrink:0;
-        background:rgba(25,27,44,.9);border:1px solid rgba(255,255,255,.07);border-radius:12px;
-        padding:8px 14px;font-size:12.5px;color:#999bb3;
-    }
-    .ee-foot .saved{margin-left:auto;color:var(--success)}
+    /* 「保存并预览」从顶栏挪进侧栏（顶栏留给发布 / 保存这类主操作） */
+    .ee-side-actions{flex:none;display:flex;margin-bottom:10px}
+    .ee-side-actions .ee-btn{flex:1;text-align:center}
     /* ===== 侧栏 ===== */
     .ee-side{width:clamp(220px,26vw,320px);flex-shrink:0;display:flex;flex-direction:column;gap:10px;overflow-y:auto;padding-right:2px;order:9}
     /* ===== 侧栏折叠 ===== */
@@ -584,15 +584,15 @@ font-size:13px;font-family:inherit;outline:none;
     <header class="ee-top">
         <div class="ee-left">
             <a class="ee-back" href="/admin.html">← 返回后台</a>
-            <span class="ee-badge" id="eeTypeBadge">加载中</span>
-            <span class="ee-badge" id="eeStatusBadge">—</span>
             <span class="ee-id" id="eeIdText"></span>
         </div>
         <div class="ee-right">
-            <button class="ee-btn" id="eeViewBtn" onclick="eeOpenFront()">前台查看</button>
+            <!-- 字数 / 保存状态原来在编辑器下方那条 .ee-foot 里，现在并到顶栏右侧 -->
+            <span class="ee-stat" id="eeInfo">0 字</span>
+            <span class="ee-stat saved" id="eeSaved"></span>
+            <button class="ee-btn" id="eeViewBtn" onclick="eeOpenFront()" style="display: none;">前台查看</button>
             <button class="ee-btn primary" id="eePublishBtn" onclick="eeOpenPublish()">发布</button>
-            <button class="ee-btn danger" id="eeDeleteBtn" onclick="eeDelete()">删除</button>
-            <button class="ee-btn" onclick="eeSavePreview()">保存并预览</button>
+            <button class="ee-btn danger" id="eeDeleteBtn" onclick="eeDelete()" style="display: none;">删除</button>
             <button class="ee-btn primary" id="eeSaveBtn" onclick="eeSave()">保存</button>
         </div>
     </header>
@@ -609,13 +609,15 @@ font-size:13px;font-family:inherit;outline:none;
                 <span class="ec-tip">切换章节会自动暂存当前内容，点「保存」时统一提交</span>
             </div>
             <div class="ee-editor-card"><div id="eeVditor"></div></div>
-            <div class="ee-foot"><span id="eeInfo">0 字</span><span class="saved" id="eeSaved"></span></div>
         </section>
 
         <aside class="ee-side" id="eeSide">
             <div class="ee-side-head">
                 <span>属性</span>
                 <button type="button" class="ee-side-toggle" id="eeSideToggle" onclick="eeToggleSide()" title="折叠侧栏（Ctrl+.）">折叠 <span class="chev">›</span></button>
+            </div>
+            <div class="ee-side-actions">
+                <button type="button" class="ee-btn" onclick="eeSavePreview()">保存并预览</button>
             </div>
             <div class="ee-card">
                 <label>状态</label>
@@ -755,6 +757,6 @@ font-size:13px;font-family:inherit;outline:none;
     <script src="js/markdown-config.js?v=1.2.0"></script>
 <script src="js/embed-picker.js?v=1.9.1"></script>
 <script src="js/tag-picker.js?v=1.0.0"></script>
-    <script src="js/admin-edit.js?v=1.10.0"></script>
+    <script src="js/admin-edit.js?v=1.10.1"></script>
 </body>
 </html>
