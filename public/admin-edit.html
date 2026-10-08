@@ -290,9 +290,23 @@ font-size:13px;font-family:inherit;outline:none;
     .vditor-theme-sepia{--editor-bg:rgba(244,236,216,.95);--editor-text:#3e332a;--editor-pre-bg:rgba(210,195,170,.5)}
     .vditor-theme-green{--editor-bg:rgba(199,237,204,.9);--editor-text:#1a3a1a;--editor-pre-bg:rgba(170,210,175,.5)}
     .vditor-theme-blue{--editor-bg:rgba(220,232,245,.9);--editor-text:#1a2a3a;--editor-pre-bg:rgba(190,205,225,.5)}
-    /* 「保存并预览」从顶栏挪进侧栏（顶栏留给发布 / 保存这类主操作） */
-    .ee-side-actions{flex:none;display:flex;margin-bottom:10px}
-    .ee-side-actions .ee-btn{flex:1;text-align:center}
+    /* 顶栏的「预览 / 发布 / 保存」按钮组
+       三个是同一类动作，拼成一个盒子（贴边、只留分隔线），比三个独立圆角按钮更像一组。 */
+    .ee-action-box{
+        display:inline-flex;align-items:stretch;overflow:hidden;
+        border-radius:999px;border:1px solid rgba(115,170,255,.38);background:rgba(255,255,255,.05);
+    }
+    .ee-action-box .ee-btn{
+        border:0;border-radius:0;background:transparent;margin:0;padding:7px 15px;font-size:13px;
+    }
+    .ee-action-box .ee-btn+.ee-btn{border-left:1px solid rgba(255,255,255,.14)}
+    .ee-action-box .ee-btn:hover{background:rgba(255,255,255,.13);color:#fff}
+    .ee-action-box .ee-btn:active{transform:none}
+    .ee-action-box .ee-btn.primary{
+        background:linear-gradient(135deg,rgba(59,130,246,.42),rgba(115,170,255,.3));
+        color:#eaf2ff;font-weight:500;
+    }
+    .ee-action-box .ee-btn.primary:hover{background:linear-gradient(135deg,rgba(59,130,246,.62),rgba(115,170,255,.48))}
     /* ===== 侧栏折叠区「更多设置」 =====
        侧栏原来是一长列七八张卡片，每次发文都要在里面滚着找状态/标签/封面。
        把十天半个月才动一次的（摘要 / 信息 / 内嵌画布 / 白板管理 / 导图口令）
@@ -315,6 +329,14 @@ font-size:13px;font-family:inherit;outline:none;
     .ee-ba-key-row .ee-btn{flex:none;height:32px;padding:0 11px;font-size:12.5px}
     /* ===== 侧栏 ===== */
     .ee-side{width:clamp(220px,26vw,320px);flex-shrink:0;display:flex;flex-direction:column;gap:10px;overflow-y:auto;padding-right:2px;order:9}
+    /* 侧栏不显示滚动条（内容照样能滚）—— 细窄的侧栏旁边挂一根滚动条很扎眼。
+       注意：css/scrollbar.css 里有一条 `* { scrollbar-width: thin !important }`，
+       所以这里必须同样带 !important，并且用更高特异性（html body #eeSide）才压得住；
+       后代一起管到，侧栏内部那些可滚区域（内嵌画布清单等）也不会露出滚动条。 */
+    html body #eeSide,
+    html body #eeSide *{scrollbar-width:none!important;-ms-overflow-style:none!important}
+    html body #eeSide::-webkit-scrollbar,
+    html body #eeSide *::-webkit-scrollbar{width:0!important;height:0!important;display:none!important}
     /* ===== 侧栏折叠 ===== */
     /* 吸顶：侧栏本身可滚动，折叠按钮不该被卡片顶走 */
     .ee-side-head{
@@ -636,10 +658,15 @@ font-size:13px;font-family:inherit;outline:none;
             <span class="ee-stat" id="eeInfo">0 字</span>
             <span class="ee-stat saved" id="eeSaved"></span>
             <button class="ee-btn" id="eeViewBtn" onclick="eeOpenFront()" style="display: none;">前台查看</button>
-            <!-- 发布不再弹窗：状态 / 标签 / 封面都在侧栏，缺什么由 doSave 用胶囊提示拦下 -->
-            <button class="ee-btn primary" id="eePublishBtn" onclick="eePublishNow()">发布</button>
             <button class="ee-btn danger" id="eeDeleteBtn" onclick="eeDelete()" style="display: none;">删除</button>
-            <button class="ee-btn primary" id="eeSaveBtn" onclick="eeSave()">保存</button>
+            <!-- 预览 / 发布 / 保存合成一个盒子：它们是同一类动作（把内容落库、或看效果），
+                 连成一体比散着三个圆角按钮更像一组。预览原来挂在侧栏，一并挪过来。
+                 发布不再弹窗：状态 / 标签 / 封面都在侧栏，缺什么由 doSave 用胶囊提示拦下。 -->
+            <div class="ee-action-box">
+                <button class="ee-btn" id="eePreviewBtn" onclick="eeSavePreview()" title="保存后到前台看效果">预览</button>
+                <button class="ee-btn primary" id="eePublishBtn" onclick="eePublishNow()">发布</button>
+                <button class="ee-btn primary" id="eeSaveBtn" onclick="eeSave()">保存</button>
+            </div>
         </div>
     </header>
 
@@ -666,9 +693,6 @@ font-size:13px;font-family:inherit;outline:none;
             <div class="ee-card ee-title-card-side">
                 <label>标题</label>
                 <input id="eeTitle" class="ee-title-input" placeholder="标题" maxlength="100" autocomplete="off">
-            </div>
-            <div class="ee-side-actions">
-                <button type="button" class="ee-btn" onclick="eeSavePreview()">保存并预览</button>
             </div>
             <div class="ee-card">
                 <label>状态</label>
@@ -788,6 +812,6 @@ font-size:13px;font-family:inherit;outline:none;
 <script src="js/editor-menu.js?v=1.0.0"></script>
 <script src="js/editor-outline.js?v=1.0.0"></script>
 <script src="js/tag-picker.js?v=1.0.0"></script>
-    <script src="js/admin-edit.js?v=1.14.0"></script>
+    <script src="js/admin-edit.js?v=1.15.0"></script>
 </body>
 </html>
