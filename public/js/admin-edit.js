@@ -7,6 +7,7 @@
  * v1.11.0：发布不再弹窗（侧栏已有状态/标签/封面，缺东西用胶囊提示）；
  *          弹窗里独有的导图编辑口令搬到侧栏「导图口令」卡片
  * v1.12.0：编辑器改造 —— 精简顶部工具栏、接入右键菜单与大纲、侧栏分组、去掉块悬停操作条
+ * v1.12.1：标题从编辑区上方搬进侧栏（四种形态统一，白板/导图原本没有写标题的地方）
  */
 (function () {
     'use strict';
@@ -134,9 +135,10 @@
     function editorHeight() {
         var col = $('eeEditorCol');
         var h = col ? col.clientHeight : 0;
-        // 标题卡 + 与编辑器之间的间距（原来还要减掉编辑器下方那条 .ee-foot，
-        // 它已经搬到顶栏了，减多了会在编辑器底下留一截空白）
-        h = h - 64;
+        // 标题卡已经搬到侧栏，这里只剩「分章」条会占高度（而且只在分章文章里出现），
+        // 所以按它实际高度动态扣，而不是像以前那样写死减一个数。
+        var bar = $('eeChapterBar');
+        if (bar && bar.offsetParent !== null) h -= (bar.offsetHeight + 10);
         return Math.max(360, h);
     }
     function fitEditor() {

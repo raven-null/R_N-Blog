@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -81,14 +81,19 @@ font-size:13px;font-family:inherit;outline:none;
     /* ===== 主体 ===== */
     .ee-main{flex:1;min-height:0;display:flex;gap:12px;padding:12px 18px 16px;overflow:visible}
     .ee-editor-col{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column}
-    .ee-title-card{
-        background:linear-gradient(135deg,#252b48,#2e2240);border:1px solid rgba(255,255,255,.07);
-        border-radius:12px;padding:10px 18px;flex-shrink:0;transition:box-shadow .22s ease;
+    /* 标题搬进侧栏后的样子：侧栏只有 220~320px 宽，原来那套 22px 大标题卡放不下，
+       改成卡片里一个加粗的输入框，字号比普通字段大一点以示层级。 */
+    .ee-title-card-side:focus-within{border-color:rgba(115,170,255,.5)}
+    .ee-title-input{
+        width:100%;padding:8px 11px;border-radius:var(--radius-sm);font-family:inherit;
+        font-size:14.5px;font-weight:600;line-height:1.45;
+        background:var(--bg-input);border:1px solid var(--border);color:var(--text);outline:none;
     }
-    .ee-title-card:focus-within{box-shadow:0 0 0 1px rgba(115,170,255,.5)}
-    .ee-title{width:100%;background:transparent;border:none;outline:none;color:#e4e6f7;font-size:22px;font-weight:600;font-family:inherit}
-    .ee-title::placeholder{color:rgba(228,230,247,.35);font-weight:400}
-    .ee-editor-card{flex:1;min-height:0;margin-top:10px;display:flex;flex-direction:column}
+    .ee-title-input:focus{border-color:var(--accent)}
+    .ee-title-input::placeholder{color:var(--text-muted);font-weight:400}
+    /* 分章条不在编辑区顶部时（标题已搬走），与编辑器之间留一点缝 */
+    .ee-chapter-bar+.ee-editor-card{margin-top:10px}
+    .ee-editor-card{flex:1;min-height:0;display:flex;flex-direction:column}
     /* 面板不被容器裁切 + 层级最高：容器 overflow:hidden 会把弹出面板切掉一部分 */
     html body .vditor-panel,
     html body .vditor-hint,
@@ -427,7 +432,7 @@ font-size:13px;font-family:inherit;outline:none;
     @media(max-width:900px){
         .ee-main{padding:10px 12px 12px;gap:10px}
         .ee-side{width:clamp(190px,32vw,260px)}
-        .ee-title{font-size:19px}
+        .ee-title-input{font-size:14px}
         .ee-cover{height:104px}
     }
 
@@ -464,7 +469,7 @@ font-size:13px;font-family:inherit;outline:none;
         .ee-btn{padding:7px 12px;font-size:12.5px}
         .ee-chapter-bar{padding:8px 10px}
         .ee-chapter-bar select{min-width:0;width:100%}
-        .ee-title{font-size:18px}
+        .ee-title-input{font-size:14px}
     }
 
         /* ===== Vditor 弹窗面板统一外观（追加在最后，确保覆盖库与动态内联样式） ===== */
@@ -635,11 +640,10 @@ font-size:13px;font-family:inherit;outline:none;
     </header>
 
     <main class="ee-main">
-        <!-- 文章 / 随记：编辑器 + 元信息 -->
+        <!-- 文章 / 随记：编辑器 + 元信息。
+             标题不在这里 —— 它搬到了侧栏最上方，四种形态（文章/随记/白板/导图）统一在那边写，
+             因为白板和导图形态下这一整列是隐藏的，标题放这里等于没地方写。 -->
         <section class="ee-editor-col" id="eeEditorCol">
-            <div class="ee-title-card">
-                <input id="eeTitle" class="ee-title" placeholder="标题" maxlength="100" autocomplete="off">
-            </div>
             <div class="ee-chapter-bar" id="eeChapterBar" style="display:none">
                 <span class="ec-label">分章文章</span>
                 <select id="eeChapterSel" onchange="eeSwitchChapter(this.value)"></select>
@@ -652,6 +656,12 @@ font-size:13px;font-family:inherit;outline:none;
             <div class="ee-side-head">
                 <span>属性</span>
                 <button type="button" class="ee-side-toggle" id="eeSideToggle" onclick="eeToggleSide()" title="折叠侧栏（Ctrl+.）">折叠 <span class="chev">›</span></button>
+            </div>
+            <!-- 标题：四种形态共用这一处（原来它在编辑区上方，白板/导图形态下那整列是隐藏的，
+                 等于那两种形态根本没地方写标题）。放侧栏最上面，是发文第一个要填的东西。 -->
+            <div class="ee-card ee-title-card-side">
+                <label>标题</label>
+                <input id="eeTitle" class="ee-title-input" placeholder="标题" maxlength="100" autocomplete="off">
             </div>
             <div class="ee-side-actions">
                 <button type="button" class="ee-btn" onclick="eeSavePreview()">保存并预览</button>
@@ -774,6 +784,6 @@ font-size:13px;font-family:inherit;outline:none;
 <script src="js/editor-menu.js?v=1.0.0"></script>
 <script src="js/editor-outline.js?v=1.0.0"></script>
 <script src="js/tag-picker.js?v=1.0.0"></script>
-    <script src="js/admin-edit.js?v=1.12.0"></script>
+    <script src="js/admin-edit.js?v=1.12.1"></script>
 </body>
 </html>
