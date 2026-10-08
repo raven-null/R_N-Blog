@@ -2,6 +2,7 @@
  * 独立编辑页脚本（admin-edit.html）
  * 用途：对已发布/草稿的文章、随记、白板进行再次编辑，不再占用后台「写文章」页
  * 白板文章额外提供白板管理：访问权限 / 编辑口令 / 白板名称 / 历史版本回滚（v1.3.0）
+ * v1.10.0：侧栏新增「本文内嵌画布」清单（显示画布名称，点击定位到正文块）
  */
 (function () {
     'use strict';
@@ -96,10 +97,16 @@
     }
 
     // ===== 未保存提示 =====
+    var canvasListTimer = null;
+    function scheduleCanvasListRefresh() {
+        clearTimeout(canvasListTimer);
+        canvasListTimer = setTimeout(refreshCanvasList, 600);   // 打字时别每敲一下就重画侧栏
+    }
     window.eeMarkDirty = function () {
         dirty = true;
         $('eeSaved').textContent = '有未保存改动';
         $('eeSaved').style.color = '#ffb020';
+        scheduleCanvasListRefresh();
     };
     window.addEventListener('beforeunload', function (e) {
         if (!dirty) return;
@@ -234,6 +241,8 @@
                     window.EmbedPicker.setVditor(vditor);
                     window.EmbedPicker.bindToolbar(vditor);
                 }
+                // 正文就位后再刷一次侧栏画布清单（setValue 是异步渲染的）
+                refreshCanvasList();
             }
         });
         return vditor;
@@ -1116,6 +1125,86 @@
         window.open('/article.html?post=' + name + '&blob=' + encodeURIComponent(doc.id || docId), '_blank');
     };
 
+    // ===== 侧栏：本文内嵌画布清单 =====
+    // 把正文里引用的白板 / 导图列出来（显示画布名称），点一下滚动定位到正文里那个块。
+    // 名称走与「插入画布」面板同一个列表接口；结果缓存住，避免每次刷新清单都重新请求。
+    var canvasNameCache = { board: null, map: null };
+
+    function loadCanvasNames() {
+        var kinds = ['board', 'map'].filter(function (k) { return canvasNameCache[k] === null; });
+        if (!kinds.length) return Promise.resolve();
+        return Promise.all(kinds.map(function (k) {
+            var url = k === 'map' ? '/api/mindmap?action=list' : '/api/excalidraw?action=list';
+            return fetch(url, { headers: { 'X-Admin-Key': adminKey }, cache: 'no-store' })
+                .then(function (r) { return r.json(); })
+                .then(function (d) {
+                    var items = (d && d.status === 'success' && (d.items || d.data)) || [];
+                    var map = {};
+                    items.forEach(function (it) { if (it && it.id) map[it.id] = it.title || ''; });
+                    canvasNameCache[k] = map;
+                })
+                .catch(function () { canvasNameCache[k] = {}; });
+        }));
+    }
+
+    /** 正文里引用的画布（顺序 = 在正文里出现的顺序） */
+    function currentCanvasRefs() {
+        // 用页面自己的 getEditorContent()（Vditor 未就绪时会回落到 pendingMd），
+        // 不要写成 Vditor 实例的 getValue() —— 那个名字在这个作用域里不存在。
+        var md = '';
+        try { md = getEditorContent() || ''; } catch (e) { md = ''; }
+        try {
+            return (window.EmbedPicker && window.EmbedPicker.extractBlockRefs(md)) || [];
+        } catch (e) { return []; }
+    }
+
+    /** 在正文编辑器里找到这块画布的卡片（不用属性选择器：画布 id 可能含中文等字符） */
+    function findCanvasCard(id) {
+        var list = document.querySelectorAll('.vditor-wysiwyg .ep-canvas-card');
+        for (var i = 0; i < list.length; i++) {
+            if (list[i].getAttribute('data-id') === id) return list[i];
+        }
+        return null;
+    }
+
+    function paintCanvasList(refs) {
+        var box = $('eeCanvasList');
+        if (!box) return;
+        box.innerHTML = refs.map(function (r) {
+            var name = (canvasNameCache[r.kind] || {})[r.id];
+            return '<div class="ee-canvas-item" data-kind="' + r.kind + '" data-id="' + esc(r.id) + '">' +
+                '<span class="k">' + (r.kind === 'map' ? '导图' : '白板') + '</span>' +
+                '<span class="n' + (name ? '' : ' unnamed') + '">' + (name ? esc(name) : '未命名') + '</span>' +
+                '</div>';
+        }).join('');
+        Array.prototype.forEach.call(box.querySelectorAll('.ee-canvas-item'), function (row) {
+            row.addEventListener('click', function () {
+                var id = this.getAttribute('data-id');
+                var el = findCanvasCard(id);
+                if (!el) { toast('正文里没找到这块画布，可能已被删除'); return; }
+                try { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) { el.scrollIntoView(); }
+                el.classList.remove('ee-canvas-flash');
+                void el.offsetWidth;                       // 强制重排，让动画能重复播放
+                el.classList.add('ee-canvas-flash');
+                setTimeout(function () { el.classList.remove('ee-canvas-flash'); }, 1300);
+            });
+        });
+    }
+
+    function refreshCanvasList() {
+        var box = $('eeCanvasList');
+        if (!box) return;
+        var refs = currentCanvasRefs();
+        if (!refs.length) {
+            box.innerHTML = '<div class="ee-hint">正文里还没有白板 / 导图。工具栏点「插入画布」加一块。</div>';
+            return;
+        }
+        paintCanvasList(refs);                             // 先用缓存里的名字画出来，不阻塞
+        if (canvasNameCache.board === null || canvasNameCache.map === null) {
+            loadCanvasNames().then(function () { paintCanvasList(currentCanvasRefs()); });
+        }
+    }
+
     // ===== 启动 =====
     var booted = false;
     function boot() {
@@ -1136,7 +1225,10 @@
             eeUploadCover(this.files && this.files[0]);
             this.value = '';
         });
-        (isNew ? initNewDoc() : load()).then(function () { setTimeout(fitEditor, 120); });
+        (isNew ? initNewDoc() : load()).then(function () {
+            setTimeout(fitEditor, 120);
+            refreshCanvasList();
+        });
     }
     window.addEventListener('resize', function () { setTimeout(fitEditor, 80); });
 

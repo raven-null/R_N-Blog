@@ -716,12 +716,20 @@
         .vditor-toolbar__item:hover{color:var(--accent)!important;transform:translateY(-1px)}
         .vditor-content{background:var(--editor-bg,rgba(26,26,26,0.5))!important}
         .vditor-ir,.vditor-wysiwyg,.vditor-sv{color:var(--editor-text,#fff)!important}
-        .vditor-ir *,.vditor-wysiwyg *,.vditor-sv *{color:var(--editor-text,#fff)!important}
+        /* 这条 * 规则要排除内嵌画布（.ep-canvas-card）整棵子树：
+           白板卡片是自成一套配色的组件，Excalidraw 的菜单、图标大量用 currentColor。
+           以前被 !important 一刷，白色菜单面板上就出现主题色文字、图标也一起变色。
+           排除后它用自己的颜色（与 admin-edit.html 同款处理）。 */
+        .vditor-ir *:not(.ep-canvas-card):not(.ep-canvas-card *),
+        .vditor-wysiwyg *:not(.ep-canvas-card):not(.ep-canvas-card *),
+        .vditor-sv *:not(.ep-canvas-card):not(.ep-canvas-card *){color:var(--editor-text,#fff)!important}
+        /* 卡片自身的基准色（画布始终是浅色底），避免它从编辑器继承主题色再往下传 */
+        .vditor-ir .ep-canvas-card,.vditor-wysiwyg .ep-canvas-card,.vditor-sv .ep-canvas-card{color:#1b1b1f}
         .vditor-ir pre,.vditor-wysiwyg pre,.vditor-sv pre{background:var(--editor-pre-bg,rgba(8,8,8,0.6))!important;color:var(--editor-text,#fff)!important}
         .vditor-ir code,.vditor-wysiwyg code{color:var(--editor-text,#fff)!important}
         .vditor-ir p,.vditor-wysiwyg p,.vditor-ir li,.vditor-wysiwyg li,.vditor-ir h1,.vditor-ir h2,.vditor-ir h3,.vditor-ir h4,.vditor-ir h5,.vditor-ir h6,.vditor-wysiwyg h1,.vditor-wysiwyg h2,.vditor-wysiwyg h3,.vditor-wysiwyg h4,.vditor-wysiwyg h5,.vditor-wysiwyg h6{color:var(--editor-text,#fff)!important}
         .vditor-ir blockquote,.vditor-wysiwyg blockquote{color:var(--editor-text,#fff)!important}
-        .vditor-ir a,.vditor-wysiwyg a{color:var(--accent)!important}
+        .vditor-ir a:not(.ep-canvas-card *),.vditor-wysiwyg a:not(.ep-canvas-card *){color:var(--accent)!important}
         .vditor-ir table,.vditor-wysiwyg table{color:var(--editor-text,#fff)!important}
         .vditor-ir th,.vditor-ir td,.vditor-wysiwyg th,.vditor-wysiwyg td{color:var(--editor-text,#fff)!important;border-color:rgba(128,128,128,0.2)!important}
         .vditor-ir th,.vditor-wysiwyg th{background:rgba(128,128,128,0.1)!important}
@@ -1579,7 +1587,7 @@
         </div>
     </div>
 
-        <script src="js/embed-picker.js?v=1.8.3"></script>
+        <script src="js/embed-picker.js?v=1.9.0"></script>
 <script src="js/tag-picker.js?v=1.0.0"></script>
         <script src="js/admin-app.js?v=1.16.0"></script>
 

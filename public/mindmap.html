@@ -530,6 +530,18 @@
       document.title = (edit ? '编辑导图' : '思维导图') + ' - ' + note;
       // 被前台文章页 iframe 嵌入：提示文案交给父页面，浮条只留导出
       try { if (window.parent !== window) document.documentElement.dataset.embedded = '1'; } catch (e) { /* 跨域则忽略 */ }
+
+      // 全屏编辑（宿主点卡片上的「扩大」）：Esc 通知宿主关掉全屏。
+      // 焦点在这个 iframe 里，父页面的 keydown 收不到，只能自己监听再 postMessage。
+      if (qs.get('full') === '1') {
+        document.addEventListener('keydown', function (e) {
+          if (e.key !== 'Escape') return;
+          // 正在输入（节点重命名等）时 Esc 归编辑器自己用
+          var ae = document.activeElement;
+          if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.isContentEditable)) return;
+          try { window.parent.postMessage({ type: 'board-stage', action: 'full-close', note: note }, '*'); } catch (err) { /* 忽略 */ }
+        });
+      }
     })();
   </script>
   <link rel="stylesheet" href="/js/vendor/mindmap/mindmap-editor.v105.css">

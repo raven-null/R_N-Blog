@@ -1,5 +1,5 @@
 /**
- * 插入画布面板（白板 / 思维导图）—— 后台写文章页与文章编辑页共用（v1.8.3）
+ * 插入画布面板（白板 / 思维导图）—— 后台写文章页与文章编辑页共用（v1.9.0）
  * ===========================================================================
  * 职责：
  *   · 自己注入样式与弹窗 DOM（两个页面只需引入本文件 + 一个工具栏按钮）
@@ -94,24 +94,25 @@
             '  max-width:min(560px,92vw);padding:10px 16px;border-radius:10px;font-size:13px;line-height:1.7;',
             '  background:rgba(20,20,28,.96);color:#fff;border:1px solid rgba(255,255,255,.16);',
             '  box-shadow:0 18px 50px -12px rgba(0,0,0,.8)}',
-            /* 编辑器内直接渲染的画布块（与阅读页同一套渲染，不是卡片占位） */
-            '.ep-canvas-card{display:block;margin:14px 0;border-radius:10px;overflow:hidden;',
+            /* 编辑器内直接渲染的画布块（与阅读页同一套渲染，不是卡片占位）。
+               卡片上不再有顶栏 —— 只有画布本身 + 右上角一个悬浮的「扩大」按钮。 */
+            '.ep-canvas-card{display:block;position:relative;margin:14px 0;border-radius:10px;overflow:hidden;',
             '  border:1px solid rgba(79,195,247,.3);background:#0b0b0e;',
             '  font-family:-apple-system,"Segoe UI","PingFang SC",sans-serif}',
-            '.ep-canvas-bar{display:flex;align-items:center;gap:10px;padding:7px 12px;',
-            '  background:rgba(79,195,247,.09);border-bottom:1px solid rgba(79,195,247,.2)}',
-            '.ep-canvas-tag{flex:none;font-size:12px;font-weight:600;color:#4fc3f7}',
-            '.ep-canvas-id{flex:none;font-size:11.5px;color:rgba(255,255,255,.45);',
-            "  font-family:'Courier New',monospace}",
-            '.ep-canvas-cap{flex:1;min-width:0;font-size:12px;color:rgba(255,255,255,.6);',
-            '  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
             '.ep-canvas{position:relative;height:480px;background:#fff}',
             '.ep-canvas .ep-inline-board{position:absolute;inset:0}',
+            /* 悬浮「扩大」按钮：落在画布右上角，盖在画布之上（.exc-shell 的 z-index 是 1） */
+            '.ep-expand-btn{position:absolute;top:8px;right:8px;z-index:3;width:30px;height:30px;padding:0;',
+            '  display:flex;align-items:center;justify-content:center;border-radius:8px;cursor:pointer;',
+            '  border:1px solid rgba(0,0,0,.16);background:rgba(255,255,255,.92);color:#1b1b1f;',
+            '  box-shadow:0 2px 10px rgba(0,0,0,.18);transition:transform .12s,background .12s}',
+            '.ep-expand-btn:hover{background:#fff;transform:scale(1.06)}',
+            '.ep-expand-btn svg{width:16px;height:16px}',
             /* 编写页的内嵌白板不显示白板自带的操作胶囊（返回/导出/编辑/留言/信息）：
-               那是给「阅读页 / 独立白板页」用的。编写页里编辑走卡片顶栏的
-               「在抽屉中编辑」，而胶囊里的「返回」在这里点下去会 history.back()
-               直接离开编辑页（正文可能没保存）。阅读页用的是 .embed-block，
-               不带 .ep-canvas，所以不受这条影响 —— 两套形态互不干扰。 */
+               那是给「阅读页 / 独立白板页」用的。编写页里编辑走卡片右上角的「扩大」，
+               而胶囊里的「返回」在这里点下去会 history.back() 直接离开编辑页
+               （正文可能没保存）。阅读页用的是 .embed-block，不带 .ep-canvas，
+               所以不受这条影响 —— 两套形态互不干扰。 */
             '.ep-canvas .mm-capsule{display:none!important}',
             '.ep-inline-frame{display:block;width:100%;height:100%;border:0}',
             '.ep-canvas-loading{display:flex;align-items:center;justify-content:center;height:100%;',
@@ -132,10 +133,6 @@
             '.ep-card.hint{border-style:dashed;border-color:rgba(255,255,255,.22);',
             '  background:rgba(255,255,255,.03)}',
             '.ep-card.hint .ep-card-title{color:rgba(255,255,255,.55);font-weight:500}',
-            '.ep-edit-btn{flex:none;padding:5px 12px;border-radius:999px;cursor:pointer;',
-            '  border:1px solid rgba(79,195,247,.5);background:rgba(79,195,247,.12);color:#4fc3f7;',
-            '  font-size:12px;font-family:inherit;transition:background .15s}',
-            '.ep-edit-btn:hover{background:rgba(79,195,247,.24)}',
             /* 画布编辑抽屉 */
             '.ep-drawer-mask{position:fixed;inset:0;z-index:2147483000;background:rgba(5,5,9,.5);',
             '  backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);display:none}',
@@ -146,6 +143,8 @@
             '  transform:translateX(103%);transition:transform .3s cubic-bezier(.22,1,.36,1);',
             '  font-family:-apple-system,"Segoe UI","PingFang SC",sans-serif}',
             '.ep-drawer.open{transform:none}',
+            /* 全屏编辑：铺满整个窗口，去掉侧栏圆角与左边框上的阴影 */
+            '.ep-drawer.ep-drawer-full{width:100vw;max-width:100vw;left:0;right:auto;border-left:0;box-shadow:none}',
             '.ep-drawer-head{flex:none;display:flex;align-items:center;gap:10px;padding:12px 16px;',
             '  border-bottom:1px solid rgba(255,255,255,.1);background:rgba(20,20,28,.9)}',
             '.ep-drawer-title{flex:1;min-width:0;font-size:14px;font-weight:600;color:#e8e8ea;',
@@ -310,28 +309,6 @@
         card.dataset.kind = conf.kind;
         card.dataset.id = conf.id;
 
-        // 顶部细条：类型 / id / 图注 / 编辑入口（画布本身在下方铺满）
-        var bar = document.createElement('div');
-        bar.className = 'ep-canvas-bar';
-        bar.setAttribute('contenteditable', 'false');
-        bar.innerHTML = '<span class="ep-canvas-tag">' + (isMap ? '思维导图' : '白板') + '</span>' +
-            '<span class="ep-canvas-id">' + esc(conf.id) + '</span>' +
-            (conf.caption ? '<span class="ep-canvas-cap">' + esc(conf.caption) + '</span>' : '');
-        var btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'ep-edit-btn';
-        btn.textContent = '在抽屉中编辑';
-        btn.setAttribute('contenteditable', 'false');
-        btn.addEventListener('click', function (ev) {
-            ev.preventDefault();
-            ev.stopPropagation();
-            var holder = btn.closest ? btn.closest('.ep-canvas-card') : null;
-            var c = (holder && holder.__epConf) || conf;
-            openDrawer(c);
-        });
-        bar.appendChild(btn);
-        card.appendChild(bar);
-
         // 画布本体：白板用 bundle 直挂（与阅读页同一套 data-excalidraw + ExcalidrawMount），
         // 导图用 iframe 复用现成页面 —— 编辑页与阅读页看到的是同一个渲染结果。
         var canvas = document.createElement('div');
@@ -340,6 +317,30 @@
         if (conf.height) canvas.style.height = conf.height + 'px';
         initInlineCanvas(canvas, conf);
         card.appendChild(canvas);
+
+        // 卡片上不再有顶栏（原先那条「白板 wb-xxx ｜ 在抽屉中编辑」已按需求删掉），
+        // 只在画布右上角留一个悬浮的「扩大」按钮：点开全屏画布直接编辑。
+        // 按钮挂在卡片而不是画布容器上 —— 画布重挂时 renderInlineBoard/Frame
+        // 会清空容器内容，挂在里面会被一起清掉。
+        var expand = document.createElement('button');
+        expand.type = 'button';
+        expand.className = 'ep-expand-btn';
+        expand.title = (isMap ? '扩大编辑思维导图' : '扩大编辑白板') + '（全屏）';
+        expand.setAttribute('aria-label', '扩大编辑');
+        expand.setAttribute('contenteditable', 'false');
+        expand.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
+            'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+            '<path d="M8 3H5a2 2 0 0 0-2 2v3"></path><path d="M16 3h3a2 2 0 0 1 2 2v3"></path>' +
+            '<path d="M16 21h3a2 2 0 0 0 2-2v-3"></path><path d="M8 21H5a2 2 0 0 1-2-2v-3"></path></svg>';
+        expand.addEventListener('click', function (ev) {
+            ev.preventDefault();
+            ev.stopPropagation();
+            var holder = expand.closest ? expand.closest('.ep-canvas-card') : null;
+            var c = (holder && holder.__epConf) || conf;
+            // full: 全屏铺满窗口编辑（关闭时同样会先把画布落盘）
+            openDrawer({ kind: c.kind, id: c.id, caption: c.caption, height: c.height, full: true });
+        });
+        card.appendChild(expand);
 
         card.__epConf = conf;
         // 阻止画布内的键盘事件冒泡到 Vditor：否则在画布里按 Del / 输入会被当成正文编辑
@@ -636,6 +637,11 @@
         document.addEventListener('keydown', function (e) {
             if (e.key === 'Escape' && box.classList.contains('open')) closeDrawer();
         });
+        // 全屏编辑时焦点在 iframe 里，父页面收不到 Esc —— 编辑器那边会 postMessage 出来
+        window.addEventListener('message', function (e) {
+            var d = e.data;
+            if (d && d.type === 'board-stage' && d.action === 'full-close') closeDrawer();
+        });
     }
 
     function openDrawer(conf) {
@@ -644,16 +650,22 @@
         buildDrawer();
         drawerConf = conf;
         var isMap = conf.kind === 'map';
+        var full = !!conf.full;
+        var box = document.getElementById(DRAWER_ID);
+        if (box) box.classList.toggle('ep-drawer-full', full);
         var title = document.getElementById('epDrawerTitle');
         var idEl = document.getElementById('epDrawerId');
         var host = document.getElementById('epDrawerHost');
+        var closeBtn = document.getElementById('epDrawerClose');
+        // 全屏时「完成」改叫「还原」：语义是退回到文章编辑，而不是结束一个侧边面板
+        if (closeBtn) closeBtn.textContent = full ? '还原' : '完成';
         if (title) title.textContent = (isMap ? '思维导图' : '白板') + (conf.caption ? ' · ' + conf.caption : '');
         if (idEl) idEl.textContent = conf.id;
         if (host) {
             host.innerHTML = '<iframe title="' + (isMap ? '导图编辑器' : '白板编辑器') + '" src="' +
                 (isMap
-                    ? '/mindmap.html?note=' + encodeURIComponent(conf.id) + '&edit=1&from=admin'
-                    : '/excalidraw.html?note=' + encodeURIComponent(conf.id) + '&edit=1&from=admin&capsule=0') +
+                    ? '/mindmap.html?note=' + encodeURIComponent(conf.id) + '&edit=1&from=admin' + (full ? '&full=1' : '')
+                    : '/excalidraw.html?note=' + encodeURIComponent(conf.id) + '&edit=1&from=admin&capsule=0' + (full ? '&full=1' : '')) +
                 '"></iframe>';
             // 画布编辑器体积大（白板 bundle 4MB+），弱网下可能迟迟不出现。
             // 给一个延迟提示，避免用户看到一片空白以为坏了。
@@ -802,9 +814,11 @@
         var conf = { kind: k, id: newId, title: name, caption: '' };
         insert(activeVditor, k, newId);
         toast('已插入新' + label + (name ? '「' + name + '」' : '') +
-            '。点该块上的「在抽屉中编辑」开始绘制，关闭抽屉时会自动保存。', 6500);
-        // 直接打开抽屉让用户马上开始画（新建的画布本来就是空的）
-        setTimeout(function () { openDrawer(conf); }, 120);
+            '，正在打开全屏画布，按「还原」或 Esc 退出（退出时自动保存）。', 6500);
+        // 新建的画布本来就是空的，直接进全屏让用户马上开始画
+        setTimeout(function () {
+            openDrawer({ kind: conf.kind, id: conf.id, caption: conf.caption, full: true });
+        }, 120);
     }
 
     function updateQuota() {
