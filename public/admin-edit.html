@@ -355,7 +355,6 @@ font-size:13px;font-family:inherit;outline:none;
     .ee-modal-field input,.ee-modal-field select{width:100%;padding:9px 12px;border-radius:var(--radius-sm);background:var(--bg-input);border:1px solid var(--border);color:var(--text);font-size:13px;font-family:inherit}
     .ee-modal-field input:focus,.ee-modal-field select:focus{outline:none;border-color:var(--accent)}
     .ee-modal-actions{flex:none;display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
-    #eePublishModal .ee-modal-field{flex:1;min-height:0;overflow-y:auto;padding-right:4px}
     .ee-modal-tip{font-size:12px;color:#ffb4ad;min-height:16px;margin-top:8px;line-height:1.6}
     /* 图库选择弹窗 */
     .ee-picker{position:fixed;inset:0;z-index:2400;display:none}
@@ -591,7 +590,8 @@ font-size:13px;font-family:inherit;outline:none;
             <span class="ee-stat" id="eeInfo">0 字</span>
             <span class="ee-stat saved" id="eeSaved"></span>
             <button class="ee-btn" id="eeViewBtn" onclick="eeOpenFront()" style="display: none;">前台查看</button>
-            <button class="ee-btn primary" id="eePublishBtn" onclick="eeOpenPublish()">发布</button>
+            <!-- 发布不再弹窗：状态 / 标签 / 封面都在侧栏，缺什么由 doSave 用胶囊提示拦下 -->
+            <button class="ee-btn primary" id="eePublishBtn" onclick="eePublishNow()">发布</button>
             <button class="ee-btn danger" id="eeDeleteBtn" onclick="eeDelete()" style="display: none;">删除</button>
             <button class="ee-btn primary" id="eeSaveBtn" onclick="eeSave()">保存</button>
         </div>
@@ -679,6 +679,16 @@ font-size:13px;font-family:inherit;outline:none;
                 </div>
                 <div class="ee-hint">权限、口令、名称改动即时生效；回滚会用所选快照覆盖当前画布，当前版本仍保留在历史中。</div>
             </div>
+            <div class="ee-card" id="eeMapKeyCard" style="display:none">
+                <label>导图口令</label>
+                <div class="ee-ba-row"><span>编辑口令</span><span class="ee-ba-value" id="eeMapKey">—</span></div>
+                <input id="eeMapKeyInput" type="password" placeholder="新口令（至少 4 位）" autocomplete="new-password">
+                <div class="ee-cover-actions">
+                    <button class="ee-btn" onclick="eeSaveMapKey()">保存口令</button>
+                    <button class="ee-btn danger" onclick="eeClearMapKey()">清除口令</button>
+                </div>
+                <div class="ee-hint">开启后他人需要输入口令才能编辑这张导图（与白板的「编辑口令」是同一机制，只是接口不同）。</div>
+            </div>
         </aside>
 
         <!-- 侧栏折叠后的边缘展开把手 -->
@@ -701,49 +711,10 @@ font-size:13px;font-family:inherit;outline:none;
         </section>
     </main>
 
-    <div class="ee-modal" id="eePublishModal">
-        <div class="ee-modal-mask" onclick="eeClosePublish()"></div>
-        <div class="ee-modal-box">
-            <h3>发布</h3>
-            <div class="ee-modal-sub">确定后会保存当前内容；状态选「草稿」即为下架。</div>
-            <div class="ee-modal-field">
-                <label>状态</label>
-                <select id="eePubStatus">
-                    <option value="published">发布</option>
-                    <option value="draft">草稿（下架）</option>
-                </select>
-            </div>
-            <div class="ee-modal-field">
-                <label>标签</label>
-                <div id="eePubTagsPicker"></div>
-            </div>
-            <div class="ee-modal-field">
-                <label>封面图</label>
-                <div class="ee-cover" id="eePubCoverBox">
-                    <img id="eePubCoverImg" alt="封面预览">
-                    <span id="eePubCoverEmpty">未设置封面</span>
-                </div>
-                <div class="ee-cover-actions" style="margin-top:8px">
-                    <label class="ee-btn" style="cursor:pointer">上传封面<input type="file" accept="image/*" id="eePubCoverFile" style="display:none"></label>
-                    <button type="button" class="ee-btn" onclick="eePickCover()">从图库选封面</button>
-                    <button type="button" class="ee-btn danger" onclick="eeClearCover()">移除封面</button>
-                </div>
-            </div>
-            <div class="ee-modal-field" id="eePubEditKeyField" style="display:none">
-                <label>编辑密钥</label>
-                <label class="ee-check">
-                    <input type="checkbox" id="eeUseEditKey" checked>
-                    <span>开启编辑密钥（他人需输入密钥才能编辑；默认开启）</span>
-                </label>
-                <input type="text" id="eeEditKey" value="Raven_NULL" maxlength="40" autocomplete="off" placeholder="至少 4 位">
-            </div>
-            <div class="ee-modal-actions">
-                <button type="button" class="ee-btn" onclick="eeClosePublish()">取消</button>
-                <button type="button" class="ee-btn primary" id="eePubOk" onclick="eeConfirmPublish()">确定</button>
-            </div>
-            <div class="ee-modal-tip" id="eePubTip"></div>
-        </div>
-    </div>
+    <!-- 发布弹窗已按需求去掉：「发布」直接按侧栏的状态 / 标签 / 封面保存并发布，
+         缺标题或正文时由 doSave() 里的胶囊提示（#eeToast）拦下。
+         弹窗里独有的「编辑密钥」已搬到侧栏：白板在「白板管理」卡片，
+         导图在「导图口令」卡片。 -->
 
     <div class="ee-picker" id="eePicker">
         <div class="ee-picker-mask" onclick="eeClosePicker()"></div>
@@ -757,6 +728,6 @@ font-size:13px;font-family:inherit;outline:none;
     <script src="js/markdown-config.js?v=1.2.0"></script>
 <script src="js/embed-picker.js?v=1.9.1"></script>
 <script src="js/tag-picker.js?v=1.0.0"></script>
-    <script src="js/admin-edit.js?v=1.10.1"></script>
+    <script src="js/admin-edit.js?v=1.11.0"></script>
 </body>
 </html>

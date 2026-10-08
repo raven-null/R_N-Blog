@@ -4,6 +4,8 @@
  * 白板文章额外提供白板管理：访问权限 / 编辑口令 / 白板名称 / 历史版本回滚（v1.3.0）
  * v1.10.0：侧栏新增「本文内嵌画布」清单（显示画布名称，点击定位到正文块）
  * v1.10.1：顶栏重排 —— 字数/保存状态搬进顶栏、删掉类型与状态徽标、「保存并预览」挪进侧栏
+ * v1.11.0：发布不再弹窗（侧栏已有状态/标签/封面，缺东西用胶囊提示）；
+ *          弹窗里独有的导图编辑口令搬到侧栏「导图口令」卡片
  */
 (function () {
     'use strict';
@@ -69,8 +71,7 @@
     }
 
     // ===== 标签选择器（与后台写文章页同款：chips + 下拉建议 + 回车确认）=====
-    var tagPicker = null;      // 侧栏标签
-    var pubTagPicker = null;   // 发布弹窗标签
+    var tagPicker = null;      // 侧栏标签（发布弹窗已去掉，现在只有这一个）
 
     function currentTags() { return tagPicker ? tagPicker.getTags() : []; }
 
@@ -82,9 +83,6 @@
                 onChange: function () { window.eeMarkDirty(); }
             });
         }
-        if (!pubTagPicker && $('eePubTagsPicker')) {
-            pubTagPicker = window.TagPicker.create($('eePubTagsPicker'), { placeholder: '添加标签，回车确认…' });
-        }
     }
 
     // 已有标签作为下拉建议（失败时忽略，不影响自由输入）
@@ -93,7 +91,6 @@
             if (!r || r.status !== 'success') return;
             var names = (r.data || []).map(function (t) { return t.name; }).filter(Boolean);
             if (tagPicker) tagPicker.setSuggestions(names);
-            if (pubTagPicker) pubTagPicker.setSuggestions(names);
         }).catch(function () { /* 忽略 */ });
     }
 
@@ -449,6 +446,43 @@
         return true;
     }
 
+    // ===== 导图口令（原来只在发布弹窗里能设，弹窗去掉后搬到侧栏）=====
+    async function refreshMapKeyCard() {
+        var card = $('eeMapKeyCard');
+        if (!card) return;
+        var mid = mapId();
+        if (docType !== 'mindmap' || !mid) { card.style.display = 'none'; return; }
+        card.style.display = '';
+        try {
+            var d = await mmApi('id=' + encodeURIComponent(mid) + '&metaOnly=1');
+            $('eeMapKey').textContent = (d && d.status === 'success' && d.meta && d.meta.hasKey) ? '已设置' : '未设置';
+        } catch (e) {
+            $('eeMapKey').textContent = '读取失败';   // 接口不可用时降级，不抛未捕获异常
+        }
+    }
+    async function mapMetaSet(body, okMsg) {
+        var mid = mapId();
+        if (!mid) { toast('导图还没保存，先保存一次', 'error'); return false; }
+        var d = await mmApi('action=meta&id=' + encodeURIComponent(mid), {
+            method: 'POST',
+            body: JSON.stringify(body)
+        });
+        if (!d || d.status !== 'success') { toast((d && d.message) || '操作失败', 'error'); return false; }
+        if (okMsg) toast(okMsg, 'success');
+        refreshMapKeyCard();
+        notifyChanged();
+        return true;
+    }
+    window.eeSaveMapKey = async function () {
+        var k = ($('eeMapKeyInput').value || '').trim();
+        if (k.length < 4) { toast('口令至少 4 位', 'error'); return; }
+        if (await mapMetaSet({ editKey: k }, '导图口令已设置')) $('eeMapKeyInput').value = '';
+    };
+    window.eeClearMapKey = async function () {
+        if (!window.confirm('确定清除这张导图的编辑口令？清除后任何人都能编辑它。')) return;
+        mapMetaSet({ editKey: '' }, '导图口令已清除');
+    };
+
     window.eeLoadBoardAdmin = async function () {
         var card = $('eeBoardAdminCard');
         if (!card) return;
@@ -554,14 +588,10 @@
     // 封面：缩略图预览 + 上传 / 从图库选 / 移除（页面上不展示 URL 文本）
     window.eeRenderCover = function () {
         var url = $('eeImage').value.trim();
-        // 右栏封面卡与发布弹窗内的封面预览同步
+        // 侧栏封面卡（发布弹窗已去掉，不再有第二处封面预览要同步）
         var img = $('eeCoverImg');
         var empty = $('eeCoverEmpty');
         var clear = $('eeCoverClear');
-        var pImg = $('eePubCoverImg');
-        var pEmpty = $('eePubCoverEmpty');
-        if (pImg) { if (url) { pImg.src = url; pImg.style.display = 'block'; } else { pImg.removeAttribute('src'); pImg.style.display = 'none'; } }
-        if (pEmpty) pEmpty.style.display = url ? 'none' : '';
         if (url) {
             img.src = url;
             img.style.display = 'block';
@@ -840,6 +870,7 @@
             if ($('eeBoard')) $('eeBoard').style.display = 'none';
             $('eeMindmap').style.display = 'flex';
             mountMindmap();
+            refreshMapKeyCard();
         } else {
             if ($('eeBoard')) $('eeBoard').style.display = 'none';
             if ($('eeMindmap')) $('eeMindmap').style.display = 'none';
@@ -1040,52 +1071,19 @@
     };
 
     // ===== 状态 / 删除 / 前台 =====
-    // 发布弹窗：状态 / 标签 / 封面，确认后保存
-    window.eeOpenPublish = function () {
-        var s = $('eePubStatus');
-        if (s) s.value = ($('eeStatusSel').value || 'published');
-        if (pubTagPicker) pubTagPicker.setTags(currentTags(), true);
-        // 编辑密钥字段：仅白板（后续导图同样适用）显示，默认勾选、默认值 Raven_NULL
-        var ekField = $('eePubEditKeyField');
-        if (ekField) ekField.style.display = (docType === 'whiteboard' || docType === 'mindmap') ? '' : 'none';
-        window.eeRenderCover();
-        var tip = $('eePubTip'); if (tip) tip.textContent = '';
-        var box = $('eePublishModal'); if (box) box.classList.add('open');
-    };
-    window.eeClosePublish = function () {
-        var box = $('eePublishModal'); if (box) box.classList.remove('open');
-    };
-    window.eeConfirmPublish = async function () {
-        var tip = $('eePubTip');
-        if (tip) tip.textContent = '';
-        var status = ($('eePubStatus') && $('eePubStatus').value) || 'published';
-        $('eeStatusSel').value = status;
-        if (pubTagPicker && tagPicker) tagPicker.setTags(pubTagPicker.getTags(), true);
+    /**
+     * 发布：不再弹窗。
+     * 状态、标签、封面都在侧栏，弹窗只是把同样的东西再问一遍。
+     * 缺东西（没标题 / 没正文 / 引用的画布没落盘）由 doSave() 用胶囊提示拦下，
+     * 所以这里不需要自己再校验一遍。
+     */
+    window.eePublishNow = async function () {
+        var sel = $('eeStatusSel');
+        if (sel) sel.value = 'published';
         window.eeMarkDirty();
-        var ok = await doSave(true);
-        if (!ok) { if (tip) tip.textContent = '保存失败，请检查标题与内容后重试'; return; }
-        // 编辑密钥：默认开启（Raven_NULL），可在弹窗取消
-        var useKey = $('eeUseEditKey');
-        var keyInput = $('eeEditKey');
-        var kv = ((keyInput && keyInput.value) || '').trim();
-        // 画布类内容（白板 / 导图）都支持编辑密钥，只是接口不同
-        var keyApi = docType === 'whiteboard' ? excApi : (docType === 'mindmap' ? mmApi : null);
-        var keyId = docType === 'whiteboard' ? (doc && doc.boardId) : (docType === 'mindmap' ? (doc && doc.mapId) : '');
-        if (keyApi && keyId) {
-            if (useKey && useKey.checked && kv.length >= 4) {
-                try {
-                    var d = await keyApi('action=meta&id=' + encodeURIComponent(keyId), { method: 'POST', body: JSON.stringify({ editKey: kv }) });
-                    if (!d || d.status !== 'success') toast((d && d.message) || '编辑密钥设置失败', 'error');
-                    else toast('编辑密钥已开启（' + kv + '）', 'success');
-                } catch (e) { /* 忽略：文章已保存成功 */ }
-            } else if (useKey && !useKey.checked) {
-                try { await keyApi('action=meta&id=' + encodeURIComponent(keyId), { method: 'POST', body: JSON.stringify({ editKey: '' }) }); } catch (e) { /* 忽略 */ }
-            } else if (useKey && useKey.checked) {
-                toast('编辑密钥至少 4 位，本次未设置', 'error');
-            }
-        }
-        window.eeClosePublish();
-        toast(status === 'draft' ? '已存为草稿（下架）' : '已发布', 'success');
+        var ok = await doSave(true);      // silent：成功提示统一由下面这条「已发布」给
+        if (!ok) return;                  // 失败原因 doSave 已经提示过了
+        toast('已发布', 'success');
     };
     window.eeToggleStatus = async function () {
         if (!doc || !doc.id) { toast('先保存一次再切换状态', 'error'); return; }
@@ -1210,11 +1208,6 @@
         if (t) t.addEventListener('input', window.eeMarkDirty);
         var coverFile = $('eeCoverFile');
         if (coverFile) coverFile.addEventListener('change', function () {
-            eeUploadCover(this.files && this.files[0]);
-            this.value = '';
-        });
-        var pubCoverFile = $('eePubCoverFile');
-        if (pubCoverFile) pubCoverFile.addEventListener('change', function () {
             eeUploadCover(this.files && this.files[0]);
             this.value = '';
         });
