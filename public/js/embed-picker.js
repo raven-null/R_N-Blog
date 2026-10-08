@@ -1,5 +1,5 @@
 /**
- * 插入画布面板（白板 / 思维导图）—— 后台写文章页与文章编辑页共用（v1.8.2）
+ * 插入画布面板（白板 / 思维导图）—— 后台写文章页与文章编辑页共用（v1.8.3）
  * ===========================================================================
  * 职责：
  *   · 自己注入样式与弹窗 DOM（两个页面只需引入本文件 + 一个工具栏按钮）
@@ -107,6 +107,12 @@
             '  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
             '.ep-canvas{position:relative;height:480px;background:#fff}',
             '.ep-canvas .ep-inline-board{position:absolute;inset:0}',
+            /* 编写页的内嵌白板不显示白板自带的操作胶囊（返回/导出/编辑/留言/信息）：
+               那是给「阅读页 / 独立白板页」用的。编写页里编辑走卡片顶栏的
+               「在抽屉中编辑」，而胶囊里的「返回」在这里点下去会 history.back()
+               直接离开编辑页（正文可能没保存）。阅读页用的是 .embed-block，
+               不带 .ep-canvas，所以不受这条影响 —— 两套形态互不干扰。 */
+            '.ep-canvas .mm-capsule{display:none!important}',
             '.ep-inline-frame{display:block;width:100%;height:100%;border:0}',
             '.ep-canvas-loading{display:flex;align-items:center;justify-content:center;height:100%;',
             '  padding:16px;text-align:center;font-size:13px;line-height:1.8;',

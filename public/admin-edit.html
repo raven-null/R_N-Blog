@@ -544,9 +544,11 @@ font-size:13px;font-family:inherit;outline:none;
     <link rel="stylesheet" href="/css/scrollbar.css?v=1.0.1">
     <link rel="stylesheet" href="/css/responsive.css?v=1.0.0">
     <link rel="stylesheet" href="/css/mobile.css?v=1.0.0">
-    <!-- 内嵌白板的操作胶囊（.mm-capsule / .mm-cap-btn / .mm-key）由白板编辑器
-         渲染，capsule.css 是它的一部分，不引入就会裸露成一竖列没样式的按钮；
-         留言抽屉（.mm-drawer*）同理。与 article.html / excalidraw.html 保持一致。 -->
+    <!-- 内嵌白板由白板编辑器渲染，写作页与阅读页刻意做成两套形态：
+         写作页隐藏白板自带的操作胶囊（见 embed-picker.js 的 .ep-canvas .mm-capsule），
+         胶囊里的「返回/导出/编辑/留言/信息」只属于阅读页与独立白板页。
+         capsule.css 仍要引入 —— 加密白板的编辑口令输入框（.mm-key）用它；
+         drawer.css 给留言抽屉兜底（万一其它入口把 .mm-drawer 打开）。 -->
     <link rel="stylesheet" href="/css/capsule.css?v=1.0.0">
     <link rel="stylesheet" href="/css/drawer.css?v=1.0.1">
 </head>
@@ -719,7 +721,7 @@ font-size:13px;font-family:inherit;outline:none;
 
     <div class="ee-toast" id="eeToast"></div>
     <script src="js/markdown-config.js?v=1.2.0"></script>
-<script src="js/embed-picker.js?v=1.8.2"></script>
+<script src="js/embed-picker.js?v=1.8.3"></script>
 <script src="js/tag-picker.js?v=1.0.0"></script>
     <script src="js/admin-edit.js?v=1.9.0"></script>
 </body>
