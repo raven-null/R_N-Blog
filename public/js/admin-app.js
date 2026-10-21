@@ -623,177 +623,10 @@
             r.readAsText(f);
         }
 
-        // ===== 写文章 =====
-        function resetEditor(){
-            editingId=null;
-            editingType=null;
-            editingBoardId='';
-            document.getElementById('edTitle').value='';
-            document.getElementById('edExcerpt').value='';
-            document.getElementById('edImage').value='';
-            renderCoverPreview();
-            selectedArticleTags=[];
-            renderTagPickerChips();
-            document.getElementById('edStatus').value='published';
-            setEditorContent('');
-            closePublishModal();
-        }
-        async function saveArticle(opts){
-            const opt=opts||{};
-            const title=document.getElementById('edTitle').value.trim();
-            const excerpt=document.getElementById('edExcerpt').value.trim();
-            const tags=selectedArticleTags.join(', ');
-            const status=document.getElementById('edStatus').value;
-            const content=getEditorContent();
-            let image=document.getElementById('edImage').value.trim();
-            if(!title){showToast('请填写文章标题','error');return}
-            if(!content){showToast('请填写文章内容','error');return}
-            // 先把正文里引用的内嵌画布落盘：画布内容与文章正文是两套存储，
-            // 若画布保存失败仍提交文章，就会出现「文章存了、画布改动丢了」——故阻断提交。
-            if(window.EmbedPicker&&typeof window.EmbedPicker.flushEmbeds==='function'){
-                let flush={ok:true,failed:[]};
-                try{flush=await window.EmbedPicker.flushEmbeds(vditorInstance)}catch(e){flush={ok:true,failed:[]}}
-                if(!flush.ok){
-                    showToast('引用的画布保存失败：'+flush.failed.join('、')+'。文章未提交，请处理后重试','error');
-                    return;
-                }
-            }
-            // 未设置封面图时：图库有图则随机选一张，图库空则报错
-            if(!image){
-                const galleryRes=await apiFetch('action=images');
-                const galleryImages=(galleryRes.status==='success'&&galleryRes.data)?galleryRes.data:[];
-                if(galleryImages.length>0){
-                    const picked=galleryImages[Math.floor(Math.random()*galleryImages.length)];
-                    image=picked.url;
-                    document.getElementById('edImage').value=image;
-                    renderCoverPreview();
-                    showToast(`已自动从图库选择封面: ${picked.key}`,'success');
-                }else{
-                    showConfirm('图库中没有图片，无法自动选择封面。请先上传一张封面图或先在图片管理中上传图片。','缺少封面图','知道了');
-                    return;
-                }
-            }
-            const body={title,excerpt,tags,content,status,image};
-            if(editingId)body.id=editingId;
-            // ===== 内容形态判定 =====
-            // 随记保持随记；显式选了白板/导图形态（写文章页的形态切换器）尊重该选择；
-            // 其余由 embed-picker 推导：正文为空且只引用一个块 → 独立画布形态，否则 article。
-            let finalType=editingType||'article';
-            if(finalType!=='card'&&window.EmbedPicker&&typeof window.EmbedPicker.deriveContentType==='function'){
-                const explicit=(writeMode==='board')?'whiteboard':(writeMode==='mindmap'?'mindmap':'');
-                const base=explicit||finalType;
-                try{ finalType=window.EmbedPicker.deriveContentType(base,content); }catch(e){ finalType=base; }
-            }
-            body.type=finalType;
-            if(editingBoardId)body.boardId=editingBoardId;
-            // 独立画布形态：把正文里引用的那个块落到关联字段（单块且类型匹配时）
-            if(window.EmbedPicker&&typeof window.EmbedPicker.extractBlockRefs==='function'){
-                let refs=[];
-                try{ refs=window.EmbedPicker.extractBlockRefs(content)||[]; }catch(e){ refs=[]; }
-                if(finalType==='whiteboard'&&refs.length===1&&refs[0].kind==='board')body.boardId=refs[0].id;
-                if(finalType==='mindmap'){ if(refs.length===1&&refs[0].kind==='map')body.mapId=refs[0].id; else if(currentMapId)body.mapId=currentMapId; }
-            }
-            const r=await apiFetch('action=articles',{method:'POST',body:JSON.stringify(body)});
-            if(r.status==='success'){
-                const meta=(r.data&&r.data.data)?r.data.data:(r.data||{});
-                lastSaved={id:editingId||meta.id||'',filename:meta.filename||''};
-                resetEditor();
-                notifyArticlesChanged();
-                showToast('已保存','success');
-                // 默认留在写页（不再跳回列表），可继续改或预览
-                if(opt.preview){
-                    if(lastSaved.id)openFrontPreview(buildFrontUrl(lastSaved));
-                    else showToast('预览需要先保存成功','error');
-                }
-            }else{
-                showToast(r.message||'保存失败','error');
-            }
-        }
-        // 「保存并预览」：保存后直接在右侧抽屉查看前台效果
-        function saveArticlePreview(){saveArticle({preview:true})}
-        // ===== 全屏写作（隐藏后台框架，内容占满整个屏幕） =====
-        let writeFull=false;
-        const FS_ICON='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>';
-        function setFullBtn(){
-            const btn=document.getElementById('writeFullBtn');
-            if(btn)btn.innerHTML=writeFull?FS_ICON+'退出全屏':FS_ICON+'全屏写作';
-        }
-        function toggleWriteFull(){
-            writeFull=!writeFull;
-            document.body.classList.toggle('admin-write-full',writeFull);
-            setFullBtn();
-            setTimeout(fitEditor,60);
-            // 浏览器原生全屏（失败则保持布局级全屏，不影响使用）
-            if(writeFull){
-                const de=document.documentElement;
-                if(de.requestFullscreen&&!document.fullscreenElement){
-                    de.requestFullscreen().catch(function(){});
-                }
-            }else if(document.exitFullscreen&&document.fullscreenElement){
-                document.exitFullscreen().catch(function(){});
-            }
-        }
-        // 用户按 Esc 退出浏览器全屏时，同步还原布局
-        document.addEventListener('fullscreenchange',function(){
-            if(!document.fullscreenElement&&document.body.classList.contains('admin-write-full')){
-                document.body.classList.remove('admin-write-full');
-                writeFull=false;
-                setFullBtn();
-                setTimeout(fitEditor,60);
-            }
-        });
 
         // ===== 形态切换（文章/随记/白板）：顶部 tab + 右侧操作组 + 视图动画 =====
         let writeMode='article';
-        const WRITE_VIEWS={article:{view:'view-article',group:'rightGroupArticle'},note:{view:'view-note',group:'rightGroupNote'},board:{view:'view-board',group:'rightGroupBoard'},mindmap:{view:'view-mindmap',group:'rightGroupMindmap'}};
-        let writeSwitchTimer=null;
-        function setWriteMode(mode){
-            writeMode=mode;
-            // 形态切换：玻璃分段选择器与当前形态同步（滑块随选中项移动）
-            document.querySelectorAll('#writeModeGroup input[data-mode]').forEach(function(inp){
-                inp.checked = inp.dataset.mode === mode;
-            });
-            // 视图切换（旧视图自然过渡回隐藏态，新视图滑入）
-            for(const k in WRITE_VIEWS){
-                const v=document.getElementById(WRITE_VIEWS[k].view);
-                if(v)v.classList.toggle('active',k===mode);
-            }
-            // 右侧操作组按形态显隐
-            for(const k in WRITE_VIEWS){
-                const g=document.getElementById(WRITE_VIEWS[k].group);
-                if(g)g.style.display=k===mode?'':'none';
-            }
-            clearTimeout(writeSwitchTimer);
-            writeSwitchTimer=setTimeout(function(){
-                document.querySelectorAll('#tab-write .tab-view.leaving').forEach(function(v){v.classList.remove('leaving')});
-            },400);
-            if(mode==='article'){ensureEditor();setTimeout(fitEditor,100)}
-            else if(mode==='note'){loadRecentNotes()}
-            else if(mode==='board'){
-                const host=document.getElementById('wbBoardHost');
-                if(!currentBoardId)wbNew(true);                        // 没有画板：直接给一块空白画布
-                else if(host&&!host.querySelector('iframe.wb-frame'))wbMount(currentBoardId); // 有画板但未挂载：恢复
-            }
-            else if(mode==='mindmap'){
-                const host=document.getElementById('mmMapHost');
-                if(!currentMapId)mmNew(true);                          // 没有导图：直接给一块空白导图
-                else if(host&&!host.querySelector('iframe.wb-frame'))mmMount(currentMapId); // 有导图未挂载：恢复
-            }
-        }
-        // 形态切换：玻璃分段选择器的 radio 变化驱动视图切换（点击 label 与键盘方向键都会触发）
-        document.querySelectorAll('#writeModeGroup input[data-mode]').forEach(function(inp){
-            inp.addEventListener('change',function(){ setWriteMode(inp.dataset.mode) });
-        });
 
-        function fitEditor(){
-            const host=document.getElementById('vditor');
-            const wrap=document.getElementById('writeModeArticle');
-            if(!host||!wrap)return;
-            if(host.classList.contains('vditor--fullscreen'))return;
-            const h=wrap.clientHeight;
-            if(h<240)return; // 布局未就绪（隐藏/动画中）时跳过，避免撑破
-            host.style.height=h+'px';
-        }
         // 白板 bundle 懒加载（切到白板形态才加载 8MB）
         function ensureExcBundle(){
             if(window.ExcalidrawMount)return;
@@ -1159,172 +992,16 @@
                 if(d&&d.classList.contains('open'))closeFrontPreview();
             }
         });
-        // ===== Vditor 编辑器（所见即所得，轻量沉浸式） =====
-        // 按需加载：只有在真的要用编辑器时才注入脚本/样式（首屏省 289KB JS + 43KB CSS）
-        let vditorLoading=null;
-        function loadVditor(){
-            if(typeof Vditor!=='undefined')return Promise.resolve(true);
-            if(vditorLoading)return vditorLoading;
-            const withV='?v=1.0.0';
-            if(!document.getElementById('vditorCss')){
-                const l=document.createElement('link');
-                l.id='vditorCss';l.rel='stylesheet';l.href='js/vendor/vditor/dist/index.css'+withV;
-                document.head.appendChild(l);
-            }
-            vditorLoading=new Promise(resolve=>{
-                const s=document.createElement('script');
-                s.id='vditorJs';s.src='js/vendor/vditor/dist/index.min.js'+withV;
-                s.onload=()=>resolve(typeof Vditor!=='undefined');
-                s.onerror=()=>resolve(false);
-                document.head.appendChild(s);
-            });
-            return vditorLoading;
-        }
-        let vditorInstance=null;
-        let vditorReady=false;      // after 回调触发后为 true
-        let vditorPendingMd=null;   // 初始化完成前暂存待写入内容
-        let vditorResizeBound=false; // resize 自适应监听只绑定一次
-        function ensureEditor(){
-            if(vditorInstance)return vditorInstance;
-            const host=document.getElementById('vditor');
-            if(!host)return null;
-            if(typeof Vditor==='undefined'){
-                // 首次进来：先按需拉脚本，加载完再初始化一次（避免静默失败）
-                host.innerHTML='<div style="height:100%;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:13px">编辑器加载中…</div>';
-                loadVditor().then(ok=>{
-                    if(!ok){
-                        host.innerHTML='<div style="height:100%;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:13px">编辑器加载失败，请刷新页面重试</div>';
-                        return;
-                    }
-                    ensureEditor();
-                });
-                return null;
-            }
-            // 防御：若此前某次初始化中断在 #vditor 内残留了编辑器 DOM，
-            // 先清空再重建，避免页面上出现两份编辑器 DOM 上下堆叠
-            if(host.querySelector('.vditor'))host.innerHTML='';
-            const wrapH=document.getElementById('writeModeArticle')?.clientHeight||0;
-            const initH=wrapH>=240?wrapH:Math.max(360,(document.querySelector('.content')?.offsetHeight||700)-300);
-            vditorInstance=new Vditor('vditor',{
-                height:initH,
-                // 注意：不带尾部斜杠，Vditor 内部按 cdn + '/dist/...' 拼接
-                cdn:'js/vendor/vditor',
-                mode:'wysiwyg',
-                theme:'dark',
-                lang:'zh_CN',
-                placeholder:'开始写作吧……支持 Markdown 语法，拖拽或粘贴图片会自动上传',
-                toolbar:[
-                    'emoji','headings','bold','italic','strike','link',
-                    '|','list','ordered-list','check','outdent','indent',
-                    '|','quote','line','code','inline-code','table',
-                    '|','upload','edit-mode',
-                    '|',window.EmbedPickerToolbarItem||{name:'eeEmbedPick',tip:'插入白板 / 思维导图',click:function(){}},
-                    '|','undo','redo',
-                    {name:'more',toolbar:['code-theme','content-theme','export','help']}
-                ],
-                // 内嵌画布块在编辑器内显示为卡片（逻辑在 /js/embed-picker.js）
-                customRenders: window.EmbedPicker ? window.EmbedPicker.customRenders : [],
-                upload:{
-                    accept:'image/*',
-                    multiple:true,
-                    // 自定义上传：粘贴/拖拽/工具栏上传全部走已验证的 JSON 通道，
-                    // 前端先压缩再上传（避免 multipart 兼容与请求体过大问题）
-                    handler:(files)=>{
-                        (async()=>{
-                            for(const f of files){
-                                const url=await uploadArticleImageAndGetUrl(f);
-                                if(!url)continue;
-                                const ed=vditorInstance;
-                                if(ed)ed.insertValue('!['+(f.name||'图片')+']('+url+')');
-                                trackArticleImage(url);
-                            }
-                        })();
-                    }
-                },
-                cache:{enable:true},
-                after:()=>{
-                    vditorReady=true;
-                    switchEditorTheme(currentEditorTheme);
-                    // 工具栏「插入画布」按钮：面板与逻辑在 /js/embed-picker.js（与编辑页共用）
-                    if(window.EmbedPicker){
-                        window.EmbedPicker.setVditor(vditorInstance);
-                        window.EmbedPicker.bindToolbar(vditorInstance);
-                    }
-                    if(!vditorResizeBound){
-                        vditorResizeBound=true;
-                        // 窗口/布局尺寸变化时让编辑器贴合剩余空间
-                        window.addEventListener('resize',()=>{
-                            setTimeout(fitEditor,80);
-                        });
-                    }
-                    setTimeout(fitEditor,60);
-                    if(vditorPendingMd!==null){
-                        const md=vditorPendingMd;
-                        vditorPendingMd=null;
-                        vditorInstance.setValue(md);
-                        scanArticleImagesFromContent(md);
-                    }
-                    updateEditorInfo();
-                }
-            });
-            return vditorInstance;
-        }
-        function getEditorContent(){const ed=ensureEditor();return ed?ed.getValue():''}
-        function setEditorContent(md){
-            const ed=ensureEditor();
-            if(!ed)return;
-            md=md||'';
-            // 编辑器尚未初始化完成（懒加载 i18n/lute 中）时先暂存，after 后写入，避免 setValue 报错或内容丢失
-            if(!vditorReady){vditorPendingMd=md;return}
-            ed.setValue(md);
-            scanArticleImagesFromContent(md);
-            updateEditorInfo();
-        }
-        function updateEditorInfo(){
-            const el=document.getElementById('editorInfo');
-            if(el&&vditorInstance){
-                const val=vditorInstance.getValue()||'';
-                el.textContent=val.length+' 字';
-            }
-        }
-        function insertAtCursor(t){
-            const ed=ensureEditor();
-            if(!ed)return;
-            ed.insertValue(t);
-            updateEditorInfo();
+        /**
+         * 旧「写文章」页的「插入到光标处」入口。
+         * 后台现在不再内置编辑器（写作在独立页 /admin-edit.html），
+         * 但图片选择器等历史入口还会走到这里，所以保留函数本身给一句明确提示，
+         * 而不是让它们静默失败或抛 ReferenceError。
+         */
+        function insertAtCursor(){
+            showToast('后台不再内置编辑器，请到内容列表新建 / 编辑内容','error');
         }
 
-        // ===== 编辑器主题切换 =====
-        const editorThemes={
-            dark:{bg:'rgba(26,26,26,0.8)',text:'#fff',preBg:'rgba(8,8,8,0.6)'},
-            light:{bg:'rgba(255,255,255,0.95)',text:'#1a1a1a',preBg:'#f0f0f0'},
-            sepia:{bg:'rgba(244,236,216,0.95)',text:'#3e332a',preBg:'rgba(210,195,170,0.5)'},
-            green:{bg:'rgba(199,237,204,0.9)',text:'#1a3a1a',preBg:'rgba(170,210,175,0.5)'},
-            blue:{bg:'rgba(220,232,245,0.9)',text:'#1a2a3a',preBg:'rgba(190,205,225,0.5)'}
-        };
-        const EDITOR_THEME_CLASSES=['vditor-theme-dark','vditor-theme-light','vditor-theme-sepia','vditor-theme-green','vditor-theme-blue'];
-        let currentEditorTheme=localStorage.getItem('editor_theme')||'sepia';
-        function switchEditorTheme(theme){
-            currentEditorTheme=theme;
-            localStorage.setItem('editor_theme',theme);
-            const vditorEl=document.getElementById('vditor');
-            if(vditorEl){
-                // 只增删主题类，保留 vditor 自身类（vditor/wysiwyg 等）
-                EDITOR_THEME_CLASSES.forEach(function(c){vditorEl.classList.remove(c)});
-                vditorEl.classList.add('vditor-theme-'+theme);
-                const t=editorThemes[theme];
-                if(t){
-                    vditorEl.style.setProperty('--editor-bg',t.bg);
-                    vditorEl.style.setProperty('--editor-text',t.text);
-                    vditorEl.style.setProperty('--editor-pre-bg',t.preBg);
-                }
-            }
-            document.querySelectorAll('.theme-dot').forEach(d=>{
-                d.classList.toggle('active',d.dataset.theme===theme);
-            });
-        }
-        // 初始同步主题点高亮（vditor 就绪后 after 回调里会再次调用）
-        switchEditorTheme(currentEditorTheme);
 
         // ===== 发布弹窗（文章 / 随记 / 白板共用，按形态显隐字段） =====
         function defaultBoardName(){
@@ -1372,34 +1049,16 @@
         function closePublishModal(){
             document.getElementById('publishModal').classList.remove('open');
         }
-        // 确认按钮按当前形态分派
+        /**
+         * 发布弹窗的确认按钮，按当前形态分派。
+         * 文章 / 随记那两条「用后台内嵌编辑器提交正文」的分支已随「写文章」页下线
+         * （正文只存在独立编辑页里），所以这里只剩白板与导图两条真实路径；
+         * 其余形态给一句明确提示，不再调用已删除的保存函数。
+         */
         function publishConfirm(){
-            if(writeMode==='note')return publishNote();
             if(writeMode==='board')return publishBoard();
             if(writeMode==='mindmap')return publishMindmap();
-            return saveArticle();
-        }
-        // 随记发布：标签与状态来自弹窗
-        async function publishNote(){
-            const content=document.getElementById('wmNoteContent').value;
-            if(!String(content||'').trim()){showToast('写点什么再发布','error');return}
-            const title=(document.getElementById('wmNoteTitle').value||'').trim();
-            const finalTitle=title||String(content).replace(/\n/g,' ').trim().slice(0,20);
-            const tags=selectedArticleTags.slice();
-            const wmP=initWmTagPicker();
-            (wmP?wmP.getTags():[]).forEach(function(t){if(!tags.includes(t))tags.push(t)});
-            const status=document.getElementById('edStatus').value;
-            const r=await apiFetch('action=articles',{method:'POST',body:JSON.stringify({title:finalTitle,content:String(content),status,type:'card',tags})});
-            if(r.status!=='success'){showToast(r.message||'发布失败','error');return}
-            showToast(status==='draft'?'随记已存为草稿':'随记已发布','success');
-            document.getElementById('wmNoteTitle').value='';
-            document.getElementById('wmNoteContent').value='';
-            if(wmP)wmP.setTags([],true);
-            selectedArticleTags=[];
-            renderTagPickerChips();
-            closePublishModal();
-            loadRecentNotes();
-            notifyArticlesChanged();
+            showToast('请到内容列表新建 / 编辑内容（后台不再内置编辑器）','error');
         }
         // 白板发布：先保存画板 → 重命名画板 → 新建/更新白板文章
         async function publishBoard(){
@@ -1662,19 +1321,7 @@
                 showToast(`上传完成: ${success} 成功, ${fail} 失败`, fail > 0 ? 'error' : 'success');
             }
         }
-        function importToEditor(f){if(!f)return;const r=new FileReader();r.onload=()=>{const m=r.result.match(/^---\s*\n([\s\S]*?)\n---\s*\n([\s\S]*)$/);insertAtCursor(m?m[2]:r.result);showToast(`已插入: ${f.name}`,'success')};r.readAsText(f)}
-        function exportMarkdown(){const title=document.getElementById('edTitle').value.trim()||'untitled',excerpt=document.getElementById('edExcerpt').value.trim(),image=document.getElementById('edImage').value.trim(),md=`---\ntitle: ${title}\ndate: ${new Date().toISOString().slice(0,10)}\n${excerpt?`excerpt: ${excerpt}\n`:''}${image?`image: ${image}\n`:''}tags: [${selectedArticleTags.join(', ')}]\nauthor: 博主\n---\n\n${getEditorContent()}`,a=document.createElement('a');a.href=URL.createObjectURL(new Blob([md],{type:'text/markdown'}));a.download=`${title.replace(/[^a-zA-Z0-9\u4e00-\u9fff]/g,'-')}.md`;a.click();showToast('已导出','success')}
 
-        // 编辑器内上传图片并插入（多文件）
-        async function uploadAndInsertToEditor(files){
-            for(const f of files){
-                const url=await uploadArticleImageAndGetUrl(f);
-                if(url){
-                    insertAtCursor(`![${f.name.replace(/\.\w+$/,'')}](${url})`);
-                    trackArticleImage(url);
-                }
-            }
-        }
 
         // ===== 文中图片管理 =====
         // 从图片 URL 提取 key 并记录到文中图片列表
@@ -1714,8 +1361,13 @@
             insertAtCursor('![图片]('+url+')');
             showToast('已插入到光标处','success');
         }
+        /**
+         * 「文中图片」抽屉。
+         * 原来它会先扫描后台内嵌编辑器的正文再打开抽屉；编辑器随「写文章」页一起下线了，
+         * 现在抽屉只展示已经统计到的图片，不再依赖一个不存在的编辑器实例。
+         * 注意 closeArticleImages 仍被 admin.html 的遮罩 onclick 引用，必须保留。
+         */
         function openArticleImages(){
-            scanArticleImagesFromContent(getEditorContent());
             renderArticleImages();
             const d=document.getElementById('artImgDrawer'),m=document.getElementById('artImgMask');
             if(d){d.classList.add('open');d.setAttribute('aria-hidden','false')}
