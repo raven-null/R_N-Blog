@@ -1,0 +1,939 @@
+/* ==========================================================================
+ * 写作页样式（admin-edit.html 专用）
+ * --------------------------------------------------------------------------
+ * v1.0.0
+ *   从 admin-edit.html 的 <style> 里整段搬出来（原内联 34.6KB / 156 个 !important）。
+ *   搬出来顺手做了三件维护层的事：
+ *   1) Vditor 覆盖规则原来被追加过三遍（面板底色分别写成 #14161d / #000 / #0b0b0e，
+ *      互相打架，靠书写顺序定胜负），这里合并成**唯一一份**，取值按改造前最后一次
+ *      生效的结果，观感不变；
+ *   2) 删掉不再有对应 DOM 的死样式：.ee-badge*（顶栏徽标已删）、
+ *      .ee-modal* / .ee-check（发布弹窗已删）；
+ *   3) 本轮新增组件的样式：自绘确认框 .ee-confirm、快捷键面板 .ee-shortcuts、
+ *      顶栏「⋯」菜单 .ee-more-menu、窄屏属性抽屉 .ee-side-mask。
+ *
+ *   顺序有讲究：必须排在 js/vendor/vditor/dist/index.css 之后（HTML 里就是这么放的）。
+ *   选择器前缀用 html body 是为了压过 Vditor 组件自身样式。
+ * ========================================================================== */
+
+:root {
+    --bg: #0d0e14;
+    --bg-card: #16171f;
+    --bg-input: rgba(255, 255, 255, .05);
+    --border: rgba(255, 255, 255, .09);
+    --border-light: rgba(255, 255, 255, .16);
+    --text: #e8e9f2;
+    --text-muted: #8c8fa8;
+    --text-secondary: #b8b9c9;
+    --accent: #73aaff;
+    --danger: #ef6a5e;
+    --success: #7bd88f;
+    --radius: 14px;
+    --radius-sm: 10px;
+    --glass-bg: linear-gradient(145deg, rgba(255, 255, 255, .09), rgba(255, 255, 255, .035));
+    --glass-border: rgba(255, 255, 255, .12);
+    --glass-blur: blur(22px) saturate(170%);
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; height: 100%; }
+body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* ===== 顶部操作条 ===== */
+.ee-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 10px 18px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(22, 23, 31, .92);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    flex-shrink: 0;
+    z-index: 10;
+}
+.ee-left, .ee-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ee-back {
+    padding: 7px 14px;
+    border-radius: 99px;
+    text-decoration: none;
+    background: rgba(255, 255, 255, .06);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    font-size: 13px;
+    transition: all .2s ease;
+}
+.ee-back:hover { background: rgba(255, 255, 255, .12); color: #fff; }
+.ee-id { font-size: 12px; color: var(--text-muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+/* 字数 / 保存状态：原来在编辑器下方那条 .ee-foot 里，现在并进顶栏右侧。
+   注意别用 margin-left:auto —— 那会把后面的按钮顶开。 */
+.ee-stat { font-size: 12.5px; color: var(--text-muted); white-space: nowrap; }
+.ee-stat.saved { transition: color .2s ease; }
+
+.ee-btn {
+    padding: 7px 14px;
+    border-radius: 99px;
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+    background: rgba(255, 255, 255, .08);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    transition: all .2s ease;
+    text-decoration: none;
+}
+.ee-btn:hover { background: rgba(255, 255, 255, .15); color: #fff; }
+.ee-btn:active { transform: scale(.97); }
+.ee-btn.primary {
+    background: linear-gradient(135deg, rgba(59, 130, 246, .4), rgba(115, 170, 255, .3));
+    border-color: rgba(115, 170, 255, .45);
+    color: #eaf2ff;
+    font-weight: 500;
+}
+.ee-btn.primary:hover { background: linear-gradient(135deg, rgba(59, 130, 246, .55), rgba(115, 170, 255, .45)); }
+.ee-btn.danger:hover { border-color: var(--danger); color: var(--danger); }
+/* 提交中：三个动作按钮一起禁用，避免重复 POST */
+.ee-btn[disabled] { opacity: .45; cursor: not-allowed; transform: none; }
+.ee-btn[disabled]:hover { background: rgba(255, 255, 255, .08); color: var(--text-secondary); }
+
+/* ===== 顶栏「⋯」更多菜单 ===== */
+/* 窄屏才出现的「属性」入口（桌面端侧栏自带折叠按钮，不需要它） */
+.ee-side-btn { display: none; }
+.ee-more { position: relative; display: inline-flex; }
+.ee-more-btn {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    line-height: 1;
+}
+.ee-more-menu {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 8px);
+    z-index: 70;
+    min-width: 168px;
+    display: none;
+    flex-direction: column;
+    gap: 2px;
+    padding: 6px;
+    border-radius: 12px;
+    background: #14161d;
+    border: 1px solid var(--border-light);
+    box-shadow: 0 22px 50px -18px rgba(0, 0, 0, .9);
+}
+.ee-more-menu.open { display: flex; }
+.ee-more-menu .ee-btn {
+    width: 100%;
+    border: 0;
+    border-radius: 8px;
+    text-align: left;
+    padding: 9px 12px;
+    background: transparent;
+}
+.ee-more-menu .ee-btn:hover { background: rgba(255, 255, 255, .1); }
+.ee-more-menu .ee-btn.danger:hover { background: rgba(239, 106, 94, .16); }
+
+/* ===== 主体 ===== */
+.ee-main { flex: 1; min-height: 0; display: flex; gap: 12px; padding: 12px 18px 16px; overflow: visible; }
+.ee-editor-col { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+
+/* 标题在侧栏：只有 220~320px 宽，用卡片里一个加粗输入框，字号比普通字段大一点以示层级 */
+.ee-title-card-side:focus-within { border-color: rgba(115, 170, 255, .5); }
+.ee-title-input {
+    width: 100%;
+    padding: 8px 11px;
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: 14.5px;
+    font-weight: 600;
+    line-height: 1.45;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    color: var(--text);
+    outline: none;
+}
+.ee-title-input:focus { border-color: var(--accent); }
+.ee-title-input::placeholder { color: var(--text-muted); font-weight: 400; }
+
+/* 分章条不在编辑区顶部时（标题已搬走），与编辑器之间留一点缝 */
+.ee-chapter-bar + .ee-editor-card { margin-top: 10px; }
+.ee-editor-card { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+
+/* ==========================================================================
+ * Vditor 覆盖（本页唯一一份）
+ * 三件事：面板纯黑不透明且层级最高、不被容器裁切；正文/工具栏内边距归零重排；
+ * 主题跟随 .vditor-theme-*（由 admin-edit.js 的 applyTheme 写 CSS 变量）。
+ * ========================================================================== */
+html body .vditor {
+    --panel-background-color: #000;
+    --panel-shadow: 0 18px 44px -14px rgba(0, 0, 0, .92);
+    --toolbar-background-color: #181927;
+    --toolbar-icon-color: #fff;
+    --toolbar-icon-hover-color: #73aaff;
+    --second-color: #aaa;
+    --border-color: rgba(255, 255, 255, .18);
+    --textarea-background-color: #000;
+    --textarea-text-color: #fff;
+}
+/* 弹层面板：纯黑、不透明、浮在最上层（父容器 backdrop-filter 会形成层叠上下文，
+   所以祖先链也一起抬层级，见下面 .ee-main / .vditor 的 z-index） */
+html body .vditor-panel,
+html body .vditor-hint,
+html body .vditor-tip,
+html body .vditor-panel--arrow,
+html body .vditor-panel--none {
+    position: absolute !important;
+    overflow: visible !important;
+    z-index: 2147483647 !important;
+    max-width: min(340px, 92vw) !important;
+    box-sizing: border-box !important;
+    transform: none !important;
+    background: #000 !important;
+    background-color: #000 !important;
+    background-image: none !important;
+    color: #fff !important;
+    opacity: 1 !important;
+    filter: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    text-shadow: none !important;
+    border: 1px solid rgba(255, 255, 255, .18) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 18px 44px -14px rgba(0, 0, 0, .9) !important;
+    font-size: 13px !important;
+}
+html body .vditor-panel *,
+html body .vditor-hint *,
+html body .vditor-panel--arrow *,
+html body .vditor-panel--none *,
+html body .vditor-emojis,
+html body .vditor-emojis * {
+    color: #fff !important;
+    opacity: 1 !important;
+    text-shadow: none !important;
+}
+html body .vditor-panel button,
+html body .vditor-hint button,
+html body .vditor-tip button,
+html body .vditor-panel--none button,
+html body .vditor-emojis button {
+    background: transparent !important;
+    border: 0 !important;
+    color: #e8e8ea !important;
+    opacity: 1 !important;
+    font-size: 13px !important;
+}
+html body .vditor-panel button:hover,
+html body .vditor-hint button:hover,
+html body .vditor-tip button:hover,
+html body .vditor-panel--none button:hover,
+html body .vditor-emojis button:hover {
+    background: rgba(255, 255, 255, .12) !important;
+    color: #fff !important;
+}
+html body .vditor-menu--current,
+html body .vditor-menu--current * { color: #7fb2ff !important; font-weight: 600 !important; }
+html body .vditor-menu--disabled,
+html body .vditor-menu--disabled * { color: #8b8f9c !important; }
+html body .vditor-emojis__tip,
+html body .vditor-emojis__tail { color: rgba(255, 255, 255, .6) !important; }
+html body .vditor-emojis__icon { font-size: 20px !important; line-height: 1.6 !important; }
+html body .vditor-emojis {
+    max-height: min(46vh, 360px) !important;
+    overflow: auto !important;
+}
+/* 面板内部滚动容器：给足高度，避免条目被裁掉 */
+html body .vditor-hint div[style*="overflow"],
+html body .vditor-hint > div > div {
+    max-height: min(52vh, 420px) !important;
+    overflow-y: auto !important;
+    background: transparent !important;
+}
+/* 箭头与面板同色，不然会露出浅色三角 */
+html body .vditor-panel--arrow::before,
+html body .vditor-panel--arrow::after {
+    background: #000 !important;
+    background-color: #000 !important;
+    border-color: rgba(255, 255, 255, .2) !important;
+    opacity: 1 !important;
+}
+html body .vditor-input { background: #000 !important; color: #fff !important; border: 1px solid #3a3f4d !important; }
+/* 悬浮提示：工具栏自身是滚动容器，会把按钮上方的气泡裁掉 */
+html body .vditor-tooltipped::after {
+    z-index: 2147483647 !important;
+    background: #000 !important;
+    color: #fff !important;
+    border: 1px solid #3a3f4d !important;
+    border-radius: 8px !important;
+    font-size: 12px !important;
+    line-height: 1.5 !important;
+    white-space: nowrap !important;
+    max-width: none !important;
+    opacity: 1 !important;
+    padding: 6px 10px !important;
+}
+html body .vditor-tooltipped::before { display: none !important; }
+
+/* 输入区与工具栏：Vditor 会按视口宽度动态加超大左右内边距（实测 163px）用于居中行宽，
+   这里一律压回 20px，让编辑器平铺整个盒子 */
+html body .vditor-toolbar {
+    padding-left: 20px !important;
+    padding-right: 20px !important;
+    box-sizing: border-box !important;
+    overflow: visible !important;
+    height: auto !important;
+}
+html body .vditor-wysiwyg pre.vditor-reset,
+html body .vditor-ir pre.vditor-reset,
+html body .vditor-sv {
+    padding-left: 20px !important;
+    padding-right: 20px !important;
+    max-width: none !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+}
+/* 正文首行留白：图片/表格/链接的浮动操作条在元素上方弹出，首行时会被内容滚动区裁掉 */
+html body .vditor-wysiwyg pre.vditor-reset,
+html body .vditor-ir pre.vditor-reset { padding-top: 10px !important; }
+
+/* 层叠：正文要压过其它页面内容，但 .ee-main 不能盖过页面级弹层（提示 60 / 预览）。
+   所以这里给 20，只保证「编辑器内部 > 页面其它内容」。 */
+html body .ee-main,
+html body .ee-editor-card,
+html body .vditor,
+html body .vditor-content { position: relative !important; }
+html body .ee-main { z-index: 20 !important; }
+html body .ee-editor-card,
+html body .vditor,
+html body .vditor-content { z-index: 3000 !important; }
+html body .vditor-toolbar { position: relative !important; z-index: 3001 !important; }
+
+/* 编辑器卡片外观 */
+.ee-editor-card .vditor {
+    display: flex;
+    flex-direction: column;
+    border-radius: 12px !important;
+    overflow: visible;
+    border: 1px solid var(--glass-border) !important;
+    box-shadow: 0 12px 32px -14px rgba(0, 0, 0, .55) !important;
+}
+.ee-editor-card .vditor-toolbar {
+    flex: none;
+    background: rgba(24, 25, 39, .95) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, .07) !important;
+    backdrop-filter: blur(12px);
+    border-radius: 12px 12px 0 0 !important;
+}
+.ee-editor-card .vditor-toolbar__item { color: #fff !important; transition: all .2s ease; }
+.ee-editor-card .vditor-toolbar__item--current,
+.ee-editor-card .vditor-toolbar__item:hover { color: var(--accent) !important; }
+.ee-editor-card .vditor-toolbar [data-type="outline"] { display: none !important; }
+.ee-editor-card .vditor-content { flex: 1; min-height: 0; background: var(--editor-bg, rgba(26, 26, 26, .8)) !important; }
+.ee-editor-card .vditor-ir,
+.ee-editor-card .vditor-wysiwyg,
+.ee-editor-card .vditor-sv {
+    flex: 1;
+    min-width: 1px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    color: var(--editor-text, #fff) !important;
+}
+/* 这条 * 规则要排除内嵌画布（.ep-canvas-card）整棵子树：
+   白板 / 导图卡片是自成一套配色的组件，Excalidraw 的菜单、图标大量用 currentColor。
+   被 !important 一刷，白色菜单面板上就出现主题色的深褐文字、图标也一起变色。 */
+.ee-editor-card .vditor-ir *:not(.ep-canvas-card):not(.ep-canvas-card *),
+.ee-editor-card .vditor-wysiwyg *:not(.ep-canvas-card):not(.ep-canvas-card *),
+.ee-editor-card .vditor-sv *:not(.ep-canvas-card):not(.ep-canvas-card *) { color: var(--editor-text, #fff) !important; }
+/* 卡片自身的基准色（画布始终是浅色底），避免它从编辑器继承主题色再往下传 */
+.ee-editor-card .vditor-ir .ep-canvas-card,
+.ee-editor-card .vditor-wysiwyg .ep-canvas-card,
+.ee-editor-card .vditor-sv .ep-canvas-card { color: #1b1b1f; }
+.ee-editor-card .vditor-ir pre,
+.ee-editor-card .vditor-wysiwyg pre,
+.ee-editor-card .vditor-sv pre { background: var(--editor-pre-bg, rgba(8, 8, 8, .6)) !important; }
+.ee-editor-card .vditor-ir a:not(.ep-canvas-card *),
+.ee-editor-card .vditor-wysiwyg a:not(.ep-canvas-card *) { color: var(--accent) !important; }
+/* 表格：Vditor 的表格底色是写死的浅色（#fafbfc / #fff），而上面那条 * 规则把文字统一
+   接管成 --editor-text（深色主题下是 #fff）→ 白字白底糊成一片。
+   这里把底色也接管过来：行透明 + 表头淡底 + 中性半透明边框。 */
+.ee-editor-card .vditor-reset table tr,
+.ee-editor-card .vditor-reset table tbody tr:nth-child(2n) { background-color: transparent !important; }
+.ee-editor-card .vditor-reset table th { background-color: rgba(128, 128, 128, .16) !important; }
+.ee-editor-card .vditor-reset table th,
+.ee-editor-card .vditor-reset table td { border-color: rgba(128, 128, 128, .35) !important; }
+/* 去掉 Vditor 的「块悬停操作条」（上移 / 删除）：功能已并进右键菜单。
+   admin-edit.js 的 stripVditorPopover() 还会把它从 DOM 摘掉，
+   这样 Vditor 的 ⇧⌘X 快捷键也会自然失效，而不是「看不见却能删」。 */
+.ee-editor-card .vditor-panel--none { display: none !important; }
+
+/* 编辑器主题（变量由 admin-edit.js 写入，与后台主题一致） */
+.vditor-theme-dark { --editor-bg: rgba(26, 26, 26, .8); --editor-text: #fff; --editor-pre-bg: rgba(8, 8, 8, .6); }
+.vditor-theme-light { --editor-bg: rgba(255, 255, 255, .95); --editor-text: #1a1a1a; --editor-pre-bg: #f0f0f0; }
+.vditor-theme-sepia { --editor-bg: rgba(244, 236, 216, .95); --editor-text: #3e332a; --editor-pre-bg: rgba(210, 195, 170, .5); }
+.vditor-theme-green { --editor-bg: rgba(199, 237, 204, .9); --editor-text: #1a3a1a; --editor-pre-bg: rgba(170, 210, 175, .5); }
+.vditor-theme-blue { --editor-bg: rgba(220, 232, 245, .9); --editor-text: #1a2a3a; --editor-pre-bg: rgba(190, 205, 225, .5); }
+
+/* ===== 预览 / 发布 / 保存：同一类动作，拼成一个盒子（贴边、只留分隔线） ===== */
+.ee-action-box {
+    display: flex;
+    width: 100%;
+    align-items: stretch;
+    overflow: hidden;
+    flex: none;
+    border-radius: 10px;
+    border: 1px solid rgba(115, 170, 255, .38);
+    background: rgba(255, 255, 255, .05);
+}
+.ee-action-box .ee-btn {
+    flex: 1;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    margin: 0;
+    padding: 9px 6px;
+    font-size: 13px;
+    text-align: center;
+}
+.ee-action-box .ee-btn + .ee-btn { border-left: 1px solid rgba(255, 255, 255, .14); }
+.ee-action-box .ee-btn:hover { background: rgba(255, 255, 255, .13); color: #fff; }
+.ee-action-box .ee-btn:active { transform: none; }
+.ee-action-box .ee-btn.primary {
+    background: linear-gradient(135deg, rgba(59, 130, 246, .42), rgba(115, 170, 255, .3));
+    color: #eaf2ff;
+    font-weight: 500;
+}
+.ee-action-box .ee-btn.primary:hover { background: linear-gradient(135deg, rgba(59, 130, 246, .62), rgba(115, 170, 255, .48)); }
+.ee-action-box .ee-btn[disabled] { opacity: .5; }
+
+/* ===== 侧栏折叠区「更多设置」 =====
+   侧栏原来是一长列七八张卡片，每次发文都要滚着找状态/标签/封面。
+   把十天半个月才动一次的（摘要 / 内嵌画布 / 白板管理 / 导图口令 / 信息）收进这里。 */
+.ee-side-more { flex: none; }
+.ee-side-more > summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    cursor: pointer;
+    list-style: none;
+    background: rgba(255, 255, 255, .04);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    font-size: 12.5px;
+    transition: background .18s ease, color .18s ease;
+}
+.ee-side-more > summary::-webkit-details-marker { display: none; }
+.ee-side-more > summary:hover { background: rgba(255, 255, 255, .09); color: #fff; }
+.ee-side-more > summary .chev { font-size: 14px; line-height: 1; transition: transform .18s ease; }
+.ee-side-more[open] > summary .chev { transform: rotate(90deg); }
+.ee-side-more-body { display: flex; flex-direction: column; gap: 10px; padding-top: 10px; }
+/* 口令一行：输入框占满，右边跟「添加」；已设过口令时再出现「清除」 */
+.ee-ba-key-row { display: flex; gap: 6px; align-items: center; }
+.ee-ba-key-row input { flex: 1; min-width: 0; }
+.ee-ba-key-row .ee-btn { flex: none; height: 32px; padding: 0 11px; font-size: 12.5px; }
+
+/* ===== 侧栏 ===== */
+.ee-side {
+    width: clamp(220px, 26vw, 320px);
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow-y: auto;
+    padding-right: 2px;
+    order: 9;
+}
+/* 侧栏不显示滚动条（内容照样能滚）—— 细窄的侧栏旁边挂一根滚动条很扎眼。
+   css/scrollbar.css 里有一条 `* { scrollbar-width: thin !important }`，
+   所以这里必须同样带 !important，并且用更高特异性才压得住。 */
+html body #eeSide,
+html body #eeSide * { scrollbar-width: none !important; -ms-overflow-style: none !important; }
+html body #eeSide::-webkit-scrollbar,
+html body #eeSide *::-webkit-scrollbar { width: 0 !important; height: 0 !important; display: none !important; }
+
+.ee-side-head {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    flex: none;
+    padding: 1px 2px 6px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    background: var(--bg);
+}
+.ee-side-head > span { font-size: 12px; color: var(--text-muted); letter-spacing: .5px; }
+.ee-side-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 11px;
+    border-radius: 99px;
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+    background: rgba(255, 255, 255, .06);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    transition: all .18s ease;
+}
+.ee-side-toggle:hover { background: rgba(255, 255, 255, .14); color: #fff; }
+.ee-side-toggle .chev { font-size: 14px; line-height: 1; transform: translateY(-1px); }
+
+/* 桌面端的「折叠侧栏」：!important 用来压掉 applyDoc() 里写的 style.display = 'flex' */
+.ee-main.side-collapsed .ee-side { display: none !important; }
+.ee-side-open { display: none; }
+.ee-main.side-collapsed .ee-side-open {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    /* z-index 要高于 .ee-editor-card 的 3000，否则会被编辑器正文压住 */
+    position: fixed;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 3100;
+    padding: 14px 7px;
+    border-radius: 10px 0 0 10px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 12px;
+    letter-spacing: 1px;
+    writing-mode: vertical-rl;
+    background: rgba(115, 170, 255, .18);
+    border: 1px solid rgba(115, 170, 255, .34);
+    border-right: none;
+    color: #cfe2ff;
+    box-shadow: -8px 0 24px -12px rgba(0, 0, 0, .8);
+    transition: background .18s ease, color .18s ease;
+}
+.ee-main.side-collapsed .ee-side-open:hover { background: rgba(115, 170, 255, .36); color: #fff; }
+
+/* 窄屏抽屉用的遮罩（桌面端永不显示） */
+.ee-side-mask { display: none; }
+
+/* ===== 侧栏：本文内嵌画布清单 ===== */
+.ee-canvas-list { display: flex; flex-direction: column; gap: 6px; }
+.ee-canvas-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 9px;
+    border-radius: 8px;
+    cursor: pointer;
+    background: rgba(255, 255, 255, .03);
+    border: 1px solid var(--border);
+    transition: border-color .15s ease, background .15s ease;
+}
+.ee-canvas-item:hover { border-color: rgba(115, 170, 255, .5); background: rgba(115, 170, 255, .1); }
+.ee-canvas-item .k { flex: none; font-size: 11px; font-weight: 600; color: #7fb2ff; }
+.ee-canvas-item .n {
+    flex: 1;
+    min-width: 0;
+    font-size: 12.5px;
+    color: var(--text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.ee-canvas-item .n.unnamed { color: var(--text-muted); font-style: italic; }
+/* 点侧栏条目跳到正文对应块时闪一下，避免「跳过去了但不知道在哪」 */
+.ee-canvas-flash { animation: eeCanvasFlash 1.2s ease; }
+@keyframes eeCanvasFlash {
+    0%, 100% { box-shadow: none; }
+    25%, 75% { box-shadow: 0 0 0 3px rgba(115, 170, 255, .6); }
+}
+
+/* ===== 侧栏卡片 ===== */
+.ee-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.ee-card label { font-size: 12px; color: var(--text-muted); }
+.ee-card input,
+.ee-card textarea,
+.ee-card select {
+    width: 100%;
+    padding: 8px 11px;
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: 13px;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    color: var(--text);
+    outline: none;
+    resize: vertical;
+}
+.ee-card input:focus,
+.ee-card textarea:focus,
+.ee-card select:focus { border-color: var(--accent); }
+.ee-cover {
+    position: relative;
+    height: 130px;
+    border-radius: var(--radius-sm);
+    border: 1px dashed var(--border);
+    background: #0a0b10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    font-size: 11.5px;
+    color: var(--text-muted);
+}
+.ee-cover img { width: 100%; height: 100%; object-fit: cover; display: none; }
+.ee-cover-actions { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.ee-cover-actions .ee-btn { height: 30px; justify-content: center; margin: 0; font-size: 12.5px; padding: 6px 12px; }
+.ee-cover-actions label.ee-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    font-size: 12.5px;
+    color: #e8e8ea;
+}
+.ee-meta-list { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: var(--text-muted); }
+.ee-meta-list b { color: var(--text-secondary); font-weight: 500; }
+
+/* ===== 白板管理卡片 ===== */
+.ee-ba-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--text-muted); }
+.ee-ba-value { color: var(--text); font-size: 12px; }
+/* 当前生效的那一项亮起（如白板权限的「开放编辑 / 设为只读」） */
+.ee-btn.active {
+    background: linear-gradient(135deg, rgba(59, 130, 246, .55), rgba(115, 170, 255, .42));
+    border-color: rgba(115, 170, 255, .75);
+    color: #fff;
+    font-weight: 600;
+    box-shadow: 0 0 0 1px rgba(115, 170, 255, .35), 0 0 12px rgba(115, 170, 255, .25);
+}
+.ee-btn.active:hover { background: linear-gradient(135deg, rgba(59, 130, 246, .68), rgba(115, 170, 255, .55)); }
+
+/* ===== 白板 / 思维导图 ===== */
+.ee-board { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 10px; }
+.ee-board-host {
+    flex: 1;
+    min-height: 0;
+    background: rgba(18, 20, 32, .55);
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+    border: 1px dashed rgba(255, 255, 255, .12);
+}
+.ee-board-host > [data-excalidraw] { height: 100%; }
+.ee-frame { width: 100%; height: 100%; border: 0; display: block; background: #0b0b0e; }
+.ee-hint {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #8a8fa3;
+    font-size: 13px;
+    text-align: center;
+    padding: 0 16px;
+    line-height: 1.7;
+}
+/* 导图面板顶部的「绑定导图」条（文章没绑导图时才出现） */
+.ee-mm-bar {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 10px 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, .1);
+    background: rgba(255, 255, 255, .03);
+    font-size: 13px;
+}
+.ee-mm-bar-label { color: var(--text-secondary); }
+.ee-mm-bar select {
+    max-width: 320px;
+    padding: 7px 10px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, .06);
+    border: 1px solid rgba(255, 255, 255, .12);
+    color: var(--text);
+    font-size: 13px;
+    font-family: inherit;
+    outline: none;
+}
+.ee-mm-bar select:focus { border-color: rgba(255, 255, 255, .28); }
+
+/* ===== 分章条 ===== */
+.ee-chapter-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+    padding: 9px 14px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #252b48, #2e2240);
+    border: 1px solid rgba(255, 255, 255, .07);
+    font-size: 12.5px;
+    color: var(--text-secondary);
+}
+.ee-chapter-bar .ec-label { color: #cfe2ff; font-weight: 600; }
+.ee-chapter-bar select {
+    flex: 1;
+    min-width: 200px;
+    padding: 7px 11px;
+    border-radius: 10px;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 13px;
+    font-family: inherit;
+}
+.ee-chapter-bar .ec-tip { color: var(--text-muted); font-size: 11.5px; }
+
+/* ===== 图库选择弹窗 ===== */
+.ee-picker { position: fixed; inset: 0; z-index: 2400; display: none; }
+.ee-picker.open { display: flex; align-items: center; justify-content: center; }
+.ee-picker-mask {
+    position: absolute;
+    inset: 0;
+    background: rgba(5, 5, 9, .6);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+.ee-picker-box {
+    position: relative;
+    width: min(780px, 94vw);
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: 0 30px 90px -20px rgba(0, 0, 0, .8);
+}
+.ee-picker-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+.ee-picker-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 10px;
+    padding: 14px;
+    overflow-y: auto;
+}
+.ee-picker-item {
+    position: relative;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    background: #000;
+    aspect-ratio: 1/1;
+    transition: border-color .18s ease, transform .18s ease;
+}
+.ee-picker-item:hover { border-color: var(--accent); transform: translateY(-2px); }
+.ee-picker-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ee-picker-item span {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 3px 6px;
+    font-size: 10px;
+    color: #dfe3f5;
+    background: rgba(8, 9, 14, .72);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.ee-picker-empty { grid-column: 1/-1; text-align: center; color: var(--text-muted); font-size: 12.5px; padding: 26px 0; }
+
+/* ===== 提示胶囊 ===== */
+.ee-toast {
+    position: fixed;
+    left: 50%;
+    bottom: 28px;
+    transform: translateX(-50%) translateY(12px);
+    background: rgba(20, 21, 30, .96);
+    border: 1px solid var(--border-light);
+    border-radius: 12px;
+    padding: 10px 18px;
+    font-size: 13px;
+    color: var(--text);
+    opacity: 0;
+    pointer-events: none;
+    transition: all .25s ease;
+    z-index: 60;
+    box-shadow: 0 16px 40px -14px rgba(0, 0, 0, .7);
+    max-width: min(560px, 92vw);
+    line-height: 1.6;
+}
+.ee-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.ee-toast.error { border-color: rgba(239, 106, 94, .5); color: #ffd9d5; }
+.ee-toast.success { border-color: rgba(123, 216, 143, .45); color: #d7f5df; }
+
+/* ==========================================================================
+ * 自绘确认框（js/editor-kit.js 的 EE.confirm 动态创建）
+ * 替掉原生 confirm：原生弹窗在后台这套深色玻璃 UI 里非常突兀，而且不能自定义按钮文案。
+ * ========================================================================== */
+.ee-confirm { position: fixed; inset: 0; z-index: 2600; display: none; }
+.ee-confirm.open { display: flex; align-items: center; justify-content: center; }
+.ee-confirm-mask {
+    position: absolute;
+    inset: 0;
+    background: rgba(5, 5, 9, .62);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+.ee-confirm-box {
+    position: relative;
+    width: min(420px, 92vw);
+    padding: 20px 22px 18px;
+    border-radius: 18px;
+    background: linear-gradient(145deg, rgba(34, 34, 42, .98), rgba(18, 18, 24, .97));
+    border: 1px solid rgba(255, 255, 255, .13);
+    box-shadow: 0 30px 90px -20px rgba(0, 0, 0, .85);
+}
+.ee-confirm-box h3 { margin: 0 0 10px; font-size: 16px; font-weight: 700; color: var(--accent); }
+.ee-confirm-box p { margin: 0; font-size: 13px; line-height: 1.75; color: var(--text-secondary); }
+.ee-confirm-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+.ee-confirm .ee-btn.danger.primary {
+    background: linear-gradient(135deg, rgba(239, 106, 94, .5), rgba(239, 106, 94, .34));
+    border-color: rgba(239, 106, 94, .6);
+    color: #ffe7e4;
+}
+.ee-confirm .ee-btn.danger.primary:hover { background: linear-gradient(135deg, rgba(239, 106, 94, .7), rgba(239, 106, 94, .5)); }
+
+/* ==========================================================================
+ * 快捷键说明面板（EE.openShortcuts）
+ * ========================================================================== */
+.ee-shortcuts { position: fixed; inset: 0; z-index: 2550; display: none; }
+.ee-shortcuts.open { display: flex; align-items: center; justify-content: center; }
+.ee-shortcuts-mask {
+    position: absolute;
+    inset: 0;
+    background: rgba(5, 5, 9, .62);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+.ee-shortcuts-box {
+    position: relative;
+    width: min(460px, 92vw);
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    border-radius: 18px;
+    overflow: hidden;
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    box-shadow: 0 30px 90px -20px rgba(0, 0, 0, .85);
+}
+.ee-shortcuts-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 13px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13.5px;
+    color: var(--text);
+}
+.ee-shortcuts-body { padding: 12px 16px 16px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; }
+.ee-sc-row { display: flex; align-items: center; gap: 12px; font-size: 12.5px; color: var(--text-secondary); }
+.ee-sc-row kbd {
+    flex: none;
+    min-width: 128px;
+    padding: 4px 8px;
+    border-radius: 7px;
+    background: rgba(255, 255, 255, .07);
+    border: 1px solid var(--border);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11.5px;
+    color: #cfe2ff;
+    text-align: center;
+}
+
+/* ==========================================================================
+ * 窄屏（P1-12）
+ * 900px 以下：侧栏收窄；720px 以下：整个写作页改成「编辑区独占 + 属性抽屉」，
+ * 顶栏次要动作进「⋯」，工具栏横向滚动。
+ * ========================================================================== */
+@media (max-width: 900px) {
+    .ee-main { padding: 10px 12px 12px; gap: 10px; }
+    .ee-side { width: clamp(190px, 32vw, 260px); }
+    .ee-title-input { font-size: 14px; }
+    .ee-cover { height: 104px; }
+}
+
+@media (max-width: 720px) {
+    .ee-top { padding: 8px 10px; gap: 8px; }
+    .ee-main { padding: 8px 10px 12px; gap: 10px; }
+    .ee-right .ee-stat { font-size: 11.5px; }
+    .ee-side-btn { display: inline-flex; align-items: center; }
+    .ee-btn { padding: 7px 12px; font-size: 12.5px; }
+    .ee-chapter-bar { padding: 8px 10px; }
+    .ee-chapter-bar select { min-width: 0; width: 100%; }
+
+    /* 属性栏变右侧抽屉：默认收起，点顶栏「属性」滑出。
+       这里的 !important 是为了压过 applyDoc() 写的 style.display='flex'。 */
+    .ee-main .ee-side {
+        position: fixed;
+        right: 0;
+        top: 0;
+        bottom: 0;
+        width: min(340px, 90vw);
+        padding: 12px 12px 20px;
+        display: none !important;
+        z-index: 3200;
+        background: var(--bg);
+        border-left: 1px solid var(--border-light);
+        box-shadow: -24px 0 60px -24px rgba(0, 0, 0, .9);
+        order: 0;
+    }
+    .ee-main .ee-side.open {
+        display: flex !important;
+        animation: eeDrawerIn .22s ease;
+    }
+    @keyframes eeDrawerIn {
+        from { transform: translateX(18px); opacity: .4; }
+        to { transform: none; opacity: 1; }
+    }
+    .ee-side-head { position: static; }
+    .ee-side-mask {
+        position: fixed;
+        inset: 0;
+        z-index: 3100;
+        background: rgba(4, 4, 8, .55);
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
+    }
+    .ee-side-mask.open { display: block; }
+    /* 抽屉里不再需要「折叠侧栏」的把手 */
+    .ee-side-open { display: none !important; }
+    /* 工具栏按钮多：窄屏横向滚动，好过换行堆成一坨 */
+    html body .vditor-toolbar { overflow-x: auto !important; overflow-y: hidden !important; }
+    html body .vditor-toolbar::-webkit-scrollbar { height: 0; }
+    .ee-cover { height: 96px; }
+    .ee-toast { bottom: 16px; }
+}

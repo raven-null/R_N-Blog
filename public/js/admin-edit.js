@@ -1,24 +1,44 @@
 /**
  * 独立编辑页脚本（admin-edit.html）
- * 用途：对已发布/草稿的文章、随记、白板进行再次编辑，不再占用后台「写文章」页
- * 白板文章额外提供白板管理：访问权限 / 编辑口令 / 白板名称 / 历史版本回滚（v1.3.0）
+ * 用途：对已发布/草稿的文章、随记、白板、导图进行再次编辑，不再占用后台「写文章」页
+ *
+ * ---- 版本历史（近期）----
  * v1.10.0：侧栏新增「本文内嵌画布」清单（显示画布名称，点击定位到正文块）
  * v1.10.1：顶栏重排 —— 字数/保存状态搬进顶栏、删掉类型与状态徽标、「保存并预览」挪进侧栏
- * v1.11.0：发布不再弹窗（侧栏已有状态/标签/封面，缺东西用胶囊提示）；
- *          弹窗里独有的导图编辑口令搬到侧栏「导图口令」卡片
+ * v1.11.0：发布不再弹窗（侧栏已有状态/标签/封面，缺东西用胶囊提示）
  * v1.12.0：编辑器改造 —— 精简顶部工具栏、接入右键菜单与大纲、侧栏分组、去掉块悬停操作条
- * v1.12.1：标题从编辑区上方搬进侧栏（四种形态统一，白板/导图原本没有写标题的地方）
- * v1.13.0：白板/导图隐藏「本文内嵌画布」；白板去掉独立改名入口（名称跟随标题并自动同步）
- * v1.14.0：侧栏细节 —— 去掉画板 ID 行、口令改行内「添加」（已设置才出现「清除」）、
- *          导图口令卡片去掉标题与说明、信息卡片移到折叠区最后
+ * v1.12.1：标题从编辑区上方搬进侧栏
+ * v1.13.0：白板/导图隐藏「本文内嵌画布」；白板去掉独立改名入口
+ * v1.14.0：侧栏细节 —— 去掉画板 ID 行、口令改行内「添加」、信息卡片移到折叠区最后
  * v1.15.0：侧栏隐藏滚动条；「保存并预览」改成顶栏的「预览」，与发布 / 保存合成一个按钮组
- * v1.15.1：「本文内嵌画布」只给文章用（随记 / 白板 / 导图 都隐藏，且不再去拉画布名字）
+ * v1.15.1：「本文内嵌画布」只给文章用
+ * v1.20.0（本轮）：P0 + P1 + P2 一批改造，详见下面分组注释
+ *   P0-1 分章保存安全：任一章拉取失败就中止保存（原来会把失败章当空串拼进全文，
+ *        保存后服务端重新分块 = 那一章正文被永久清空）；切章也改成「拉取成功才切」
+ *   P0-2 本地草稿：编辑时每 2 秒防抖暂存到 localStorage，进页面若发现比线上新就提示恢复
+ *   P0-3 提交锁：doSave 期间锁住「保存 / 发布 / 预览」，避免双击发出两次 POST
+ *   P0-4 章节并发拉取：缺的章节按 6 个一批并发取，失败即中止（不再串行 20 连发）
+ *   P1-5 画布清单改读 DOM 卡片，打字时不再每次全文 getValue()
+ *   P1-6 字数改净字数（汉字 + 英文单词，去掉 Markdown 标记），并做 250ms 防抖
+ *   P1-7 原生 confirm/alert 换成自绘确认框（EE.confirm）
+ *   P1-8 「预览」不再写库：发给本地 /preview.html 渲染，不再先 POST 一次
+ *   P1-9 白板标题没变就不打 meta 接口（逻辑在 editor-embed-admin.js）
+ *   P1-10 顶栏「?」打开快捷键说明（EE.openShortcuts）
+ *   P1-11 请求层统一兜底：非 JSON 响应不再炸链、GET 失败自动重试一次（editor-kit.js）
+ *   P1-12 窄屏：属性栏改右侧抽屉、顶栏次要动作收进「⋯」、工具栏横向滚动
+ *   P2-16 去掉 Vditor 自带的 content-theme / code-theme，主题只留页面这一套（editor_theme）
+ *   P2-17 拆分：基础设施 → editor-kit.js；白板 / 导图管理 → editor-embed-admin.js
  */
 (function () {
     'use strict';
 
-    var EXC_BUNDLE_VERSION = 'v30'; // 与 scripts/build-excalidraw.mjs 的 BUNDLE_VERSION 保持一致
-    var adminKey = localStorage.getItem('admin_key') || '';
+    // ===== 基础设施（editor-kit.js）=====
+    var EE = window.EE;
+    var api = EE.api;
+    var toast = EE.toast;
+    var esc = EE.esc;
+
+    // ===== 页面状态 =====
     var params = new URLSearchParams(location.search);
     var docId = params.get('id') || '';
     // 新建模式：/admin-edit.html?new=1&type=article|card|whiteboard|mindmap
@@ -32,7 +52,7 @@
     var vditorReady = false;
     var pendingMd = null;
     var dirty = false;
-    var savedTimer = null;
+    var saveInFlight = false;   // P0-3：提交锁
 
     var editorThemes = {
         dark: { bg: 'rgba(26,26,26,.8)', text: '#fff', pre: 'rgba(8,8,8,.6)' },
@@ -45,23 +65,6 @@
 
     // ===== 基础工具 =====
     function $(id) { return document.getElementById(id); }
-    function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
-    function toast(msg, type) {
-        var t = $('eeToast');
-        t.textContent = msg;
-        t.className = 'ee-toast show' + (type ? ' ' + type : '');
-        clearTimeout(t._timer);
-        t._timer = setTimeout(function () { t.className = 'ee-toast'; }, 2600);
-    }
-    function api(query, opts) {
-        opts = opts || {};
-        return fetch('/api/admin?' + query, {
-            method: opts.method || 'GET',
-            headers: { 'Content-Type': 'application/json', 'X-Admin-Key': adminKey },
-            body: opts.body,
-            cache: 'no-store'
-        }).then(function (r) { return r.json(); });
-    }
     function notifyChanged() {
         try { var bc = new BroadcastChannel('blog-articles'); bc.postMessage({ type: 'articles-changed' }); bc.close(); } catch (e) { }
     }
@@ -76,9 +79,10 @@
     function newCanvasId(t) {
         return (t === 'mindmap' ? 'mm-' : 'wb-') + Math.random().toString(36).slice(2, 10);
     }
+    function isCanvasType() { return docType === 'whiteboard' || docType === 'mindmap'; }
 
-    // ===== 标签选择器（与后台写文章页同款：chips + 下拉建议 + 回车确认）=====
-    var tagPicker = null;      // 侧栏标签（发布弹窗已去掉，现在只有这一个）
+    // ===== 标签选择器 =====
+    var tagPicker = null;
 
     function currentTags() { return tagPicker ? tagPicker.getTags() : []; }
 
@@ -98,20 +102,21 @@
             if (!r || r.status !== 'success') return;
             var names = (r.data || []).map(function (t) { return t.name; }).filter(Boolean);
             if (tagPicker) tagPicker.setSuggestions(names);
-        }).catch(function () { /* 忽略 */ });
+        });
     }
 
-    // ===== 未保存提示 =====
+    // ===== 未保存状态 / 本地草稿（P0-2）=====
     var canvasListTimer = null;
     function scheduleCanvasListRefresh() {
         clearTimeout(canvasListTimer);
-        canvasListTimer = setTimeout(refreshCanvasList, 600);   // 打字时别每敲一下就重画侧栏
+        canvasListTimer = setTimeout(function () { refreshCanvasList(false); }, 400);
     }
     window.eeMarkDirty = function () {
         dirty = true;
         $('eeSaved').textContent = '有未保存改动';
         $('eeSaved').style.color = '#ffb020';
         scheduleCanvasListRefresh();
+        scheduleDraftSave();
     };
     window.addEventListener('beforeunload', function (e) {
         if (!dirty) return;
@@ -125,6 +130,143 @@
         }
     });
 
+    // ---- 本地草稿 ----
+    var draftKey = '';
+    var draftTimer = null;
+    var lastDraftHint = 0;
+
+    function draftKeyFor() {
+        return docId ? ('doc:' + docId) : ('new:' + normalizeType(newTypeParam));
+    }
+
+    /**
+     * 快照的可比较签名。
+     * 不直接 JSON.stringify 整个快照：分章文章的 chunks 里会有「还没加载」的 null，
+     * 上次暂存时可能加载了 3 章、这次只加载了 1 章，长度不同但内容其实一致 ——
+     * 直接比较会误报「有本地草稿」。
+     * 这里把尾部 null 去掉再比，并且不比较当前章号（章号不同不算内容不同）。
+     */
+    function draftSignature(snap) {
+        if (!snap) return '';
+        var chapters = null;
+        if (Array.isArray(snap.chapters)) {
+            chapters = snap.chapters.filter(function (c) { return typeof c === 'string'; });
+        }
+        return JSON.stringify({
+            title: snap.title || '',
+            tags: snap.tags || [],
+            excerpt: snap.excerpt || '',
+            image: snap.image || '',
+            status: snap.status || '',
+            chunked: !!snap.chunked,
+            content: snap.content || '',
+            chapters: chapters
+        });
+    }
+
+    /** 当前页面的一份快照（本地草稿 / 恢复比对都用它） */
+    function draftSnapshot() {
+        var snap = {
+            title: $('eeTitle').value,
+            tags: currentTags(),
+            excerpt: $('eeExcerpt').value,
+            image: $('eeImage').value,
+            status: $('eeStatusSel').value,
+            chunked: !!chunkEdit,
+            content: isCanvasType() ? '' : getEditorContent()
+        };
+        if (chunkEdit) {
+            snap.chapter = chunkEdit.current;
+            snap.total = chunkEdit.total;
+            // 只存已经拿到的章节（null 表示还没加载，恢复时保持未加载）
+            snap.chapters = chunkEdit.chunks.slice();
+        }
+        return snap;
+    }
+
+    function scheduleDraftSave() {
+        if (!EE.draft.available()) return;
+        clearTimeout(draftTimer);
+        // 2 秒防抖：写字时别每敲一下就序列化一遍
+        draftTimer = setTimeout(saveDraftNow, 2000);
+    }
+
+    function saveDraftNow() {
+        if (!dirty || !EE.draft.available()) return;
+        draftKey = draftKey || draftKeyFor();
+        var ok = EE.draft.save(draftKey, draftSnapshot());
+        if (!ok) return;
+        // 顶栏提示做成「已暂存」，与「已保存（已提交）」区分开，颜色也不同
+        var now = new Date().toLocaleTimeString();
+        var el = $('eeSaved');
+        if (el && dirty) {
+            el.textContent = '已暂存本地 ' + now;
+            el.title = '改动已存到浏览器本地，未提交到服务器。Ctrl+S 保存';
+            el.style.color = '#ffb020';
+        }
+        lastDraftHint = Date.now();
+    }
+
+    /**
+     * 载入完成后调用：若本地草稿与刚载入的内容不同，就问要不要恢复。
+     * 相同则静默丢弃（上一次保存后没清掉的残留）。
+     */
+    function maybeRestoreDraft() {
+        draftKey = draftKeyFor();
+        var rec = EE.draft.load(draftKey);
+        if (!rec || !rec.data) return;
+        var base = draftSignature(draftSnapshot());
+        if (draftSignature(rec.data) === base) { EE.draft.clear(draftKey); return; }
+
+        var when = rec.savedAt ? new Date(rec.savedAt).toLocaleString() : '上次';
+        var hasContent = !!String(rec.data.content || '').length ||
+            (Array.isArray(rec.data.chapters) && rec.data.chapters.some(function (c) { return !!c; }));
+        if (!hasContent && !rec.data.title) { EE.draft.clear(draftKey); return; }
+
+        EE.confirm({
+            title: '恢复本地草稿',
+            message: '检测到 ' + when + ' 自动暂存的本地草稿（未提交）。恢复后会覆盖当前编辑器内容；丢弃则保持服务器上的版本。',
+            okText: '恢复草稿',
+            cancelText: '丢弃'
+        }).then(function (yes) {
+            if (!yes) { EE.draft.clear(draftKey); return; }
+            applyDraft(rec.data);
+            dirty = true;
+            $('eeSaved').textContent = '已恢复本地草稿（未提交）';
+            $('eeSaved').style.color = '#ffb020';
+            toast('已恢复草稿，记得 Ctrl+S 保存', 'success');
+        });
+    }
+
+    function applyDraft(d) {
+        if (!d) return;
+        if (typeof d.title === 'string') $('eeTitle').value = d.title;
+        if (d.tags && tagPicker) tagPicker.setTags(d.tags, true);
+        $('eeExcerpt').value = d.excerpt || '';
+        $('eeImage').value = d.image || '';
+        window.eeRenderCover();
+        if (d.status) $('eeStatusSel').value = d.status;
+        if (d.chunked && chunkEdit) {
+            // 章节结构变了就不做局部恢复，避免把内容写进错误的章
+            if (d.total === chunkEdit.total && Array.isArray(d.chapters)) {
+                for (var i = 0; i < chunkEdit.total; i++) {
+                    if (typeof d.chapters[i] === 'string') chunkEdit.chunks[i] = d.chapters[i];
+                }
+                var idx = Number(d.chapter);
+                if (Number.isInteger(idx) && idx >= 0 && idx < chunkEdit.total) {
+                    chunkEdit.current = idx;
+                    $('eeChapterSel').value = String(idx);
+                    setEditorContent(chunkEdit.chunks[idx] || '');
+                }
+            } else {
+                toast('本地草稿与当前分章结构不一致，只恢复了属性', 'error');
+            }
+        } else if (typeof d.content === 'string' && !isCanvasType()) {
+            setEditorContent(d.content);
+        }
+        refreshCanvasList(true);
+    }
+
     // ===== 编辑器 =====
     function applyTheme() {
         var theme = localStorage.getItem('editor_theme') || 'sepia';
@@ -132,7 +274,7 @@
         var el = $('eeVditor');
         if (!el) return;
         THEME_CLASSES.forEach(function (c) { el.classList.remove(c); });
-        el.classList.add('vditor-theme-' + theme);
+        el.classList.add('vditor-theme-' + (editorThemes[theme] ? theme : 'sepia'));
         el.style.setProperty('--editor-bg', t.bg);
         el.style.setProperty('--editor-text', t.text);
         el.style.setProperty('--editor-pre-bg', t.pre);
@@ -140,7 +282,7 @@
     function editorHeight() {
         var col = $('eeEditorCol');
         var h = col ? col.clientHeight : 0;
-        // 标题卡已经搬到侧栏，这里只剩「分章」条会占高度（而且只在分章文章里出现），
+        // 标题卡在侧栏，这里只剩「分章」条会占高度（而且只在分章文章里出现），
         // 所以按它实际高度动态扣，而不是像以前那样写死减一个数。
         var bar = $('eeChapterBar');
         if (bar && bar.offsetParent !== null) h -= (bar.offsetHeight + 10);
@@ -152,12 +294,13 @@
         el.style.height = editorHeight() + 'px';
     }
 
-    // ===== 侧栏折叠 =====
-    // 折叠状态存在 localStorage，刷新后保持。显隐由 .ee-main.side-collapsed 这个类控制
-    // （CSS 里带 !important，因为 applyDoc() 会直接写 style.display='flex'）。
+    // ===== 侧栏折叠（桌面）/ 抽屉（窄屏，P1-12）=====
     var SIDE_KEY = 'ee_side_collapsed';
     function sideCollapsed() {
         try { return localStorage.getItem(SIDE_KEY) === '1'; } catch (e) { return false; }
+    }
+    function isNarrow() {
+        return window.matchMedia && window.matchMedia('(max-width: 720px)').matches;
     }
     function applySideCollapsed() {
         var main = document.querySelector('.ee-main');
@@ -171,16 +314,36 @@
         }
         var handle = $('eeSideOpen');
         if (handle) handle.setAttribute('aria-hidden', collapsed ? 'false' : 'true');
+        // 窄屏下抽屉默认收起（点顶栏「属性」打开）
+        if (isNarrow() && !main.classList.contains('side-drawer-open')) {
+            $('eeSide').classList.remove('open');
+        }
         // 编辑区宽度变了，让编辑器重新贴合
         setTimeout(fitEditor, 60);
     }
     window.eeToggleSide = function () {
         var main = document.querySelector('.ee-main');
         if (!main) return;
+        if (isNarrow()) { window.eeToggleSideDrawer(); return; }
         var next = !main.classList.contains('side-collapsed');
         try { localStorage.setItem(SIDE_KEY, next ? '1' : '0'); } catch (e) { /* 隐私模式等，忽略 */ }
         applySideCollapsed();
         toast(next ? '侧栏已折叠（Ctrl+. 展开）' : '侧栏已展开');
+    };
+    /** 窄屏：右侧抽屉的开关 */
+    window.eeToggleSideDrawer = function () {
+        var side = $('eeSide');
+        var main = document.querySelector('.ee-main');
+        if (!side) return;
+        var open = !side.classList.contains('open');
+        side.classList.toggle('open', open);
+        if (main) main.classList.toggle('side-drawer-open', open);
+        var mask = $('eeSideMask');
+        if (mask) mask.classList.toggle('open', open);
+        if (open) {
+            // 抽屉里第一个输入框直接聚焦，少一次点击
+            setTimeout(function () { try { $('eeTitle').focus(); } catch (e) { /* 忽略 */ } }, 220);
+        }
     };
     // Ctrl/Cmd + . 切换；用捕获阶段，避免被 Vditor 的快捷键吞掉
     document.addEventListener('keydown', function (e) {
@@ -189,11 +352,36 @@
             window.eeToggleSide();
         }
     }, true);
-    function updateInfo() {
-        if (!vditor) return;
-        var v = vditor.getValue() || '';
-        $('eeInfo').textContent = v.length + ' 字';
+
+    // ===== 顶栏「⋯」更多菜单（窄屏把次要动作收进来）=====
+    window.eeOpenShortcuts = function () { EE.openShortcuts(); };
+    window.eeToggleMore = function (e) {
+        if (e && e.stopPropagation) e.stopPropagation();
+        var box = $('eeMoreMenu');
+        if (!box) return;
+        box.classList.toggle('open');
+    };
+    document.addEventListener('click', function (e) {
+        var box = $('eeMoreMenu');
+        if (!box || !box.classList.contains('open')) return;
+        if (!box.contains(e.target)) box.classList.remove('open');
+    });
+
+    // ===== 字数（P1-6：净字数 + 防抖）=====
+    var infoTimer = null;
+    function scheduleInfo() {
+        clearTimeout(infoTimer);
+        infoTimer = setTimeout(updateInfo, 250);
     }
+    function updateInfo() {
+        var el = $('eeInfo');
+        if (!el) return;
+        var raw = getEditorContent();
+        var c = EE.countWords(raw);
+        el.textContent = c.words.toLocaleString() + ' 字';
+        el.title = '净字数：汉字 + 英文单词，不含 Markdown 标记\n源码 ' + raw.length + ' 字符';
+    }
+
     function initEditor() {
         if (vditor) return vditor;
         var host = $('eeVditor');
@@ -209,23 +397,25 @@
             lang: 'zh_CN',
             placeholder: '正文内容……支持 Markdown，粘贴/拖拽图片会自动上传',
             // 顶部只留常用的：其余（删除线 / 行内代码 / 任务 / 缩进 / 分割线 /
-            // 编辑模式 / 主题 / 导出…）都进了右键菜单，见 /js/editor-menu.js。
+            // 编辑模式 / 导出…）都进了右键菜单，见 /js/editor-menu.js。
             // 表格故意留在工具栏：它点开会弹「几行几列」的面板，那个面板是贴着
             // 工具栏按钮定位的，从右键菜单里调用会让面板跑到顶部去。
+            // P2-16：more 里不再给 content-theme / code-theme —— 页面有一套 editor_theme
+            // （顶部工具栏 + localStorage），Vditor 自带那套会把同一批 CSS 变量改回去，
+            // 两套开关互相覆盖，表现为「换了主题又变回去」。
             toolbar: [
                 'headings', 'bold', 'italic', 'link',
                 '|', 'list', 'ordered-list', 'quote',
                 '|', 'code', 'table', 'upload',
                 '|', window.EmbedPickerToolbarItem || { name: 'eeEmbedPick', tip: '插入白板 / 思维导图', click: function () {} },
                 '|', 'undo', 'redo',
-                { name: 'more', toolbar: ['strike', 'inline-code', 'check', 'outdent', 'indent', 'line', 'edit-mode', 'code-theme', 'content-theme', 'export', 'help'] }
+                { name: 'more', toolbar: ['strike', 'inline-code', 'check', 'outdent', 'indent', 'line', 'edit-mode', 'export', 'help'] }
             ],
             // 内嵌画布块在编辑器内显示为卡片（逻辑在 /js/embed-picker.js）
             customRenders: window.EmbedPicker ? window.EmbedPicker.customRenders : [],
             upload: {
                 accept: 'image/*',
                 multiple: true,
-                // 自定义上传：走 JSON 通道（与后台一致），前端先压缩
                 handler: function (files) {
                     (async function () {
                         for (var i = 0; i < files.length; i++) {
@@ -237,7 +427,10 @@
                 }
             },
             cache: { enable: false },
-            input: function () { updateInfo(); window.eeMarkDirty(); },
+            input: function () {
+                scheduleInfo();
+                window.eeMarkDirty();
+            },
             after: function () {
                 vditorReady = true;
                 applyTheme();
@@ -252,8 +445,8 @@
                     window.EmbedPicker.setVditor(vditor);
                     window.EmbedPicker.bindToolbar(vditor);
                 }
-                // 正文就位后再刷一次侧栏画布清单（setValue 是异步渲染的）
-                refreshCanvasList();
+                // 正文就位后再刷一次侧栏画布清单（setValue 是异步渲染的，这里做一次全文解析兜底）
+                refreshCanvasList(true);
                 stripVditorPopover();
                 // 右键菜单（剪贴板 / 格式 / 插入 / 段落操作），见 /js/editor-menu.js
                 if (window.EditorMenu) window.EditorMenu.attach(vditor);
@@ -281,6 +474,8 @@
         var ed = initEditor();
         if (!ed) return;
         md = md || '';
+        // 内容整体换了：画布清单要重新做一次全文解析（DOM 卡片还没渲染出来）
+        sawDomCards = false;
         if (!vditorReady) { pendingMd = md; return; }
         ed.setValue(md);
         updateInfo();
@@ -295,348 +490,10 @@
         try { return ed.getValue() || ''; } catch (e) { return pendingMd || ''; }
     }
 
-    // ===== 白板 =====
-    function loadExcBundle() {
-        if (window.ExcalidrawMount) { window.ExcalidrawMount(); return; }
-        var css = document.createElement('link');
-        css.rel = 'stylesheet';
-        css.href = '/js/vendor/excalidraw/excalidraw-editor.' + EXC_BUNDLE_VERSION + '.css';
-        document.head.appendChild(css);
-        var s = document.createElement('script');
-        s.src = '/js/vendor/excalidraw/excalidraw-editor.' + EXC_BUNDLE_VERSION + '.js';
-        s.onload = function () { if (window.ExcalidrawMount) window.ExcalidrawMount(); };
-        s.onerror = function () { $('eeBoardHost').innerHTML = '<div class="ee-hint">白板组件加载失败，请刷新重试</div>'; };
-        document.head.appendChild(s);
-    }
-    function mountBoard() {
-        var host = $('eeBoardHost');
-        var bid = (doc && doc.boardId) || '';
-        if (!bid) {
-            host.innerHTML = '<div class="ee-hint">这篇文章还没有绑定画板，无法内嵌编辑；可在此页下方新建画板，或在写文章页切到「白板」形态新建。</div>';
-            return;
-        }
-        var openBtn = null; // 顶栏已无此入口，保留变量以便将来恢复
-        if (openBtn) openBtn.href = '/excalidraw.html?note=' + encodeURIComponent(bid) + '&edit=1';
-        // iframe 内嵌独立白板页：与编辑页样式/布局隔离，避免相互干扰
-        host.innerHTML = '<iframe class="ee-frame" title="白板编辑器" src="/excalidraw.html?note=' + encodeURIComponent(bid) + '&edit=1"></iframe>';
-    }
-    // ===== 思维导图 =====
-    function mapId() { return (doc && doc.mapId) || ''; }
-    function mmApi(query, opts, retry) {
-        opts = opts || {};
-        if (retry === undefined) retry = 1;
-        return fetch('/api/mindmap?' + query, {
-            method: opts.method || 'GET',
-            headers: { 'Content-Type': 'application/json', 'X-Admin-Key': adminKey },
-            body: opts.body,
-            cache: 'no-store'
-        }).then(function (r) {
-            if (r.status >= 500) throw new Error('HTTP ' + r.status);
-            return r.json();
-        }).catch(function (err) {
-            if (retry > 0) {
-                return new Promise(function (res) { setTimeout(res, 700); }).then(function () {
-                    return mmApi(query, opts, retry - 1);
-                });
-            }
-            throw err;
-        });
-    }
-    document.addEventListener('DOMContentLoaded', function () { wireMindmapBind(); });
-    function mountMindmap() {
-        var host = $('eeMindmapHost');
-        var mid = mapId();
-        if (!host) return;
-        if (!mid) {
-            // 没绑定：直接给出「选一张已有的 / 新建一张」的入口
-            var bar = $('eeMindmapBar');
-            if (bar) bar.style.display = 'flex';
-            host.innerHTML = '<div class="ee-hint">这篇文章还没绑定导图。选一张已有的，或用「新建一张导图」——' +
-                '绑定后这里会直接显示可编辑的导图，图片与内容就存在一起了。</div>';
-            void fillMindmapPicker();
-            return;
-        }
-        var bar2 = $('eeMindmapBar');
-        if (bar2) bar2.style.display = 'none';
-        // iframe 内嵌导图页（与白板同一套交互：底部胶囊、右侧留言抽屉）
-        // from=admin 让导图页收起自己的胶囊，由这里顶栏的按钮统一控制
-        host.innerHTML = '<iframe class="ee-frame" title="导图编辑器" src="/mindmap.html?note=' +
-            encodeURIComponent(mid) + '&edit=1&from=admin"></iframe>';
-    }
-    /* ===== 文章 → 导图 绑定 ===== */
-    function mmListApi() {
-        return fetch('/api/mindmap?action=list', {
-            headers: { 'X-Admin-Key': adminKey },
-            cache: 'no-store'
-        }).then(function (r) { return r.json(); });
-    }
-    function fillMindmapPicker() {
-        var sel = $('eeMindmapPick');
-        if (!sel || sel.dataset.loaded === '1') return Promise.resolve();
-        return mmListApi().then(function (d) {
-            if (!d || d.status !== 'success') return;
-            var items = d.items || [];
-            sel.innerHTML = '<option value="">— 选择一张已有导图 —</option>' +
-                items.map(function (it) {
-                    return '<option value="' + it.id + '">' +
-                        (it.title || '未命名导图').replace(/[<>&]/g, '') +
-                        '（' + it.id + (it.hasKey ? '·有口令' : '') + '）</option>';
-                }).join('');
-            sel.dataset.loaded = '1';
-        }).catch(function () { /* 列表拿不到就不显示选项 */ });
-    }
-    /** 把 doc.mapId 换成新值，并刷新导图区 */
-    function bindMindmap(newId) {
-        if (!doc) return;
-        doc.mapId = newId;
-        if (newId && doc.type !== 'mindmap') {
-            doc.type = 'mindmap';
-            if (typeof window.eeSetType === 'function') window.eeSetType('mindmap');
-        }
-        mountMindmap();
-    }
-    function wireMindmapBind() {
-        var sel = $('eeMindmapPick');
-        var btn = $('eeMindmapBind');
-        var nw = $('eeMindmapNew');
-        if (btn && !btn.dataset.wired) {
-            btn.dataset.wired = '1';
-            btn.addEventListener('click', function () {
-                var v = sel ? sel.value : '';
-                if (!v) { alert('先选一张导图'); return; }
-                bindMindmap(v);
-            });
-        }
-        if (nw && !nw.dataset.wired) {
-            nw.dataset.wired = '1';
-            nw.addEventListener('click', function () {
-                // 新建：给一个不会撞车的 id，导图保存时会自动创建
-                var nid = 'map-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7);
-                bindMindmap(nid);
-            });
-        }
-    }
-    window.eeSaveMindmap = async function () {
-        var frame = document.querySelector('#eeMindmapHost iframe.ee-frame');
-        var saver = null, dirtyFn = null;
-        try {
-            saver = frame && frame.contentWindow && frame.contentWindow.__mindmapSave;
-            dirtyFn = frame && frame.contentWindow && frame.contentWindow.__mindmapDirty;
-        } catch (e) { saver = null; dirtyFn = null; }
-        if (typeof saver !== 'function') return true; // 还没挂载好：不阻塞后续保存
-        // 没有未落盘的改动就不用打一次保存（避免每次都产生新版本）
-        try {
-            if (typeof dirtyFn === 'function' && !dirtyFn()) return true;
-        } catch (e) { /* 忽略 */ }
-        return !!(await saver());
-    };
-
-    // ===== 白板管理（移植自后台「白板管理」：权限 / 口令 / 名称 / 历史回滚）=====
-    function excApi(query, opts, retry) {
-        opts = opts || {};
-        if (retry === undefined) retry = 1; // 网络层失败（部署中 / 连接被关闭）自动重试一次
-        return fetch('/api/excalidraw?' + query, {
-            method: opts.method || 'GET',
-            headers: { 'Content-Type': 'application/json', 'X-Admin-Key': adminKey },
-            body: opts.body,
-            cache: 'no-store'
-        }).then(function (r) {
-            if (r.status >= 500) throw new Error('HTTP ' + r.status);
-            return r.json();
-        }).catch(function (err) {
-            if (retry > 0) {
-                return new Promise(function (res) { setTimeout(res, 700); }).then(function () {
-                    return excApi(query, opts, retry - 1);
-                });
-            }
-            throw err;
-        });
-    }
-    function boardId() { return (doc && doc.boardId) || ''; }
-
-    // 同步「开放编辑 / 设为只读」按钮的选中高亮（-1 表示未知/读取失败，两个都不亮）
-    function markEditableButtons(state) {
-        var on = $('eeBaEditOn'), off = $('eeBaEditOff');
-        if (on) on.classList.toggle('active', state === 1);
-        if (off) off.classList.toggle('active', state === 0);
-    }
-
-    // 修改白板 meta（标题 / 权限 / 口令）
-    async function boardMetaSet(body, okMsg) {
-        var bid = boardId();
-        if (!bid) { toast('该文章还没有绑定画板', 'error'); return false; }
-        var d = await excApi('action=meta&id=' + encodeURIComponent(bid), {
-            method: 'POST',
-            body: JSON.stringify(body)
-        });
-        if (d.status !== 'success') { toast(d.message || '操作失败', 'error'); return false; }
-        if (okMsg) toast(okMsg, 'success');
-        window.eeLoadBoardAdmin();
-        notifyChanged();
-        return true;
-    }
-
-    // ===== 导图口令（原来只在发布弹窗里能设，弹窗去掉后搬到侧栏）=====
-    async function refreshMapKeyCard() {
-        var card = $('eeMapKeyCard');
-        if (!card) return;
-        var mid = mapId();
-        if (docType !== 'mindmap' || !mid) { card.style.display = 'none'; return; }
-        card.style.display = '';
-        try {
-            var d = await mmApi('id=' + encodeURIComponent(mid) + '&metaOnly=1');
-            var hasKey = !!(d && d.status === 'success' && d.meta && d.meta.hasKey);
-            $('eeMapKey').textContent = hasKey ? '已设置' : '未设置';
-            // 只有设过口令才给「清除」按钮 —— 没设过时它点了也没意义
-            var clr = $('eeMapKeyClear');
-            if (clr) clr.style.display = hasKey ? '' : 'none';
-        } catch (e) {
-            $('eeMapKey').textContent = '读取失败';   // 接口不可用时降级，不抛未捕获异常
-            var clr2 = $('eeMapKeyClear');
-            if (clr2) clr2.style.display = 'none';
-        }
-    }
-    async function mapMetaSet(body, okMsg) {
-        var mid = mapId();
-        if (!mid) { toast('导图还没保存，先保存一次', 'error'); return false; }
-        var d = await mmApi('action=meta&id=' + encodeURIComponent(mid), {
-            method: 'POST',
-            body: JSON.stringify(body)
-        });
-        if (!d || d.status !== 'success') { toast((d && d.message) || '操作失败', 'error'); return false; }
-        if (okMsg) toast(okMsg, 'success');
-        refreshMapKeyCard();
-        notifyChanged();
-        return true;
-    }
-    window.eeSaveMapKey = async function () {
-        var k = ($('eeMapKeyInput').value || '').trim();
-        if (k.length < 4) { toast('口令至少 4 位', 'error'); return; }
-        if (await mapMetaSet({ editKey: k }, '导图口令已设置')) $('eeMapKeyInput').value = '';
-    };
-    window.eeClearMapKey = async function () {
-        if (!window.confirm('确定清除这张导图的编辑口令？清除后任何人都能编辑它。')) return;
-        mapMetaSet({ editKey: '' }, '导图口令已清除');
-    };
-
-    window.eeLoadBoardAdmin = async function () {
-        var card = $('eeBoardAdminCard');
-        if (!card) return;
-        var bid = boardId();
-        if (docType !== 'whiteboard' || !bid) { card.style.display = 'none'; return; }
-        card.style.display = '';
-        try {
-            var d = await excApi('id=' + encodeURIComponent(bid) + '&metaOnly=1');
-            if (d.status === 'success' && d.meta) {
-                $('eeBaEditable').textContent = d.meta.editable === 1 ? '公开可编辑' : '只读';
-                $('eeBaKey').textContent = d.meta.hasKey ? '已设置' : '未设置';
-                markEditableButtons(d.meta.editable === 1 ? 1 : 0);
-                // 只有设过口令才给「清除」按钮 —— 没设过时它点了也没意义
-                var clr = $('eeBaKeyClear');
-                if (clr) clr.style.display = d.meta.hasKey ? '' : 'none';
-            } else {
-                $('eeBaEditable').textContent = '画板不存在';
-                $('eeBaKey').textContent = '—';
-                markEditableButtons(-1);
-                var clr2 = $('eeBaKeyClear');
-                if (clr2) clr2.style.display = 'none';
-            }
-        } catch (e) {
-            // 接口不可用（部署中 / 连接被关闭）时降级显示，不抛未捕获异常
-            $('eeBaEditable').textContent = '读取失败';
-            $('eeBaKey').textContent = '—';
-            $('eeBaRev').textContent = '接口暂时不可用';
-            markEditableButtons(-1);
-            var clr3 = $('eeBaKeyClear');
-            if (clr3) clr3.style.display = 'none';
-            toast('白板信息读取失败（网络或部署中），可点「刷新历史」重试', 'error');
-        }
-        window.eeLoadBoardHistory();
-    };
-
-    window.eeSetBoardEditable = function (v) {
-        boardMetaSet({ editable: v }, v === 1 ? '已开放编辑' : '已设为只读');
-    };
-
-    // 白板名称不再是独立入口：它就是侧栏顶部的「标题」，
-    // 保存文章时由 syncBoardTitleFromArticle() 同步到白板 meta.title。
-    /**
-     * 把文章标题同步成白板的 meta.title。
-     * 只在白板上做：导图那边后端 meta 支不支持 title 没确认，不冒险；
-     * 而且导图侧栏本来也没有第二个改名入口，不存在两处打架的问题。
-     */
-    async function syncBoardTitleFromArticle(type, title) {
-        if (type !== 'whiteboard' || !title) return;
-        if (!boardId()) return;
-        try { await boardMetaSet({ title: title }); } catch (e) { /* 忽略：同步失败不回收文章保存 */ }
-    }
-
-    window.eeSaveBoardKey = async function () {
-        var k = ($('eeBaKeyInput').value || '').trim();
-        if (k.length < 4) { toast('口令至少 4 位', 'error'); return; }
-        var ok = await boardMetaSet({ editKey: k }, '口令已设置');
-        if (ok) $('eeBaKeyInput').value = '';
-    };
-
-    window.eeClearBoardKey = function () {
-        boardMetaSet({ editKey: '' }, '口令已清除');
-    };
-
-    window.eeLoadBoardHistory = async function () {
-        var bid = boardId();
-        var sel = $('eeBaRevSel');
-        if (!sel || !bid) return;
-        sel.innerHTML = '<option value="">加载中…</option>';
-        try {
-            var d = await excApi('action=history&id=' + encodeURIComponent(bid));
-            if (d.status !== 'success') { sel.innerHTML = '<option value="">读取失败</option>'; return; }
-            var revs = d.revs || [];
-            if (!revs.length) {
-                sel.innerHTML = '<option value="">暂无历史版本</option>';
-                $('eeBaRev').textContent = '当前 rev ' + (d.current || 0) + ' · 暂无快照';
-                return;
-            }
-            sel.innerHTML = revs.map(function (r) {
-                return '<option value="' + r + '">rev ' + r + (r === d.current ? '（当前）' : '') + '</option>';
-            }).join('');
-            $('eeBaRev').textContent = '当前 rev ' + (d.current || 0) + ' · 共 ' + revs.length + ' 个快照';
-        } catch (e) {
-            sel.innerHTML = '<option value="">读取失败</option>';
-        }
-    };
-
-    window.eeRollbackBoard = async function () {
-        var bid = boardId();
-        var sel = $('eeBaRevSel');
-        var rev = sel ? sel.value : '';
-        if (!bid || rev === '') { toast('请先选择要回滚到的版本', 'error'); return; }
-        if (!window.confirm('确定把画布回滚到 rev ' + rev + '？当前画布会被该快照覆盖，当前版本仍保留在历史中。')) return;
-        var d = await excApi('action=rollback&id=' + encodeURIComponent(bid) + '&rev=' + encodeURIComponent(rev), { method: 'POST' });
-        if (d.status !== 'success') { toast(d.message || '回滚失败', 'error'); return; }
-        toast('已回滚到 rev ' + rev, 'success');
-        mountBoard();          // 重建 iframe，载入回滚后的画布
-        window.eeLoadBoardAdmin();
-        notifyChanged();
-    };
-
-    window.eeSaveBoard = async function () {
-        var frame = document.querySelector('#eeBoardHost iframe.ee-frame');
-        var saver = null;
-        try { saver = frame && frame.contentWindow && frame.contentWindow.__excalidrawSave; } catch (e) { saver = null; }
-        if (typeof saver !== 'function') { toast('白板编辑器还在加载，请稍候', 'error'); return; }
-        var ok = await saver();
-        toast(ok ? '画板已保存' : '画板保存未完成（口令/空画布/网络？）', ok ? 'success' : 'error');
-        if (ok) notifyChanged();
-    };
-
     // ===== 渲染 =====
-    function renderCover() {
-        window.eeRenderCover();
-    }
     // 封面：缩略图预览 + 上传 / 从图库选 / 移除（页面上不展示 URL 文本）
     window.eeRenderCover = function () {
         var url = $('eeImage').value.trim();
-        // 侧栏封面卡（发布弹窗已去掉，不再有第二处封面预览要同步）
         var img = $('eeCoverImg');
         var empty = $('eeCoverEmpty');
         var clear = $('eeCoverClear');
@@ -668,12 +525,11 @@
     async function eeUploadImage(file) {
         try {
             var d = await fileToBase64(file);
-            var res = await fetch('/api/article-image', {
+            var r = await EE.request('/api/article-image', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-Admin-Key': adminKey },
-                body: JSON.stringify({ data: d.base64, mime: d.mime, name: file.name })
+                body: JSON.stringify({ data: d.base64, mime: d.mime, name: file.name }),
+                headers: { 'Content-Type': 'application/json', 'X-Admin-Key': EE.adminKey() }
             });
-            var r = await res.json();
             if (r.status === 'success' && r.url) return r.url;
             toast('图片上传失败：' + (r.message || '未知原因'), 'error');
         } catch (e) {
@@ -683,24 +539,25 @@
     }
     async function eeUploadCover(file) {
         if (!file) return;
+        var d, r;
         try {
-            var d = await fileToBase64(file);
-            var res = await fetch('/api/article-image', {
+            d = await fileToBase64(file);
+            r = await EE.request('/api/article-image', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-Admin-Key': adminKey },
-                body: JSON.stringify({ data: d.base64, mime: d.mime, name: file.name })
+                body: JSON.stringify({ data: d.base64, mime: d.mime, name: file.name }),
+                headers: { 'Content-Type': 'application/json', 'X-Admin-Key': EE.adminKey() }
             });
-            var r = await res.json();
-            if (r.status === 'success' && r.url) {
-                $('eeImage').value = r.url;
-                window.eeRenderCover();
-                window.eeMarkDirty();
-                toast('封面已上传', 'success');
-            } else {
-                toast(r.message || '上传失败', 'error');
-            }
         } catch (e) {
             toast('上传失败：' + (e.message || e), 'error');
+            return;
+        }
+        if (r.status === 'success' && r.url) {
+            $('eeImage').value = r.url;
+            window.eeRenderCover();
+            window.eeMarkDirty();
+            toast('封面已上传', 'success');
+        } else {
+            toast(r.message || '上传失败', 'error');
         }
     }
     window.eeClearCover = function () {
@@ -715,23 +572,19 @@
         if (!box || !grid) return;
         grid.innerHTML = '<div class="ee-picker-empty">加载中…</div>';
         box.classList.add('open');
-        try {
-            var r = await api('action=images&_=' + Date.now());
-            var list = (r && r.status === 'success' && Array.isArray(r.data)) ? r.data : [];
-            if (!list.length) {
-                grid.innerHTML = '<div class="ee-picker-empty">图库暂无图片，可到「图片管理」上传</div>';
-                return;
-            }
-            window.__eePickList = list;
-            grid.innerHTML = list.map(function (img, i) {
-                var thumb = img.thumb || img.url || '';
-                return '<div class="ee-picker-item" onclick="eeChooseCover(' + i + ')">' +
-                    '<img src="' + esc(thumb) + '" loading="lazy" alt="">' +
-                    '<span>' + esc(img.key || '') + '</span></div>';
-            }).join('');
-        } catch (e) {
-            grid.innerHTML = '<div class="ee-picker-empty">加载失败：' + esc(e.message || e) + '</div>';
+        var r = await api('action=images&_=' + Date.now());
+        var list = (r && r.status === 'success' && Array.isArray(r.data)) ? r.data : [];
+        if (!list.length) {
+            grid.innerHTML = '<div class="ee-picker-empty">图库暂无图片，可到「图片管理」上传</div>';
+            return;
         }
+        window.__eePickList = list;
+        grid.innerHTML = list.map(function (img, i) {
+            var thumb = img.thumb || img.url || '';
+            return '<div class="ee-picker-item" onclick="eeChooseCover(' + i + ')">' +
+                '<img src="' + esc(thumb) + '" loading="lazy" alt="">' +
+                '<span>' + esc(img.key || '') + '</span></div>';
+        }).join('');
     };
     window.eeClosePicker = function () {
         var box = $('eePicker');
@@ -759,11 +612,10 @@
             return '<span>' + r[0] + '：<b>' + r[1] + '</b></span>';
         }).join('');
     }
-    // 顶栏那两个「文章 / 草稿」徽标已按需求删掉，状态看侧栏的「状态」下拉即可。
 
     // ===== 加载 =====
     async function load() {
-        if (!adminKey) { location.replace('/admin.html'); return; }
+        if (!EE.adminKey()) { location.replace('/admin.html'); return; }
         if (!docId) { toast('缺少文章 ID', 'error'); return; }
         var r = await api('action=articles&id=' + encodeURIComponent(docId) + '&_=' + Date.now());
         if (r.status !== 'success' || !r.data) {
@@ -773,20 +625,23 @@
         doc = r.data;
         // 长文章（分章存储）：按章加载编辑，避免一次把全文塞进编辑器
         if (doc && doc.chunked) {
-            try {
-                var toc = await api('action=article-toc&id=' + encodeURIComponent(docId) + '&_=' + Date.now());
-                if (toc && toc.status === 'success' && toc.data) {
-                    chunkEdit = {
-                        total: toc.data.total || 0,
-                        chapters: toc.data.chapters || [],
-                        current: 0,
-                        chunks: []
-                    };
-                    var c0 = await fetchChunkText(0);
-                    chunkEdit.chunks[0] = c0 || '';
-                    doc.content = chunkEdit.chunks[0];
+            var toc = await api('action=article-toc&id=' + encodeURIComponent(docId) + '&_=' + Date.now());
+            if (toc && toc.status === 'success' && toc.data) {
+                chunkEdit = {
+                    total: toc.data.total || 0,
+                    chapters: toc.data.chapters || [],
+                    current: 0,
+                    chunks: []
+                };
+                var c0 = await fetchChunkText(0);
+                if (c0 === null) {
+                    chunkEdit = null;
+                    toast('首章读取失败，已按普通文章载入（草稿与保存已做保护，可重试）', 'error');
+                } else {
+                    chunkEdit.chunks[0] = c0;
+                    doc.content = c0;
                 }
-            } catch (e) { chunkEdit = null; }
+            }
         }
         docType = normalizeType(doc.type);
         await applyDoc();
@@ -799,7 +654,7 @@
      * 与文章记录是两条数据，id 先定下来，打开就能画、画完保存即创建。
      */
     async function initNewDoc() {
-        if (!adminKey) { location.replace('/admin.html'); return; }
+        if (!EE.adminKey()) { location.replace('/admin.html'); return; }
         docType = normalizeType(newTypeParam);
         var id = '';
         var bId = '';
@@ -846,20 +701,20 @@
      * dirty 由 true 变 false 才算保存过，单纯打开看一眼不会建记录。
      */
     function watchNewCanvasSave() {
-        if (!isNew || (docType !== 'whiteboard' && docType !== 'mindmap')) return;
+        if (!isNew || !isCanvasType()) return;
         var isBoard = docType === 'whiteboard';
         var sawDirty = false;
         var timer = setInterval(function () {
             if (savedOnce || !isNew) { clearInterval(timer); return; }
             var frame = document.querySelector(isBoard ? '#eeBoardHost iframe' : '#eeMindmapHost iframe');
-            var dirty;
+            var d;
             try {
                 var fn = frame && frame.contentWindow && frame.contentWindow[isBoard ? '__excalidrawDirty' : '__mindmapDirty'];
                 if (typeof fn !== 'function') return;
-                dirty = fn();
+                d = fn();
             } catch (e) { return; } // 还没挂载好 / 拿不到：下一轮再看
-            if (dirty === true) { sawDirty = true; return; }
-            if (sawDirty && dirty === false) {
+            if (d === true) { sawDirty = true; return; }
+            if (sawDirty && d === false) {
                 clearInterval(timer);
                 autoAdoptCanvas();
             }
@@ -886,7 +741,7 @@
         $('eeExcerpt').value = doc.excerpt || '';
         $('eeImage').value = doc.image || '';
         $('eeStatusSel').value = doc.status || (isNew ? 'draft' : 'published');
-        renderCover();
+        window.eeRenderCover();
         renderMeta();
         if (docType === 'card') $('eeViewBtn').textContent = '首页查看';
         // 随记没有封面图；摘要只有文章有（白板保留封面图）
@@ -915,15 +770,15 @@
             $('eeSide').style.display = 'flex';      // 右侧功能区（状态/标签/封面/信息）始终保持
             if ($('eeMindmap')) $('eeMindmap').style.display = 'none';
             $('eeBoard').style.display = 'flex';
-            mountBoard();
+            window.EEEmbed.mountBoard();
             window.eeLoadBoardAdmin();
         } else if (docType === 'mindmap') {
             $('eeEditorCol').style.display = 'none'; // 导图同样用整块画布区
             $('eeSide').style.display = 'flex';
             if ($('eeBoard')) $('eeBoard').style.display = 'none';
             $('eeMindmap').style.display = 'flex';
-            mountMindmap();
-            refreshMapKeyCard();
+            window.EEEmbed.mountMindmap();
+            window.EEEmbed.refreshMapKeyCard();
         } else {
             if ($('eeBoard')) $('eeBoard').style.display = 'none';
             if ($('eeMindmap')) $('eeMindmap').style.display = 'none';
@@ -938,15 +793,39 @@
         $('eeSaved').style.color = isNew ? '#ffb020' : '#7bd88f';
     }
 
-    // ===== 长文章按章编辑（避免一次载入全文） =====
+    // ===== 长文章按章编辑（避免一次载入全文）=====
     var chunkEdit = null; // { total, chapters, current, chunks }
+
+    /**
+     * 取一章正文。
+     * @returns {Promise<string|null>} null 明确表示「失败」，空串表示「这一章本来就是空的」
+     * 这个区分是 P0 的关键：以前失败也返回 null，调用方 `text || ''` 一兜底就成了空串，
+     * 保存时把空串拼进全文 → 服务端重新分块 → 那一章正文被永久清空。
+     */
     async function fetchChunkText(i) {
-        try {
-            var r = await api('action=article-chunk&id=' + encodeURIComponent(docId) + '&i=' + i + '&_=' + Date.now());
-            if (r && r.status === 'success' && r.data) return r.data.content || '';
-        } catch (e) { /* 拉取失败返回 null，由调用方兜底 */ }
+        var r = await api('action=article-chunk&id=' + encodeURIComponent(docId) + '&i=' + i + '&_=' + Date.now());
+        if (r && r.status === 'success' && r.data && typeof r.data.content === 'string') return r.data.content;
         return null;
     }
+
+    /** 并发把缺失的章节补齐；有一章失败就整批失败（保存必须全量一致） */
+    async function loadMissingChunks(list) {
+        var BATCH = 6;
+        var failed = [];
+        for (var i = 0; i < list.length; i += BATCH) {
+            var batch = list.slice(i, i + BATCH);
+            var res = await Promise.all(batch.map(function (idx) {
+                return fetchChunkText(idx).then(function (t) { return { idx: idx, t: t }; });
+            }));
+            res.forEach(function (x) {
+                if (x.t === null) failed.push(x.idx + 1);
+                else chunkEdit.chunks[x.idx] = x.t;
+            });
+            if (failed.length) break;   // 已经有失败：剩下的不用再请求
+        }
+        return failed;
+    }
+
     function renderChapterBar() {
         var bar = $('eeChapterBar');
         var sel = $('eeChapterSel');
@@ -960,63 +839,73 @@
     }
     async function refreshChunkToc() {
         if (!chunkEdit) return;
-        try {
-            var toc = await api('action=article-toc&id=' + encodeURIComponent(docId) + '&_=' + Date.now());
-            if (toc && toc.status === 'success' && toc.data) {
-                chunkEdit.total = toc.data.total || chunkEdit.total;
-                chunkEdit.chapters = toc.data.chapters || chunkEdit.chapters;
-                // 分章结构可能变化：未在编辑的章节缓存作废，重新按需拉取
-                for (var i = 0; i < chunkEdit.chunks.length; i++) {
-                    if (i !== chunkEdit.current) chunkEdit.chunks[i] = null;
-                }
-                renderChapterBar();
-            }
-        } catch (e) { /* 忽略 */ }
+        var toc = await api('action=article-toc&id=' + encodeURIComponent(docId) + '&_=' + Date.now());
+        if (!toc || toc.status !== 'success' || !toc.data) return;
+        chunkEdit.total = toc.data.total || chunkEdit.total;
+        chunkEdit.chapters = toc.data.chapters || chunkEdit.chapters;
+        // 保存后服务端会重新分章，边界可能变：未在编辑的章节缓存作废，按需重取
+        for (var i = 0; i < chunkEdit.chunks.length; i++) {
+            if (i !== chunkEdit.current) chunkEdit.chunks[i] = null;
+        }
+        renderChapterBar();
     }
     window.eeSwitchChapter = async function (i) {
         if (!chunkEdit) return;
         i = Number(i);
         if (!Number.isInteger(i) || i === chunkEdit.current) return;
-        // 切换前把当前章内容暂存内存（保存时统一提交）
+        var sel = $('eeChapterSel');
+        // 先把当前章收进内存（保存时统一提交）
         chunkEdit.chunks[chunkEdit.current] = getEditorContent();
-        var text = chunkEdit.chunks[i];
-        if (text == null) {
-            setEditorContent('');
-            text = await fetchChunkText(i);
-            chunkEdit.chunks[i] = text || '';
+        // 目标章没加载过就先取：**只有成功才切**，失败时编辑区仍是当前章，不会出现空白覆盖
+        if (chunkEdit.chunks[i] == null) {
+            var text = await fetchChunkText(i);
+            if (text === null) {
+                toast('第 ' + (i + 1) + ' 章读取失败，已取消切换（当前内容未改动）', 'error');
+                if (sel) sel.value = String(chunkEdit.current);
+                return;
+            }
+            chunkEdit.chunks[i] = text;
         }
-        setEditorContent(text || '');
+        setEditorContent(chunkEdit.chunks[i] || '');
         chunkEdit.current = i;
-        $('eeChapterSel').value = String(i);
+        if (sel) sel.value = String(i);
+        refreshCanvasList(true);
         toast('已切换到第 ' + (i + 1) + ' 章（原内容已暂存）', 'success');
     };
 
     // ===== 保存 =====
+    /**
+     * 拼出待提交的正文。
+     * 分章文章：缺的章节按批并发取回，任一章失败就抛 ChunkFetchError ——
+     * 调用方（doSave / 预览）必须中止，绝不提交半篇。
+     */
+    async function assembleContent() {
+        if (isCanvasType()) return '';   // 画布类没有富文本正文：别为拿正文去初始化 Vditor
+        if (!chunkEdit) return getEditorContent();
+
+        chunkEdit.chunks[chunkEdit.current] = getEditorContent();
+        var missing = [];
+        for (var i = 0; i < chunkEdit.total; i++) {
+            if (chunkEdit.chunks[i] == null) missing.push(i);
+        }
+        if (missing.length) {
+            var failed = await loadMissingChunks(missing);
+            if (failed.length) {
+                var err = new Error('第 ' + failed.join('、') + ' 章读取失败');
+                err.code = 'chunk-fetch-failed';
+                err.chapters = failed;
+                throw err;
+            }
+        }
+        var parts = [];
+        for (var k = 0; k < chunkEdit.total; k++) parts.push(chunkEdit.chunks[k] || '');
+        return parts.join('\n\n');
+    }
+
     async function collect() {
         var title = $('eeTitle').value.trim();
         var tags = currentTags();
-
-        // 先取正文（分章文章需按顺序拼全文）。
-        // 白板 / 导图没有富文本编辑器：这类文档的正文恒为空，
-        // 千万不要为了拿正文去初始化 Vditor——既拖慢保存，也会在初始化完成前 getValue() 抛错。
-        var content;
-        if (docType === 'whiteboard' || docType === 'mindmap') {
-            content = '';
-        } else if (chunkEdit) {
-            chunkEdit.chunks[chunkEdit.current] = getEditorContent();
-            var parts = [];
-            for (var i = 0; i < chunkEdit.total; i++) {
-                var text = chunkEdit.chunks[i];
-                if (text == null) {
-                    text = await fetchChunkText(i);
-                    chunkEdit.chunks[i] = text || '';
-                }
-                parts.push(text || '');
-            }
-            content = parts.join('\n\n');
-        } else {
-            content = getEditorContent();
-        }
+        var content = await assembleContent();
 
         // ===== 内容形态判定 =====
         // 规则：正文去掉块标记后为空、且只引用了一个块 → 保留独立画布形态（阅读页整页展示）；
@@ -1053,85 +942,167 @@
         if (finalType === 'mindmap' && mapId) body.mapId = mapId;
         return body;
     }
-    async function doSave(silent) {
-        var body = await collect();
-        if (!body.title) { toast('请填写标题', 'error'); return false; }
-        if (body.type !== 'whiteboard' && body.type !== 'mindmap' && !body.content) { toast('请填写正文内容', 'error'); return false; }
-        // 内嵌块的真实内容在画布自己的 store（excalidraw / mindmaps），与文章正文是两套存储。
-        // 若画布保存失败仍提交文章，就会出现「文章存了、画布改动丢了」——故此处必须阻断。
-        var flush = { ok: true, failed: [] };
-        if (window.EmbedPicker && typeof window.EmbedPicker.flushEmbeds === 'function') {
-            try {
-                flush = await window.EmbedPicker.flushEmbeds(vditor);
-            } catch (e) { flush = { ok: true, failed: [] }; }
-        }
-        if (!flush.ok) {
-            toast('引用的画布保存失败：' + flush.failed.join('、') +
-                '。文章未提交，请处理后重试（常见原因：画布设有编辑口令未通过、网络中断）', 'error');
-            return false;
-        }
-        var btn = $('eeSaveBtn');
-        btn.disabled = true;
-        var r = await api('action=articles', { method: 'POST', body: JSON.stringify(body) });
-        btn.disabled = false;
-        if (r.status !== 'success') { toast('保存失败：' + (r.message || ''), 'error'); return false; }
-        // 首次保存：服务端生成记录 id（新建模式下 collect() 传的是空串；白板/导图则用已有的画布 id）。
-        // 落库成功后这个页面就从「新建」变成「编辑已有」，地址栏同步换掉，
-        // 这样刷新 / 转发链接都能直接回到这篇内容，也避免再点保存又建一篇。
-        if (!doc) doc = {};
-        if (r.data && r.data.id) {
-            if (!doc.id) doc.createdAt = r.data.date || '';
-            doc.id = r.data.id;
-            doc.filename = r.data.filename || (doc.id + '.md');
-        }
-        if (!savedOnce) {
-            savedOnce = true;
-            isNew = false;
-            try {
-                history.replaceState(null, '', '/admin-edit.html?id=' + encodeURIComponent(doc.id));
-            } catch (e) { /* 忽略：地址栏换不掉不影响功能 */ }
-            $('eeIdText').textContent = doc.id || '';
-            if ($('eeDeleteBtn')) $('eeDeleteBtn').style.display = '';
-            if ($('eeViewBtn')) $('eeViewBtn').style.display = '';
-            document.title = '编辑' + typeLabel(docType) + ' · ' + (body.title || doc.id);
-        }
-        if (doc && r.data) {
-            doc.status = body.status;
-            doc.title = body.title;
-            // 后端可能追加固定标签（如随记的「随记」），以返回值为准回填
-            doc.tags = Array.isArray(r.data.tags) ? r.data.tags : body.tags;
-            doc.excerpt = body.excerpt;
-            doc.image = body.image;
-            doc.updatedAt = r.data.update || doc.updatedAt;
-            if (tagPicker) tagPicker.setTags(doc.tags || [], true);
-            renderMeta();
-        }
-        dirty = false;
-        if (chunkEdit) refreshChunkToc();
-        // 白板名称跟随标题：侧栏已经去掉单独的改名入口，这里顺手同步到白板 meta.title
-        // （后台「白板管理」列表读的是那个）。同步失败不影响文章已保存这个事实。
-        syncBoardTitleFromArticle(body.type, body.title);
-        var now = new Date().toLocaleTimeString();
-        $('eeSaved').textContent = '已保存 ' + now;
-        $('eeSaved').style.color = '#7bd88f';
-        notifyChanged();
-        if (!silent) toast('已保存', 'success');
-        return true;
+
+    /** 提交期间锁住三个动作按钮：双击「发布」不会再发两次 POST（P0-3） */
+    function setBusy(on) {
+        [['eeSaveBtn', '保存中…'], ['eePublishBtn', '发布中…'], ['eePreviewBtn', '']].forEach(function (pair) {
+            var b = $(pair[0]);
+            if (!b) return;
+            b.disabled = !!on;
+            if (on && pair[1]) { b.dataset.label = b.textContent; b.textContent = pair[1]; }
+            else if (!on && b.dataset.label) { b.textContent = b.dataset.label; delete b.dataset.label; }
+        });
+        var st = $('eeStatusSel');
+        if (st) st.disabled = !!on;
     }
-    window.eeSave = function () { doSave(false); };
-    window.eeSavePreview = async function () {
-        var ok = await doSave(true);
-        if (!ok) return;
-        toast('已保存，正在打开前台预览', 'success');
-        eeOpenFront();
+
+    async function doSave(silent) {
+        if (saveInFlight) { toast('正在保存，请稍候…'); return false; }
+        saveInFlight = true;
+        setBusy(true);
+        try {
+            var body;
+            try {
+                body = await collect();
+            } catch (e) {
+                if (e && e.code === 'chunk-fetch-failed') {
+                    toast('已取消保存：' + e.message + '（避免用不完整的内容覆盖文章）。请检查网络后重试', 'error');
+                    return false;
+                }
+                toast('保存失败：' + ((e && e.message) || e), 'error');
+                return false;
+            }
+
+            if (!body.title) { toast('请填写标题', 'error'); return false; }
+            if (body.type !== 'whiteboard' && body.type !== 'mindmap' && !body.content) { toast('请填写正文内容', 'error'); return false; }
+
+            // 内嵌块的真实内容在画布自己的 store（excalidraw / mindmaps），与文章正文是两套存储。
+            // 若画布保存失败仍提交文章，就会出现「文章存了、画布改动丢了」——故此处必须阻断。
+            var flush = { ok: true, failed: [] };
+            if (window.EmbedPicker && typeof window.EmbedPicker.flushEmbeds === 'function') {
+                try { flush = await window.EmbedPicker.flushEmbeds(vditor); } catch (e) { flush = { ok: true, failed: [] }; }
+            }
+            if (!flush.ok) {
+                toast('引用的画布保存失败：' + flush.failed.join('、') +
+                    '。文章未提交，请处理后重试（常见原因：画布设有编辑口令未通过、网络中断）', 'error');
+                return false;
+            }
+
+            var r = await api('action=articles', { method: 'POST', body: JSON.stringify(body), retry: 0 });
+            if (r.status !== 'success') { toast('保存失败：' + (r.message || ''), 'error'); return false; }
+
+            // 首次保存：服务端生成记录 id（新建模式下 collect() 传的是空串；白板/导图则用已有的画布 id）。
+            // 落库成功后这个页面就从「新建」变成「编辑已有」，地址栏同步换掉，
+            // 这样刷新 / 转发链接都能直接回到这篇内容，也避免再点保存又建一篇。
+            var wasNew = isNew;
+            if (!doc) doc = {};
+            if (r.data && r.data.id) {
+                if (!doc.id) doc.createdAt = r.data.date || '';
+                doc.id = r.data.id;
+                doc.filename = r.data.filename || (doc.id + '.md');
+            }
+            if (!savedOnce) {
+                savedOnce = true;
+                isNew = false;
+                docId = doc.id || docId;
+                try {
+                    history.replaceState(null, '', '/admin-edit.html?id=' + encodeURIComponent(doc.id));
+                } catch (e) { /* 忽略：地址栏换不掉不影响功能 */ }
+                $('eeIdText').textContent = doc.id || '';
+                if ($('eeDeleteBtn')) $('eeDeleteBtn').style.display = '';
+                if ($('eeViewBtn')) $('eeViewBtn').style.display = '';
+                document.title = '编辑' + typeLabel(docType) + ' · ' + (body.title || doc.id);
+            }
+            if (doc && r.data) {
+                doc.status = body.status;
+                doc.title = body.title;
+                // 后端可能追加固定标签（如随记的「随记」），以返回值为准回填
+                doc.tags = Array.isArray(r.data.tags) ? r.data.tags : body.tags;
+                doc.excerpt = body.excerpt;
+                doc.image = body.image;
+                doc.updatedAt = r.data.update || doc.updatedAt;
+                if (tagPicker) tagPicker.setTags(doc.tags || [], true);
+                renderMeta();
+            }
+            dirty = false;
+            // 已提交成功：本地草稿没用了。新建落库后 key 从 new:* 换成 doc:*，两个都清
+            if (wasNew) EE.draft.clear(draftKeyFor());
+            EE.draft.clear(draftKey);
+            draftKey = draftKeyFor();
+            if (chunkEdit) refreshChunkToc();
+            // 白板名称跟随标题（侧栏没有单独的改名入口）。标题没变则不发请求。
+            window.EEEmbed.syncTitle(body.type, body.title);
+            var now = new Date().toLocaleTimeString();
+            $('eeSaved').textContent = '已保存 ' + now;
+            $('eeSaved').style.color = '#7bd88f';
+            notifyChanged();
+            if (!silent) toast('已保存', 'success');
+            return true;
+        } finally {
+            saveInFlight = false;
+            setBusy(false);
+        }
+    }
+    window.eeSave = function () { return doSave(false); };
+
+    // ===== 预览（P1-8：不写库）=====
+    var previewPayload = null;
+    var previewWin = null;
+
+    /**
+     * 预览 = 把当前编辑器内容发给本地 /preview.html 渲染。
+     * 以前是「先 POST 保存再打开前台」，等于点一次预览就改一次线上文章
+     * （已发布的文章会把半成品直接推上线）。现在完全不碰数据库。
+     */
+    window.eePreview = async function () {
+        if (saveInFlight) { toast('正在保存，请稍候…'); return; }
+        var content;
+        saveInFlight = true;
+        setBusy(true);
+        try {
+            content = await assembleContent();
+        } catch (e) {
+            if (e && e.code === 'chunk-fetch-failed') toast('预览失败：' + e.message, 'error');
+            else toast('预览失败：' + ((e && e.message) || e), 'error');
+            return;
+        } finally {
+            saveInFlight = false;
+            setBusy(false);
+        }
+        previewPayload = {
+            title: $('eeTitle').value.trim() || '（无标题）',
+            tags: currentTags(),
+            excerpt: $('eeExcerpt').value.trim(),
+            image: $('eeImage').value.trim(),
+            status: $('eeStatusSel').value,
+            statusText: $('eeStatusSel').value === 'draft' ? '草稿' : '已发布',
+            content: content,
+            words: EE.countWords(content).words,
+            at: Date.now()
+        };
+        previewWin = window.open('/preview.html', 'ee_preview');
+        if (!previewWin) {
+            toast('浏览器拦截了新窗口，请允许弹窗后重试', 'error');
+            previewPayload = null;
+            return;
+        }
+        toast('已打开预览（未保存、未发布）', 'success');
     };
+    // 预览页加载完会来要数据（postMessage 只认同源）
+    window.addEventListener('message', function (e) {
+        if (e.origin !== location.origin) return;
+        if (!e.data || e.data.type !== 'ee-preview-ready') return;
+        if (!previewPayload) return;
+        try {
+            e.source.postMessage({ type: 'ee-preview-data', payload: previewPayload }, location.origin);
+        } catch (err) { /* 忽略 */ }
+    });
 
     // ===== 状态 / 删除 / 前台 =====
     /**
      * 发布：不再弹窗。
      * 状态、标签、封面都在侧栏，弹窗只是把同样的东西再问一遍。
-     * 缺东西（没标题 / 没正文 / 引用的画布没落盘）由 doSave() 用胶囊提示拦下，
-     * 所以这里不需要自己再校验一遍。
+     * 缺东西（没标题 / 没正文 / 引用的画布没落盘）由 doSave() 用胶囊提示拦下。
      */
     window.eePublishNow = async function () {
         var sel = $('eeStatusSel');
@@ -1146,8 +1117,12 @@
         var cur = doc.status || 'published';
         var next = cur === 'published' ? 'draft' : 'published';
         var word = next === 'published' ? '发布' : '下架';
-        if (!confirm('确定' + word + '「' + (doc.title || doc.id) + '」？')) return;
-        var r = await api('action=articles', { method: 'PATCH', body: JSON.stringify({ id: doc.id, status: next }) });
+        if (!(await EE.confirm({
+            title: word + '这篇文章',
+            message: '确定' + word + '「' + (doc.title || doc.id) + '」？',
+            okText: word
+        }))) return;
+        var r = await api('action=articles', { method: 'PATCH', body: JSON.stringify({ id: doc.id, status: next }), retry: 0 });
         if (r.status !== 'success') { toast(word + '失败：' + (r.message || ''), 'error'); return; }
         doc.status = next;
         $('eeStatusSel').value = next;
@@ -1156,10 +1131,15 @@
     };
     window.eeDelete = async function () {
         if (!doc || !doc.id) { toast('还没保存，无需删除', 'error'); return; }
-        if (!confirm('确定删除「' + (doc.title || doc.id) + '」？删除后不可恢复！')) return;
-        var r = await api('action=articles&id=' + encodeURIComponent(doc.id), { method: 'DELETE' });
+        if (!(await EE.confirm({
+            title: '删除内容',
+            message: '确定删除「' + (doc.title || doc.id) + '」？删除后不可恢复。',
+            okText: '删除', danger: true
+        }))) return;
+        var r = await api('action=articles&id=' + encodeURIComponent(doc.id), { method: 'DELETE', retry: 0 });
         if (r.status !== 'success') { toast('删除失败：' + (r.message || ''), 'error'); return; }
         dirty = false;
+        EE.draft.clear(draftKey);
         notifyChanged();
         toast('已删除，正在返回后台', 'success');
         setTimeout(function () { location.href = '/admin.html'; }, 600);
@@ -1172,37 +1152,55 @@
         window.open('/article.html?post=' + name + '&blob=' + encodeURIComponent(doc.id || docId), '_blank');
     };
 
-    // ===== 侧栏：本文内嵌画布清单 =====
+    // ===== 侧栏：本文内嵌画布清单（P1-5：读 DOM，不全文序列化）=====
     // 把正文里引用的白板 / 导图列出来（显示画布名称），点一下滚动定位到正文里那个块。
     // 名称走与「插入画布」面板同一个列表接口；结果缓存住，避免每次刷新清单都重新请求。
     var canvasNameCache = { board: null, map: null };
+    var lastRefs = [];        // 上一次已知的引用（全文解析结果或 DOM 结果）
+    var sawDomCards = false;  // 是否见过 DOM 里的画布卡片（用于区分「没渲染出来」和「被删了」）
 
     function loadCanvasNames() {
         var kinds = ['board', 'map'].filter(function (k) { return canvasNameCache[k] === null; });
         if (!kinds.length) return Promise.resolve();
         return Promise.all(kinds.map(function (k) {
             var url = k === 'map' ? '/api/mindmap?action=list' : '/api/excalidraw?action=list';
-            return fetch(url, { headers: { 'X-Admin-Key': adminKey }, cache: 'no-store' })
-                .then(function (r) { return r.json(); })
+            return EE.request(url, { headers: { 'X-Admin-Key': EE.adminKey() } })
                 .then(function (d) {
                     var items = (d && d.status === 'success' && (d.items || d.data)) || [];
                     var map = {};
                     items.forEach(function (it) { if (it && it.id) map[it.id] = it.title || ''; });
                     canvasNameCache[k] = map;
-                })
-                .catch(function () { canvasNameCache[k] = {}; });
+                });
         }));
     }
 
-    /** 正文里引用的画布（顺序 = 在正文里出现的顺序） */
-    function currentCanvasRefs() {
-        // 用页面自己的 getEditorContent()（Vditor 未就绪时会回落到 pendingMd），
-        // 不要写成 Vditor 实例的 getValue() —— 那个名字在这个作用域里不存在。
-        var md = '';
-        try { md = getEditorContent() || ''; } catch (e) { md = ''; }
-        try {
-            return (window.EmbedPicker && window.EmbedPicker.extractBlockRefs(md)) || [];
-        } catch (e) { return []; }
+    /** 直接读编辑器里已渲染的画布卡片：O(卡片数)，不做全文 getValue() */
+    function refsFromDom() {
+        var cards = document.querySelectorAll('#eeVditor .vditor-wysiwyg .ep-canvas-card');
+        var out = [], seen = {};
+        for (var i = 0; i < cards.length; i++) {
+            var id = cards[i].getAttribute('data-id') || '';
+            if (!id || seen[id]) continue;
+            seen[id] = 1;
+            var kind = cards[i].getAttribute('data-kind') || (id.indexOf('mm-') === 0 ? 'map' : 'board');
+            out.push({ id: id, kind: kind === 'map' ? 'map' : 'board' });
+        }
+        return out;
+    }
+
+    /**
+     * 当前正文引用的画布（顺序 = 在正文里出现的顺序）
+     * @param {boolean} force true = 做一次全文解析（内容刚整体载入时用，DOM 卡片还没渲染）
+     */
+    function currentCanvasRefs(force) {
+        if (force && window.EmbedPicker && typeof window.EmbedPicker.extractBlockRefs === 'function') {
+            try { return window.EmbedPicker.extractBlockRefs(getEditorContent()) || []; } catch (e) { return []; }
+        }
+        var dom = refsFromDom();
+        if (dom.length) { sawDomCards = true; return dom; }
+        // DOM 里没有卡片：见过卡片 = 用户删掉了；一次都没见过 = 还没渲染，沿用上次解析结果
+        if (vditorReady && sawDomCards) return [];
+        return lastRefs;
     }
 
     /** 在正文编辑器里找到这块画布的卡片（不用属性选择器：画布 id 可能含中文等字符） */
@@ -1238,18 +1236,18 @@
         });
     }
 
-    function refreshCanvasList() {
+    function refreshCanvasList(force) {
         var box = $('eeCanvasList');
         if (!box) return;
         if (docType !== 'article') return;   // 只有文章用这个清单，别的形态连名字都不必去拉
-        var refs = currentCanvasRefs();
-        if (!refs.length) {
+        lastRefs = currentCanvasRefs(!!force);
+        if (!lastRefs.length) {
             box.innerHTML = '<div class="ee-hint">正文里还没有白板 / 导图。工具栏点「插入画布」加一块。</div>';
             return;
         }
-        paintCanvasList(refs);                             // 先用缓存里的名字画出来，不阻塞
+        paintCanvasList(lastRefs);                          // 先用缓存里的名字画出来，不阻塞
         if (canvasNameCache.board === null || canvasNameCache.map === null) {
-            loadCanvasNames().then(function () { paintCanvasList(currentCanvasRefs()); });
+            loadCanvasNames().then(function () { paintCanvasList(lastRefs); });
         }
     }
 
@@ -1260,20 +1258,53 @@
         booted = true;
         // 侧栏折叠状态先应用（不依赖接口，避免加载慢时侧栏先闪一下再收起）
         applySideCollapsed();
+        // 画布/导图管理模块：注入上下文（它不自己读全局状态）
+        if (window.EEEmbed) {
+            window.EEEmbed.init({
+                getDoc: function () { return doc; },
+                getDocType: function () { return docType; },
+                toast: toast,
+                notify: notifyChanged,
+                setType: function (t) {
+                    docType = normalizeType(t);
+                    if (window.EEEmbed) window.EEEmbed.refreshMapKeyCard();
+                }
+            });
+        }
         // 标题改动同样计入未保存状态
         var t = $('eeTitle');
         if (t) t.addEventListener('input', window.eeMarkDirty);
+        var excerpt = $('eeExcerpt');
+        if (excerpt) excerpt.addEventListener('input', window.eeMarkDirty);
         var coverFile = $('eeCoverFile');
         if (coverFile) coverFile.addEventListener('change', function () {
             eeUploadCover(this.files && this.files[0]);
             this.value = '';
         });
+        var statusSel = $('eeStatusSel');
+        if (statusSel) statusSel.addEventListener('change', window.eeMarkDirty);
+        // 窄屏：抽屉遮罩点一下收起
+        var mask = $('eeSideMask');
+        if (mask) mask.addEventListener('click', window.eeToggleSideDrawer);
+
+        // 「?」打开快捷键说明（输入框里不抢键）
+        document.addEventListener('keydown', function (e) {
+            if (e.key !== '?' || e.ctrlKey || e.metaKey || e.altKey) return;
+            var tag = (e.target && e.target.tagName || '').toLowerCase();
+            if (tag === 'input' || tag === 'textarea' || (e.target && e.target.isContentEditable)) return;
+            e.preventDefault();
+            EE.openShortcuts();
+        });
+
         (isNew ? initNewDoc() : load()).then(function () {
             setTimeout(fitEditor, 120);
-            refreshCanvasList();
+            refreshCanvasList(true);
+            maybeRestoreDraft();
         });
     }
-    window.addEventListener('resize', function () { setTimeout(fitEditor, 80); });
+    window.addEventListener('resize', function () {
+        setTimeout(function () { fitEditor(); applySideCollapsed(); }, 80);
+    });
 
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
     else boot();
