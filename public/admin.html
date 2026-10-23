@@ -1206,7 +1206,7 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="settings-tip">选择厂商与模型、粘贴 API Key 即可使用，无需手填接口地址与模型名。</div>
+                            <div class="settings-tip">选择厂商与模型、粘贴 API Key 即可使用，无需手填接口地址与模型名。<br>小米 MiMo 的密钥以 <code>tp-</code> 开头时（Token Plan），厂商要选「小米 MiMo（Token Plan）」，选成普通「小米 MiMo」会返回 401。</div>
                         </div>
 
                         <!-- 7. 写作助手：写作页右侧「AI」页签用的那套，独立模型 + 独立密钥。
@@ -1255,7 +1255,7 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="settings-tip">写作页右侧「AI」页签用这套配置：只回答写作中的疑问，不读取正文、也不会改正文；密钥独立，不影响访客端聊天。</div>
+                            <div class="settings-tip">写作页右侧「AI」页签用这套配置：只回答写作中的疑问，不读取正文、也不会改正文；密钥独立，不影响访客端聊天。<br>小米 MiMo 的 <code>tp-</code> 开头密钥（Token Plan）请选「小米 MiMo（Token Plan）」，选错会 401。</div>
                         </div>
                         </div>
 
@@ -1483,7 +1483,7 @@
     </div>
 
         <script src="js/tag-picker.js?v=1.0.0"></script>
-        <script src="js/admin-app.js?v=1.18.0"></script>
+        <script src="js/admin-app.js?v=1.18.1"></script>
 
     <!-- 前台预览抽屉（iframe 内嵌，零跳出） -->
     <style>

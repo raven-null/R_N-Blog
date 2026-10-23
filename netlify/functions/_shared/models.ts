@@ -68,14 +68,27 @@ export const MODEL_CATALOG: CatalogProvider[] = [
     ],
   },
   {
-    // 小米 MiMo：官方平台 platform.xiaomimimo.com，OpenAI 兼容接口在 api.xiaomimimo.com/v1。
-    // 注意 v2.6 系列里只有 mimo-v2.6-pro-ultraspeed 强制 temperature=1（传了也会被覆盖），
+    // 小米 MiMo：官方平台 platform.xiaomimimo.com，标准 OpenAI 兼容接口在 api.xiaomimimo.com/v1。
+    // 注意：`tp-` 开头的 Token Plan 密钥**不认**这个域名（会返回 401 invalid_key），
+    // 必须用下面的「小米 MiMo（Token Plan）」那项（token-plan-cn.xiaomimimo.com）。
+    // 另外 v2.6 系列里只有 mimo-v2.6-pro-ultraspeed 强制 temperature=1（传了也会被覆盖），
     // pro / flash 可以正常调温；以后加 ultraspeed 记得带 temperature: 1。
     id: "mimo",
     name: "小米 MiMo",
     models: [
       { id: "mimo-v2.6-pro", label: "MiMo-V2.6-Pro", apiUrl: "https://api.xiaomimimo.com/v1/chat/completions", tags: ["更强"] },
       { id: "mimo-v2.6-flash", label: "MiMo-V2.6-Flash", apiUrl: "https://api.xiaomimimo.com/v1/chat/completions", tags: ["快速", "性价比"] },
+    ],
+  },
+  {
+    // 小米 MiMo 的 Token Plan：密钥形如 tp-xxxx，只能走 token-plan 的区域域名
+    // （cn / sgp / ams 三个区域，实测同一把 key 只在它绑定的区域有效；这里给的是 cn）。
+    // 用错了域名的典型表现就是 401 invalid_key —— 排查时先看密钥前缀。
+    id: "mimo-tp",
+    name: "小米 MiMo（Token Plan）",
+    models: [
+      { id: "mimo-v2.6-pro", label: "MiMo-V2.6-Pro", apiUrl: "https://token-plan-cn.xiaomimimo.com/v1/chat/completions", tags: ["Token Plan"] },
+      { id: "mimo-v2.6-flash", label: "MiMo-V2.6-Flash", apiUrl: "https://token-plan-cn.xiaomimimo.com/v1/chat/completions", tags: ["Token Plan", "快速"] },
     ],
   },
 ]
