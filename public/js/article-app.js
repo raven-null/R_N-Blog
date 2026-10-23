@@ -6,6 +6,29 @@
         /* 白板编辑器 bundle 版本：与 scripts/build-excalidraw.mjs 的 BUNDLE_VERSION 保持一致 */
 const EXC_BUNDLE_VERSION = 'v30';
 
+/**
+ * 标题 id 全局去重（v3.38.0）
+ * 标题 id 现在按标题文字生成（markdown-config 的 heading renderer），
+ * 分章文章每章单独解析 —— 两章里出现同名标题就会撞 id，锚点会跳错。
+ * 这里给撞车的那一个补上 -2 / -3 后缀。
+ * @param {HTMLElement} heading 目标标题
+ * @param {number} index 兜底序号
+ */
+function uniqueHeadingId(heading, index) {
+    if (!heading || !heading.id) return;
+    var base = heading.id;
+    var id = base;
+    var n = 2;
+    while (document.getElementById(id) && document.getElementById(id) !== heading) {
+        id = base + '-' + (n++);
+    }
+    if (id === base) return;
+    heading.id = id;
+    // 目录里若已引用旧 id，跟着改（生成目录时通常还没引用，这里只是兜底）
+    var link = document.querySelector('.toc-list a[href="#' + base + '"]');
+    if (link) link.setAttribute('href', '#' + id);
+}
+
 const ArticleApp = {
             // 当前文章数据
             currentPost: null,
@@ -265,6 +288,10 @@ const ArticleApp = {
                     st.loaded = next;
                     st.current = next;
                     ok = true;
+                    // 分章：本批标题 id 可能与前面章节撞名，先做全局去重（锚点才能跳对）
+                    Array.prototype.forEach.call(wrap.querySelectorAll('h1,h2,h3,h4,h5,h6'), function (h, i) {
+                        uniqueHeadingId(h, i);
+                    });
                     this.enhanceImages(wrap);
                     requestAnimationFrame(() => this.highlightVisibleBlocks(wrap));
                     this.highlightRemainingBlocks(wrap);
@@ -1036,8 +1063,11 @@ const ArticleApp = {
                 let childContainer = null;
 
                 headings.forEach((heading, index) => {
-                    const id = `heading-${index}`;
-                    heading.id = id;
+                    // v3.38.0：标题 id 由 markdown-config 的 heading renderer 按标题文字生成
+                    // （稳定锚点，手写 [文字](#锚点) 不会因改稿失效）。
+                    // 这里只做兜底 + 全局去重（分章文章每章单独解析，可能出现同名标题）。
+                    if (!heading.id) heading.id = `heading-${index}`;
+                    uniqueHeadingId(heading, index);
 
                     const li = document.createElement('li');
                     const level = parseInt(heading.tagName.charAt(1));
@@ -1081,7 +1111,7 @@ const ArticleApp = {
                     }
 
                     const a = document.createElement('a');
-                    a.href = `#${id}`;
+                    a.href = `#${heading.id}`;
                     a.textContent = heading.textContent;
                     a.title = heading.textContent;
 

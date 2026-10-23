@@ -1574,6 +1574,173 @@
     // 右键菜单（editor-menu.js）通过这个入口回调
     window.EETerms = { mark: markTerm };
 
+    // ===== 插入链接：站内文章 / 本文标题（v3.38.0）=====
+    // 正文里的链接是纯 Markdown（`[文字](地址)`），难点只有两个：
+    //   1) 站内文章的地址要带 filename + id，手打记不住；
+    //   2) 页内锚点要知道标题 slug，而 slug 是渲染时按标题文字算的。
+    // 所以这里做一个「选一下就好」的面板：列表可搜索，选中后自动写出 Markdown。
+    // 与「关联文章」共用同一份文章索引缓存（articleIndexCache），不额外请求。
+    var linkPickerMode = null;   // 'article' | 'heading'
+    var linkPickerText = '';     // 选中文字（有就当作链接文字，否则用目标标题）
+    var linkPickerItems = [];
+    var savedCaretRange = null;  // 打开面板前编辑器里的选区（插入前要还原）
+
+    /** 收集当前正文里的标题（按渲染顺序算 slug，保证与前台锚点一致） */
+    function collectHeadings() {
+        var md = getEditorContent() || '';
+        var lines = md.split('\n');
+        var used = {};
+        var out = [];
+        for (var i = 0; i < lines.length; i++) {
+            var m = lines[i].match(/^\s{0,3}(#{1,6})\s+(.+?)\s*#*\s*$/);
+            if (!m) continue;
+            var text = m[2].replace(/[`*_~\[\]()#>!]/g, '').trim();
+            if (!text) continue;
+            var slug = (window.MarkdownConfig && window.MarkdownConfig.slugify)
+                ? window.MarkdownConfig.slugify(text)
+                : text.toLowerCase().replace(/\s+/g, '-');
+            var n = (used[slug] || 0) + 1;
+            used[slug] = n;
+            var id = n === 1 ? slug : slug + '-' + n;
+            out.push({ level: m[1].length, text: text, id: id });
+        }
+        return out;
+    }
+
+    function paintLinkPicker() {
+        var box = $('eeLinkPickerList');
+        if (!box) return;
+        var kw = (($('eeLinkPickerSearch') || {}).value || '').trim().toLowerCase();
+        var items = linkPickerItems.filter(function (it) {
+            if (!kw) return true;
+            return (it.text || '').toLowerCase().indexOf(kw) >= 0 ||
+                (it.sub || '').toLowerCase().indexOf(kw) >= 0;
+        });
+        if (!items.length) {
+            box.innerHTML = '<div class="ee-related-empty">' + (linkPickerItems.length ? '没有匹配项' : '没有可选内容') + '</div>';
+            return;
+        }
+        box.innerHTML = items.slice(0, 60).map(function (it, i) {
+            return '<button type="button" class="ee-rel-result" data-i="' + i + '">' +
+                '<span class="t">' + esc(it.tag || '') + '</span>' +
+                '<span class="n">' + esc(it.text) + '</span>' +
+                '<span class="d">' + esc(it.sub || '') + '</span>' +
+                '<span class="plus">↗</span>' +
+                '</button>';
+        }).join('');
+        var list = items.slice(0, 60);
+        Array.prototype.forEach.call(box.querySelectorAll('.ee-rel-result'), function (btn) {
+            btn.addEventListener('click', function () {
+                var it = list[Number(this.getAttribute('data-i'))];
+                if (it) applyLinkPicker(it);
+            });
+        });
+    }
+
+    /** 选中后把 Markdown 链接插到光标处 */
+    function applyLinkPicker(item) {
+        if (!item) return;
+        var text = (linkPickerText || '').trim() || item.text;
+        // 链接文字里的方括号会破坏语法，转义掉
+        text = text.replace(/[[\]]/g, '');
+        var md = '[' + text + '](' + item.url + ')';
+        try {
+            // 还原打开面板前的选区：不还原的话 insertValue 会把链接插到文档开头
+            if (savedCaretRange) {
+                var host = $('eeVditor');
+                var okRange = host && document.contains(savedCaretRange.startContainer);
+                if (okRange) {
+                    host.querySelector('.vditor-wysiwyg, .vditor-ir').focus();
+                    var sel = window.getSelection();
+                    sel.removeAllRanges();
+                    sel.addRange(savedCaretRange);
+                }
+            }
+            if (vditor && typeof vditor.insertValue === 'function') vditor.insertValue(md);
+            else toast('编辑器还没就绪，请稍后重试', 'error');
+        } catch (e) {
+            toast('插入失败：' + ((e && e.message) || e), 'error');
+        }
+        savedCaretRange = null;
+        window.eeMarkDirty();
+        closeLinkPicker();
+        toast('已插入链接：' + item.text, 'success');
+    }
+
+    function closeLinkPicker() {
+        var box = $('eeLinkPicker');
+        if (box) box.classList.remove('open');
+        linkPickerMode = null;
+    }
+    window.eeCloseLinkPicker = closeLinkPicker;
+
+    window.eeOpenLinkPicker = function (mode, selectedText) {
+        linkPickerMode = mode === 'heading' ? 'heading' : 'article';
+        linkPickerText = String(selectedText || '');
+        var box = $('eeLinkPicker');
+        if (!box) { toast('链接面板未加载，请刷新重试', 'error'); return; }
+        // 关键：面板一打开焦点就给了搜索框，编辑器里的选区会丢，
+        // vditor.insertValue 会把链接插到文档开头（还会把第一行标题并进段落）。
+        // 所以先把当前选区存下来，插入前再还原。
+        savedCaretRange = null;
+        try {
+            var sel = window.getSelection();
+            if (sel && sel.rangeCount) {
+                var r = sel.getRangeAt(0);
+                var host = $('eeVditor');
+                if (host && host.contains(r.startContainer)) savedCaretRange = r.cloneRange();
+            }
+        } catch (e) { savedCaretRange = null; }
+        $('eeLinkPickerTitle').textContent = linkPickerMode === 'heading' ? '链接到本文标题' : '插入站内链接';
+        $('eeLinkPickerSearch').value = '';
+        $('eeLinkPickerSearch').placeholder = linkPickerMode === 'heading' ? '搜索标题…' : '搜索文章标题或 id…';
+        $('eeLinkPickerThumb').textContent = linkPickerText ? ('链接文字：' + linkPickerText) : '未选中文字时用目标标题作为链接文字';
+        box.classList.add('open');
+        $('eeLinkPickerList').innerHTML = '<div class="ee-related-empty">加载中…</div>';
+
+        if (linkPickerMode === 'heading') {
+            linkPickerItems = collectHeadings().map(function (h) {
+                return {
+                    text: h.text,
+                    sub: 'H' + h.level,
+                    tag: '#' + h.level,
+                    url: '#' + h.id
+                };
+            });
+            paintLinkPicker();
+            setTimeout(function () { try { $('eeLinkPickerSearch').focus(); } catch (e) { } }, 60);
+            return;
+        }
+
+        loadArticleIndex(false).then(function (list) {
+            linkPickerItems = (list || [])
+                .filter(function (p) { return !doc || p.id !== doc.id; })   // 不链自己
+                .map(function (p) {
+                    return {
+                        text: p.title,
+                        sub: p.date || '',
+                        tag: postTypeLabel(p.type).slice(0, 2),
+                        url: '/article.html?post=' + encodeURIComponent(p.filename) + '&blob=' + encodeURIComponent(p.id)
+                    };
+                });
+            paintLinkPicker();
+            setTimeout(function () { try { $('eeLinkPickerSearch').focus(); } catch (e) { } }, 60);
+        });
+    };
+
+    // 搜索框：输入即过滤（纯前端）
+    function wireLinkPickerSearch() {
+        var inp = $('eeLinkPickerSearch');
+        if (!inp || inp.dataset.wired) return;
+        inp.dataset.wired = '1';
+        inp.addEventListener('input', paintLinkPicker);
+        var mask = $('eeLinkPickerMask');
+        if (mask) mask.addEventListener('click', closeLinkPicker);
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && $('eeLinkPicker') && $('eeLinkPicker').classList.contains('open')) closeLinkPicker();
+        }, true);
+    }
+
     // ===== 启动 =====
     var booted = false;
     function boot() {
@@ -1626,6 +1793,7 @@
             wireRelatedPostsSearch();
             renderRelatedPostsPanel(true);
             renderTermsPanel();
+            wireLinkPickerSearch();
             offerStripLegacyEmbeds();
             maybeRestoreDraft();
         });

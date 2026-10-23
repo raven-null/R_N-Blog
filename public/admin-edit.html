@@ -12,7 +12,7 @@
 <!-- 写作页样式：原来整段内联在 <style> 里（34.6KB / 156 个 !important，
      Vditor 覆盖规则还被追加过三遍），现已抽成独立文件并合并去重。
      顺序有讲究：必须排在 vditor/dist/index.css 之后，靠 html body 前缀 + !important 压过组件样式。 -->
-<link rel="stylesheet" href="/css/editor-write.css?v=1.3.0">
+<link rel="stylesheet" href="/css/editor-write.css?v=1.4.0">
     <link rel="stylesheet" href="/css/scrollbar.css?v=1.0.1">
     <link rel="stylesheet" href="/css/responsive.css?v=1.0.0">
     <link rel="stylesheet" href="/css/mobile.css?v=1.0.0">
@@ -211,6 +211,21 @@
         </section>
     </main>
 
+    <!-- 插入链接面板（v3.38.0）：右键「插入站内链接」/「链接到本文标题」打开。
+         列表可搜索，选中后自动在光标处写出 Markdown：`[文字](地址)`。 -->
+    <div class="ee-linkpicker" id="eeLinkPicker">
+        <div class="ee-linkpicker-mask" id="eeLinkPickerMask"></div>
+        <div class="ee-linkpicker-box">
+            <div class="ee-linkpicker-head">
+                <span id="eeLinkPickerTitle">插入链接</span>
+                <button type="button" class="ee-btn" onclick="eeCloseLinkPicker()">关闭</button>
+            </div>
+            <div class="ee-linkpicker-hint" id="eeLinkPickerThumb"></div>
+            <input type="search" id="eeLinkPickerSearch" class="ee-rel-search" placeholder="搜索…" autocomplete="off">
+            <div class="ee-linkpicker-list" id="eeLinkPickerList"></div>
+        </div>
+    </div>
+
     <!-- 发布弹窗已按需求去掉：「发布」直接按侧栏的状态 / 标签 / 封面保存并发布，
          缺标题或正文时由 doSave() 里的胶囊提示（#eeToast）拦下。
          弹窗里独有的「编辑密钥」已搬到侧栏：白板在「白板管理」卡片，
@@ -225,14 +240,14 @@
     </div>
 
     <div class="ee-toast" id="eeToast"></div>
-    <script src="js/markdown-config.js?v=1.3.0"></script>
-<script src="js/editor-menu.js?v=1.1.0"></script>
+    <script src="js/markdown-config.js?v=1.4.0"></script>
+<script src="js/editor-menu.js?v=1.2.0"></script>
 <script src="js/editor-outline.js?v=1.0.0"></script>
 <script src="js/tag-picker.js?v=1.0.0"></script>
     <!-- 基础设施（提示 / 请求兜底 / 自绘确认框 / 净字数 / 本地草稿 / 快捷键面板 / 旧内嵌块迁移） -->
     <script src="js/editor-kit.js?v=1.1.1"></script>
     <!-- 白板与导图管理（权限 / 口令 / 历史回滚 / 绑定），由 admin-edit.js 注入上下文 -->
     <script src="js/editor-embed-admin.js?v=1.0.0"></script>
-    <script src="js/admin-edit.js?v=1.23.0"></script>
+    <script src="js/admin-edit.js?v=1.24.0"></script>
 </body>
 </html>

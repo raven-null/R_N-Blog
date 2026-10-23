@@ -45,8 +45,26 @@
     // 原 parseEmbed / renderEmbedBlock 与 ```embed 渲染分支一并移除。
 
     /**
+     * 标题锚点 slug（v3.38.0）。
+     * 目标：**手写的页内链接不会因为改稿而失效**。
+     * 之前的标题 id 是渲染后按顺序生成的 `heading-0/1/2`，前面插一个标题，后面全部错位；
+     * 现在按标题文字生成：`## 为什么要注意开销` → `id="为什么要注意开销"`。
+     * 规则：小写 → 去掉 Markdown 标记 → 空白变 `-` → 只留字母数字下划线中文与 `-`。
+     * 重复标题由渲染器追加 -2 / -3（编辑器插入链接时用同一套逻辑算，保证一致）。
+     */
+    function slugify(text) {
+        var s = String(text == null ? '' : text).trim().toLowerCase();
+        s = s.replace(/[`*_~\[\]()#>!]/g, '');                 // 常见 Markdown 标记
+        s = s.replace(/[\s\u3000]+/g, '-');                     // 空白 → -
+        s = s.replace(/[^\w\u4e00-\u9fa5\-.]+/g, '');           // 只留字母数字下划线中文点与 -
+        s = s.replace(/\.+/g, '.').replace(/-+/g, '-').replace(/^[-.]+|[-.]+$/g, '');
+        return s || 'section';
+    }
+
+    /**
      * 把自定义配置应用到传入的 marked 实例上。
-     * 每次解析调用一次即可（幂等：重复调用只是重复设置同样的选项）。
+     * 每次解析调用一次即可（幂等：重复调用只是重复设置同样的选项；
+     * 标题去重计数在每次调用时重置，所以同一次解析内是确定的）。
      */
     function apply(marked) {
         if (!marked) return null;
@@ -72,6 +90,22 @@
         });
 
         var renderer = new marked.Renderer();
+
+        // 标题：给稳定 id（按标题文字生成），手写的 `[见第 2 节](#为什么要注意开销)` 才不会因改稿失效。
+        // marked 15 是 token 风格，内联内容要自己 parseInline，否则 `**粗体**` 会原样输出。
+        var headingSlugCount = Object.create(null);
+        renderer.heading = function (token) {
+            var depth = token && token.depth ? token.depth : 2;
+            var inner = (token && token.tokens && this.parser && typeof this.parser.parseInline === 'function')
+                ? this.parser.parseInline(token.tokens)
+                : escapeHtml(String((token && token.text) || ''));
+            var plain = String((token && token.text) || '').replace(/[`*_~\[\]()#>!]/g, '');
+            var base = slugify(plain);
+            var n = (headingSlugCount[base] || 0) + 1;
+            headingSlugCount[base] = n;
+            var id = n === 1 ? base : base + '-' + n;
+            return '<h' + depth + ' id="' + escapeHtml(id) + '">' + inner + '</h' + depth + '>';
+        };
 
         // 图片：URL 重写 + figure 图注 + 懒加载 + 点击灯箱
         renderer.image = function (token) {
@@ -137,6 +171,7 @@
 
     root.MarkdownConfig = {
         apply: apply,
-        escapeHtml: escapeHtml
+        escapeHtml: escapeHtml,
+        slugify: slugify
     };
 })(typeof self !== 'undefined' ? self : this);

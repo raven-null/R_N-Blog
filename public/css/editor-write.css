@@ -686,6 +686,50 @@ html body #eeSide *::-webkit-scrollbar { width: 0 !important; height: 0 !importa
 }
 .ee-term-op:hover { color: #fff; background: rgba(115, 170, 255, .16); border-color: rgba(115, 170, 255, .4); }
 
+/* ===== 插入链接面板（v3.38.0）===== */
+.ee-linkpicker { position: fixed; inset: 0; z-index: 2500; display: none; }
+.ee-linkpicker.open { display: flex; align-items: center; justify-content: center; }
+.ee-linkpicker-mask {
+    position: absolute;
+    inset: 0;
+    background: rgba(5, 5, 9, .62);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+.ee-linkpicker-box {
+    position: relative;
+    width: min(560px, 94vw);
+    max-height: 78vh;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 16px 18px 18px;
+    border-radius: 18px;
+    background: linear-gradient(145deg, rgba(34, 34, 42, .98), rgba(18, 18, 24, .97));
+    border: 1px solid rgba(255, 255, 255, .13);
+    box-shadow: 0 30px 90px -20px rgba(0, 0, 0, .85);
+}
+.ee-linkpicker-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--accent);
+}
+.ee-linkpicker-hint { font-size: 11.5px; color: var(--text-muted); line-height: 1.6; }
+.ee-linkpicker-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-height: 120px;
+    max-height: 58vh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-right: 2px;
+}
+
 /* ===== 侧栏卡片 ===== */
 .ee-card {
     background: var(--bg-card);

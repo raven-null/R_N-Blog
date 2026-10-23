@@ -358,6 +358,19 @@
                     if (window.EETerms && typeof window.EETerms.mark === 'function') window.EETerms.mark(text);
                     else toast('术语功能未加载，请刷新重试', 'error');
                 }, !hasSel),
+                // 站内链接（v3.38.0）：选中文字 → 选目标文章 / 本文标题，自动写出 Markdown 链接
+                item('插入站内链接', '', function () {
+                    var text = '';
+                    try { text = String(window.getSelection() || '').trim(); } catch (err) { text = ''; }
+                    if (window.eeOpenLinkPicker) window.eeOpenLinkPicker('article', text);
+                    else toast('链接面板未加载，请刷新重试', 'error');
+                }, false),
+                item('链接到本文标题', '', function () {
+                    var text = '';
+                    try { text = String(window.getSelection() || '').trim(); } catch (err) { text = ''; }
+                    if (window.eeOpenLinkPicker) window.eeOpenLinkPicker('heading', text);
+                    else toast('链接面板未加载，请刷新重试', 'error');
+                }, false),
                 '-',
                 item('上移这一段', '', actions.moveUp, !inBlock),
                 item('下移这一段', '', actions.moveDown, !inBlock),
