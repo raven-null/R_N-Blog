@@ -1399,7 +1399,10 @@ export default async (req: Request) => {
       // 写作助手的密钥只发给通过校验的后台请求。这个 GET 是公开的（前台 chat.js 也在读它），
       // 不能把写作密钥一起吐给任何访客 —— 写作页走 action=ai-write 由服务端代调，也不需要它。
       // 没带 X-Admin-Key 的请求直接按未认证处理，省掉一次密码 blob 读取（首页每次都调这个接口）。
+      // 但要额外回一个 hasKey：把「根本没配」和「配了但你这请求没通过校验」分开，
+      // 否则写作页会把「密钥不存在」和「密钥被脱敏」都显示成「还没填」，作者会以为白填了。
       const writeMerged = mergeAiWrite(storedAi.write)
+      const writeHasKey = !!writeMerged.apiKey
       const hasKey = !!(req.headers.get("x-admin-key") || "")
       if (!hasKey || !(await checkAuth(req))) writeMerged.apiKey = ""
       // 合并默认值，确保关键字段有值
@@ -1425,8 +1428,8 @@ export default async (req: Request) => {
             typeof storedAi.temperature === "number" && !Number.isNaN(storedAi.temperature) ? storedAi.temperature : aiDefaults.temperature,
           ),
           // 注意放在最后：上面 ...storedAi 展开出来的 ai.write 会被这条覆盖掉，
-          // 避免绕过密钥脱敏
-          write: writeMerged,
+          // 避免绕过密钥脱敏。hasKey 只说明「存了没」，不含密钥本身。
+          write: { ...writeMerged, hasKey: writeHasKey },
         },
         navTags: data.navTags && data.navTags.length ? data.navTags : DEFAULT_SETTINGS.navTags,
       }
@@ -1457,6 +1460,14 @@ export default async (req: Request) => {
       }
 
       // 允许保存空值（默认无个人信息）
+      // 写作助手是后加的字段：老客户端（缓存了旧 admin-app.js）保存设置时不带 ai.write，
+      // 而这里会整块重写 —— 那样一次保存就会把已经填好的写作密钥清成默认值，
+      // 表现就是「配好了、过一会儿又变成还没配」。所以不带这个字段时沿用库里已有的值。
+      const prevRaw = await settingsStore.get("site", { type: "text" })
+      const prevAiWrite = (() => {
+        try { return (JSON.parse(prevRaw || "{}").ai || {}).write } catch { return undefined }
+      })()
+      const writeIncoming = (ai && typeof ai === "object" && ai.write) ? ai.write : null
       const settings = {
         siteTitle: String(siteTitle || "").trim(),
         favicon: String(favicon || "").trim(),
@@ -1491,9 +1502,10 @@ export default async (req: Request) => {
           systemPrompt: String(ai?.systemPrompt || "").trim(),
           maxTokens: Number(ai?.maxTokens) > 0 ? Number(ai?.maxTokens) : 2048,
           temperature: typeof ai?.temperature === "number" && !Number.isNaN(ai.temperature) ? ai.temperature : 0.7,
-          // 写作助手：字段和上面一致，但独立保存（密钥单独一套）
+          // 写作助手：字段和上面一致，但独立保存（密钥单独一套）。
+          // 请求没带 ai.write 时沿用库里已有的配置（见上面 writeIncoming 的注释）。
           write: (() => {
-            const w = (ai && typeof ai === "object" && ai.write) || {}
+            const w = (writeIncoming || prevAiWrite || {}) as any
             const provider = String(w.provider || DEFAULT_AI_WRITE.provider).trim().slice(0, 40)
             const model = String(w.model || DEFAULT_AI_WRITE.model).trim()
             return {

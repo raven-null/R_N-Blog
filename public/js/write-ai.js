@@ -178,6 +178,17 @@
         els.submit.setAttribute('aria-label', on ? '停止生成' : '发送');
     }
 
+    /** 状态条里的「重试」小按钮（未配置 / 网络失败 都用它） */
+    function appendRetry(btnText) {
+        var retry = el('button', 'ee-ai-mini', btnText || '重试');
+        retry.type = 'button';
+        retry.className = 'ee-ai-mini ee-ai-retry';
+        retry.style.marginTop = '6px';
+        retry.addEventListener('click', function () { reloadConfig(); });
+        els.status.appendChild(document.createElement('br'));
+        els.status.appendChild(retry);
+    }
+
     function paintStatus() {
         if (!els.status) return;
         els.status.className = 'ee-ai-status';
@@ -193,17 +204,23 @@
             els.status.hidden = false;
             els.status.className = 'ee-ai-status warn';
             els.status.innerHTML = '还没填写作助手的 API Key。去 ' + link + ' 填一个（独立于访客端），填完点「重试」。';
-            var retry = el('button', 'ee-ai-mini', '重试');
-            retry.type = 'button';
-            retry.className = 'ee-ai-mini ee-ai-retry';
-            retry.style.marginTop = '6px';
-            retry.addEventListener('click', function () { reloadConfig(); });
-            els.status.appendChild(document.createElement('br'));
-            els.status.appendChild(retry);
+            appendRetry('重试');
+        } else if (state === 'unauth') {
+            // 密钥在服务端存着，但这个页面没通过校验（改过密码 / 登录态丢了），密钥被脱敏成空串。
+            // 这时绝不能显示「还没填」—— 作者会以为自己白填了。
+            els.status.hidden = false;
+            els.status.className = 'ee-ai-status warn';
+            els.status.innerHTML = '写作助手的密钥已经配好了，但这个页面没通过管理密钥校验（改过密码或登录态丢了）。' +
+                '去 <a href="/admin.html" target="_blank" rel="noopener">后台</a> 重新登录一次，再回来点「重试」。';
+            appendRetry('重试');
         } else if (state === 'error') {
             els.status.hidden = false;
             els.status.className = 'ee-ai-status error';
-            els.status.textContent = '读取 AI 配置失败：' + (els.status.dataset.err || '接口无响应');
+            // 给作者看的是「怎么办」，浏览器原文（Failed to fetch 之类）留在 title 里，排查时能看到
+            els.status.innerHTML = '读取 AI 配置失败：' + escapeHtml(els.status.dataset.err || '接口无响应') +
+                '。多半是网络断了或请求被插件拦截，恢复后点「重试」。';
+            els.status.title = els.status.dataset.raw || '';
+            appendRetry('重试');
         } else {
             // 正常状态不摆状态条：这个面板只回答问题，不放别的东西
             els.status.hidden = true;
@@ -239,22 +256,60 @@
     }
 
     // ===== 配置 =====
+    /**
+     * 读配置。网络层失败（浏览器原文 Failed to fetch）和 5xx 会退避重试两次 ——
+     * 常见场景是断网一瞬间、或正好撞上站点部署。两次都失败才进 error 态。
+     */
+    var CONFIG_RETRY_DELAYS = [300, 800];
+
+    function loadSettingsOnce() {
+        return fetch(SETTINGS_URL, { headers: { 'X-Admin-Key': adminKey() } })
+            .then(function (r) {
+                if (!r.ok && r.status !== 401) {
+                    var e = new Error('HTTP ' + r.status);
+                    if (r.status >= 500) e.retriable = true;
+                    throw e;
+                }
+                return r.json();
+            });
+    }
+
     function reloadConfig() {
         state = 'loading';
         paintStatus();
-        return fetch(SETTINGS_URL, { headers: { 'X-Admin-Key': adminKey() } })
-            .then(function (r) { return r.json(); })
+        var tries = 0;
+        function attempt() {
+            return loadSettingsOnce().catch(function (err) {
+                // 网络层失败（没拿到响应）或 5xx：重试
+                var netFail = !(err && /^HTTP \d+$/.test(err.message || ''));
+                if ((netFail || err.retriable) && tries < CONFIG_RETRY_DELAYS.length) {
+                    var wait = CONFIG_RETRY_DELAYS[tries++];
+                    return new Promise(function (res) { setTimeout(res, wait); }).then(attempt);
+                }
+                throw err;
+            });
+        }
+        return attempt()
             .then(function (d) {
                 var ai = (d && d.data && d.data.ai) || {};
                 config = ai.write || null;
                 if (!config) { state = 'nokey'; }
                 else if (config.enabled === false) { state = 'disabled'; }
-                else if (!config.apiKey) { state = 'nokey'; }
-                else { state = 'ready'; }
+                else if (config.apiKey) { state = 'ready'; }
+                // 服务端把「根本没配」（hasKey === false）和「配了但这个请求没通过校验、
+                // 密钥被脱敏成空串」（hasKey === true）分开了，别再混成一个「还没填」
+                else if (config.hasKey) { state = 'unauth'; }
+                else { state = 'nokey'; }
             })
             .catch(function (err) {
                 state = 'error';
-                if (els.status) els.status.dataset.err = (err && err.message) || String(err);
+                if (els.status) {
+                    var raw = (err && err.message) || String(err);
+                    els.status.dataset.raw = raw;
+                    els.status.dataset.err = /Failed to fetch|NetworkError|load failed|^HTTP 5|ERR_/i.test(raw)
+                        ? '网络连接失败（请求没发出去，或被浏览器插件拦截）'
+                        : raw;
+                }
             })
             .then(function () { paintStatus(); });
     }
