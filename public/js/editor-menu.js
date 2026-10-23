@@ -349,6 +349,16 @@
                 '-',
                 item('插入图片', '', function () { clickToolbar('upload'); }, false),
                 '-',
+                // 文内术语回链（v3.37.0）：选中一段文字标成术语，正文里从第二次出现起自动回链。
+                // 定义锚点默认是这个词首次出现的那段；想改锚点去侧栏「本篇术语」里点「锚到当前段落」。
+                item('标记为术语', '', function () {
+                    var text = '';
+                    try { text = String(window.getSelection() || '').trim(); } catch (err) { text = ''; }
+                    if (!text) { toast('先选中要标成术语的文字'); return; }
+                    if (window.EETerms && typeof window.EETerms.mark === 'function') window.EETerms.mark(text);
+                    else toast('术语功能未加载，请刷新重试', 'error');
+                }, !hasSel),
+                '-',
                 item('上移这一段', '', actions.moveUp, !inBlock),
                 item('下移这一段', '', actions.moveDown, !inBlock),
                 item('复制这一段', '', actions.dupBlock, !inBlock),

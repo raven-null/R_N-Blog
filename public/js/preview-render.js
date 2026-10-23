@@ -118,6 +118,11 @@
         body.innerHTML = html;
         maskEmbeds(body);
 
+        // 术语回链（v3.37.0）：预览页也带同样的回链与气泡，方便发布前检查效果
+        if (window.TermLinks && Array.isArray(p.terms) && p.terms.length) {
+            try { window.TermLinks.enhance(body, p.terms, { root: body }); } catch (e) { /* 忽略 */ }
+        }
+
         // 相关画布（v3.35.0：白板 / 导图改成文章的关联）。预览页不加载画布本体，只列出来
         var rel = $('pvRelated');
         var refs = Array.isArray(p.canvasRefs) ? p.canvasRefs.filter(function (r) {

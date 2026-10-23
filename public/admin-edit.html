@@ -12,7 +12,7 @@
 <!-- 写作页样式：原来整段内联在 <style> 里（34.6KB / 156 个 !important，
      Vditor 覆盖规则还被追加过三遍），现已抽成独立文件并合并去重。
      顺序有讲究：必须排在 vditor/dist/index.css 之后，靠 html body 前缀 + !important 压过组件样式。 -->
-<link rel="stylesheet" href="/css/editor-write.css?v=1.2.0">
+<link rel="stylesheet" href="/css/editor-write.css?v=1.3.0">
     <link rel="stylesheet" href="/css/scrollbar.css?v=1.0.1">
     <link rel="stylesheet" href="/css/responsive.css?v=1.0.0">
     <link rel="stylesheet" href="/css/mobile.css?v=1.0.0">
@@ -122,6 +122,14 @@
                         <div class="ee-rel-results" id="eeRelatedPostsResults"></div>
                         <div class="ee-hint ee-related-hint">关联后前台文末会列出「相关文章」，并自动形成反向链接（对方文末也会出现这篇）。</div>
                     </div>
+                    <!-- 本篇术语（v3.37.0）：文内术语回链。
+                         正文里选中词 → 右键「标记为术语」；词从第二次出现起自动链回定义处。
+                         定义锚点默认是「首次出现那段」，也可以点「锚到当前段落」改到光标所在段。 -->
+                    <div class="ee-card" id="eeTermsCard">
+                        <label>本篇术语</label>
+                        <div class="ee-related-list" id="eeTermsList"></div>
+                        <div class="ee-hint ee-related-hint">在正文里选中一个词 → 右键「标记为术语」。读者读到第二次出现时会看到虚线下划线，悬停看定义、点击跳回。</div>
+                    </div>
                     <!-- 关联画布：白板 / 导图挂在文章上，不再「插入正文」。
                          关联存在文章的 canvasRefs 字段，前台在文末「相关画布」区展示；
                          点整行去前台看 / 改那块画布，× 解除关联。 -->
@@ -218,13 +226,13 @@
 
     <div class="ee-toast" id="eeToast"></div>
     <script src="js/markdown-config.js?v=1.3.0"></script>
-<script src="js/editor-menu.js?v=1.0.0"></script>
+<script src="js/editor-menu.js?v=1.1.0"></script>
 <script src="js/editor-outline.js?v=1.0.0"></script>
 <script src="js/tag-picker.js?v=1.0.0"></script>
     <!-- 基础设施（提示 / 请求兜底 / 自绘确认框 / 净字数 / 本地草稿 / 快捷键面板 / 旧内嵌块迁移） -->
     <script src="js/editor-kit.js?v=1.1.1"></script>
     <!-- 白板与导图管理（权限 / 口令 / 历史回滚 / 绑定），由 admin-edit.js 注入上下文 -->
     <script src="js/editor-embed-admin.js?v=1.0.0"></script>
-    <script src="js/admin-edit.js?v=1.22.0"></script>
+    <script src="js/admin-edit.js?v=1.23.0"></script>
 </body>
 </html>

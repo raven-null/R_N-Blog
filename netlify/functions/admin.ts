@@ -51,6 +51,16 @@ interface ArticleMeta {
   /** 关联文章 id 列表（v3.36.0）。单向存储：只有「我关联了谁」，
    *  前台展示时再按全量索引反查「谁关联了我」，合并成双向，避免两边写入不一致。 */
   relatedIds?: string[]
+  /** 本篇术语（v3.37.0）：正文里某个词从第二次出现起自动回链到它的定义处。
+   *  只存在记录里（前台读记录就够了），不进索引以控制索引体积。 */
+  terms?: TermRef[]
+}
+
+/** 术语词条：word = 要回链的词；anchor = 'first'（首次出现处，默认）
+ *  或一段「段落指纹」（该段落开头若干字，用于在自定义锚点时定位）。 */
+interface TermRef {
+  word: string
+  anchor?: string
 }
 
 // ===================== 认证 =====================
@@ -91,6 +101,36 @@ const CANVAS_ID_RE = /^(?:wb|mm)-[A-Za-z0-9-]{2,61}$/
 
 /** 一篇文章最多关联多少块画布（够用即可，挡住异常请求把索引撑大） */
 const MAX_CANVAS_REFS = 20
+
+/**
+ * 术语词条的规范化（v3.37.0）。
+ *   - word：去首尾空白、去掉换行/制表符，最多 24 字；空词丢弃；同词只留第一条；
+ *   - anchor：'first' 或缺省 = 锚到首次出现；否则当作「段落指纹」（≤48 字）；
+ *   - 上限 30 条：术语要在前台逐词扫描正文，词太多会拖慢长文。
+ */
+const MAX_TERMS = 30
+const MAX_TERM_WORD = 24
+const MAX_TERM_ANCHOR = 48
+
+function normalizeTerms(raw: unknown): TermRef[] {
+  if (!Array.isArray(raw)) return []
+  const out: TermRef[] = []
+  const seen = new Set<string>()
+  for (const item of raw) {
+    const o = (item && typeof item === "object") ? item as any : {}
+    const word = String(o.word || "").replace(/[\r\n\t]+/g, " ").trim().slice(0, MAX_TERM_WORD)
+    if (!word) continue
+    if (seen.has(word)) continue
+    seen.add(word)
+    const rawAnchor = String(o.anchor || "").replace(/[\r\n\t]+/g, " ").trim()
+    const anchor = (!rawAnchor || rawAnchor === "first")
+      ? "first"
+      : rawAnchor.slice(0, MAX_TERM_ANCHOR)
+    out.push({ word, anchor })
+    if (out.length >= MAX_TERMS) break
+  }
+  return out
+}
 
 /** 一篇文章最多关联多少篇文章（卡片更占地方，比画布少一点） */
 const MAX_RELATED_IDS = 12
@@ -501,6 +541,8 @@ export default async (req: Request) => {
       const canvasRefs = normalizeCanvasRefs((body as any).canvasRefs, content || "")
       // 关联文章（v3.36.0）：同样记录 + 索引各一份。单向存储，前台反查成双向。
       const relatedIds = normalizeRelatedIds((body as any).relatedIds, articleId)
+      // 本篇术语（v3.37.0）：只写进记录（前台读记录就够），不进索引以控制索引体积。
+      const terms = normalizeTerms((body as any).terms)
 
       const articleData = {
         id: articleId,
@@ -518,6 +560,7 @@ export default async (req: Request) => {
         mapId,
         canvasRefs,
         relatedIds,
+        terms,
         createdAt: now,
         updatedAt: now,
       }

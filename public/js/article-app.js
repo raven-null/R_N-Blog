@@ -114,6 +114,8 @@ const ArticleApp = {
                     canvasRefs: Array.isArray(d.canvasRefs) ? d.canvasRefs : [],
                     // v3.36.0：关联文章（单向存储：我只存「我关联了谁」）。
                     relatedIds: Array.isArray(d.relatedIds) ? d.relatedIds.map(String) : [],
+                    // v3.37.0：本篇术语（第二次出现起回链到定义处）。
+                    terms: Array.isArray(d.terms) ? d.terms.filter(t => t && t.word) : [],
                     frontmatter: {},
                 };
                 this.renderArticle();
@@ -267,6 +269,8 @@ const ArticleApp = {
                     requestAnimationFrame(() => this.highlightVisibleBlocks(wrap));
                     this.highlightRemainingBlocks(wrap);
                     this.mountEmbeds(wrap);
+                    // 术语回链：逐章扫描（词条已由首章设置，这里只补本批次的链接）
+                    this.applyTermLinks(wrap, false);
                     requestAnimationFrame(() => this.generateTableOfContents());
                 } finally {
                     st.loading = false;
@@ -420,6 +424,9 @@ const ArticleApp = {
                 }
                 document.body.classList.remove('no-toc');
 
+                // 换文章时清掉上一篇留下的术语锚点与气泡
+                if (window.TermLinks) window.TermLinks.clear();
+
                 // 渲染文章头部信息（与白板文章共用）
                 this.renderArticleHeader(header);
 
@@ -452,8 +459,10 @@ const ArticleApp = {
                     const appendNext = () => {
                         if (sections.length === 0) {
                             // 全部渲染完成后：高亮剩余代码块 + 挂载 Excalidraw 内嵌 + 生成完整目录
+                            // + 术语回链（v3.37.0：全文到齐后一次扫描，避免每批都重扫全文）
                             this.highlightRemainingBlocks(content);
                             this.mountEmbeds(content);
+                            this.applyTermLinks(content);
                             requestAnimationFrame(() => this.generateTableOfContents());
                             return;
                         }
@@ -473,8 +482,52 @@ const ArticleApp = {
                 } else {
                     // 短文无增量渲染：挂载 Excalidraw 内嵌，直接生成目录
                     this.mountEmbeds(content);
+                    this.applyTermLinks(content);
                     requestAnimationFrame(() => this.generateTableOfContents());
                 }
+            },
+
+            /**
+             * 术语回链（v3.37.0）。
+             * 把正文里的术语从第二次出现起包成 .term-link（悬停看定义、点击跳回），
+             * 并在文末渲染「本篇术语」表。分章文章逐章追加时各自调用一次。
+             * @param {HTMLElement} container 要扫描的容器
+             * @param {boolean} [useTerms] true=第一次调用，把词条交给增强器
+             */
+            applyTermLinks(container, useTerms) {
+                if (!window.TermLinks || !container) return;
+                const terms = (this.currentPost && Array.isArray(this.currentPost.terms)) ? this.currentPost.terms : [];
+                if (!terms.length) { this.renderTermList(); return; }
+                const rootHost = document.getElementById('article-content') || container;
+                try {
+                    window.TermLinks.enhance(container, (useTerms === false ? null : terms), { root: rootHost });
+                } catch (e) { /* 术语增强失败不影响阅读 */ }
+                this.renderTermList();
+            },
+
+            /** 文末「本篇术语」：词 + 定义（不截断）+ 点击跳回定义处 */
+            renderTermList() {
+                const host = document.getElementById('related-terms');
+                if (!host || !window.TermLinks) return;
+                const terms = (this.currentPost && Array.isArray(this.currentPost.terms)) ? this.currentPost.terms : [];
+                const rows = terms
+                    .map(t => ({ word: String(t.word || ''), def: window.TermLinks.definitionOf(String(t.word || '')) }))
+                    .filter(r => r.word && r.def);
+                if (!rows.length) { host.style.display = 'none'; host.innerHTML = ''; return; }
+                host.style.display = '';
+                host.innerHTML =
+                    '<div class="related-terms-head">本篇术语' +
+                    '<span class="rt-count">' + rows.length + '</span>' +
+                    '<span class="rt-tip">点词条跳到定义处</span></div>' +
+                    '<div class="rt-list">' + rows.map(r =>
+                        '<button type="button" class="rt-item" data-word="' + this.esc(r.word) + '">' +
+                        '<span class="rt-word">' + this.esc(r.word) + '</span>' +
+                        '<span class="rt-def">' + this.esc(r.def) + '</span>' +
+                        '</button>'
+                    ).join('') + '</div>';
+                host.querySelectorAll('.rt-item').forEach(btn => {
+                    btn.addEventListener('click', () => window.TermLinks.jumpToWord(btn.dataset.word));
+                });
             },
 
             // 文章头部信息（普通文章与纯白板文章共用）

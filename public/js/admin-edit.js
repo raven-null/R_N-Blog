@@ -155,6 +155,7 @@
             chunked: !!snap.chunked,
             canvasRefs: snap.canvasRefs || [],
             relatedIds: snap.relatedIds || [],
+            terms: snap.terms || [],
             content: snap.content || '',
             chapters: chapters
         });
@@ -171,6 +172,7 @@
             chunked: !!chunkEdit,
             canvasRefs: relatedCanvases.slice(),
             relatedIds: relatedPosts.slice(),
+            terms: terms.map(function (t) { return { word: t.word, anchor: t.anchor || 'first' }; }),
             content: isCanvasType() ? '' : getEditorContent()
         };
         if (chunkEdit) {
@@ -271,6 +273,11 @@
         if (Array.isArray(d.relatedIds)) {
             relatedPosts = d.relatedIds.map(String);
             renderRelatedPostsPanel();
+        }
+        if (Array.isArray(d.terms)) {
+            terms = d.terms.filter(function (t) { return t && t.word; })
+                .map(function (t) { return { word: String(t.word), anchor: String(t.anchor || 'first') }; });
+            renderTermsPanel();
         }
     }
 
@@ -759,6 +766,11 @@
         relatedPosts = (Array.isArray(doc.relatedIds) ? doc.relatedIds : []).map(String);
         wireRelatedPostsSearch();
         renderRelatedPostsPanel(true);
+        // 本篇术语（v3.37.0）：只存记录里，面板列出词条与锚点状态
+        terms = (Array.isArray(doc.terms) ? doc.terms : [])
+            .filter(function (t) { return t && t.word; })
+            .map(function (t) { return { word: String(t.word), anchor: String(t.anchor || 'first') }; });
+        renderTermsPanel();
         if (docType === 'mindmap') $('eeViewBtn').textContent = '前台查看';
         // 新建：还没有记录可删、也还没法从前台打开
         if (isNew) {
@@ -936,7 +948,9 @@
                 return name ? { kind: r.kind, id: r.id, name: name } : { kind: r.kind, id: r.id };
             }) : [],
             // 关联文章（v3.36.0）：单向列表，服务端会去重、去掉自己、限 12 条。
-            relatedIds: relatedPosts.slice()
+            relatedIds: relatedPosts.slice(),
+            // 本篇术语（v3.37.0）：服务端会去重、限 30 条、限词长。
+            terms: terms.map(function (t) { return { word: t.word, anchor: t.anchor || 'first' }; })
         };
         if (finalType === 'mindmap' && mapId) body.mapId = mapId;
         return body;
@@ -1441,6 +1455,125 @@
         });
     }
 
+    // ===== 侧栏：本篇术语（v3.37.0）=====
+    // 文内术语回链：正文里某个词从**第二次出现**起自动链回它的定义处。
+    //   - 标记方式：编辑器里选中文字 → 右键「标记为术语」（见 editor-menu.js）；
+    //   - 定义锚点：默认 = 该词首次出现的那一段；也可以在面板里点「锚到当前段落」改锚点
+    //     （存的是那一段开头若干字作为「段落指纹」，渲染时按前缀匹配定位）；
+    //   - 数据随文章 POST 提交（terms），只写进记录、不进索引。
+    var terms = [];   // [{word, anchor}]
+
+    var MAX_TERMS_CLIENT = 30;
+    var MAX_TERM_WORD_CLIENT = 24;
+    var MAX_TERM_ANCHOR_CLIENT = 48;
+
+    function normalizeWord(w) {
+        return String(w || '').replace(/[\r\n\t]+/g, ' ').trim().slice(0, MAX_TERM_WORD_CLIENT);
+    }
+
+    /** 当前编辑器光标所在段落的「指纹」（去空白后的前 48 字） */
+    function caretBlockFingerprint() {
+        try {
+            var sel = window.getSelection();
+            if (!sel || !sel.rangeCount) return '';
+            var node = sel.getRangeAt(0).startContainer;
+            var el = node && (node.nodeType === 1 ? node : node.parentElement);
+            if (!el) return '';
+            var block = el.closest('p, li, blockquote, td, th, h1, h2, h3, h4, h5, h6');
+            if (!block) return '';
+            var text = String(block.textContent || '').replace(/\s+/g, ' ').trim();
+            return text.slice(0, MAX_TERM_ANCHOR_CLIENT);
+        } catch (e) { return ''; }
+    }
+
+    function termIndex(word) {
+        for (var i = 0; i < terms.length; i++) if (terms[i].word === word) return i;
+        return -1;
+    }
+
+    function markTerm(rawWord) {
+        var word = normalizeWord(rawWord);
+        if (!word) { toast('先选中要标成术语的文字', 'error'); return; }
+        if (termIndex(word) >= 0) { toast('「' + word + '」已经是术语了'); return; }
+        if (terms.length >= MAX_TERMS_CLIENT) { toast('术语最多 ' + MAX_TERMS_CLIENT + ' 个', 'error'); return; }
+        terms.push({ word: word, anchor: 'first' });
+        window.eeMarkDirty();
+        renderTermsPanel();
+        toast('已标记术语「' + word + '」', 'success');
+    }
+
+    function unmarkTerm(word) {
+        terms = terms.filter(function (t) { return t.word !== word; });
+        window.eeMarkDirty();
+        renderTermsPanel();
+        toast('已移除术语「' + word + '」', 'success');
+    }
+
+    /** 把某个术语的定义锚点改到「编辑器当前光标所在段落」 */
+    function anchorTermToCaret(word) {
+        var i = termIndex(word);
+        if (i < 0) return;
+        var fp = caretBlockFingerprint();
+        if (!fp) { toast('先把光标放到要当定义的那一段里', 'error'); return; }
+        terms[i].anchor = fp;
+        window.eeMarkDirty();
+        renderTermsPanel();
+        toast('「' + word + '」的定义锚点已设为当前段落', 'success');
+    }
+
+    /** 把锚点改回「首次出现」 */
+    function resetTermAnchor(word) {
+        var i = termIndex(word);
+        if (i < 0) return;
+        terms[i].anchor = 'first';
+        window.eeMarkDirty();
+        renderTermsPanel();
+        toast('「' + word + '」的锚点已改回首次出现');
+    }
+
+    function renderTermsPanel() {
+        var card = $('eeTermsCard');
+        if (!card) return;
+        if (docType === 'card') { card.style.display = 'none'; return; }
+        card.style.display = '';
+        var box = $('eeTermsList');
+        if (!box) return;
+        if (!terms.length) {
+            box.innerHTML = '<div class="ee-related-empty">还没有术语。在正文里选中一个词，右键「标记为术语」即可。</div>';
+            return;
+        }
+        box.innerHTML = terms.map(function (t, i) {
+            var custom = !!(t.anchor && t.anchor !== 'first');
+            return '<div class="ee-term-item" data-word="' + esc(t.word) + '">' +
+                '<div class="ee-term-row">' +
+                '<span class="ee-term-word">' + esc(t.word) + '</span>' +
+                '<span class="ee-term-anchor' + (custom ? ' custom' : '') + '" title="' +
+                esc(custom ? ('锚点段落：' + t.anchor) : '锚点：首次出现处') + '">' +
+                (custom ? '自定义锚点' : '首次出现') + '</span>' +
+                '<button type="button" class="ee-canvas-unlink" data-act="del" title="移除术语">×</button>' +
+                '</div>' +
+                '<div class="ee-term-ops">' +
+                '<button type="button" class="ee-term-op" data-act="anchor">锚到当前段落</button>' +
+                (custom ? '<button type="button" class="ee-term-op" data-act="reset">改回首次</button>' : '') +
+                '</div>' +
+                '</div>';
+        }).join('');
+        Array.prototype.forEach.call(box.querySelectorAll('.ee-term-item'), function (row) {
+            var word = row.getAttribute('data-word');
+            Array.prototype.forEach.call(row.querySelectorAll('[data-act]'), function (btn) {
+                btn.addEventListener('click', function () {
+                    var act = this.getAttribute('data-act');
+                    if (act === 'del') unmarkTerm(word);
+                    else if (act === 'anchor') anchorTermToCaret(word);
+                    else if (act === 'reset') resetTermAnchor(word);
+                });
+            });
+        });
+    }
+
+    // 右键菜单（editor-menu.js）通过这个入口回调
+    window.EETerms = { mark: markTerm };
+
     // ===== 启动 =====
     var booted = false;
     function boot() {
@@ -1488,10 +1621,11 @@
 
         (isNew ? initNewDoc() : load()).then(function () {
             setTimeout(fitEditor, 120);
-            // 关联面板（画布 / 文章）；旧文章正文里若还有内嵌块，问一次要不要转成关联
+            // 关联面板（画布 / 文章 / 术语）；旧文章正文里若还有内嵌块，问一次要不要转成关联
             renderRelatedPanel(true);
             wireRelatedPostsSearch();
             renderRelatedPostsPanel(true);
+            renderTermsPanel();
             offerStripLegacyEmbeds();
             maybeRestoreDraft();
         });
