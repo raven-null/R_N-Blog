@@ -67,6 +67,17 @@ export const MODEL_CATALOG: CatalogProvider[] = [
       { id: "qwen-max", label: "Qwen-Max", apiUrl: "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions", tags: ["更强"] },
     ],
   },
+  {
+    // 小米 MiMo：官方平台 platform.xiaomimimo.com，OpenAI 兼容接口在 api.xiaomimimo.com/v1。
+    // 注意 v2.6 系列里只有 mimo-v2.6-pro-ultraspeed 强制 temperature=1（传了也会被覆盖），
+    // pro / flash 可以正常调温；以后加 ultraspeed 记得带 temperature: 1。
+    id: "mimo",
+    name: "小米 MiMo",
+    models: [
+      { id: "mimo-v2.6-pro", label: "MiMo-V2.6-Pro", apiUrl: "https://api.xiaomimimo.com/v1/chat/completions", tags: ["更强"] },
+      { id: "mimo-v2.6-flash", label: "MiMo-V2.6-Flash", apiUrl: "https://api.xiaomimimo.com/v1/chat/completions", tags: ["快速", "性价比"] },
+    ],
+  },
 ]
 
 export function findCatalogModel(provider: string, model: string): CatalogModel | null {
