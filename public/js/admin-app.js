@@ -2641,6 +2641,29 @@
             if(r.status==='success')showToast('设置已保存','success');
             else showToast(r.message||'保存失败','error');
         }
+        /**
+         * 内容维护：清掉旧文章正文里的「内嵌画布」块（v3.35.0）。
+         * 白板 / 导图改成「文章关联」后，旧文章正文里的 ```embed / ```excalidraw 块成了
+         * 没人渲染的历史残留。这里先 dry-run 扫描（不写数据），把命中清单摆给作者看，
+         * 确认后一次性删掉。画布本体（白板 / 导图管理里的数据）完全不动。
+         */
+        async function stripLegacyEmbeds(){
+            const dry=await apiFetch('action=strip-embeds',{method:'POST',body:JSON.stringify({dry:true})});
+            if(!dry||dry.status!=='success'){showToast((dry&&dry.message)||'扫描失败','error');return}
+            const list=(dry.data&&dry.data.changed)||[];
+            if(!list.length){showToast('没有发现含内嵌画布的文章','success');return}
+            const preview=list.slice(0,8).map(x=>'· '+(x.title||x.id)+'（'+x.blocks+' 段）').join('\n');
+            const more=list.length>8?('\n…等共 '+list.length+' 篇'):'';
+            const ok=await showConfirm(
+                '发现 '+list.length+' 篇文章正文里有内嵌画布：\n'+preview+more+'\n\n确认后会把这些块从正文里删掉（不可撤销）。画布本体不受影响，想挂到文章可以到写作页「关联画布」重新关联。',
+                '清理内嵌画布','全部删掉');
+            if(!ok)return;
+            const r=await apiFetch('action=strip-embeds',{method:'POST',body:JSON.stringify({dry:false})});
+            if(!r||r.status!=='success'){showToast((r&&r.message)||'清理失败','error');return}
+            const n=((r.data&&r.data.changed)||[]).length;
+            showToast('已清理 '+n+' 篇','success');
+            loadArticles();
+        }
         // 修改后台密码
         async function changePassword(){
             const oldPassword=document.getElementById('setOldPassword').value;

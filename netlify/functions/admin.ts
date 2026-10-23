@@ -90,6 +90,30 @@ const CANVAS_ID_RE = /^(?:wb|mm)-[A-Za-z0-9-]{2,61}$/
 const MAX_CANVAS_REFS = 20
 
 /**
+ * 把正文里的「内嵌画布」块整段删掉（v3.35.0 一次性清理用）。
+ * 与 public/js/editor-kit.js 的 EE.stripCanvasBlocks 同规则（两份必须一起改）：
+ *   ```embed ... ```        —— 现行写法（开栏行可能自带 board:id，也可能写在下一行）
+ *   ```excalidraw ... ```   —— 更早的写法，块内是裸 id
+ * 中间那段用惰性匹配且不强制多一行：块内为空（收尾围栏紧跟换行）时也要能删掉。
+ * 只动正文，不动画布本体（excalidraw / mindmaps 两个 store 里的数据完全保留）。
+ */
+function stripEmbedBlocks(md: string): string {
+  let s = String(md || "")
+  s = s.replace(/(^|\n)[ \t]*```embed[^\n]*(?:\n[\s\S]*?)?\n?[ \t]*```[ \t]*(?=\n|$)/g, "$1")
+  s = s.replace(/(^|\n)[ \t]*```excalidraw[^\n]*(?:\n[\s\S]*?)?\n?[ \t]*```[ \t]*(?=\n|$)/g, "$1")
+  return s.replace(/\n{3,}/g, "\n\n").replace(/[ \t]+\n/g, "\n").trim()
+}
+
+/** 正文里有几段内嵌画布块（给清理结果报数用） */
+function countEmbedBlocks(md: string): number {
+  const s = String(md || "")
+  const a = (s.match(/(^|\n)[ \t]*```embed[^\n]*(?:\n[\s\S]*?)?\n?[ \t]*```[ \t]*(?=\n|$)/g) || []).length
+  const b = (s.match(/(^|\n)[ \t]*```excalidraw[^\n]*(?:\n[\s\S]*?)?\n?[ \t]*```[ \t]*(?=\n|$)/g) || []).length
+  return a + b
+}
+
+
+/**
  * 关联画布的规范化（v3.35.0 起「关联」取代「正文内嵌」）。
  *
  * 语义变化：
@@ -660,6 +684,80 @@ export default async (req: Request) => {
         message: status ? (status === "published" ? "已发布" : "已下架为草稿") : "标签已更新",
       }, req)
     }
+  }
+
+  // ===== 一次性清理：旧文章正文里的「内嵌画布」块（v3.35.0）=====
+  // 白板 / 导图改成「文章关联」后，旧文章正文里的 ```embed / ```excalidraw 块就成了
+  // 没人渲染的历史残留。这里把它们从正文里整段删掉，**不**转成关联
+  // （作者要挂关联可以事后在写作页重新加）；画布本体（excalidraw / mindmaps 两个 store）
+  // 与「白板 / 导图形态」的内容（type=whiteboard/mindmap）都不碰。
+  //   POST {dry:true}  —— 只扫描报数，不改数据（后台按钮先跑这个再确认）
+  //   POST {dry:false} —— 真正执行
+  if (path === "strip-embeds") {
+    if (!(await checkAuth(req))) return json(401, { status: "error", message: "未授权" }, req)
+    const body = await req.json().catch(() => ({}))
+    const dry = (body as any).dry === true
+    const store = getBlobStore(ARTICLE_STORE, "strong")
+    const chunkStore = getBlobStore(CHUNK_STORE, "strong")
+    const index = await getArticleIndexStrong(store)
+    const changed: Array<{ id: string; title: string; blocks: number; before: number; after: number }> = []
+
+    for (const meta of index) {
+      if ((meta.type || "article") !== "article") continue   // 白板 / 导图 / 随记不参与
+      let content = ""
+      try { content = await readArticleContent(store, meta.id) } catch { content = "" }
+      if (!content) continue
+      const stripped = stripEmbedBlocks(content)
+      if (stripped === content) continue
+      changed.push({
+        id: meta.id,
+        title: meta.title || "",
+        blocks: countEmbedBlocks(content),
+        before: content.length,
+        after: stripped.length,
+      })
+      if (dry) continue
+
+      const raw = await store.get(meta.id, { type: "text" })
+      if (!raw) continue
+      const rec: any = JSON.parse(raw)
+      rec.content = stripped
+      rec.wordCount = stripped.length
+      rec.canvasRefs = []            // 内嵌块删掉了，旧的关联标记一并清空
+      rec.updatedAt = new Date().toISOString().slice(0, 10)
+
+      // 分章文章：按新正文重新决定还要不要分章
+      let chunkCount = 0
+      if (stripped.length > CHUNK_THRESHOLD) {
+        const chunks = splitChapters(stripped)
+        chunkCount = chunks.length
+        await clearArticleChunks(meta.id)
+        for (let i = 0; i < chunks.length; i++) await chunkStore.set(`${meta.id}/${i}`, chunks[i].content)
+        await chunkStore.set(`${meta.id}/index`, JSON.stringify({
+          total: chunks.length,
+          threshold: CHUNK_THRESHOLD,
+          wordCount: stripped.length,
+          chapters: chunks.map((ch, i) => ({ i, title: ch.title, words: ch.content.length })),
+        }))
+        rec.content = ""             // 分章存储时主记录不存全文
+      } else {
+        await clearArticleChunks(meta.id)
+      }
+      rec.chunked = chunkCount > 0
+      rec.chunkCount = chunkCount
+      await store.set(meta.id, JSON.stringify(rec))
+
+      meta.canvasRefs = []
+      meta.wordCount = stripped.length
+      meta.chunked = chunkCount > 0
+      meta.chunkCount = chunkCount
+    }
+
+    if (!dry && changed.length) await saveArticleIndex(store, index)
+    return json(200, {
+      status: "success",
+      data: { dry, scanned: index.length, changed },
+    }, req)
   }
 
   // ===== 图片管理 =====

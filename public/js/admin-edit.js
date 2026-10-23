@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 独立编辑页脚本（admin-edit.html）
  * 用途：对已发布/草稿的文章、随记、白板、导图进行再次编辑，不再占用后台「写文章」页
  *
@@ -1254,28 +1254,29 @@
     };
 
     /**
-     * 旧文章迁移：正文里还有 ```embed / ```excalidraw 内嵌块的，提示一键转成关联。
-     * 选「保持原样」就不动正文（前台仍按旧方式渲染），下次打开还会问 —— 直到转完或作者清掉。
+     * 旧文章清理：正文里还有 ```embed / ```excalidraw 内嵌块的，提示把它们**删掉**
+     * （v3.35.0 的需求：不再往正文里插画布，历史残留一律清掉，不转成关联）。
+     * 画布本体不受影响 —— 它们还在「白板管理 / 导图管理」里，要挂到本文点侧栏「关联画布」即可。
+     * 选「保持原样」就不动正文（前台仍按旧方式渲染），下次打开还会问。
      */
-    function maybeMigrateLegacyEmbeds() {
+    function offerStripLegacyEmbeds() {
         if (docType !== 'article' || isNew || !doc) return;
         var legacy = EE.parseLegacyCanvasRefs(getEditorContent());
-        var add = legacy.filter(function (r) { return !hasRelated(r.kind, r.id); });
-        if (!add.length) return;
-        var list = add.map(function (r) { return canvasKindLabel(r.kind) + ' ' + r.id; }).join('、');
+        if (!legacy.length) return;
+        var list = legacy.map(function (r) { return canvasKindLabel(r.kind) + ' ' + r.id; }).join('、');
         EE.confirm({
-            title: '把内嵌画布转成关联',
-            message: '这篇的正文里还有 ' + add.length + ' 个内嵌画布（' + list + '）。现在白板 / 导图改成「关联」：' +
-                '转为关联后它们会从正文移出，前台在文末「相关画布」区展示。选「保持原样」则不动正文。',
-            okText: '转为关联',
-            cancelText: '保持原样'
+            title: '清理正文里的内嵌画布',
+            message: '这篇的正文里还有 ' + legacy.length + ' 段内嵌画布（' + list + '）。' +
+                '现在白板 / 导图不再插进正文，这些块会被**直接删掉**（不转成关联）。' +
+                '画布本体还在白板 / 导图管理里，想挂到本文可以点侧栏「关联画布」重新关联。',
+            okText: '删掉这些块',
+            cancelText: '保持原样',
+            danger: true
         }).then(function (yes) {
             if (!yes) return;
-            add.forEach(function (r) { relatedCanvases.push(r); });
             setEditorContent(EE.stripCanvasBlocks(getEditorContent()));
             window.eeMarkDirty();
-            renderRelatedPanel(true);
-            toast('已转为关联并移出正文，记得保存', 'success');
+            toast('已移出正文，记得保存', 'success');
         });
     }
 
@@ -1329,7 +1330,7 @@
             setTimeout(fitEditor, 120);
             // 关联画布面板（文章形态才显示）；旧文章正文里若还有内嵌块，问一次要不要转成关联
             renderRelatedPanel(true);
-            maybeMigrateLegacyEmbeds();
+            offerStripLegacyEmbeds();
             maybeRestoreDraft();
         });
     }

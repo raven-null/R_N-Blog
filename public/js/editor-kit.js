@@ -253,10 +253,11 @@
     /** 把正文里的内嵌画布块整段移出，返回清理后的 Markdown */
     EE.stripCanvasBlocks = function (md) {
         var s = String(md == null ? '' : md);
-        // ```embed ... ``` 整块（开栏行可能自带 board:id，也可能写在下一行）
-        s = s.replace(/(^|\n)[ \t]*```embed[^\n]*\n[\s\S]*?\n[ \t]*```[ \t]*(?=\n|$)/g, '$1');
+        // ```embed ... ``` 整块。开栏行可能自带 board:id，也可能写在下一行；
+        // 块内允许为空（收尾围栏紧跟换行），所以中间那段是惰性匹配、不强制要求额外换行。
+        s = s.replace(/(^|\n)[ \t]*```embed[^\n]*(?:\n[\s\S]*?)?\n?[ \t]*```[ \t]*(?=\n|$)/g, '$1');
         // ```excalidraw ... ``` 整块（更早的写法，块内是裸 id）
-        s = s.replace(/(^|\n)[ \t]*```excalidraw[^\n]*\n[\s\S]*?\n[ \t]*```[ \t]*(?=\n|$)/g, '$1');
+        s = s.replace(/(^|\n)[ \t]*```excalidraw[^\n]*(?:\n[\s\S]*?)?\n?[ \t]*```[ \t]*(?=\n|$)/g, '$1');
         return s.replace(/\n{3,}/g, '\n\n').replace(/[ \t]+\n/g, '\n').trim();
     };
 
