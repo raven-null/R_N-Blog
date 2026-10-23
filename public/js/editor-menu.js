@@ -376,7 +376,14 @@
 
     var openSub = null;   // 当前展开的子菜单面板
 
-    function closeSub() {
+    /** 调试埋点（仅当 window.__subDebug 为真时记录，生产环境不产生开销） */
+    function subLog(what) {
+        if (!window.__subDebug) return;
+        (window.__subLog = window.__subLog || []).push(Date.now() % 100000 + ' ' + what);
+    }
+
+    function closeSub(reason) {
+        subLog('closeSub ' + (reason || ''));
         if (openSub) {
             openSub.classList.remove('open');
             openSub = null;
@@ -386,8 +393,16 @@
         });
     }
 
-    /** 在指定容器里渲染一排菜单项（顶层与子菜单共用） */
-    function renderInto(box, rows) {
+    /**
+     * 在指定容器里渲染一排菜单项（顶层与子菜单共用）
+     * @param {HTMLElement} box 容器
+     * @param {Array} rows 菜单行
+     * @param {boolean} inSub true = 渲染在子菜单面板里
+     *   关键区别：只有**顶层**的普通项才绑「移上去就收起子菜单」。
+     *   早期版本没区分容器，子菜单里的项也绑了这条 —— 鼠标一进子菜单就把它自己关掉了，
+     *   表现就是「二级菜单移不进去」。
+     */
+    function renderInto(box, rows, inSub) {
         box.innerHTML = '';
         rows.forEach(function (row) {
             if (row === '-') {
@@ -408,14 +423,15 @@
                 b.addEventListener('mouseenter', function () { openSubmenu(b, row.sub); });
                 b.addEventListener('click', function (e) {
                     e.preventDefault();
-                    if (openSub && openSub._owner === b) { closeSub(); return; }
+                    if (openSub && openSub._owner === b) { closeSub('click-toggle'); return; }
                     openSubmenu(b, row.sub);
                 });
                 b.addEventListener('keydown', function (e) {
                     if (e.key === 'ArrowRight') { e.preventDefault(); openSubmenu(b, row.sub); }
                 });
             } else {
-                b.addEventListener('mouseenter', closeSub);   // 移到普通项上就收起子菜单
+                // 只在顶层：移到普通项上收起子菜单（子菜单内的项不能绑这条）
+                if (!inSub) b.addEventListener('mouseenter', function () { closeSub('hover-other-item'); });
                 b.addEventListener('click', function (e) {
                     e.preventDefault();
                     if (row.disabled) return;
@@ -429,7 +445,7 @@
 
     /** 展开某个子菜单：贴在触发行右侧；右侧放不下翻到左边 */
     function openSubmenu(trigger, rows) {
-        closeSub();
+        closeSub('reopen');
         var panel = document.getElementById(SUBBOX_ID);
         if (!panel) {
             panel = document.createElement('div');
@@ -438,16 +454,19 @@
             panel.setAttribute('role', 'menu');
             document.body.appendChild(panel);
             panel.addEventListener('mousedown', function (e) { e.preventDefault(); });
-            // 鼠标离开面板且不在触发行上 → 收起（给 120ms 缓冲，方便斜着移过去）
+            // 鼠标离开面板 → 收起。注意这里**不能**看触发行的 :hover：
+            // 从触发行往子菜单移动时触发行必然先失去 hover，看了就永远收不起来。
+            // 改成「离开后 220ms 内没有再回到面板，且指针也不在面板上」才关，
+            // 给斜着移动留出余量。
             panel.addEventListener('mouseleave', function () {
                 setTimeout(function () {
                     if (!panel.classList.contains('open')) return;
-                    if (trigger.matches && trigger.matches(':hover')) return;
-                    closeSub();
-                }, 120);
+                    if (panel.matches && panel.matches(':hover')) return;
+                    closeSub('panel-mouseleave');
+                }, 220);
             });
         }
-        renderInto(panel, rows);
+        renderInto(panel, rows, true);
         trigger.classList.add('active');
         panel.classList.add('open');
         openSub = panel;
@@ -455,8 +474,10 @@
 
         var r = trigger.getBoundingClientRect();
         var pr = panel.getBoundingClientRect();
-        var left = r.right + 2;
-        if (left + pr.width > window.innerWidth - 8) left = r.left - pr.width - 2;   // 翻到左边
+        // 与触发行**重叠 1px**：两元素之间留空会让指针在空隙里"掉出去"，
+        // 一旦斜着移动就会先命中别的行、把子菜单关掉。
+        var left = r.right - 1;
+        if (left + pr.width > window.innerWidth - 8) left = r.left - pr.width + 1;   // 翻到左边
         if (left < 8) left = 8;
         var top = r.top - 4;
         if (top + pr.height > window.innerHeight - 8) top = Math.max(8, window.innerHeight - pr.height - 8);
@@ -465,7 +486,7 @@
     }
 
     function render(rows) {
-        closeSub();
+        closeSub('render');
         renderInto($(MENU_ID), rows);
     }
 
@@ -482,7 +503,7 @@
     }
 
     function hide() {
-        closeSub();
+        closeSub('hide');
         var box = $(MENU_ID);
         if (box) box.classList.remove('open');
     }
