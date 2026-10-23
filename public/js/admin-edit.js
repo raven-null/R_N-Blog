@@ -423,17 +423,75 @@
 
     // ===== 顶栏「⋯」更多菜单（窄屏把次要动作收进来）=====
     window.eeOpenShortcuts = function () { EE.openShortcuts(); };
+
+    /**
+     * 「⋯」菜单的定位。菜单挂在 <body> 上（见 initMoreMenu），所以坐标要自己算：
+     * 贴住 ⋯ 按钮右缘往下 8px；下方放不下就翻到上方；左右都夹在视口内。
+     */
+    function placeMoreMenu() {
+        var box = $('eeMoreMenu');
+        var btn = $('eeMoreBtn');
+        if (!box || !btn) return;
+        box.style.visibility = 'hidden';
+        box.classList.add('open');          // 先显示才能量到尺寸
+        var br = btn.getBoundingClientRect();
+        var bw = box.offsetWidth;
+        var bh = box.offsetHeight;
+        var vw = window.innerWidth;
+        var vh = window.innerHeight;
+        var gap = 8;
+        var left = br.right - bw;           // 右缘对齐按钮
+        if (left < 8) left = 8;
+        if (left + bw > vw - 8) left = Math.max(8, vw - bw - 8);
+        var top = br.bottom + gap;
+        if (top + bh > vh - 8) {            // 下方不够 → 翻到按钮上方
+            top = br.top - bh - gap;
+            if (top < 8) top = Math.max(8, vh - bh - 8);
+        }
+        box.style.left = Math.round(left) + 'px';
+        box.style.top = Math.round(top) + 'px';
+        box.style.visibility = '';
+    }
+
+    /**
+     * 把「⋯」菜单挪到 <body> 末尾。
+     * 必须挪：.ee-top 有 backdrop-filter + z-index:10，自己就是层叠上下文，
+     * 菜单留在里面时 z-index 再大也只能在顶栏那层里比较，会被 .ee-main(20) /
+     * 编辑器正文(3000) 压住 —— 表现就是「点了 ⋯ 菜单看不见」。
+     */
+    function initMoreMenu() {
+        var box = $('eeMoreMenu');
+        if (!box || box.parentNode === document.body) return;
+        document.body.appendChild(box);
+    }
+
     window.eeToggleMore = function (e) {
         if (e && e.stopPropagation) e.stopPropagation();
         var box = $('eeMoreMenu');
         if (!box) return;
-        box.classList.toggle('open');
+        initMoreMenu();
+        if (box.classList.contains('open')) { box.classList.remove('open'); return; }
+        placeMoreMenu();
     };
     document.addEventListener('click', function (e) {
         var box = $('eeMoreMenu');
         if (!box || !box.classList.contains('open')) return;
         if (!box.contains(e.target)) box.classList.remove('open');
     });
+    // 位置是按按钮算的，滚动/缩放后会错位，直接收起
+    window.addEventListener('scroll', function () {
+        var box = $('eeMoreMenu');
+        if (box) box.classList.remove('open');
+    }, { passive: true, capture: true });
+    window.addEventListener('resize', function () {
+        var box = $('eeMoreMenu');
+        if (box) box.classList.remove('open');
+    });
+    document.addEventListener('keydown', function (e) {
+        if (e.key !== 'Escape') return;
+        var box = $('eeMoreMenu');
+        if (box && box.classList.contains('open')) box.classList.remove('open');
+    }, true);
 
     // ===== 字数（P1-6：净字数 + 防抖）=====
     var infoTimer = null;
@@ -832,11 +890,17 @@
             .map(function (t) { return { word: String(t.word), anchor: String(t.anchor || 'first') }; });
         renderTermsPanel();
         if (docType === 'mindmap') $('eeViewBtn').textContent = '前台查看';
-        // 新建：还没有记录可删、也还没法从前台打开
+        // 新建：还没有记录可删、也还没法从前台打开。
+        // 反过来，打开一篇已存在的内容时必须把这两项显出来 —— 原来只有「新建时隐藏」、
+        // 没有「已有文档时显示」，导致从列表点进一篇文章后 ⋯ 菜单里只剩「快捷键」，
+        // 得先随便保存一次才能看到「前台查看 / 删除」。
         if (isNew) {
             if ($('eeDeleteBtn')) $('eeDeleteBtn').style.display = 'none';
             if ($('eeViewBtn')) $('eeViewBtn').style.display = 'none';
             if ($('eeTitle')) $('eeTitle').placeholder = '给这' + typeLabel(docType) + '起个名字（必填）';
+        } else {
+            if ($('eeDeleteBtn')) $('eeDeleteBtn').style.display = '';
+            if ($('eeViewBtn')) $('eeViewBtn').style.display = '';
         }
         if (docType === 'whiteboard') {
             $('eeEditorCol').style.display = 'none'; // 白板不用富文本编辑器，画布直接占左侧编辑位
@@ -2143,6 +2207,8 @@
         // AI 面板只在页签切过去时才渲染内容，这里初始化是为了切页签不再有延迟。
         applySideMode();
         if (window.WriteAi) window.WriteAi.init({ host: $('eeSideAi') });
+        // 顶栏「⋯」菜单搬到 <body>：脱离顶栏的层叠上下文，才能压过编辑器
+        initMoreMenu();
 
         // 「?」打开快捷键说明（输入框里不抢键）
         document.addEventListener('keydown', function (e) {

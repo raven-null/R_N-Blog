@@ -112,6 +112,14 @@
     }
 
     // ===== 界面 =====
+    // 布局对齐 DeepSeek 网页版：输入框钉在面板底部，发送按钮就在输入框右侧，
+    // 生成中同一个按钮原地变成「停止」；对话超出高度只在消息区滚动。
+    var ICON_SEND = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
+        'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+        '<path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg>';
+    var ICON_STOP = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">' +
+        '<rect x="7" y="7" width="10" height="10" rx="2"/></svg>';
+
     function build() {
         if (!host || host.dataset.built) return;
         host.dataset.built = '1';
@@ -125,41 +133,49 @@
         els.list = el('div', 'ee-ai-list');
         els.list.id = 'eeAiList';
 
+        // 一行：输入框 + 右侧圆按钮（发送 ⇄ 停止）
         var inputBox = el('div', 'ee-ai-input');
         els.input = document.createElement('textarea');
         els.input.id = 'eeAiInput';
-        els.input.rows = 2;
-        els.input.placeholder = '问点写作上的事…（Enter 发送，Shift+Enter 换行）';
+        els.input.rows = 1;
+        // 不放可见提示语（只用 aria-label 给读屏软件），面板保持干净
         els.input.setAttribute('aria-label', '向写作助手提问');
 
-        var acts = el('div', 'ee-ai-acts');
-        els.send = el('button', 'ee-btn primary', '发送');
-        els.send.type = 'button';
-        els.send.id = 'eeAiSend';
-        els.stop = el('button', 'ee-btn', '停止');
-        els.stop.type = 'button';
-        els.stop.id = 'eeAiStop';
-        els.stop.hidden = true;
-        acts.appendChild(els.send);
-        acts.appendChild(els.stop);
+        els.submit = el('button', 'ee-ai-submit');
+        els.submit.type = 'button';
+        els.submit.id = 'eeAiSubmit';
+        els.submit.dataset.mode = 'send';
+        els.submit.innerHTML = ICON_SEND;
+        els.submit.title = '发送（Enter）';
+        els.submit.setAttribute('aria-label', '发送');
 
         inputBox.appendChild(els.input);
-        inputBox.appendChild(acts);
-
-        var note = el('div', 'ee-ai-note', '只解答写作疑问：不读取正文，也不会改动正文');
+        inputBox.appendChild(els.submit);
 
         wrap.appendChild(els.status);
         wrap.appendChild(els.list);
         wrap.appendChild(inputBox);
-        wrap.appendChild(note);
         host.appendChild(wrap);
 
-        els.send.addEventListener('click', function () { send(); });
-        els.stop.addEventListener('click', stop);
+        // 同一个按钮两种角色：没在生成 → 发送；正在生成 → 停止
+        els.submit.addEventListener('click', function () {
+            if (controller) stop();
+            else send();
+        });
         els.input.addEventListener('keydown', onKey);
 
         paintStatus();
         paintMessages();
+    }
+
+    /** 「发送 ⇄ 停止」按钮换形 */
+    function setSubmitMode(on) {
+        if (!els.submit) return;
+        els.submit.dataset.mode = on ? 'stop' : 'send';
+        els.submit.innerHTML = on ? ICON_STOP : ICON_SEND;
+        var label = on ? '停止生成（Esc）' : '发送（Enter）';
+        els.submit.title = label;
+        els.submit.setAttribute('aria-label', on ? '停止生成' : '发送');
     }
 
     function paintStatus() {
@@ -194,7 +210,7 @@
         }
         var usable = state === 'ready';
         if (els.input) els.input.disabled = !usable;
-        if (els.send) els.send.disabled = !usable || !!controller;
+        if (els.submit) els.submit.disabled = !usable;
     }
 
     function scrollBottom() {
@@ -281,7 +297,7 @@
 
         controller = new AbortController();
         paintStatus();
-        if (els.stop) els.stop.hidden = false;
+        setSubmitMode(true);
 
         var payload = {
             messages: messages.map(function (m) { return { role: m.role, content: m.content }; })
@@ -349,7 +365,7 @@
         var box = streaming;
         streaming = null;
         controller = null;
-        if (els.stop) els.stop.hidden = true;
+        setSubmitMode(false);
         if (paintTimer) { clearTimeout(paintTimer); paintTimer = null; }
         if (note) streamText = (streamText || '') + (streamText ? '\n\n' : '') + note;
         if (box) {

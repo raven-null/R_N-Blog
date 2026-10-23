@@ -119,11 +119,16 @@ body {
     font-size: 16px;
     line-height: 1;
 }
+/* 菜单本身挂在 <body> 上（由 admin-edit.js 在启动时搬过去），坐标由 JS 按 ⋯ 按钮算。
+   为什么必须搬出来：.ee-top 带 backdrop-filter + z-index:10，是一个层叠上下文，
+   而 .ee-main 是 20、编辑器正文是 3000 —— 留在顶栏里的话，这里写多大的 z-index
+   都只在顶栏那层内部生效，整体会被编辑器压住（实际表现：菜单出现在编辑区下面看不见）。
+   z-index 取 3400：高于抽屉遮罩 3100、划词按钮组 3200，低于模态类弹层（确认框等）。 */
 .ee-more-menu {
-    position: absolute;
-    right: 0;
-    top: calc(100% + 8px);
-    z-index: 70;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 3400;
     min-width: 168px;
     display: none;
     flex-direction: column;
@@ -599,8 +604,10 @@ html body #eeSide *::-webkit-scrollbar { width: 0 !important; height: 0 !importa
 
 /* ===== 侧栏「AI」页签：写作问答助手（v3.44.0）=====
    职责只有「回答问题」：面板里除了消息和输入框，只有未配置 / 出错这类必要状态提示，
-   没有快捷提问、没有复制按钮、没有会话管理。 */
-.ee-ai { display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+   没有快捷提问、没有复制按钮、没有会话管理。
+   布局对齐 DeepSeek 网页版：输入框钉在底部、发送按钮在它右侧（生成中原地变成停止），
+   对话超出高度时只滚消息区，输入框始终可见。 */
+.ee-ai { display: flex; flex-direction: column; gap: 8px; min-height: 0; flex: 1 1 auto; height: 100%; }
 .ee-ai-status {
     flex: none;
     padding: 6px 9px;
@@ -615,11 +622,12 @@ html body #eeSide *::-webkit-scrollbar { width: 0 !important; height: 0 !importa
 .ee-ai-status.warn { color: #ffd9a8; background: rgba(240, 173, 78, .12); border-color: rgba(240, 173, 78, .34); }
 .ee-ai-status.error { color: #ffd9d5; background: rgba(239, 106, 94, .12); border-color: rgba(239, 106, 94, .34); }
 .ee-ai-status a { color: #9fc4ff; }
+/* 消息区：吃掉除输入行以外的全部高度，溢出就自己滚（不再写死 46vh） */
 .ee-ai-list {
     flex: 1 1 auto;
-    min-height: 160px;
-    max-height: 46vh;
+    min-height: 0;
     overflow-y: auto;
+    overscroll-behavior: contain;
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -688,25 +696,56 @@ html body #eeSide *::-webkit-scrollbar { width: 0 !important; height: 0 !importa
     transition: all .15s ease;
 }
 .ee-ai-mini:hover { color: #fff; background: rgba(255, 255, 255, .12); }
-.ee-ai-input { flex: none; display: flex; flex-direction: column; gap: 6px; }
+/* 输入行：输入框 + 右侧圆按钮，同一行贴底（DeepSeek 那种） */
+.ee-ai-input { flex: none; display: flex; align-items: flex-end; gap: 6px; }
 .ee-ai-input textarea {
-    width: 100%;
-    min-height: 56px;
-    max-height: 140px;
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 36px;
+    max-height: 130px;
     padding: 8px 10px;
-    border-radius: 8px;
-    resize: vertical;
+    border-radius: 12px;
+    resize: none;
     font-family: inherit;
     font-size: 12.5px;
     line-height: 1.6;
     color: var(--text);
     background: var(--bg);
     border: 1px solid var(--border);
+    transition: border-color .15s ease;
 }
 .ee-ai-input textarea:focus { outline: none; border-color: rgba(115, 170, 255, .55); }
-.ee-ai-acts { display: flex; gap: 6px; }
-.ee-ai-acts .ee-btn { flex: 1; justify-content: center; }
-.ee-ai-note { font-size: 10.5px; line-height: 1.5; color: var(--text-muted); }
+/* 发送 / 停止：同一个按钮两个形态（data-mode 切换），图标 + 颜色一起变 */
+.ee-ai-submit {
+    flex: none;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #0d0f14;
+    background: #cfe2ff;
+    border: 1px solid #cfe2ff;
+    transition: background .15s ease, color .15s ease, border-color .15s ease, transform .12s ease;
+}
+.ee-ai-submit svg { width: 17px; height: 17px; }
+.ee-ai-submit:hover { background: #e2edff; border-color: #e2edff; }
+.ee-ai-submit:active { transform: scale(.94); }
+.ee-ai-submit[data-mode="stop"] {
+    color: #fff;
+    background: rgba(239, 106, 94, .9);
+    border-color: rgba(239, 106, 94, .9);
+}
+.ee-ai-submit[data-mode="stop"]:hover { background: #ef6a5e; border-color: #ef6a5e; }
+.ee-ai-submit:disabled { opacity: .4; cursor: not-allowed; background: rgba(255, 255, 255, .14); border-color: transparent; color: #e8e9f2; }
+
+/* AI 模式下整条侧栏不滚：高度让给消息区，输入行钉在底部 */
+.ee-main[data-side-mode="ai"] .ee-side { overflow: hidden; }
+.ee-main[data-side-mode="ai"] .ee-side-inner { flex: 1 1 auto; min-height: 0; }
+.ee-side-ai { flex: 1 1 auto; min-height: 0; }
 
 /* 顶栏「AI」按钮：常驻（侧栏折叠时也能一键打开），和「属性」按钮区分开一点 */
 .ee-ai-btn { color: #cfe2ff; border-color: rgba(115, 170, 255, .4); background: rgba(115, 170, 255, .12); }
