@@ -26,6 +26,7 @@
     'use strict';
 
     var MENU_ID = 'eeCtxMenu';
+    var SUBBOX_ID = 'eeCtxSub';
     var STYLE_ID = 'ee-ctxmenu-style';
 
     function $(id) { return document.getElementById(id); }
@@ -49,6 +50,24 @@
             '#' + MENU_ID + ' .m-item[disabled]:hover{background:transparent;color:#dfe3f5}',
             '#' + MENU_ID + ' .m-key{margin-left:auto;font-size:11.5px;color:rgba(255,255,255,.38)}',
             '#' + MENU_ID + ' .m-sep{height:1px;margin:5px 6px;background:rgba(255,255,255,.11)}',
+            /* 二级菜单（v3.41.0）：顶层只放最高频的几项，其余收进子菜单。
+               子菜单是绝对定位的小面板，挂在触发行旁边；空间不够时翻到左边。 */
+            '#' + MENU_ID + ' .m-item.m-sub::after{content:"›";margin-left:auto;font-size:14px;color:rgba(255,255,255,.45)}',
+            '#' + MENU_ID + ' .m-item.m-sub.active{background:rgba(115,170,255,.20);color:#fff}',
+            '.m-subbox{position:fixed;z-index:2147483001;display:none;min-width:172px;',
+            '  padding:6px;border-radius:12px;background:rgba(24,25,34,.98);',
+            '  border:1px solid rgba(255,255,255,.14);box-shadow:0 18px 48px -14px rgba(0,0,0,.85);',
+            '  backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);',
+            '  font-family:-apple-system,"Segoe UI","PingFang SC",sans-serif;font-size:13px}',
+            '.m-subbox.open{display:block}',
+            '.m-subbox .m-item{display:flex;align-items:center;gap:10px;width:100%;',
+            '  padding:7px 10px;border-radius:8px;cursor:pointer;border:0;background:transparent;',
+            '  color:#dfe3f5;font-family:inherit;font-size:13px;text-align:left}',
+            '.m-subbox .m-item:hover{background:rgba(115,170,255,.20);color:#fff}',
+            '.m-subbox .m-item[disabled]{opacity:.38;cursor:default}',
+            '.m-subbox .m-item[disabled]:hover{background:transparent;color:#dfe3f5}',
+            '.m-subbox .m-key{margin-left:auto;font-size:11.5px;color:rgba(255,255,255,.38)}',
+            '.m-subbox .m-sep{height:1px;margin:5px 6px;background:rgba(255,255,255,.11)}',
             /* 「收起顶部工具栏」：右键菜单里切换，状态记在 localStorage。
                收起后格式化全走右键菜单，写作时顶部一整条都不占地方。 */
             '.ee-toolbar-collapsed .vditor-toolbar{display:none!important}'
@@ -350,8 +369,25 @@
         return { label: label, key: key, fn: fn, disabled: disabled };
     }
 
-    function render(rows) {
-        var box = $(MENU_ID);
+    /** 二级菜单项（v3.41.0）：hover / 点一下 / → 键展开 */
+    function sub(label, rows) {
+        return { label: label, sub: rows };
+    }
+
+    var openSub = null;   // 当前展开的子菜单面板
+
+    function closeSub() {
+        if (openSub) {
+            openSub.classList.remove('open');
+            openSub = null;
+        }
+        Array.prototype.forEach.call(document.querySelectorAll('#' + MENU_ID + ' .m-item.m-sub.active'), function (el) {
+            el.classList.remove('active');
+        });
+    }
+
+    /** 在指定容器里渲染一排菜单项（顶层与子菜单共用） */
+    function renderInto(box, rows) {
         box.innerHTML = '';
         rows.forEach(function (row) {
             if (row === '-') {
@@ -362,18 +398,75 @@
             }
             var b = document.createElement('button');
             b.type = 'button';
-            b.className = 'm-item';
+            b.className = 'm-item' + (row.sub ? ' m-sub' : '');
             b.innerHTML = '<span>' + row.label + '</span>' + (row.key ? '<span class="m-key">' + row.key + '</span>' : '');
             if (row.disabled) b.setAttribute('disabled', 'disabled');
             b.addEventListener('mousedown', function (e) { e.preventDefault(); });   // 别让编辑器丢焦点
-            b.addEventListener('click', function (e) {
-                e.preventDefault();
-                if (row.disabled) return;
-                hide();
-                try { row.fn(ctx); } catch (err) { toast('操作失败：' + ((err && err.message) || err)); }
-            });
+
+            if (row.sub) {
+                // 二级菜单：桌面 hover 展开，触屏 / 键盘也能点开
+                b.addEventListener('mouseenter', function () { openSubmenu(b, row.sub); });
+                b.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    if (openSub && openSub._owner === b) { closeSub(); return; }
+                    openSubmenu(b, row.sub);
+                });
+                b.addEventListener('keydown', function (e) {
+                    if (e.key === 'ArrowRight') { e.preventDefault(); openSubmenu(b, row.sub); }
+                });
+            } else {
+                b.addEventListener('mouseenter', closeSub);   // 移到普通项上就收起子菜单
+                b.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    if (row.disabled) return;
+                    hide();
+                    try { row.fn(ctx); } catch (err) { toast('操作失败：' + ((err && err.message) || err)); }
+                });
+            }
             box.appendChild(b);
         });
+    }
+
+    /** 展开某个子菜单：贴在触发行右侧；右侧放不下翻到左边 */
+    function openSubmenu(trigger, rows) {
+        closeSub();
+        var panel = document.getElementById(SUBBOX_ID);
+        if (!panel) {
+            panel = document.createElement('div');
+            panel.id = SUBBOX_ID;
+            panel.className = 'm-subbox';
+            panel.setAttribute('role', 'menu');
+            document.body.appendChild(panel);
+            panel.addEventListener('mousedown', function (e) { e.preventDefault(); });
+            // 鼠标离开面板且不在触发行上 → 收起（给 120ms 缓冲，方便斜着移过去）
+            panel.addEventListener('mouseleave', function () {
+                setTimeout(function () {
+                    if (!panel.classList.contains('open')) return;
+                    if (trigger.matches && trigger.matches(':hover')) return;
+                    closeSub();
+                }, 120);
+            });
+        }
+        renderInto(panel, rows);
+        trigger.classList.add('active');
+        panel.classList.add('open');
+        openSub = panel;
+        panel._owner = trigger;
+
+        var r = trigger.getBoundingClientRect();
+        var pr = panel.getBoundingClientRect();
+        var left = r.right + 2;
+        if (left + pr.width > window.innerWidth - 8) left = r.left - pr.width - 2;   // 翻到左边
+        if (left < 8) left = 8;
+        var top = r.top - 4;
+        if (top + pr.height > window.innerHeight - 8) top = Math.max(8, window.innerHeight - pr.height - 8);
+        panel.style.left = Math.round(left) + 'px';
+        panel.style.top = Math.round(Math.max(8, top)) + 'px';
+    }
+
+    function render(rows) {
+        closeSub();
+        renderInto($(MENU_ID), rows);
     }
 
     function showAt(x, y) {
@@ -389,6 +482,7 @@
     }
 
     function hide() {
+        closeSub();
         var box = $(MENU_ID);
         if (box) box.classList.remove('open');
     }
@@ -429,54 +523,54 @@
             var termHit = (selText && window.EETerms && typeof window.EETerms.has === 'function' && window.EETerms.has(selText))
                 ? selText : '';
 
+            // 顶层只放最高频的动作，其余收进二级菜单（v3.41.0：25 行 → 12 行）
             render([
                 item('剪切', 'Ctrl+X', actions.cut, !hasSel),
                 item('复制', 'Ctrl+C', actions.copy, !hasSel),
                 item('粘贴', 'Ctrl+V', actions.paste, false),
                 item('全选', 'Ctrl+A', actions.selectAll, false),
                 '-',
-                item('加粗', 'Ctrl+B', function () { clickToolbar('bold'); }, !hasSel),
-                item('斜体', 'Ctrl+I', function () { clickToolbar('italic'); }, !hasSel),
-                item('删除线', '', function () { clickToolbar('strike'); }, !hasSel),
-                item('行内代码', '', function () { clickToolbar('inline-code'); }, !hasSel),
-                item('链接', '', function () { clickToolbar('link'); }, !hasSel),
-                // 取消链接（v3.39.1）：光标在链接里时可用，去掉链接、保留文字
-                item('取消链接', '', actions.unlink, !inLink),
-                '-',
+                // 格式：原来平铺 5 项，现在收成一层
+                sub('格式', [
+                    item('加粗', 'Ctrl+B', function () { clickToolbar('bold'); }, !hasSel),
+                    item('斜体', 'Ctrl+I', function () { clickToolbar('italic'); }, !hasSel),
+                    item('删除线', '', function () { clickToolbar('strike'); }, !hasSel),
+                    item('行内代码', '', function () { clickToolbar('inline-code'); }, !hasSel)
+                ]),
+                // 链接：插入（Vditor 原生 / 站内文章 / 本文标题）+ 取消
+                sub('链接', [
+                    item('插入链接…', '', function () { clickToolbar('link'); }, !hasSel),
+                    item('插入站内链接…', '', function () {
+                        if (window.eeOpenLinkPicker) window.eeOpenLinkPicker('article', selText);
+                        else toast('链接面板未加载，请刷新重试', 'error');
+                    }, false),
+                    item('链接到本文标题…', '', function () {
+                        if (window.eeOpenLinkPicker) window.eeOpenLinkPicker('heading', selText);
+                        else toast('链接面板未加载，请刷新重试', 'error');
+                    }, false),
+                    '-',
+                    // 光标在链接里时可用：去掉链接、保留文字
+                    item('取消链接', '', actions.unlink, !inLink)
+                ]),
+                // 术语：标记 / 取消（取消项同时清掉链接，v3.40.0 合并过）
+                sub('术语', [
+                    item('标记为术语', '', function () {
+                        if (!selText) { toast('先选中要标成术语的文字'); return; }
+                        if (window.EETerms && typeof window.EETerms.mark === 'function') window.EETerms.mark(selText);
+                        else toast('术语功能未加载，请刷新重试', 'error');
+                    }, !hasSel),
+                    item('取消链接和术语标记', '', function () {
+                        cancelLinkAndTerm(termHit || selText);
+                    }, !(inLink || termHit))
+                ]),
                 item('插入图片', '', function () { clickToolbar('upload'); }, false),
-                '-',
-                // 文内术语回链（v3.37.0）：选中一段文字标成术语，正文里从第二次出现起自动回链。
-                // 定义锚点默认是这个词首次出现的那段；想改锚点去侧栏「本篇术语」里点「锚到当前段落」。
-                item('标记为术语', '', function () {
-                    var text = '';
-                    try { text = String(window.getSelection() || '').trim(); } catch (err) { text = ''; }
-                    if (!text) { toast('先选中要标成术语的文字'); return; }
-                    if (window.EETerms && typeof window.EETerms.mark === 'function') window.EETerms.mark(text);
-                    else toast('术语功能未加载，请刷新重试', 'error');
-                }, !hasSel),
-                // 取消链接 + 术语标记（v3.40.0）：一处清掉两样标记。
-                // 光标在链接里 / 选中的词是术语时可用；两样都在时一次全清。
-                item('取消链接和术语标记', '', function () {
-                    cancelLinkAndTerm(termHit || selText);
-                }, !(inLink || termHit)),
-                // 站内链接（v3.38.0）：选中文字 → 选目标文章 / 本文标题，自动写出 Markdown 链接
-                item('插入站内链接', '', function () {
-                    var text = '';
-                    try { text = String(window.getSelection() || '').trim(); } catch (err) { text = ''; }
-                    if (window.eeOpenLinkPicker) window.eeOpenLinkPicker('article', text);
-                    else toast('链接面板未加载，请刷新重试', 'error');
-                }, false),
-                item('链接到本文标题', '', function () {
-                    var text = '';
-                    try { text = String(window.getSelection() || '').trim(); } catch (err) { text = ''; }
-                    if (window.eeOpenLinkPicker) window.eeOpenLinkPicker('heading', text);
-                    else toast('链接面板未加载，请刷新重试', 'error');
-                }, false),
-                '-',
-                item('上移这一段', '', actions.moveUp, !inBlock),
-                item('下移这一段', '', actions.moveDown, !inBlock),
-                item('复制这一段', '', actions.dupBlock, !inBlock),
-                item('删除这一段', '', actions.delBlock, !inBlock),
+                // 段落：移动 / 复制 / 删除
+                sub('段落', [
+                    item('上移这一段', '', actions.moveUp, !inBlock),
+                    item('下移这一段', '', actions.moveDown, !inBlock),
+                    item('复制这一段', '', actions.dupBlock, !inBlock),
+                    item('删除这一段', '', actions.delBlock, !inBlock)
+                ]),
                 '-',
                 item(toolbarCollapsed() ? '展开顶部工具栏' : '收起顶部工具栏', '', toggleToolbar, false)
             ]);
@@ -485,8 +579,10 @@
 
         document.addEventListener('mousedown', function (e) {
             var box = $(MENU_ID);
+            var subbox = $(SUBBOX_ID);
             if (!box || !box.classList.contains('open')) return;
-            if (box.contains(e.target)) return;
+            // 点子菜单里的项不算「点外面」
+            if (box.contains(e.target) || (subbox && subbox.contains(e.target))) return;
             hide();
         }, true);
         document.addEventListener('keydown', function (e) {
