@@ -98,6 +98,7 @@ const ArticleApp = {
             applyBlobArticle(d, filename) {
                 const content = d.content || '';
                 this.currentPost = {
+                    id: d.id || '',
                     filename: filename,
                     title: d.title,
                     date: d.date || d.createdAt,
@@ -111,6 +112,8 @@ const ArticleApp = {
                     // v3.35.0：白板 / 导图改成文章的「关联」列表（正文里不再内嵌），
                     // 由 admin-edit 的「关联画布」面板维护，前台在文末「相关画布」区展示。
                     canvasRefs: Array.isArray(d.canvasRefs) ? d.canvasRefs : [],
+                    // v3.36.0：关联文章（单向存储：我只存「我关联了谁」）。
+                    relatedIds: Array.isArray(d.relatedIds) ? d.relatedIds.map(String) : [],
                     frontmatter: {},
                 };
                 this.renderArticle();
@@ -420,9 +423,12 @@ const ArticleApp = {
                 // 渲染文章头部信息（与白板文章共用）
                 this.renderArticleHeader(header);
 
-                // v3.35.0：文末「相关画布」（白板 / 导图关联）。与正文渲染完全独立，
-                // 所以放在这里一次性建好；分章文章后续追加章节不会影响它（它是 #article-content 的兄弟节点）。
+                // v3.35.0：文末「相关画布」（白板 / 导图关联）。
+                // v3.36.0：文末「相关文章」（文章 ↔ 文章关联，正向 + 反向合并）。
+                // 两块都与正文渲染完全独立，是 #article-content 的兄弟节点，
+                // 所以这里一次性建好即可；分章文章后续追加章节不会影响它们。
                 this.renderRelatedCanvases();
+                this.renderRelatedPosts().catch(() => { /* 关联文章取不到不影响正文阅读 */ });
 
                 // 异步解析 Markdown（长文使用 Web Worker）
                 const html = await MarkdownParser.parseMarkdownAsync(this.currentPost.content);
@@ -643,6 +649,94 @@ const ArticleApp = {
              * 卡片默认收起，点一下才在下面挂真实画布（白板走 Excalidraw、导图走 mindmap.html），
              * 再点一次收起：首屏不为下面的画布付代价，也不会出现「正文中间卡一块」的排版问题。
              */
+            /**
+             * 文末「相关文章」（v3.36.0）。
+             * 关联是**单向存储**的：每篇只存「我关联了谁」（relatedIds），展示时合并两拨：
+             *   正向 —— 我的 relatedIds 指向的文章
+             *   反向 —— 索引里 relatedIds 含我的文章（谁关联了我）
+             * 这样不会出现「A 存了 B、B 没存上 A」的不一致，删文章时也不用回来清对方引用。
+             * 数据源：一次拉全量索引（/api/admin?action=articles）+ 5 分钟会话缓存，不新增接口。
+             */
+            async ensureRelatedIndex() {
+                if (this._relIndex) return this._relIndex;
+                try {
+                    const raw = sessionStorage.getItem('blog-related-index-v1');
+                    if (raw) {
+                        const o = JSON.parse(raw);
+                        if (o && Array.isArray(o.list) && Date.now() - (o.t || 0) < 5 * 60 * 1000) {
+                            this._relIndex = o.list;
+                            return o.list;
+                        }
+                    }
+                } catch (e) { /* 坏缓存忽略，直接拉新的 */ }
+
+                let list = [];
+                try {
+                    const res = await fetch('/api/admin?action=articles', { cache: 'no-store' });
+                    const data = await res.json();
+                    if (data && data.status === 'success' && Array.isArray(data.data)) {
+                        list = data.data.map(a => ({
+                            id: a.id,
+                            filename: a.filename || (a.id + '.md'),
+                            title: a.title || '',
+                            date: a.date || '',
+                            excerpt: a.excerpt || '',
+                            tags: Array.isArray(a.tags) ? a.tags : [],
+                            type: a.type || 'article',
+                            status: a.status || 'published',
+                            relatedIds: Array.isArray(a.relatedIds) ? a.relatedIds.map(String) : [],
+                        }));
+                    }
+                } catch (e) { list = []; }
+                this._relIndex = list;
+                try { sessionStorage.setItem('blog-related-index-v1', JSON.stringify({ t: Date.now(), list })); } catch (e) { /* 配额满忽略 */ }
+                return list;
+            },
+
+            async renderRelatedPosts() {
+                const host = document.getElementById('related-posts');
+                if (!host) return;
+                const me = this.currentPost;
+                if (!me) return;
+                const index = await this.ensureRelatedIndex();
+                if (!index.length) { host.style.display = 'none'; host.innerHTML = ''; return; }
+
+                const byId = new Map(index.map(p => [p.id, p]));
+                const forward = (me.relatedIds || []).map(id => byId.get(id)).filter(Boolean);
+                const backward = index.filter(p => p.id !== me.id && (p.relatedIds || []).indexOf(me.id) >= 0);
+
+                const seen = new Set([me.id]);
+                const merged = [];
+                const push = p => {
+                    if (!p || !p.id || seen.has(p.id)) return;
+                    if ((p.status || 'published') !== 'published') return;  // 草稿 / 下架不露出
+                    if ((p.type || 'article') === 'card') return;          // 随记没有详情页
+                    seen.add(p.id);
+                    merged.push(p);
+                };
+                forward.forEach(push);    // 作者手挑的顺序优先
+                backward.forEach(push);
+                if (!merged.length) { host.style.display = 'none'; host.innerHTML = ''; return; }
+
+                host.style.display = '';
+                host.innerHTML =
+                    '<div class="related-posts-head">相关文章' +
+                    '<span class="rp-count">' + merged.length + '</span>' +
+                    '<span class="rp-tip">读到这里的下一篇</span></div>' +
+                    '<div class="rp-list">' + merged.map(p => {
+                        const url = '/article.html?post=' + encodeURIComponent(p.filename) +
+                            '&blob=' + encodeURIComponent(p.id);
+                        const tags = (p.tags || []).slice(0, 3)
+                            .map(t => '<span class="rp-tag">' + this.esc(t) + '</span>').join('');
+                        return '<a class="rp-card" href="' + url + '">' +
+                            '<span class="rp-title">' + this.esc(p.title || '(未命名)') + '</span>' +
+                            (p.excerpt ? '<span class="rp-excerpt">' + this.esc(p.excerpt) + '</span>' : '') +
+                            '<span class="rp-meta">' +
+                            (p.date ? '<span>' + this.esc(p.date) + '</span>' : '') + tags +
+                            '</span></a>';
+                    }).join('') + '</div>';
+            },
+
             renderRelatedCanvases() {
                 const host = document.getElementById('related-canvas');
                 if (!host) return;

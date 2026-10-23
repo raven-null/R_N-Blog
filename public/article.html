@@ -1844,6 +1844,53 @@
         .toc-chapter-item .ci-words { flex: none; font-size: 11px; color: rgba(255,255,255,.4); }
     </style>
     <style>
+        /* ===== 相关文章（v3.36.0）=====
+           文章 ↔ 文章的关联：正向（我关联的）+ 反向（谁关联了我）合并后列出。
+           与下面的「相关画布」保持同一族样式，视觉上是一组「读完之后还能去哪」。 */
+        .related-posts {
+            margin: 40px 0 0;
+            padding-top: 22px;
+            border-top: 1px solid rgba(255,255,255,.1);
+        }
+        .related-posts-head {
+            display: flex; align-items: center; gap: 8px;
+            margin-bottom: 14px;
+            font-size: 15px; font-weight: 600; color: var(--text-primary, #e8e9f2);
+        }
+        .related-posts-head .rp-count {
+            padding: 1px 8px; border-radius: 99px; font-size: 11.5px; font-weight: 500;
+            color: #cfe2ff; background: rgba(115,170,255,.16); border: 1px solid rgba(115,170,255,.32);
+        }
+        .related-posts-head .rp-tip { margin-left: auto; font-size: 11.5px; font-weight: 400; color: rgba(255,255,255,.42); }
+        .rp-list { display: flex; flex-direction: column; gap: 10px; }
+        .rp-card {
+            display: block; padding: 13px 15px; border-radius: 12px; text-decoration: none;
+            background: rgba(255,255,255,.04);
+            border: 1px solid rgba(255,255,255,.12);
+            transition: border-color .18s ease, background .18s ease, transform .18s ease;
+        }
+        .rp-card:hover { border-color: rgba(115,170,255,.55); background: rgba(115,170,255,.1); transform: translateY(-1px); }
+        .rp-card .rp-title {
+            display: block; margin-bottom: 5px;
+            font-size: 14.5px; font-weight: 600; color: var(--text-primary, #e8e9f2);
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        .rp-card .rp-excerpt {
+            display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden;
+            font-size: 12.5px; line-height: 1.7; color: rgba(255,255,255,.5);
+        }
+        .rp-card .rp-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 7px; font-size: 11.5px; color: rgba(255,255,255,.42); }
+        .rp-card .rp-tag {
+            padding: 1px 7px; border-radius: 99px;
+            background: rgba(115,170,255,.12); border: 1px solid rgba(115,170,255,.28); color: #cfe2ff;
+        }
+        @media (max-width: 640px) {
+            .related-posts { margin-top: 30px; }
+            .related-posts-head .rp-tip { display: none; }
+            .rp-card { padding: 12px 13px; }
+        }
+    </style>
+    <style>
         /* ===== 相关画布（v3.35.0：白板 / 导图与文章的关联，不再内嵌正文）=====
            文末一块独立区域，默认只列卡片；点卡片在下方就地展开可交互画布，
            再点一次收起。展开后才挂 iframe / Excalidraw，首屏不为画布付代价。 */
@@ -2079,6 +2126,9 @@
                 <!-- 由 JavaScript 动态生成 -->
             </div>
 
+            <!-- 相关文章（v3.36.0）：文章 ↔ 文章的关联，正向 + 反向合并后在这里列出 -->
+            <section class="related-posts" id="related-posts" style="display:none"></section>
+
             <!-- 相关画布（v3.35.0）：白板 / 导图与本文关联后在这里列出，点开就地查看 -->
             <section class="related-canvas" id="related-canvas" style="display:none"></section>
 
@@ -2133,7 +2183,7 @@
     <script src="js/reader.js?v=3.13.7" defer></script>
     <script src="js/animations.js?v=3.14.0" defer></script>
 
-    <script src="js/article-app.js?v=1.5.1" defer></script>
+    <script src="js/article-app.js?v=1.6.0" defer></script>
 
 </body>
 </html>

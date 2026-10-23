@@ -594,6 +594,58 @@ html body #eeSide *::-webkit-scrollbar { width: 0 !important; height: 0 !importa
     line-height: 1.7;
 }
 
+/* 关联文章：搜索框 + 结果列表（与「关联画布」共用一个面板观感） */
+.ee-rel-search {
+    width: 100%;
+    padding: 7px 10px;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 12.5px;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    color: var(--text);
+    outline: none;
+}
+.ee-rel-search:focus { border-color: var(--accent); }
+.ee-rel-search::-webkit-search-cancel-button { -webkit-appearance: none; }
+.ee-rel-results {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 190px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+/* 结果行：点一下加入关联。整行是按钮，天然可键盘操作 */
+.ee-rel-result {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 6px 8px;
+    border-radius: 8px;
+    cursor: pointer;
+    text-align: left;
+    font-family: inherit;
+    font-size: 12.5px;
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--text-secondary);
+    transition: background .15s ease, border-color .15s ease;
+}
+.ee-rel-result:hover { background: rgba(115, 170, 255, .1); border-color: rgba(115, 170, 255, .45); color: #fff; }
+.ee-rel-result .t { flex: none; font-size: 10.5px; color: #7fb2ff; }
+.ee-rel-result .n {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.ee-rel-result .d { flex: none; font-size: 10.5px; color: var(--text-muted); }
+.ee-rel-result .plus { flex: none; font-size: 13px; color: #7b88a8; }
+.ee-rel-result:hover .plus { color: #7fb2ff; }
+
 /* ===== 侧栏卡片 ===== */
 .ee-card {
     background: var(--bg-card);

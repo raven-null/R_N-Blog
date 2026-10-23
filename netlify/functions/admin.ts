@@ -48,6 +48,9 @@ interface ArticleMeta {
   /** 正文里内嵌的画布（```embed board:xxx / map:yyy）；后台卡片据此直接跳去单独修改那块画布。
    *  空数组 = 已扫描过、没有内嵌画布；缺字段 = 还没扫过（由 action=sync-canvas-refs 补）。 */
   canvasRefs?: CanvasRef[]
+  /** 关联文章 id 列表（v3.36.0）。单向存储：只有「我关联了谁」，
+   *  前台展示时再按全量索引反查「谁关联了我」，合并成双向，避免两边写入不一致。 */
+  relatedIds?: string[]
 }
 
 // ===================== 认证 =====================
@@ -88,6 +91,35 @@ const CANVAS_ID_RE = /^(?:wb|mm)-[A-Za-z0-9-]{2,61}$/
 
 /** 一篇文章最多关联多少块画布（够用即可，挡住异常请求把索引撑大） */
 const MAX_CANVAS_REFS = 20
+
+/** 一篇文章最多关联多少篇文章（卡片更占地方，比画布少一点） */
+const MAX_RELATED_IDS = 12
+
+/** 文章 id 的合法字符集（与随机 id / 手工 id 的生成规则一致） */
+const ARTICLE_ID_RE = /^[A-Za-z0-9_.\u4e00-\u9fa5-]{1,64}$/
+
+/**
+ * 关联文章列表的规范化（v3.36.0）。
+ *   - 只保留形状合法的 id，去重，**排除自己**（自己关联自己没有意义，前台要滤掉）；
+ *   - 上限 MAX_RELATED_IDS；
+ *   - 不做「目标是否存在」的校验：索引在别的请求里可能刚好在更新，
+ *     而且目标被删时前台渲染会跳过（不留空白卡片），没必要在保存路径上多读一次索引。
+ */
+function normalizeRelatedIds(raw: unknown, selfId: string): string[] {
+  if (!Array.isArray(raw)) return []
+  const out: string[] = []
+  const seen = new Set<string>()
+  for (const item of raw) {
+    const id = String(item || "").trim()
+    if (!ARTICLE_ID_RE.test(id)) continue
+    if (id === selfId) continue
+    if (seen.has(id)) continue
+    seen.add(id)
+    out.push(id)
+    if (out.length >= MAX_RELATED_IDS) break
+  }
+  return out
+}
 
 /**
  * 把正文里的「内嵌画布」块整段删掉（v3.35.0 一次性清理用）。
@@ -467,6 +499,8 @@ export default async (req: Request) => {
       //   - 记录里这份给编辑页读（admin-edit 打开文章时拉的是记录，不是索引）；
       //   - 索引里这份给后台卡片与前台列表读。
       const canvasRefs = normalizeCanvasRefs((body as any).canvasRefs, content || "")
+      // 关联文章（v3.36.0）：同样记录 + 索引各一份。单向存储，前台反查成双向。
+      const relatedIds = normalizeRelatedIds((body as any).relatedIds, articleId)
 
       const articleData = {
         id: articleId,
@@ -483,6 +517,7 @@ export default async (req: Request) => {
         boardId,
         mapId,
         canvasRefs,
+        relatedIds,
         createdAt: now,
         updatedAt: now,
       }
@@ -551,6 +586,8 @@ export default async (req: Request) => {
         // 关联画布（白板 / 导图）：后台卡片据此给出「直接去改这块白板」的链接，
         // 前台文章页据此在文末渲染「相关画布」区。客户端显式提交，老客户端仍从正文兜底。
         canvasRefs,
+        // 关联文章（v3.36.0）：前台文章页据此渲染「相关文章」区，并按它反查「谁关联了我」。
+        relatedIds,
       }
 
       if (existing >= 0) {

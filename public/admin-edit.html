@@ -12,7 +12,7 @@
 <!-- 写作页样式：原来整段内联在 <style> 里（34.6KB / 156 个 !important，
      Vditor 覆盖规则还被追加过三遍），现已抽成独立文件并合并去重。
      顺序有讲究：必须排在 vditor/dist/index.css 之后，靠 html body 前缀 + !important 压过组件样式。 -->
-<link rel="stylesheet" href="/css/editor-write.css?v=1.1.0">
+<link rel="stylesheet" href="/css/editor-write.css?v=1.2.0">
     <link rel="stylesheet" href="/css/scrollbar.css?v=1.0.1">
     <link rel="stylesheet" href="/css/responsive.css?v=1.0.0">
     <link rel="stylesheet" href="/css/mobile.css?v=1.0.0">
@@ -111,6 +111,16 @@
                     <div class="ee-card" id="eeExcerptCard">
                         <label>摘要（留空自动提取）</label>
                         <textarea id="eeExcerpt" rows="3" oninput="eeMarkDirty()"></textarea>
+                    </div>
+                    <!-- 关联文章（v3.36.0）：文章 ↔ 文章的关联。
+                         单向存储（只存「我关联了谁」），前台再反查「谁关联了我」合并成双向，
+                         所以不会有两边写入不一致的问题。随记没有详情页，不显示这块。 -->
+                    <div class="ee-card" id="eeRelatedPostsCard">
+                        <label>关联文章</label>
+                        <div class="ee-related-list" id="eeRelatedPostsList"></div>
+                        <input type="search" id="eeRelatedPostsSearch" class="ee-rel-search" placeholder="搜索标题或 id…" autocomplete="off">
+                        <div class="ee-rel-results" id="eeRelatedPostsResults"></div>
+                        <div class="ee-hint ee-related-hint">关联后前台文末会列出「相关文章」，并自动形成反向链接（对方文末也会出现这篇）。</div>
                     </div>
                     <!-- 关联画布：白板 / 导图挂在文章上，不再「插入正文」。
                          关联存在文章的 canvasRefs 字段，前台在文末「相关画布」区展示；
@@ -215,6 +225,6 @@
     <script src="js/editor-kit.js?v=1.1.1"></script>
     <!-- 白板与导图管理（权限 / 口令 / 历史回滚 / 绑定），由 admin-edit.js 注入上下文 -->
     <script src="js/editor-embed-admin.js?v=1.0.0"></script>
-    <script src="js/admin-edit.js?v=1.21.1"></script>
+    <script src="js/admin-edit.js?v=1.22.0"></script>
 </body>
 </html>

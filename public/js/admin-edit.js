@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 独立编辑页脚本（admin-edit.html）
  * 用途：对已发布/草稿的文章、随记、白板、导图进行再次编辑，不再占用后台「写文章」页
  *
@@ -154,6 +154,7 @@
             status: snap.status || '',
             chunked: !!snap.chunked,
             canvasRefs: snap.canvasRefs || [],
+            relatedIds: snap.relatedIds || [],
             content: snap.content || '',
             chapters: chapters
         });
@@ -169,6 +170,7 @@
             status: $('eeStatusSel').value,
             chunked: !!chunkEdit,
             canvasRefs: relatedCanvases.slice(),
+            relatedIds: relatedPosts.slice(),
             content: isCanvasType() ? '' : getEditorContent()
         };
         if (chunkEdit) {
@@ -265,6 +267,10 @@
                 return r && (r.kind === 'board' || r.kind === 'map') && r.id;
             }).map(function (r) { return { kind: r.kind, id: String(r.id) }; });
             renderRelatedPanel();
+        }
+        if (Array.isArray(d.relatedIds)) {
+            relatedPosts = d.relatedIds.map(String);
+            renderRelatedPostsPanel();
         }
     }
 
@@ -749,6 +755,10 @@
             return r && (r.kind === 'board' || r.kind === 'map') && r.id;
         }).map(function (r) { return { kind: r.kind, id: String(r.id) }; });
         renderRelatedPanel(true);
+        // 关联文章（v3.36.0）：单向列表，随记没有详情页所以不显示面板
+        relatedPosts = (Array.isArray(doc.relatedIds) ? doc.relatedIds : []).map(String);
+        wireRelatedPostsSearch();
+        renderRelatedPostsPanel(true);
         if (docType === 'mindmap') $('eeViewBtn').textContent = '前台查看';
         // 新建：还没有记录可删、也还没法从前台打开
         if (isNew) {
@@ -924,7 +934,9 @@
             canvasRefs: finalType === 'article' ? relatedCanvases.map(function (r) {
                 var name = (canvasNameCache[r.kind] || {})[r.id] || '';
                 return name ? { kind: r.kind, id: r.id, name: name } : { kind: r.kind, id: r.id };
-            }) : []
+            }) : [],
+            // 关联文章（v3.36.0）：单向列表，服务端会去重、去掉自己、限 12 条。
+            relatedIds: relatedPosts.slice()
         };
         if (finalType === 'mindmap' && mapId) body.mapId = mapId;
         return body;
@@ -1281,6 +1293,154 @@
     }
 
 
+    // ===== 侧栏：关联文章（v3.36.0）=====
+    // 文章 ↔ 文章 的关联。**单向存储**：只在自己这篇里存「我关联了谁」（relatedIds），
+    // 前台展示时再按全量索引反查「谁关联了我」，合并成双向 —— 这样不会有
+    // 「A 存了 B、B 没存上 A」的不一致，删文章时也不用回来清对方的引用。
+    // 选择方式：一次拉回索引，搜索是纯前端过滤，不打接口。
+    var relatedPosts = [];        // string[]，我关联的文章 id
+    var articleIndexCache = null; // [{id,title,date,type,filename}]
+
+    function canLinkPosts() { return docType !== 'card'; }
+
+    /** 拉一次文章索引（列出可关联的目标）。只保留有详情页的形态 */
+    function loadArticleIndex(force) {
+        if (articleIndexCache && !force) return Promise.resolve(articleIndexCache);
+        return api('action=articles').then(function (r) {
+            var list = (r && r.status === 'success' && Array.isArray(r.data)) ? r.data : [];
+            articleIndexCache = list
+                .filter(function (a) {
+                    var t = a.type || 'article';
+                    return t === 'article' || t === 'whiteboard' || t === 'mindmap';   // 随记没有详情页
+                })
+                .map(function (a) {
+                    return {
+                        id: a.id,
+                        title: a.title || '(未命名)',
+                        date: a.date || '',
+                        type: a.type || 'article',
+                        filename: a.filename || (a.id + '.md')
+                    };
+                });
+            return articleIndexCache;
+        });
+    }
+
+    function postById(id) {
+        var list = articleIndexCache || [];
+        for (var i = 0; i < list.length; i++) if (list[i].id === id) return list[i];
+        return null;
+    }
+
+    function hasRelatedPost(id) { return relatedPosts.indexOf(id) >= 0; }
+
+    function postTypeLabel(t) { return t === 'whiteboard' ? '白板' : (t === 'mindmap' ? '导图' : '文章'); }
+
+    function paintRelatedPosts() {
+        var box = $('eeRelatedPostsList');
+        if (!box) return;
+        if (!relatedPosts.length) {
+            box.innerHTML = '<div class="ee-related-empty">还没有关联文章。关联后前台会在文末「相关文章」里列出，并自动形成反向链接。</div>';
+        } else {
+            box.innerHTML = relatedPosts.map(function (id) {
+                var p = postById(id);
+                var title = p ? p.title : id + '（已删除或不可见）';
+                var meta = p ? (postTypeLabel(p.type) + (p.date ? ' · ' + p.date : '')) : '已失效';
+                return '<div class="ee-canvas-item" data-id="' + esc(id) + '">' +
+                    '<span class="k">' + (p ? esc(postTypeLabel(p.type).slice(0, 2)) : '失效') + '</span>' +
+                    '<span class="n' + (p ? '' : ' unnamed') + '" title="' + esc(meta) + '">' + esc(title) + '</span>' +
+                    '<button type="button" class="ee-canvas-unlink" data-unlink="1" title="解除关联">×</button>' +
+                    '</div>';
+            }).join('');
+            Array.prototype.forEach.call(box.querySelectorAll('.ee-canvas-item'), function (row) {
+                row.addEventListener('click', function (e) {
+                    if (e.target && e.target.getAttribute && e.target.getAttribute('data-unlink')) {
+                        e.stopPropagation();
+                        unlinkPost(this.getAttribute('data-id'));
+                    }
+                });
+            });
+        }
+        paintRelatedPostResults();
+    }
+
+    /** 搜索结果：按标题过滤，已关联的排除 */
+    function paintRelatedPostResults() {
+        var box = $('eeRelatedPostsResults');
+        if (!box) return;
+        var kw = (($('eeRelatedPostsSearch') || {}).value || '').trim().toLowerCase();
+        var list = (articleIndexCache || []).filter(function (p) {
+            if (p.id === (doc && doc.id)) return false;         // 不列自己
+            if (hasRelatedPost(p.id)) return false;             // 已关联的不再列
+            if (!kw) return true;
+            return p.title.toLowerCase().indexOf(kw) >= 0 || p.id.toLowerCase().indexOf(kw) >= 0;
+        });
+        if (!articleIndexCache) {
+            box.innerHTML = '<div class="ee-related-empty">正在读取文章列表…</div>';
+            return;
+        }
+        if (!list.length) {
+            box.innerHTML = '<div class="ee-related-empty">' + (kw ? '没有匹配的文章' : '没有可关联的文章了') + '</div>';
+            return;
+        }
+        var CAP = 20;
+        box.innerHTML = list.slice(0, CAP).map(function (p) {
+            return '<button type="button" class="ee-rel-result" data-id="' + esc(p.id) + '">' +
+                '<span class="t">' + esc(postTypeLabel(p.type)) + '</span>' +
+                '<span class="n">' + esc(p.title) + '</span>' +
+                '<span class="d">' + esc(p.date || '') + '</span>' +
+                '<span class="plus">+</span>' +
+                '</button>';
+        }).join('') + (list.length > CAP ? '<div class="ee-related-empty">还有 ' + (list.length - CAP) + ' 篇，输入关键词继续搜</div>' : '');
+        Array.prototype.forEach.call(box.querySelectorAll('.ee-rel-result'), function (btn) {
+            btn.addEventListener('click', function () { linkPost(this.getAttribute('data-id')); });
+        });
+    }
+
+    function renderRelatedPostsPanel(force) {
+        var card = $('eeRelatedPostsCard');
+        if (!card) return;
+        if (!canLinkPosts()) { card.style.display = 'none'; return; }
+        card.style.display = '';
+        paintRelatedPosts();
+        if (!articleIndexCache || force) {
+            loadArticleIndex(force).then(function () { paintRelatedPosts(); });
+        }
+    }
+
+    function linkPost(id) {
+        id = String(id || '').trim();
+        if (!id) return;
+        if (hasRelatedPost(id)) { toast('已经关联过了'); return; }
+        if (doc && id === doc.id) { toast('不能关联自己', 'error'); return; }
+        relatedPosts.push(id);
+        window.eeMarkDirty();
+        renderRelatedPostsPanel();
+        toast('已关联', 'success');
+    }
+
+    function unlinkPost(id) {
+        relatedPosts = relatedPosts.filter(function (x) { return x !== id; });
+        window.eeMarkDirty();
+        renderRelatedPostsPanel();
+        toast('已解除关联（保存后生效）', 'success');
+    }
+
+    window.eeLinkPost = function (id) { linkPost(id); };
+    window.eeUnlinkPost = function (id) { unlinkPost(id); };
+
+    // 搜索框：300ms 防抖，纯前端过滤
+    var relatedPostsTimer = null;
+    function wireRelatedPostsSearch() {
+        var inp = $('eeRelatedPostsSearch');
+        if (!inp || inp.dataset.wired) return;
+        inp.dataset.wired = '1';
+        inp.addEventListener('input', function () {
+            clearTimeout(relatedPostsTimer);
+            relatedPostsTimer = setTimeout(paintRelatedPostResults, 300);
+        });
+    }
+
     // ===== 启动 =====
     var booted = false;
     function boot() {
@@ -1328,8 +1488,10 @@
 
         (isNew ? initNewDoc() : load()).then(function () {
             setTimeout(fitEditor, 120);
-            // 关联画布面板（文章形态才显示）；旧文章正文里若还有内嵌块，问一次要不要转成关联
+            // 关联面板（画布 / 文章）；旧文章正文里若还有内嵌块，问一次要不要转成关联
             renderRelatedPanel(true);
+            wireRelatedPostsSearch();
+            renderRelatedPostsPanel(true);
             offerStripLegacyEmbeds();
             maybeRestoreDraft();
         });
