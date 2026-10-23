@@ -686,6 +686,62 @@ html body #eeSide *::-webkit-scrollbar { width: 0 !important; height: 0 !importa
 }
 .ee-term-op:hover { color: #fff; background: rgba(115, 170, 255, .16); border-color: rgba(115, 170, 255, .4); }
 
+/* ===== 编辑区术语高亮（v3.39.0）=====
+   用 CSS Custom Highlight API 给正文里的术语打标记：不动 DOM、不改 Markdown 源码。
+   两个分组：定义锚点（首次出现/自定义）与其余出现，颜色区分。 */
+::highlight(ee-term-anchor) {
+    background-color: rgba(255, 176, 32, .28);
+    text-decoration: underline;
+    text-decoration-color: rgba(255, 176, 32, .95);
+    text-decoration-style: solid;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 2px;
+}
+::highlight(ee-term-link) {
+    background-color: rgba(115, 170, 255, .16);
+    text-decoration: underline;
+    text-decoration-color: rgba(115, 170, 255, .9);
+    text-decoration-style: dashed;
+    text-underline-offset: 2px;
+}
+/* 面板里的图例 */
+.ee-term-legend {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px 10px;
+    margin-bottom: 8px;
+    font-size: 11px;
+    color: var(--text-muted);
+}
+.ee-term-legend.muted { display: block; line-height: 1.7; }
+.ee-term-legend .lg-anchor,
+.ee-term-legend .lg-link {
+    display: inline-block;
+    width: 16px;
+    height: 9px;
+    border-radius: 2px;
+}
+.ee-term-legend .lg-anchor { background: rgba(255, 176, 32, .28); border-bottom: 2px solid rgba(255, 176, 32, .95); }
+.ee-term-legend .lg-link { background: rgba(115, 170, 255, .16); border-bottom: 2px dashed rgba(115, 170, 255, .9); }
+/* 出现次数 */
+.ee-term-count {
+    flex: none;
+    font-size: 10.5px;
+    color: #9ec2ff;
+    padding: 1px 6px;
+    border-radius: 99px;
+    background: rgba(115, 170, 255, .12);
+    border: 1px solid rgba(115, 170, 255, .28);
+}
+.ee-term-count.zero { color: #ffb4ad; background: rgba(239, 106, 94, .12); border-color: rgba(239, 106, 94, .35); }
+/* 「定位」时正文块的闪烁提示 */
+.ee-term-flash { animation: eeTermFlash 1.4s ease; }
+@keyframes eeTermFlash {
+    0%, 100% { box-shadow: none; }
+    20%, 60% { box-shadow: 0 0 0 3px rgba(255, 176, 32, .55); border-radius: 6px; }
+}
+
 /* ===== 插入链接面板（v3.38.0）===== */
 .ee-linkpicker { position: fixed; inset: 0; z-index: 2500; display: none; }
 .ee-linkpicker.open { display: flex; align-items: center; justify-content: center; }

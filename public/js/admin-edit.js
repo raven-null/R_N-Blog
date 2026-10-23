@@ -442,6 +442,7 @@
             cache: { enable: false },
             input: function () {
                 scheduleInfo();
+                scheduleTermDecorations();   // 术语高亮跟着内容走（防抖）
                 window.eeMarkDirty();
             },
             after: function () {
@@ -458,6 +459,8 @@
                 if (window.EditorMenu) window.EditorMenu.attach(vditor);
                 // 大纲（正文结构导航），见 /js/editor-outline.js
                 if (window.EditorOutline) window.EditorOutline.attach(vditor);
+                // 正文渲染完成后才扫得到文本节点：补一次术语面板刷新（出现次数 + 编辑区高亮）
+                renderTermsPanel();
             }
         });
         return vditor;
@@ -483,6 +486,7 @@
         if (!vditorReady) { pendingMd = md; return; }
         ed.setValue(md);
         updateInfo();
+        scheduleTermDecorations();   // 整篇换了内容，术语高亮要重算
     }
     function getEditorContent() {
         var ed = initEditor();
@@ -882,6 +886,7 @@
         setEditorContent(chunkEdit.chunks[i] || '');
         chunkEdit.current = i;
         if (sel) sel.value = String(i);
+        scheduleTermDecorations();
         toast('已切换到第 ' + (i + 1) + ' 章（原内容已暂存）', 'success');
     };
 
@@ -1531,28 +1536,217 @@
         toast('「' + word + '」的锚点已改回首次出现');
     }
 
+    // ===== 编辑区里的术语高亮（v3.39.0）=====
+    // 术语是元数据，正文本身是纯文本 —— 所以作者在编辑器里看不出哪里标了。
+    // 这里用 **CSS Custom Highlight API**（CSS.highlights + Range）做非侵入式高亮：
+    //   · 不往正文塞 span，不动 DOM 结构，也就不会污染 Markdown 源码
+    //   · 定义锚点（首次出现处）用一种颜色，其余出现用另一种
+    // 浏览器不支持时静默降级（面板里仍有出现次数与「定位」按钮）。
+    var TERM_HL_LINK = 'ee-term-link';
+    var TERM_HL_ANCHOR = 'ee-term-anchor';
+    var termDecorTimer = null;
+    var termDecorBusy = false;
+    var TERM_DECOR_MAX_CHARS = 300000;   // 超长正文跳过编辑期高亮（前台不受影响）
+
+    function supportsHighlightApi() {
+        return !!(window.CSS && CSS.highlights && typeof Highlight === 'function' && window.Range);
+    }
+
+    /** 扫一个容器的文本节点（跳过代码块 / 链接 / 标题等） */
+    function decorTextNodes(root) {
+        var out = [];
+        if (!root || !document.createTreeWalker) return out;
+        var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+        var n;
+        while ((n = walker.nextNode())) {
+            var t = n.nodeValue || '';
+            if (!t.trim()) continue;
+            var el = n.parentElement;
+            if (!el) continue;
+            // 注意：Vditor 的正文根本身就是 <pre class="vditor-reset">，
+            // 这里**不能**把 pre 一概跳过（否则一个节点都扫不到，高亮永远为空）。
+            // 真正的代码块在 WYSIWYG 里是 .vditor-wysiwyg__block[data-type="code-block"]，内含 <code>。
+            if (el.closest('code, a, kbd, samp, svg, .vditor-ir__marker, .vditor-wysiwyg__preview, .vditor-wysiwyg__block[data-type="code-block"], .vditor-wysiwyg__pre')) continue;
+            out.push(n);
+        }
+        return out;
+    }
+
+    function matcherOf(word) {
+        var w = String(word || '');
+        if (!w) return null;
+        if (/^[A-Za-z0-9_\-\s]+$/.test(w)) {
+            var body = w.trim().split(/\s+/).map(function (p) {
+                return p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            }).join('\\s+');
+            return new RegExp('\\b(' + body + ')\\b', 'gi');
+        }
+        return new RegExp('(' + w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'g');
+    }
+
+    /**
+     * 重算编辑区里的术语高亮。
+     * @returns {{ok:boolean, reason?:string, counts?:object}}
+     */
+    function refreshTermDecorations() {
+        var host = document.querySelector('#eeVditor .vditor-wysiwyg') ||
+            document.querySelector('#eeVditor .vditor-ir');
+        if (!host || !terms.length) { clearTermDecorations(); return { ok: false, reason: 'none' }; }
+        if (!supportsHighlightApi()) { return { ok: false, reason: 'unsupported' }; }
+        if ((getEditorContent() || '').length > TERM_DECOR_MAX_CHARS) {
+            clearTermDecorations();
+            return { ok: false, reason: 'toolong' };
+        }
+
+        var nodes = decorTextNodes(host);
+        var anchorRanges = [];
+        var linkRanges = [];
+        var counts = {};
+
+        terms.forEach(function (term) {
+            var re = matcherOf(term.word);
+            if (!re) return;
+            var hits = [];
+            for (var i = 0; i < nodes.length && hits.length < 500; i++) {
+                var text = nodes[i].nodeValue || '';
+                re.lastIndex = 0;
+                var m;
+                while ((m = re.exec(text))) {
+                    hits.push({ node: nodes[i], start: m.index, end: m.index + m[0].length });
+                    if (hits.length >= 500) break;
+                    if (m.index === re.lastIndex) re.lastIndex++;
+                }
+            }
+            counts[term.word] = hits.length;
+            if (!hits.length) return;
+            // 锚点：自定义指纹优先，否则首次出现
+            var anchorIdx = 0;
+            if (term.anchor && term.anchor !== 'first') {
+                var fp = String(term.anchor).replace(/\s+/g, ' ').trim();
+                for (var k = 0; k < hits.length; k++) {
+                    var blk = hits[k].node.parentElement &&
+                        hits[k].node.parentElement.closest('p, li, blockquote, td, th, h1, h2, h3, h4, h5, h6');
+                    var bt = blk ? String(blk.textContent || '').replace(/\s+/g, ' ').trim() : '';
+                    if (bt.indexOf(fp) === 0) { anchorIdx = k; break; }
+                }
+            }
+            hits.forEach(function (h, idx) {
+                try {
+                    var r = document.createRange();
+                    r.setStart(h.node, h.start);
+                    r.setEnd(h.node, h.end);
+                    (idx === anchorIdx ? anchorRanges : linkRanges).push(r);
+                } catch (e) { /* 节点可能刚被替换，忽略 */ }
+            });
+        });
+
+        try {
+            CSS.highlights.delete(TERM_HL_LINK);
+            CSS.highlights.delete(TERM_HL_ANCHOR);
+            if (linkRanges.length) {
+                var h1 = new Highlight();
+                linkRanges.forEach(function (r) { h1.add(r); });
+                CSS.highlights.set(TERM_HL_LINK, h1);
+            }
+            if (anchorRanges.length) {
+                var h2 = new Highlight();
+                anchorRanges.forEach(function (r) { h2.add(r); });
+                CSS.highlights.set(TERM_HL_ANCHOR, h2);
+            }
+        } catch (e) {
+            return { ok: false, reason: 'error' };
+        }
+        return { ok: true, counts: counts };
+    }
+
+    function clearTermDecorations() {
+        if (!(window.CSS && CSS.highlights)) return;
+        try {
+            CSS.highlights.delete(TERM_HL_LINK);
+            CSS.highlights.delete(TERM_HL_ANCHOR);
+        } catch (e) { /* 忽略 */ }
+    }
+
+    /** 输入时防抖重算（不必每敲一个字都扫） */
+    function scheduleTermDecorations() {
+        if (!terms.length) { clearTermDecorations(); return; }
+        clearTimeout(termDecorTimer);
+        termDecorTimer = setTimeout(function () {
+            if (termDecorBusy) return;
+            termDecorBusy = true;
+            try { refreshTermDecorations(); } finally { termDecorBusy = false; }
+        }, 450);
+    }
+
+    /** 把某个词的出现位置滚到视野里并闪一下（面板「定位」用） */
+    function locateTerm(word) {
+        var host = document.querySelector('#eeVditor .vditor-wysiwyg') ||
+            document.querySelector('#eeVditor .vditor-ir');
+        if (!host) return false;
+        var re = matcherOf(word);
+        if (!re) return false;
+        var nodes = decorTextNodes(host);
+        for (var i = 0; i < nodes.length; i++) {
+            re.lastIndex = 0;
+            if (!re.test(nodes[i].nodeValue || '')) continue;
+            var el = nodes[i].parentElement;
+            var block = el && el.closest('p, li, blockquote, td, th, h1, h2, h3, h4, h5, h6');
+            var target = block || el;
+            if (!target) continue;
+            try { target.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+            catch (e) { target.scrollIntoView(); }
+            target.classList.remove('ee-term-flash');
+            void target.offsetWidth;
+            target.classList.add('ee-term-flash');
+            setTimeout(function () { target.classList.remove('ee-term-flash'); }, 1400);
+            return true;
+        }
+        toast('正文里没找到「' + word + '」', 'error');
+        return false;
+    }
+
     function renderTermsPanel() {
         var card = $('eeTermsCard');
         if (!card) return;
-        if (docType === 'card') { card.style.display = 'none'; return; }
+        if (docType === 'card') { card.style.display = 'none'; clearTermDecorations(); return; }
         card.style.display = '';
         var box = $('eeTermsList');
         if (!box) return;
         if (!terms.length) {
             box.innerHTML = '<div class="ee-related-empty">还没有术语。在正文里选中一个词，右键「标记为术语」即可。</div>';
+            clearTermDecorations();
             return;
         }
-        box.innerHTML = terms.map(function (t, i) {
+
+        // 先算一遍出现次数（同时把编辑区高亮刷新出来）
+        var decor = refreshTermDecorations();
+        var counts = (decor && decor.counts) || {};
+        var legend = '';
+        if (decor && decor.ok) {
+            legend = '<div class="ee-term-legend">' +
+                '<span class="lg-anchor"></span>定义锚点' +
+                '<span class="lg-link"></span>其余出现（前台会变成回链）' +
+                '</div>';
+        } else if (decor && decor.reason === 'toolong') {
+            legend = '<div class="ee-term-legend muted">正文超过 30 万字，编辑区不显示高亮（前台不受影响）</div>';
+        } else if (decor && decor.reason === 'unsupported') {
+            legend = '<div class="ee-term-legend muted">当前浏览器不支持编辑区高亮，可用下方「定位」按钮查看</div>';
+        }
+
+        box.innerHTML = legend + terms.map(function (t) {
             var custom = !!(t.anchor && t.anchor !== 'first');
+            var n = counts[t.word] || 0;
             return '<div class="ee-term-item" data-word="' + esc(t.word) + '">' +
                 '<div class="ee-term-row">' +
                 '<span class="ee-term-word">' + esc(t.word) + '</span>' +
+                '<span class="ee-term-count' + (n ? '' : ' zero') + '" title="正文里出现的次数">' + n + ' 处</span>' +
                 '<span class="ee-term-anchor' + (custom ? ' custom' : '') + '" title="' +
                 esc(custom ? ('锚点段落：' + t.anchor) : '锚点：首次出现处') + '">' +
                 (custom ? '自定义锚点' : '首次出现') + '</span>' +
                 '<button type="button" class="ee-canvas-unlink" data-act="del" title="移除术语">×</button>' +
                 '</div>' +
                 '<div class="ee-term-ops">' +
+                '<button type="button" class="ee-term-op" data-act="locate">定位</button>' +
                 '<button type="button" class="ee-term-op" data-act="anchor">锚到当前段落</button>' +
                 (custom ? '<button type="button" class="ee-term-op" data-act="reset">改回首次</button>' : '') +
                 '</div>' +
@@ -1566,13 +1760,20 @@
                     if (act === 'del') unmarkTerm(word);
                     else if (act === 'anchor') anchorTermToCaret(word);
                     else if (act === 'reset') resetTermAnchor(word);
+                    else if (act === 'locate') locateTerm(word);
                 });
             });
         });
     }
 
     // 右键菜单（editor-menu.js）通过这个入口回调
-    window.EETerms = { mark: markTerm };
+    window.EETerms = {
+        mark: function (word) {
+            markTerm(word);
+            // 标完立刻高亮 + 滚到锚点，省得还要自己找
+            setTimeout(function () { refreshTermDecorations(); locateTerm(normalizeWord(word)); }, 80);
+        }
+    };
 
     // ===== 插入链接：站内文章 / 本文标题（v3.38.0）=====
     // 正文里的链接是纯 Markdown（`[文字](地址)`），难点只有两个：

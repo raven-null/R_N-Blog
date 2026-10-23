@@ -12,7 +12,7 @@
 <!-- 写作页样式：原来整段内联在 <style> 里（34.6KB / 156 个 !important，
      Vditor 覆盖规则还被追加过三遍），现已抽成独立文件并合并去重。
      顺序有讲究：必须排在 vditor/dist/index.css 之后，靠 html body 前缀 + !important 压过组件样式。 -->
-<link rel="stylesheet" href="/css/editor-write.css?v=1.4.0">
+<link rel="stylesheet" href="/css/editor-write.css?v=1.5.0">
     <link rel="stylesheet" href="/css/scrollbar.css?v=1.0.1">
     <link rel="stylesheet" href="/css/responsive.css?v=1.0.0">
     <link rel="stylesheet" href="/css/mobile.css?v=1.0.0">
@@ -124,7 +124,9 @@
                     </div>
                     <!-- 本篇术语（v3.37.0）：文内术语回链。
                          正文里选中词 → 右键「标记为术语」；词从第二次出现起自动链回定义处。
-                         定义锚点默认是「首次出现那段」，也可以点「锚到当前段落」改到光标所在段。 -->
+                         定义锚点默认是「首次出现那段」，也可以点「锚到当前段落」改到光标所在段。
+                         v3.39.0：编辑区里用非侵入式高亮标出术语（锚点橙色实线、其余蓝色虚线），
+                         面板显示每词出现次数并可「定位」；高亮不写进正文，Markdown 源码保持干净。 -->
                     <div class="ee-card" id="eeTermsCard">
                         <label>本篇术语</label>
                         <div class="ee-related-list" id="eeTermsList"></div>
@@ -248,6 +250,6 @@
     <script src="js/editor-kit.js?v=1.1.1"></script>
     <!-- 白板与导图管理（权限 / 口令 / 历史回滚 / 绑定），由 admin-edit.js 注入上下文 -->
     <script src="js/editor-embed-admin.js?v=1.0.0"></script>
-    <script src="js/admin-edit.js?v=1.24.0"></script>
+    <script src="js/admin-edit.js?v=1.25.0"></script>
 </body>
 </html>
