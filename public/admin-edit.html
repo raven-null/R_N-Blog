@@ -12,7 +12,7 @@
 <!-- 写作页样式：原来整段内联在 <style> 里（34.6KB / 156 个 !important，
      Vditor 覆盖规则还被追加过三遍），现已抽成独立文件并合并去重。
      顺序有讲究：必须排在 vditor/dist/index.css 之后，靠 html body 前缀 + !important 压过组件样式。 -->
-<link rel="stylesheet" href="/css/editor-write.css?v=1.12.0">
+<link rel="stylesheet" href="/css/editor-write.css?v=1.14.0">
     <link rel="stylesheet" href="/css/scrollbar.css?v=1.0.1">
     <link rel="stylesheet" href="/css/responsive.css?v=1.0.0">
     <link rel="stylesheet" href="/css/mobile.css?v=1.0.0">
@@ -26,18 +26,16 @@
     <header class="ee-top">
         <div class="ee-left">
             <a class="ee-back" href="/admin.html">← 返回后台</a>
-            <span class="ee-id" id="eeIdText"></span>
         </div>
         <div class="ee-right">
             <!-- 字数 / 保存状态原来在编辑器下方那条 .ee-foot 里，现在并到顶栏右侧。
                  字数已换成「净字数」（汉字 + 英文单词，不含 Markdown 标记），鼠标悬停看源码字符数。 -->
             <span class="ee-stat" id="eeInfo">0 字</span>
             <span class="ee-stat saved" id="eeSaved"></span>
-            <!-- AI 写作助手入口：桌面/窄屏都常驻（侧栏折叠时也能一键打开），点了直接切到侧栏的 AI 页签 -->
+            <!-- 下面这两个只在窄屏出现（宽屏有侧栏页签、折叠把手和整页快捷键，不必再顶到顶栏）：
+                 「AI」直接切到侧栏 AI 页签；「⋯」收着 快捷键 / 前台查看 / 删除。 -->
             <button class="ee-btn ee-ai-btn" id="eeAiBtn" onclick="eeOpenAi()" title="AI 写作助手：解答写作中的疑问">AI</button>
-            <!-- 窄屏才出现的「属性」入口：把右侧栏做成抽屉滑出（桌面端用侧栏自带的折叠按钮） -->
             <button class="ee-btn ee-side-btn" id="eeSideBtn" onclick="eeToggleSide()" title="属性栏（Ctrl+.）">属性</button>
-            <!-- 次要动作收进「⋯」：前台查看 / 删除 / 快捷键，顶栏只留最常用的 -->
             <div class="ee-more">
                 <button class="ee-btn ee-more-btn" id="eeMoreBtn" onclick="eeToggleMore(event)" title="更多操作" aria-haspopup="true">⋯</button>
                 <div class="ee-more-menu" id="eeMoreMenu">
@@ -79,7 +77,8 @@
             <!-- 标题：四种形态共用这一处（原来它在编辑区上方，白板/导图形态下那整列是隐藏的，
                  等于那两种形态根本没地方写标题）。放侧栏最上面，是发文第一个要填的东西。 -->
             <div class="ee-card ee-title-card-side">
-                <label>标题</label>
+                <label>标题<span class="ee-help" tabindex="0" role="note" aria-label="说明"
+                      data-tip="必填；文章 / 随记 / 白板 / 导图都用这一处命名，保存时会同步成它们的名字。">?</span></label>
                 <input id="eeTitle" class="ee-title-input" placeholder="标题" maxlength="100" autocomplete="off">
             </div>
             <div class="ee-card">
@@ -120,18 +119,20 @@
                 <summary>更多设置<span class="chev">›</span></summary>
                 <div class="ee-side-more-body">
                     <div class="ee-card" id="eeExcerptCard">
-                        <label>摘要（留空自动提取）</label>
+                        <label>摘要<span class="ee-help" tabindex="0" role="note" aria-label="说明"
+                              data-tip="留空会自动从正文提取。">?</span></label>
                         <textarea id="eeExcerpt" rows="3" oninput="eeMarkDirty()"></textarea>
                     </div>
                     <!-- 关联文章（v3.36.0）：文章 ↔ 文章的关联。
                          单向存储（只存「我关联了谁」），前台再反查「谁关联了我」合并成双向，
-                         所以不会有两边写入不一致的问题。随记没有详情页，不显示这块。 -->
+                         所以不会有两边写入不一致的问题。随记没有详情页，不显示这块。
+                         v3.44.4：卡片里的说明文字统一改成 label 旁的「?」，悬浮才展开。 -->
                     <div class="ee-card" id="eeRelatedPostsCard">
-                        <label>关联文章</label>
+                        <label>关联文章<span class="ee-help" tabindex="0" role="note" aria-label="说明"
+                              data-tip="关联后前台文末会列出「相关文章」，双方自动互相链接（对方文末也会出现这篇）。">?</span></label>
                         <div class="ee-related-list" id="eeRelatedPostsList"></div>
                         <input type="search" id="eeRelatedPostsSearch" class="ee-rel-search" placeholder="搜索标题或 id…" autocomplete="off">
                         <div class="ee-rel-results" id="eeRelatedPostsResults"></div>
-                        <div class="ee-hint ee-related-hint">关联后前台文末会列出「相关文章」，并自动形成反向链接（对方文末也会出现这篇）。</div>
                     </div>
                     <!-- 本篇术语（v3.37.0）：文内术语回链。
                          正文里选中词 → 右键「标记为术语」；词从第二次出现起自动链回定义处。
@@ -139,15 +140,16 @@
                          v3.39.0：编辑区里用非侵入式高亮标出术语（锚点橙色实线、其余蓝色虚线），
                          面板显示每词出现次数并可「定位」；高亮不写进正文，Markdown 源码保持干净。 -->
                     <div class="ee-card" id="eeTermsCard">
-                        <label>本篇术语</label>
+                        <label>本篇术语<span class="ee-help" tabindex="0" role="note" aria-label="说明"
+                              data-tip="正文里选中一个词 → 右键「标记为术语」。读者在第二次出现处可悬停看定义、点击跳回。">?</span></label>
                         <div class="ee-related-list" id="eeTermsList"></div>
-                        <div class="ee-hint ee-related-hint">在正文里选中一个词 → 右键「标记为术语」。读者读到第二次出现时会看到虚线下划线，悬停看定义、点击跳回。</div>
                     </div>
                     <!-- 关联画布：白板 / 导图挂在文章上，不再「插入正文」。
                          关联存在文章的 canvasRefs 字段，前台在文末「相关画布」区展示；
                          点整行去前台看 / 改那块画布，× 解除关联。 -->
                     <div class="ee-card" id="eeRelatedCard">
-                        <label>关联画布</label>
+                        <label>关联画布<span class="ee-help" tabindex="0" role="note" aria-label="说明"
+                              data-tip="正文只写文字；白板 / 导图作为「相关画布」挂在文章上，前台文末列出。新画布请先去「新建」页创建。">?</span></label>
                         <div class="ee-related-list" id="eeRelatedList"></div>
                         <div class="ee-related-add">
                             <select id="eeRelatedBoardSel" aria-label="选择要关联的白板"><option value="">选择一块白板…</option></select>
@@ -157,10 +159,10 @@
                             <select id="eeRelatedMapSel" aria-label="选择要关联的导图"><option value="">选择一张导图…</option></select>
                             <button type="button" class="ee-btn" onclick="eeLinkCanvas('map')">关联</button>
                         </div>
-                        <div class="ee-hint ee-related-hint">正文只写文字；白板 / 导图作为「相关画布」挂在文章上，前台在文末列出。新画布请先到「新建」页创建再回来关联。</div>
                     </div>
                     <div class="ee-card" id="eeBoardAdminCard" style="display:none">
-                        <label>白板管理</label>
+                        <label>白板管理<span class="ee-help" tabindex="0" role="note" aria-label="说明"
+                              data-tip="权限与口令改动即时生效；回滚会用所选快照覆盖当前画布，当前版本仍保留在历史中。">?</span></label>
                         <!-- 白板名称的改名入口已去掉：侧栏顶部的「标题」就是它的名字，
                              保存时会自动同步到白板的 meta.title（后台白板管理列表读的是那个）。
                              画板 ID 那一行也去掉了 —— 它对作者没有可操作价值。 -->
@@ -182,7 +184,6 @@
                             <button class="ee-btn" onclick="eeLoadBoardHistory()">刷新历史</button>
                             <button class="ee-btn danger" onclick="eeRollbackBoard()">回滚到所选版本</button>
                         </div>
-                        <div class="ee-hint">权限、口令改动即时生效；回滚会用所选快照覆盖当前画布，当前版本仍保留在历史中。</div>
                     </div>
                     <div class="ee-card" id="eeMapKeyCard" style="display:none">
                         <div class="ee-ba-row"><span>编辑口令</span><span class="ee-ba-value" id="eeMapKey">—</span></div>
@@ -209,8 +210,13 @@
         <!-- 窄屏抽屉的遮罩（桌面端 display:none，由 CSS 控制） -->
         <div class="ee-side-mask" id="eeSideMask"></div>
 
-        <!-- 侧栏折叠后的边缘展开把手 -->
-        <button type="button" class="ee-side-open" id="eeSideOpen" onclick="eeToggleSide()" title="展开侧栏（Ctrl+.）" aria-hidden="true">‹ 属性</button>
+        <!-- 侧栏折叠后的边缘展开把手：属性 / AI 两个入口，点哪个就展开到哪个页签 -->
+        <div class="ee-side-open" id="eeSideOpen" aria-hidden="true">
+            <button type="button" class="ee-side-open-btn" id="eeSideOpenProps"
+                    onclick="eeOpenSide('props')" title="展开属性栏（Ctrl+.）">‹ 属性</button>
+            <button type="button" class="ee-side-open-btn" id="eeSideOpenAi"
+                    onclick="eeOpenSide('ai')" title="展开 AI 助手">‹ AI</button>
+        </div>
 
         <!-- 白板 -->
         <section class="ee-board" id="eeBoard" style="display:none">
@@ -271,6 +277,6 @@
     <script src="js/editor-embed-admin.js?v=1.0.0"></script>
     <!-- 侧栏「AI」页签：写作问答助手（只读，不碰正文） -->
     <script src="js/write-ai.js?v=1.2.1"></script>
-    <script src="js/admin-edit.js?v=1.31.2"></script>
+    <script src="js/admin-edit.js?v=1.32.2"></script>
 </body>
 </html>

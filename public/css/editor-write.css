@@ -73,7 +73,7 @@ body {
     transition: all .2s ease;
 }
 .ee-back:hover { background: rgba(255, 255, 255, .12); color: #fff; }
-.ee-id { font-size: 12px; color: var(--text-muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+/* v3.44.4：顶栏不再显示内容 id，.ee-id 样式一并删掉 */
 /* 字数 / 保存状态：原来在编辑器下方那条 .ee-foot 里，现在并进顶栏右侧。
    注意别用 margin-left:auto —— 那会把后面的按钮顶开。 */
 .ee-stat { font-size: 12.5px; color: var(--text-muted); white-space: nowrap; }
@@ -105,10 +105,10 @@ body {
 .ee-btn[disabled] { opacity: .45; cursor: not-allowed; transform: none; }
 .ee-btn[disabled]:hover { background: rgba(255, 255, 255, .08); color: var(--text-secondary); }
 
-/* ===== 顶栏「⋯」更多菜单 ===== */
-/* 窄屏才出现的「属性」入口（桌面端侧栏自带折叠按钮，不需要它） */
+/* 顶栏两个入口只在窄屏出现：宽屏有侧栏页签、折叠把手和整页快捷键，顶栏保持干净 */
+.ee-more { display: none; position: relative; }
 .ee-side-btn { display: none; }
-.ee-more { position: relative; display: inline-flex; }
+.ee-ai-btn { display: none; }
 .ee-more-btn {
     width: 32px;
     height: 32px;
@@ -572,17 +572,23 @@ html body #eeSide *::-webkit-scrollbar { width: 0 !important; height: 0 !importa
         pointer-events: none;
     }
 }
+/* 折叠后的边缘把手：属性 / AI 两个竖排入口。
+   z-index 要高于 .ee-editor-card 的 3000，否则会被编辑器正文压住。 */
 .ee-side-open { display: none; }
 .ee-main.side-collapsed .ee-side-open {
     display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    /* z-index 要高于 .ee-editor-card 的 3000，否则会被编辑器正文压住 */
+    flex-direction: column;
+    gap: 6px;
     position: fixed;
     right: 0;
     top: 50%;
     transform: translateY(-50%);
     z-index: 3100;
+}
+.ee-side-open-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     padding: 14px 7px;
     border-radius: 10px 0 0 10px;
     cursor: pointer;
@@ -595,9 +601,15 @@ html body #eeSide *::-webkit-scrollbar { width: 0 !important; height: 0 !importa
     border-right: none;
     color: #cfe2ff;
     box-shadow: -8px 0 24px -12px rgba(0, 0, 0, .8);
-    transition: background .18s ease, color .18s ease;
+    transition: background .18s ease, color .18s ease, border-color .18s ease;
 }
-.ee-main.side-collapsed .ee-side-open:hover { background: rgba(115, 170, 255, .36); color: #fff; }
+.ee-side-open-btn:hover { background: rgba(115, 170, 255, .36); color: #fff; }
+/* 当前正停在这个页签上时，把手淡淡标出来 */
+.ee-side-open-btn.active {
+    background: rgba(115, 170, 255, .3);
+    border-color: rgba(115, 170, 255, .55);
+    color: #fff;
+}
 
 /* 窄屏抽屉用的遮罩（桌面端永不显示） */
 .ee-side-mask { display: none; }
@@ -808,16 +820,8 @@ html body #eeSide *::-webkit-scrollbar { width: 0 !important; height: 0 !importa
 .ee-related-add { display: flex; gap: 6px; align-items: center; }
 .ee-related-add select { flex: 1; min-width: 0; }
 .ee-related-add .ee-btn { flex: none; height: 32px; padding: 0 12px; font-size: 12.5px; }
-/* 这一块里的 .ee-hint 是行内说明，不占满高度（.ee-hint 本体是给画布占位用的居中块） */
-.ee-related-hint {
-    height: auto;
-    display: block;
-    text-align: left;
-    padding: 0;
-    color: var(--text-muted);
-    font-size: 11.5px;
-    line-height: 1.7;
-}
+/* v3.44.4：卡片里的行内说明（.ee-related-hint）已全部改成 label 旁的「?」气泡，
+   这条样式没有使用者了。留着 .ee-hint 本体给「正在加载白板 / 导图」这类占位用。 */
 
 /* 关联文章：搜索框 + 结果列表（与「关联画布」共用一个面板观感） */
 .ee-rel-search {
@@ -1209,6 +1213,55 @@ html body .vditor-wysiwyg__block[data-type="code-block"] pre.vditor-wysiwyg__pre
     gap: 8px;
 }
 .ee-card label { font-size: 12px; color: var(--text-muted); }
+/* v3.44.4：卡片里不再写解释性文字，改成 label 旁边一个「?」，悬浮/聚焦才展开说明。
+   tooltip 用绝对定位挂在 label 上（label 是整行的定位父级），宽度随卡片走，
+   这样不会被侧栏的 overflow 裁掉，也不会把卡片撑宽。 */
+.ee-card > label { position: relative; display: block; }
+.ee-help {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    margin-left: 5px;
+    border-radius: 50%;
+    vertical-align: -1px;
+    cursor: help;
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1;
+    color: var(--text-muted);
+    background: rgba(255, 255, 255, .08);
+    border: 1px solid var(--border);
+    transition: background .14s ease, color .14s ease, border-color .14s ease;
+}
+.ee-help:hover, .ee-help:focus { color: #fff; background: rgba(115, 170, 255, .3); border-color: rgba(115, 170, 255, .5); outline: none; }
+.ee-help::after {
+    content: attr(data-tip);
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(100% + 6px);
+    z-index: 40;
+    padding: 7px 9px;
+    border-radius: 8px;
+    font-size: 11.5px;
+    font-weight: 400;
+    line-height: 1.6;
+    letter-spacing: 0;
+    white-space: normal;
+    color: var(--text-secondary);
+    background: #14161d;
+    border: 1px solid var(--border-light);
+    box-shadow: 0 16px 34px -14px rgba(0, 0, 0, .95);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-3px);
+    transition: opacity .14s ease, transform .14s ease, visibility .14s;
+    pointer-events: none;
+}
+.ee-help:hover::after,
+.ee-help:focus::after { opacity: 1; visibility: visible; transform: none; }
 .ee-card input,
 .ee-card textarea,
 .ee-card select {
@@ -1528,7 +1581,10 @@ html body .vditor-wysiwyg__block[data-type="code-block"] pre.vditor-wysiwyg__pre
     .ee-top { padding: 8px 10px; gap: 8px; }
     .ee-main { padding: 8px 10px 12px; gap: 10px; }
     .ee-right .ee-stat { font-size: 11.5px; }
-    .ee-side-btn { display: inline-flex; align-items: center; }
+    /* 窄屏才把顶栏这三个入口放出来（宽屏靠侧栏页签 / 折叠把手 / 快捷键） */
+    .ee-side-btn,
+    .ee-ai-btn { display: inline-flex; align-items: center; }
+    .ee-more { display: inline-flex; }
     .ee-btn { padding: 7px 12px; font-size: 12.5px; }
     .ee-chapter-bar { padding: 8px 10px; }
     .ee-chapter-bar select { min-width: 0; width: 100%; }

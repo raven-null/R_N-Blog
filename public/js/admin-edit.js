@@ -344,7 +344,7 @@
     function sideMode() {
         try { return localStorage.getItem(SIDE_MODE_KEY) === 'ai' ? 'ai' : 'props'; } catch (e) { return 'props'; }
     }
-    /** 只做 DOM 同步（不抢焦点）：页签高亮 + 两个面板的显隐 */
+    /** 只做 DOM 同步（不抢焦点）：页签高亮 + 两个面板的显隐 + 折叠把手上的当前页签 */
     function applySideMode() {
         var mode = sideMode();
         var main = document.querySelector('.ee-main');
@@ -356,6 +356,12 @@
             t.classList.toggle('active', k === mode);
             t.setAttribute('aria-selected', k === mode ? 'true' : 'false');
             t.tabIndex = k === mode ? 0 : -1;
+        });
+        // 折叠后的边缘把手也分「属性 / AI」两个入口，标一下当前停在哪个
+        var handleBtns = { props: $('eeSideOpenProps'), ai: $('eeSideOpenAi') };
+        Object.keys(handleBtns).forEach(function (k) {
+            var b = handleBtns[k];
+            if (b) b.classList.toggle('active', k === mode);
         });
         var props = $('eeSideProps');
         var ai = $('eeSideAi');
@@ -381,6 +387,13 @@
     };
     /** 顶栏「AI」按钮：一键到 AI 页签 */
     window.eeOpenAi = function () { window.eeSideMode('ai'); };
+    /**
+     * 折叠后右侧把手上的两个入口（属性 / AI）：展开侧栏并切到对应页签。
+     * 桌面端折叠态要先取消折叠；窄屏则保证抽屉是开的。
+     */
+    window.eeOpenSide = function (mode) {
+        window.eeSideMode(mode === 'ai' ? 'ai' : 'props');
+    };
     window.eeToggleSide = function () {
         var main = document.querySelector('.ee-main');
         if (!main) return;
@@ -855,7 +868,7 @@
     /** 把 doc 渲染到页面上（编辑已有 / 新建 共用） */
     async function applyDoc() {
         document.title = (isNew ? '新建' : '编辑') + typeLabel(docType) + ' · ' + (doc.title || doc.id || '未命名');
-        $('eeIdText').textContent = doc.id || (isNew ? '尚未保存' : '');
+        // 顶栏不再显示内容 id（作者不需要看到这串字符；要复制地址栏里就有）
         $('eeTitle').value = doc.title || '';
         initTagPickers();
         if (tagPicker) tagPicker.setTags(doc.tags || [], true);
@@ -897,7 +910,8 @@
         if (isNew) {
             if ($('eeDeleteBtn')) $('eeDeleteBtn').style.display = 'none';
             if ($('eeViewBtn')) $('eeViewBtn').style.display = 'none';
-            if ($('eeTitle')) $('eeTitle').placeholder = '给这' + typeLabel(docType) + '起个名字（必填）';
+            // 新建时给个占位引导就够，「必填」这类说明放在 label 旁的「?」里，不摆长句
+            if ($('eeTitle')) $('eeTitle').placeholder = '给这' + typeLabel(docType) + '起个名字';
         } else {
             if ($('eeDeleteBtn')) $('eeDeleteBtn').style.display = '';
             if ($('eeViewBtn')) $('eeViewBtn').style.display = '';
@@ -1138,7 +1152,6 @@
                 try {
                     history.replaceState(null, '', '/admin-edit.html?id=' + encodeURIComponent(doc.id));
                 } catch (e) { /* 忽略：地址栏换不掉不影响功能 */ }
-                $('eeIdText').textContent = doc.id || '';
                 if ($('eeDeleteBtn')) $('eeDeleteBtn').style.display = '';
                 if ($('eeViewBtn')) $('eeViewBtn').style.display = '';
                 document.title = '编辑' + typeLabel(docType) + ' · ' + (body.title || doc.id);
@@ -1306,6 +1319,9 @@
             return EE.request(url, { headers: { 'X-Admin-Key': EE.adminKey() } })
                 .then(function (d) {
                     var items = (d && d.status === 'success' && (d.items || d.data)) || [];
+                    // 接口返回的不是数组（比如直接给了个对象）时按空表处理：
+                    // 这里抛异常会顺着 Promise.all 冒出去，连带把整个 applyDoc 拖死
+                    if (!Array.isArray(items)) items = [];
                     var map = {};
                     items.forEach(function (it) { if (it && it.id) map[it.id] = it.title || ''; });
                     canvasNameCache[k] = map;
@@ -1338,7 +1354,8 @@
         var box = $('eeRelatedList');
         if (!box) return;
         if (!relatedCanvases.length) {
-            box.innerHTML = '<div class="ee-related-empty">还没有关联画布。白板 / 导图挂在文章上，前台会在文末列出「相关画布」。</div>';
+            // v3.44.4：空态只说状态，怎么用写在 label 旁的「?」里，不在这里摆解释长句
+            box.innerHTML = '<div class="ee-related-empty">还没有关联画布</div>';
             return;
         }
         box.innerHTML = relatedCanvases.map(function (r) {
@@ -1479,7 +1496,7 @@
         var box = $('eeRelatedPostsList');
         if (!box) return;
         if (!relatedPosts.length) {
-            box.innerHTML = '<div class="ee-related-empty">还没有关联文章。关联后前台会在文末「相关文章」里列出，并自动形成反向链接。</div>';
+            box.innerHTML = '<div class="ee-related-empty">还没有关联文章</div>';
         } else {
             box.innerHTML = relatedPosts.map(function (id) {
                 var p = postById(id);
