@@ -459,6 +459,8 @@
                 if (window.EditorMenu) window.EditorMenu.attach(vditor);
                 // 大纲（正文结构导航），见 /js/editor-outline.js
                 if (window.EditorOutline) window.EditorOutline.attach(vditor);
+                // 代码块 IDE 手感（Tab 缩进 / Shift+Tab 反缩进 / Enter 自动缩进），见 /js/code-editor.js
+                if (window.CodeEditor) window.CodeEditor.attach(vditor);
                 // 正文渲染完成后才扫得到文本节点：补一次术语面板刷新（出现次数 + 编辑区高亮）
                 renderTermsPanel();
             }

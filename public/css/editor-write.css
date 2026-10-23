@@ -742,6 +742,145 @@ html body #eeSide *::-webkit-scrollbar { width: 0 !important; height: 0 !importa
     20%, 60% { box-shadow: 0 0 0 3px rgba(255, 176, 32, .55); border-radius: 6px; }
 }
 
+/* ===== 代码块「IDE 手感」提示条（v3.42.0）=====
+   点进代码块时在它上方浮一行快捷键提示；不占用正文高度（position:fixed）。 */
+.ee-code-hint {
+    position: fixed;
+    z-index: 3100;
+    display: none;
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: #cfe2ff;
+    background: rgba(20, 22, 30, .96);
+    border: 1px solid rgba(115, 170, 255, .35);
+    box-shadow: 0 10px 26px -12px rgba(0, 0, 0, .85);
+    pointer-events: none;
+    white-space: nowrap;
+}
+.ee-code-hint b { color: #7fb2ff; font-weight: 600; margin-right: 6px; }
+
+/* 代码块源码编辑区：等宽字体 + 保留缩进，编辑时也不要被行高挤成一团 */
+html body .vditor-wysiwyg__block[data-type="code-block"] pre.vditor-wysiwyg__pre {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
+    font-size: 13px !important;
+    line-height: 1.65 !important;
+    tab-size: 2;
+    -moz-tab-size: 2;
+    white-space: pre !important;
+}
+
+/* ===== 代码块编辑器（v3.42.0）=====
+   点代码块上的「编辑代码」（或双击代码块）弹出的浮层：行号 + 等宽文本框。
+   IDE 手感（Tab / 自动缩进 / 括号展开）在 code-editor.js 里接管，这里只管外观。 */
+.ee-codeedit { position: fixed; inset: 0; z-index: 2600; display: none; }
+.ee-codeedit.open { display: flex; align-items: center; justify-content: center; }
+.ee-codeedit-mask {
+    position: absolute; inset: 0;
+    background: rgba(4, 5, 9, .68);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+}
+.ee-codeedit-box {
+    position: relative;
+    width: min(920px, 94vw);
+    height: min(78vh, 720px);
+    display: flex;
+    flex-direction: column;
+    border-radius: 16px;
+    overflow: hidden;
+    background: #14161d;
+    border: 1px solid rgba(255, 255, 255, .14);
+    box-shadow: 0 30px 90px -20px rgba(0, 0, 0, .9);
+}
+.ee-codeedit-head {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, .1);
+    background: rgba(24, 25, 34, .96);
+}
+.ee-codeedit-title { font-size: 13.5px; font-weight: 600; color: #cfe2ff; }
+.ee-codeedit-lang {
+    width: 130px;
+    padding: 5px 9px;
+    border-radius: 8px;
+    font-family: ui-monospace, Menlo, monospace;
+    font-size: 12px;
+    color: #e8e9f2;
+    background: rgba(255, 255, 255, .06);
+    border: 1px solid rgba(255, 255, 255, .14);
+    outline: none;
+}
+.ee-codeedit-lang:focus { border-color: var(--accent); }
+.ee-codeedit-tip { font-size: 11.5px; color: rgba(255, 255, 255, .42); white-space: nowrap; }
+.ee-codeedit-sp { flex: 1; }
+.ee-codeedit-body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    background: #0f1015;
+}
+.ee-codeedit-gutter {
+    flex: none;
+    width: 48px;
+    padding: 12px 8px 12px 0;
+    overflow: hidden;
+    text-align: right;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 13px;
+    line-height: 1.65;
+    color: rgba(255, 255, 255, .28);
+    background: rgba(255, 255, 255, .03);
+    border-right: 1px solid rgba(255, 255, 255, .08);
+    user-select: none;
+}
+.ee-codeedit-gutter span { display: block; }
+.ee-codeedit-area {
+    flex: 1;
+    min-width: 0;
+    resize: none;
+    padding: 12px 14px;
+    border: 0;
+    outline: none;
+    background: transparent;
+    color: #e8e9f2;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 13px;
+    line-height: 1.65;
+    tab-size: 2;
+    -moz-tab-size: 2;
+    white-space: pre;
+    overflow: auto;
+    overscroll-behavior: contain;
+}
+/* 代码块上的「编辑代码」按钮（由 code-editor.js 注入到预览里） */
+.ee-codeedit-btn {
+    position: absolute;
+    right: 44px;
+    top: 6px;
+    z-index: 3;
+    padding: 3px 9px;
+    border-radius: 99px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 11.5px;
+    color: #cfe2ff;
+    background: rgba(20, 22, 30, .92);
+    border: 1px solid rgba(115, 170, 255, .45);
+    opacity: 0;
+    transition: opacity .15s ease, background .15s ease;
+}
+.vditor-wysiwyg__block:hover .ee-codeedit-btn { opacity: 1; }
+.ee-codeedit-btn:hover { background: rgba(115, 170, 255, .28); color: #fff; }
+@media (max-width: 640px) {
+    .ee-codeedit-box { width: 96vw; height: 82vh; }
+    .ee-codeedit-tip { display: none; }
+    .ee-codeedit-btn { opacity: 1; }
+}
+
 /* ===== 划词悬浮按钮组（v3.40.0）===== */
 .ee-selbar {
     position: fixed;
