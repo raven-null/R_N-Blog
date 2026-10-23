@@ -881,13 +881,16 @@ html body .vditor-wysiwyg__block[data-type="code-block"] pre.vditor-wysiwyg__pre
     .ee-codeedit-btn { opacity: 1; }
 }
 
-/* ===== 划词悬浮按钮组（v3.40.0）===== */
+/* ===== 划词悬浮按钮组（v3.40.0，v3.43.0 起带一行顶部工具栏快捷项）===== */
 .ee-selbar {
     position: fixed;
     z-index: 3200;          /* 高于编辑器正文（3000）与侧栏抽屉（3200 同一层，后出现者在上） */
     display: none;
     align-items: center;
-    gap: 2px;
+    justify-content: center;
+    flex-wrap: wrap;        /* 按钮多（14 个）时折成两排，而不是溢出屏幕 */
+    gap: 1px;
+    max-width: min(640px, 94vw);
     padding: 4px;
     border-radius: 10px;
     background: #14161d;
@@ -898,9 +901,9 @@ html body .vditor-wysiwyg__block[data-type="code-block"] pre.vditor-wysiwyg__pre
     -webkit-user-select: none;
 }
 .ee-selbar-btn {
-    min-width: 30px;
+    min-width: 28px;
     height: 28px;
-    padding: 0 8px;
+    padding: 0 7px;
     border: 0;
     border-radius: 7px;
     cursor: pointer;
@@ -910,12 +913,21 @@ html body .vditor-wysiwyg__block[data-type="code-block"] pre.vditor-wysiwyg__pre
     color: #e8e9f2;
     background: transparent;
     transition: background .14s ease, color .14s ease;
+    flex: 0 0 auto;
 }
 .ee-selbar-btn:hover { background: rgba(255, 255, 255, .14); color: #fff; }
 .ee-selbar-btn.primary { color: #cfe2ff; }
 .ee-selbar-btn.danger:hover { background: rgba(239, 106, 94, .22); color: #ffd9d5; }
-/* 图标按钮（B / I / </> / 🔗）用等宽，避免粗细不一时宽度跳动 */
-.ee-selbar-btn:nth-child(-n+3) { font-weight: 600; }
+/* 图标按钮（B / I / S / </>）用粗体量，避免几个按钮字重不一显得跳 */
+.ee-selbar-btn.strong { font-weight: 600; }
+/* 分组竖线：B I S </> | H1 H2 H3 | 列表 引用 代码块 | 链接 术语 */
+.ee-selbar-sep {
+    flex: 0 0 auto;
+    width: 1px;
+    height: 16px;
+    margin: 0 3px;
+    background: rgba(255, 255, 255, .16);
+}
 
 /* ===== 插入链接面板（v3.38.0）—— 右键「插入站内链接 / 链接到本文标题」打开 ===== */
 .ee-linkpicker { position: fixed; inset: 0; z-index: 2500; display: none; }

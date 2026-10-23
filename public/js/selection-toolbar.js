@@ -1,8 +1,10 @@
 /**
- * 划词悬浮按钮组（v1.0.0）
+ * 划词悬浮按钮组（v1.1.0）
  * ------------------------------------------------------------------
- * 在编辑器里选中一段文字后，选区上方浮出一排快捷按钮（加粗 / 斜体 / 行内代码 /
- * 插入链接 / 标记术语 / 取消…），点完自动收起。
+ * 在编辑器里选中一段文字后，选区上方浮出一排快捷按钮：顶部工具栏里最常用的
+ * 那几个（加粗 / 斜体 / 删除线 / 行内代码 / H1~H3 / 无序列表 / 有序列表 /
+ * 引用 / 代码块），再往后是站点特有的（插入链接 / 标记术语 / 取消标记），
+ * 点完自动收起。按钮多到需要换行时自动折成两排。
  *
  * 设计要点：
  *   - **不抢焦点、不破坏选区**：按钮的 mousedown 一律 preventDefault，
@@ -17,9 +19,16 @@
  *         host: document.getElementById('eeVditor'),
  *         selectors: '.vditor-wysiwyg, .vditor-ir',       // 选区必须落在这些元素里
  *         resolve: function (selText, ctx) {
- *             return [{ id:'bold', label:'B', title:'加粗', run: function(){...} }, ...];
+ *             // { sep:true } 是分组竖线；连续的 / 首尾的分隔符会被自动去掉
+ *             return [
+ *                 { id:'bold', label:'B', title:'加粗', strong:true, run: function(){...} },
+ *                 { sep: true },
+ *                 { id:'h1', label:'H1', title:'一级标题', run: function(){...} }
+ *             ];
  *         }
  *     });
+ *     单个 action 可选项：label | icon(同 label，HTML 允许) / title / run(text, info) /
+ *     primary / danger / strong（图标用粗体量，避免宽度跳动）。
  */
 (function () {
     'use strict';
@@ -27,6 +36,7 @@
     var BAR_ID = 'eeSelBar';
     var GAP = 8;               // 与选区的垂直间距
     var MIN_EDGE = 8;          // 距视口边缘的最小距离
+    var SEP_HTML = '<span class="ee-selbar-sep" aria-hidden="true"></span>';
 
     var bar = null;
     var host = null;
@@ -87,18 +97,34 @@
         bar.style.left = Math.round(left) + 'px';
     }
 
+    function buttonHtml(a, i) {
+        var cls = 'ee-selbar-btn' + (a.danger ? ' danger' : '') + (a.primary ? ' primary' : '') + (a.strong ? ' strong' : '');
+        var label = a.icon || a.label || '';
+        var hint = a.title || a.label || '';
+        return '<button type="button" class="' + cls + '" data-i="' + i + '" title="' + escapeAttr(hint) + '"' +
+            ' aria-label="' + escapeAttr(hint) + '">' + label + '</button>';
+    }
+
     function render(info) {
         var actions = [];
         try { actions = resolveActions ? (resolveActions(info.text, info) || []) : []; } catch (e) { actions = []; }
         if (!actions.length) { hide(); return; }
         var b = buildBar();
-        b.innerHTML = actions.map(function (a, i) {
-            var cls = 'ee-selbar-btn' + (a.danger ? ' danger' : '') + (a.primary ? ' primary' : '');
-            var label = a.icon || a.label || '';
-            var hint = a.title || a.label || '';
-            return '<button type="button" class="' + cls + '" data-i="' + i + '" title="' + escapeAttr(hint) + '"' +
-                ' aria-label="' + escapeAttr(hint) + '">' + label + '</button>';
-        }).join('');
+        // 分组竖线：连续的分隔符只留一条，首尾的多余分隔符直接丢掉
+        var parts = [];
+        var afterBtn = false;
+        for (var i = 0; i < actions.length; i++) {
+            var a = actions[i];
+            if (!a || a.sep) {
+                if (afterBtn) parts.push(SEP_HTML);
+                afterBtn = false;
+                continue;
+            }
+            parts.push(buttonHtml(a, i));
+            afterBtn = true;
+        }
+        while (parts.length && parts[parts.length - 1] === SEP_HTML) parts.pop();
+        b.innerHTML = parts.join('');
         Array.prototype.forEach.call(b.querySelectorAll('.ee-selbar-btn'), function (btn) {
             btn.addEventListener('click', function (e) {
                 e.preventDefault();
@@ -111,7 +137,7 @@
             });
         });
         b.style.display = 'flex';
-        // 量出真实尺寸再定位（内容不同宽度不同）
+        // 量出真实尺寸再定位（内容不同宽度不同；按钮多时会折行，高度也要按实测来）
         place(info.rect, b.offsetHeight || 34, b.offsetWidth || 200);
     }
 

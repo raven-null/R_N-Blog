@@ -1954,10 +1954,10 @@
         }, true);
     }
 
-    // ===== 划词悬浮按钮组（v3.40.0）=====
-    // 在编辑器里选中一段文字，选区上方浮出一排快捷按钮。按钮列表按上下文生成：
-    //   · 总是有：加粗 / 斜体 / 行内代码 / 插入链接
-    //   · 选中文字还不是术语 → 「标记术语」；已经是 → 「取消链接和术语标记」
+    // ===== 划词悬浮按钮组（v3.43.0）=====
+    // 在编辑器里选中一段文字，选区上方浮出一排快捷按钮，直接对上顶部工具栏里最
+    // 常用的那批：加粗 / 斜体 / 删除线 / 行内代码 | H1 H2 H3 | 无序列表 / 有序列表 /
+    // 引用 / 代码块 | 插入链接 / 标记术语（已是术语则显示「取消标记」）。
     // 点按钮不会丢选区（按钮的 mousedown 已 preventDefault，见 selection-toolbar.js）。
     function toolbarBtn(name) {
         var btn = document.querySelector('#eeVditor .vditor-toolbar [data-type="' + name + '"]');
@@ -1965,12 +1965,60 @@
         return false;
     }
 
+    // 标题不是「点一下就是开关」：点 headings 会先展开一个层级面板，得再点面板里的
+    // button[data-tag="h2"] 才真正应用。面板是异步插进 DOM 的，所以轮询几十毫秒
+    // （实测 1~2 轮就拿到，最多等 ~1.2s 就放弃，避免留下一个张着的面板）。
+    // 注意「more」那个面板也是 .vditor-hint，必须按可见性筛掉。
+    // 排查用：控制台执行 window.__eeDebug = true 后可看 window.__ehLog。
+    function ehLog(entry) {
+        if (!window.__eeDebug) return;
+        (window.__ehLog = window.__ehLog || []).push(entry);
+    }
+
+    function findHintBtn(tag) {
+        var hints = document.querySelectorAll('#eeVditor .vditor-hint');
+        var seen = [];
+        for (var i = 0; i < hints.length; i++) {
+            var st = window.getComputedStyle(hints[i]);
+            var shown = st.display !== 'none' && st.visibility !== 'hidden';
+            var btn = hints[i].querySelector('button[data-tag="' + tag + '"]');
+            seen.push((shown ? 'visible' : 'hidden') + ':' + hints[i].querySelectorAll('button[data-tag]').length);
+            if (shown && btn) return btn;
+        }
+        ehLog({ phase: 'find', tag: tag, total: hints.length, seen: seen.join(' ') });
+        return null;
+    }
+
+    function applyHeading(level) {
+        ehLog({ phase: 'start', level: level });
+        if (!toolbarBtn('headings')) return false;
+        var tries = 0;
+        (function attempt() {
+            var btn = findHintBtn('h' + level);
+            if (btn) { ehLog({ phase: 'hit', level: level, tries: tries }); btn.click(); return; }
+            if (++tries < 30) setTimeout(attempt, 40);
+            else ehLog({ phase: 'giveup', level: level });
+        })();
+        return true;
+    }
+
     function buildSelectionActions(selText) {
         var text = String(selText || '').trim();
         var actions = [
-            { id: 'bold', label: 'B', title: '加粗', run: function () { toolbarBtn('bold'); } },
-            { id: 'italic', label: 'I', title: '斜体', run: function () { toolbarBtn('italic'); } },
-            { id: 'code', label: '&lt;/&gt;', title: '行内代码', run: function () { toolbarBtn('inline-code'); } },
+            { id: 'bold', label: 'B', title: '加粗', strong: true, run: function () { toolbarBtn('bold'); } },
+            { id: 'italic', label: 'I', title: '斜体', strong: true, run: function () { toolbarBtn('italic'); } },
+            { id: 'strike', label: 'S', title: '删除线', strong: true, run: function () { toolbarBtn('strike'); } },
+            { id: 'inlineCode', label: '&lt;/&gt;', title: '行内代码', strong: true, run: function () { toolbarBtn('inline-code'); } },
+            { sep: true },
+            { id: 'h1', label: 'H1', title: '一级标题', run: function () { applyHeading(1); } },
+            { id: 'h2', label: 'H2', title: '二级标题', run: function () { applyHeading(2); } },
+            { id: 'h3', label: 'H3', title: '三级标题', run: function () { applyHeading(3); } },
+            { sep: true },
+            { id: 'list', label: '•', title: '无序列表', run: function () { toolbarBtn('list'); } },
+            { id: 'orderedList', label: '1.', title: '有序列表', run: function () { toolbarBtn('ordered-list'); } },
+            { id: 'quote', label: '❝', title: '引用', run: function () { toolbarBtn('quote'); } },
+            { id: 'codeBlock', label: '{ }', title: '代码块', run: function () { toolbarBtn('code'); } },
+            { sep: true },
             {
                 id: 'link', label: '🔗', title: '插入站点内 / 本文标题的链接',
                 run: function () { if (window.eeOpenLinkPicker) window.eeOpenLinkPicker('article', text); }
