@@ -9,6 +9,61 @@ const IMAGE_STORE = "blog-images"
 const DOCUMENT_STORE = "blog-documents"
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024 // 10MB
 const MAX_DOCUMENT_BYTES = 20 * 1024 * 1024 // 20MB
+const MAX_WRITE_HISTORY = 20 // 写作助手最多带多少条历史（user + assistant 合计）
+const MAX_WRITE_MESSAGE = 4000 // 单条消息字符上限
+
+// ===== 写作助手（写作页的 AI）=====
+// 和访客端聊天机器人是两套：独立模型、独立密钥、独立提示词。
+// 这里只做「解答写作中的疑问」，不读正文、不写正文（作者选的模式）。
+
+/** 后台没填提示词时用的默认人设 */
+const WRITE_SYSTEM_PROMPT = [
+  "你是一名中文技术博客作者的「写作助手」，作者的写作页右侧就挂着你，随时问、随时答。",
+  "",
+  "你负责解决写作过程中的疑问：用词与近义词、标点与断句、句子与段落结构、文章框架与过渡、",
+  "标题与摘要的写法、Markdown 排版与语法、技术概念的准确表述、举例的取法等等。",
+  "",
+  "回答要求：",
+  "1. 直接给结论，不要开场白和客套，作者是在打字的中途问你。",
+  "2. 篇幅按需给最短够用的版本；能用一句话说清就别写一段，需要并列时用短列表。",
+  "3. 涉及 Markdown / 代码时给最小可用的示例。",
+  "4. 不确定就明说「不确定」，不要编造 API、事实或引文。",
+  "5. 你看不到作者的正文，除非他把片段贴给你；不要假装知道他文章里写了什么。",
+  "6. 严禁使用 Emoji；确实需要语气时最多用一个颜文字，正式与技术内容中不用。",
+].join("\n")
+
+/** 写作助手默认配置（apiKey 故意留空：没配就提示去后台填，不借用访客端的 key） */
+const DEFAULT_AI_WRITE: Record<string, any> = {
+  enabled: true,
+  provider: "zhipu",
+  apiUrl: "https://open.bigmodel.cn/api/paas/v4/chat/completions",
+  apiKey: "",
+  model: "glm-4-flash",
+  systemPrompt: "",
+  maxTokens: 2048,
+  temperature: 0.7,
+}
+
+/** 合并存储值与默认值，顺带把温度按模型目录限定（如某些模型只接受 1） */
+function mergeAiWrite(stored: any): Record<string, any> {
+  const s = stored && typeof stored === "object" ? stored : {}
+  const provider = String(s.provider || DEFAULT_AI_WRITE.provider)
+  const model = String(s.model || DEFAULT_AI_WRITE.model)
+  return {
+    enabled: s.enabled !== false,
+    provider,
+    apiUrl: String(s.apiUrl || DEFAULT_AI_WRITE.apiUrl),
+    apiKey: String(s.apiKey || ""),
+    model,
+    systemPrompt: String(s.systemPrompt || ""),
+    maxTokens: Number(s.maxTokens) > 0 ? Number(s.maxTokens) : DEFAULT_AI_WRITE.maxTokens,
+    temperature: resolveTemperature(
+      provider,
+      model,
+      typeof s.temperature === "number" && !Number.isNaN(s.temperature) ? s.temperature : DEFAULT_AI_WRITE.temperature,
+    ),
+  }
+}
 
 const CHUNK_STORE = "article-chunks" // 长文章分块存储
 const CHUNK_THRESHOLD = 30000 // 正文字符数超过此值则自动分章（阅读端按需加载）
@@ -1330,6 +1385,8 @@ export default async (req: Request) => {
         systemPrompt: "",
         maxTokens: 2048,
         temperature: 0.7,
+        // 写作页的 AI：独立的一套（见文件顶部 DEFAULT_AI_WRITE）
+        write: { ...DEFAULT_AI_WRITE },
       },
     }
 
@@ -1339,6 +1396,12 @@ export default async (req: Request) => {
       const data = raw ? JSON.parse(raw) : {}
       const storedAi = data.ai || {}
       const aiDefaults = DEFAULT_SETTINGS.ai
+      // 写作助手的密钥只发给通过校验的后台请求。这个 GET 是公开的（前台 chat.js 也在读它），
+      // 不能把写作密钥一起吐给任何访客 —— 写作页走 action=ai-write 由服务端代调，也不需要它。
+      // 没带 X-Admin-Key 的请求直接按未认证处理，省掉一次密码 blob 读取（首页每次都调这个接口）。
+      const writeMerged = mergeAiWrite(storedAi.write)
+      const hasKey = !!(req.headers.get("x-admin-key") || "")
+      if (!hasKey || !(await checkAuth(req))) writeMerged.apiKey = ""
       // 合并默认值，确保关键字段有值
       const merged = {
         ...DEFAULT_SETTINGS,
@@ -1361,6 +1424,9 @@ export default async (req: Request) => {
             storedAi.model || aiDefaults.model,
             typeof storedAi.temperature === "number" && !Number.isNaN(storedAi.temperature) ? storedAi.temperature : aiDefaults.temperature,
           ),
+          // 注意放在最后：上面 ...storedAi 展开出来的 ai.write 会被这条覆盖掉，
+          // 避免绕过密钥脱敏
+          write: writeMerged,
         },
         navTags: data.navTags && data.navTags.length ? data.navTags : DEFAULT_SETTINGS.navTags,
       }
@@ -1425,6 +1491,22 @@ export default async (req: Request) => {
           systemPrompt: String(ai?.systemPrompt || "").trim(),
           maxTokens: Number(ai?.maxTokens) > 0 ? Number(ai?.maxTokens) : 2048,
           temperature: typeof ai?.temperature === "number" && !Number.isNaN(ai.temperature) ? ai.temperature : 0.7,
+          // 写作助手：字段和上面一致，但独立保存（密钥单独一套）
+          write: (() => {
+            const w = (ai && typeof ai === "object" && ai.write) || {}
+            const provider = String(w.provider || DEFAULT_AI_WRITE.provider).trim().slice(0, 40)
+            const model = String(w.model || DEFAULT_AI_WRITE.model).trim()
+            return {
+              enabled: w.enabled !== false,
+              provider,
+              apiUrl: String(w.apiUrl || "").trim(),
+              apiKey: String(w.apiKey || "").trim(),
+              model,
+              systemPrompt: String(w.systemPrompt || "").trim(),
+              maxTokens: Number(w.maxTokens) > 0 ? Number(w.maxTokens) : DEFAULT_AI_WRITE.maxTokens,
+              temperature: typeof w.temperature === "number" && !Number.isNaN(w.temperature) ? w.temperature : DEFAULT_AI_WRITE.temperature,
+            }
+          })(),
         },
       }
       await settingsStore.set("site", JSON.stringify(settings))
@@ -1537,6 +1619,76 @@ export default async (req: Request) => {
       articleCount,
       imageCount,
     }, req)
+  }
+
+  // ===== 写作助手（写作页右侧的 AI）：服务端代调，密钥不出服务器 =====
+  // POST { messages:[{role:'user'|'assistant',content}] } → 透传上游 SSE
+  // 只做问答：不接收、也不回写正文。
+
+  if (path === "ai-write") {
+    if (req.method !== "POST") return badRequest("Method Not Allowed", req)
+    if (!(await checkAuth(req))) return json(401, { status: "error", message: "未授权" }, req)
+
+    const body = await req.json().catch(() => ({}))
+    const rawMessages = Array.isArray(body.messages) ? body.messages : []
+    // 只收 user / assistant，system 一律由服务端拼（防止有人借接口改人设）
+    const messages = rawMessages
+      .slice(-MAX_WRITE_HISTORY)
+      .map((m: any) => ({
+        role: m?.role === "assistant" ? "assistant" : "user",
+        content: String(m?.content || "").slice(0, MAX_WRITE_MESSAGE),
+      }))
+      .filter((m: any) => m.content.trim())
+    if (!messages.length) return badRequest("messages 不能为空", req)
+
+    const settingsStore = getBlobStore("blog-settings", "strong")
+    const raw = await settingsStore.get("site", { type: "text" })
+    const data = raw ? JSON.parse(raw) : {}
+    const w = mergeAiWrite(data.ai?.write)
+    if (w.enabled === false) {
+      return json(400, { status: "error", message: "写作助手已在后台关闭（博客设置 → AI 助手 → 写作助手）" }, req)
+    }
+    if (!w.apiKey) {
+      return json(400, { status: "error", message: "还没填写作助手的 API Key（博客设置 → AI 助手 → 写作助手）" }, req)
+    }
+    const apiUrl = resolveModelApiUrl(w.provider, w.model, w.apiUrl)
+    if (!apiUrl) return json(400, { status: "error", message: "无法解析接口地址，请在后台填写自定义接口地址" }, req)
+
+    let upstream: Response
+    try {
+      upstream = await fetch(apiUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${w.apiKey}` },
+        body: JSON.stringify({
+          model: w.model,
+          messages: [{ role: "system", content: w.systemPrompt || WRITE_SYSTEM_PROMPT }, ...messages],
+          max_tokens: w.maxTokens,
+          temperature: w.temperature,
+          stream: true,
+        }),
+      })
+    } catch (err: any) {
+      return json(502, { status: "error", message: `连接 AI 接口失败：${err?.message || err}` }, req)
+    }
+
+    if (!upstream.ok) {
+      const err = await upstream.text().catch(() => "")
+      return json(502, { status: "error", message: `接口返回 ${upstream.status}：${err.slice(0, 200)}` }, req)
+    }
+
+    // 上游没按流式返回（部分自定义接口忽略 stream）时，这里原样透传，
+    // 前端按 content-type 判断，退回「一次性取全文」
+    const upstreamType = upstream.headers.get("content-type") || ""
+    return new Response(upstream.body, {
+      status: 200,
+      headers: {
+        ...corsHeaders(req),
+        "Content-Type": upstreamType || "text/event-stream; charset=utf-8",
+        "Cache-Control": "no-cache, no-transform",
+        // 让 Netlify / 反代别缓冲，保证边生成边到浏览器
+        "X-Accel-Buffering": "no",
+      },
+    })
   }
 
   // ===== 内置模型库（AI 设置下拉用） =====

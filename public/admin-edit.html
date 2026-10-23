@@ -12,7 +12,7 @@
 <!-- 写作页样式：原来整段内联在 <style> 里（34.6KB / 156 个 !important，
      Vditor 覆盖规则还被追加过三遍），现已抽成独立文件并合并去重。
      顺序有讲究：必须排在 vditor/dist/index.css 之后，靠 html body 前缀 + !important 压过组件样式。 -->
-<link rel="stylesheet" href="/css/editor-write.css?v=1.9.0">
+<link rel="stylesheet" href="/css/editor-write.css?v=1.10.0">
     <link rel="stylesheet" href="/css/scrollbar.css?v=1.0.1">
     <link rel="stylesheet" href="/css/responsive.css?v=1.0.0">
     <link rel="stylesheet" href="/css/mobile.css?v=1.0.0">
@@ -33,6 +33,8 @@
                  字数已换成「净字数」（汉字 + 英文单词，不含 Markdown 标记），鼠标悬停看源码字符数。 -->
             <span class="ee-stat" id="eeInfo">0 字</span>
             <span class="ee-stat saved" id="eeSaved"></span>
+            <!-- AI 写作助手入口：桌面/窄屏都常驻（侧栏折叠时也能一键打开），点了直接切到侧栏的 AI 页签 -->
+            <button class="ee-btn ee-ai-btn" id="eeAiBtn" onclick="eeOpenAi()" title="AI 写作助手：解答写作中的疑问">AI</button>
             <!-- 窄屏才出现的「属性」入口：把右侧栏做成抽屉滑出（桌面端用侧栏自带的折叠按钮） -->
             <button class="ee-btn ee-side-btn" id="eeSideBtn" onclick="eeToggleSide()" title="属性栏（Ctrl+.）">属性</button>
             <!-- 次要动作收进「⋯」：前台查看 / 删除 / 快捷键，顶栏只留最常用的 -->
@@ -61,10 +63,19 @@
         </section>
 
         <aside class="ee-side" id="eeSide">
-            <div class="ee-side-head">
-                <span>属性</span>
-                <button type="button" class="ee-side-toggle" id="eeSideToggle" onclick="eeToggleSide()" title="折叠侧栏（Ctrl+.）">折叠 <span class="chev">›</span></button>
-            </div>
+            <!-- 「属性」与「AI」是同一列的两个页签，永远只显示一个（侧栏只有一个位置）。
+                 v3.44.0：外层 .ee-side-inner 让折叠动画期间内容宽度不变，不会一边收窄一边重排。 -->
+            <div class="ee-side-inner">
+                <div class="ee-side-head">
+                    <div class="ee-side-tabs" role="tablist" aria-label="侧栏内容">
+                        <button type="button" class="ee-side-tab active" id="eeTabProps" role="tab"
+                                aria-selected="true" aria-controls="eeSideProps" onclick="eeSideMode('props')">属性</button>
+                        <button type="button" class="ee-side-tab" id="eeTabAi" role="tab"
+                                aria-selected="false" aria-controls="eeSideAi" onclick="eeSideMode('ai')">AI</button>
+                    </div>
+                    <button type="button" class="ee-side-toggle" id="eeSideToggle" onclick="eeToggleSide()" title="折叠侧栏（Ctrl+.）">折叠 <span class="chev">›</span></button>
+                </div>
+                <div class="ee-side-props" id="eeSideProps" role="tabpanel" aria-labelledby="eeTabProps">
             <!-- 标题：四种形态共用这一处（原来它在编辑区上方，白板/导图形态下那整列是隐藏的，
                  等于那两种形态根本没地方写标题）。放侧栏最上面，是发文第一个要填的东西。 -->
             <div class="ee-card ee-title-card-side">
@@ -188,6 +199,11 @@
                     </div>
                 </div>
             </details>
+                </div>
+                <!-- AI 写作助手（v3.44.0）：由 write-ai.js 填内容。
+                     只做问答：不读正文、不改正文，密钥留在服务端（action=ai-write 代调）。 -->
+                <div class="ee-side-ai" id="eeSideAi" role="tabpanel" aria-labelledby="eeTabAi" hidden></div>
+            </div>
         </aside>
 
         <!-- 窄屏抽屉的遮罩（桌面端 display:none，由 CSS 控制） -->
@@ -242,6 +258,7 @@
     </div>
 
     <div class="ee-toast" id="eeToast"></div>
+    <script src="js/vendor/marked.min.js"></script>
     <script src="js/markdown-config.js?v=1.4.0"></script>
 <script src="js/editor-menu.js?v=1.6.0"></script>
 <script src="js/selection-toolbar.js?v=1.1.0"></script>
@@ -252,6 +269,8 @@
     <script src="js/editor-kit.js?v=1.1.1"></script>
     <!-- 白板与导图管理（权限 / 口令 / 历史回滚 / 绑定），由 admin-edit.js 注入上下文 -->
     <script src="js/editor-embed-admin.js?v=1.0.0"></script>
-    <script src="js/admin-edit.js?v=1.29.1"></script>
+    <!-- 侧栏「AI」页签：写作问答助手（只读，不碰正文） -->
+    <script src="js/write-ai.js?v=1.0.3"></script>
+    <script src="js/admin-edit.js?v=1.30.0"></script>
 </body>
 </html>

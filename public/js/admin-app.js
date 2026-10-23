@@ -2430,6 +2430,15 @@
             document.getElementById('setAiMaxTokens').value=ai.maxTokens||'';
             const aiTemp=ai.temperature;
             document.getElementById('setAiTemperature').value=(aiTemp===undefined||aiTemp===null||aiTemp==='')?'':aiTemp;
+            // 写作助手（写作页 AI）：独立一套字段
+            const wr=ai.write||{};
+            document.getElementById('setAiWriteEnabled').checked=wr.enabled!==false;
+            document.getElementById('setAiWriteApiKey').value=wr.apiKey||'';
+            document.getElementById('setAiWriteSystemPrompt').value=wr.systemPrompt||'';
+            document.getElementById('setAiWriteMaxTokens').value=wr.maxTokens||'';
+            const wrTemp=wr.temperature;
+            document.getElementById('setAiWriteTemperature').value=(wrTemp===undefined||wrTemp===null||wrTemp==='')?'':wrTemp;
+            renderSettingsModels('AiWrite',wr.provider,wr.model,wr.apiUrl,wr.model);
             renderSettingsModels('Ai',ai.provider,ai.model,ai.apiUrl,ai.model);
         }
         // 头像预览
@@ -2635,6 +2644,16 @@
                     systemPrompt:document.getElementById('setAiSystemPrompt').value.trim(),
                     maxTokens:parseInt(document.getElementById('setAiMaxTokens').value)||2048,
                     temperature:document.getElementById('setAiTemperature').value!==''?parseFloat(document.getElementById('setAiTemperature').value):0.7,
+                    write:{
+                        enabled:document.getElementById('setAiWriteEnabled').checked,
+                        provider:document.getElementById('setAiWriteProvider').value,
+                        apiUrl:document.getElementById('setAiWriteProvider').value==='custom'?document.getElementById('setAiWriteCustomUrl').value.trim():'',
+                        apiKey:document.getElementById('setAiWriteApiKey').value.trim(),
+                        model:document.getElementById('setAiWriteProvider').value==='custom'?document.getElementById('setAiWriteCustomModel').value.trim():document.getElementById('setAiWriteModel').value,
+                        systemPrompt:document.getElementById('setAiWriteSystemPrompt').value.trim(),
+                        maxTokens:parseInt(document.getElementById('setAiWriteMaxTokens').value)||2048,
+                        temperature:document.getElementById('setAiWriteTemperature').value!==''?parseFloat(document.getElementById('setAiWriteTemperature').value):0.7,
+                    },
                 },
             };
             const r=await apiFetch('action=settings',{method:'POST',body:JSON.stringify(body)});

@@ -332,9 +332,55 @@
         if (isNarrow() && !main.classList.contains('side-drawer-open')) {
             $('eeSide').classList.remove('open');
         }
-        // 编辑区宽度变了，让编辑器重新贴合
+        // 编辑区宽度变了，让编辑器重新贴合。
+        // v3.44.0 起折叠是 280ms 的宽度过渡，所以要等过渡结束再贴一次，
+        // 否则编辑器会在动画中途按旧宽度算高/宽，收尾时留一条缝。
         setTimeout(fitEditor, 60);
+        setTimeout(fitEditor, 320);
     }
+
+    // ===== 侧栏两个页签：属性 / AI（v3.44.0，二者互斥，同一列只有一个可见）=====
+    var SIDE_MODE_KEY = 'ee_side_mode';
+    function sideMode() {
+        try { return localStorage.getItem(SIDE_MODE_KEY) === 'ai' ? 'ai' : 'props'; } catch (e) { return 'props'; }
+    }
+    /** 只做 DOM 同步（不抢焦点）：页签高亮 + 两个面板的显隐 */
+    function applySideMode() {
+        var mode = sideMode();
+        var main = document.querySelector('.ee-main');
+        if (main) main.setAttribute('data-side-mode', mode);
+        var tabs = { props: $('eeTabProps'), ai: $('eeTabAi') };
+        Object.keys(tabs).forEach(function (k) {
+            var t = tabs[k];
+            if (!t) return;
+            t.classList.toggle('active', k === mode);
+            t.setAttribute('aria-selected', k === mode ? 'true' : 'false');
+            t.tabIndex = k === mode ? 0 : -1;
+        });
+        var props = $('eeSideProps');
+        var ai = $('eeSideAi');
+        if (props) props.hidden = mode !== 'props';
+        if (ai) ai.hidden = mode !== 'ai';
+    }
+    /**
+     * 切到某个页签。顺带保证「切过去就能看到」：
+     * 桌面端折叠着就展开，窄屏抽屉关着就滑出 —— 否则点了像没反应。
+     */
+    window.eeSideMode = function (mode) {
+        mode = mode === 'ai' ? 'ai' : 'props';
+        try { localStorage.setItem(SIDE_MODE_KEY, mode); } catch (e) { /* 隐私模式，忽略 */ }
+        if (isNarrow()) {
+            var side = $('eeSide');
+            if (side && !side.classList.contains('open')) window.eeToggleSideDrawer();
+        } else if (document.querySelector('.ee-main.side-collapsed')) {
+            try { localStorage.setItem(SIDE_KEY, '0'); } catch (e) { /* 忽略 */ }
+            applySideCollapsed();
+        }
+        applySideMode();
+        if (mode === 'ai' && window.WriteAi && window.WriteAi.onShow) window.WriteAi.onShow();
+    };
+    /** 顶栏「AI」按钮：一键到 AI 页签 */
+    window.eeOpenAi = function () { window.eeSideMode('ai'); };
     window.eeToggleSide = function () {
         var main = document.querySelector('.ee-main');
         if (!main) return;
@@ -355,8 +401,16 @@
         var mask = $('eeSideMask');
         if (mask) mask.classList.toggle('open', open);
         if (open) {
-            // 抽屉里第一个输入框直接聚焦，少一次点击
-            setTimeout(function () { try { $('eeTitle').focus(); } catch (e) { /* 忽略 */ } }, 220);
+            // 抽屉里第一个该聚焦的东西：属性页签聚焦标题，AI 页签聚焦提问框
+            setTimeout(function () {
+                try {
+                    if (sideMode() === 'ai') {
+                        if (window.WriteAi && window.WriteAi.onShow) window.WriteAi.onShow();
+                    } else {
+                        $('eeTitle').focus();
+                    }
+                } catch (e) { /* 忽略 */ }
+            }, 220);
         }
     };
     // Ctrl/Cmd + . 切换；用捕获阶段，避免被 Vditor 的快捷键吞掉
@@ -2084,6 +2138,11 @@
         // 窄屏：抽屉遮罩点一下收起
         var mask = $('eeSideMask');
         if (mask) mask.addEventListener('click', window.eeToggleSideDrawer);
+
+        // 侧栏页签（属性 / AI）：先把持久化的模式应用上，再初始化 AI 面板。
+        // AI 面板只在页签切过去时才渲染内容，这里初始化是为了切页签不再有延迟。
+        applySideMode();
+        if (window.WriteAi) window.WriteAi.init({ host: $('eeSideAi') });
 
         // 「?」打开快捷键说明（输入框里不抢键）
         document.addEventListener('keydown', function (e) {

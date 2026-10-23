@@ -449,14 +449,48 @@ html body .vditor-toolbar { position: relative !important; z-index: 3001 !import
 
 /* ===== 侧栏 ===== */
 .ee-side {
-    width: clamp(220px, 26vw, 320px);
+    /* 宽度放变量里：内层 .ee-side-inner 要跟外层一样宽，各断点只改这一处 */
+    --ee-side-w: clamp(220px, 26vw, 320px);
+    width: var(--ee-side-w);
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
     gap: 10px;
     overflow-y: auto;
-    padding-right: 2px;
+    /* 折叠动画靠收窄宽度实现，横向必须裁掉而不是冒出滚动条 */
+    overflow-x: hidden;
     order: 9;
+    /* v3.44.0：折叠/展开不再是 display:none 的硬切，改成宽度 + 透明度过渡。 */
+    transition:
+        width .28s cubic-bezier(.22, .61, .36, 1),
+        opacity .22s ease,
+        transform .28s cubic-bezier(.22, .61, .36, 1);
+    will-change: width, opacity;
+}
+/* 内层保持固定宽度：折叠动画期间按钮和输入框不会一边收窄一边重排（否则文字会一路抖）。
+   右侧那 2px 留白放在内层（border-box 计入宽度），外层才能收到「宽度正好 0」。 */
+.ee-side-inner {
+    width: var(--ee-side-w);
+    box-sizing: border-box;
+    padding-right: 2px;
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+/* 两个页签面板：卡片原来是 .ee-side 的直接子元素，现在多了一层容器，间距要自己带 */
+.ee-side-props,
+.ee-side-ai {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+/* 显式写出来：上面给了 display:flex，UA 的 [hidden]{display:none} 就压不住了 */
+.ee-side-props[hidden],
+.ee-side-ai[hidden] { display: none !important; }
+/* 系统开了「减少动态效果」就不做过渡 */
+@media (prefers-reduced-motion: reduce) {
+    .ee-side { transition: none; }
 }
 /* 侧栏不显示滚动条（内容照样能滚）—— 细窄的侧栏旁边挂一根滚动条很扎眼。
    css/scrollbar.css 里有一条 `* { scrollbar-width: thin !important }`，
@@ -478,7 +512,34 @@ html body #eeSide *::-webkit-scrollbar { width: 0 !important; height: 0 !importa
     gap: 8px;
     background: var(--bg);
 }
-.ee-side-head > span { font-size: 12px; color: var(--text-muted); letter-spacing: .5px; }
+/* 「属性 / AI」页签：同一列的两个模式，永远只有一个可见 */
+.ee-side-tabs {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 2px;
+    border-radius: 99px;
+    background: rgba(255, 255, 255, .05);
+    border: 1px solid var(--border);
+}
+.ee-side-tab {
+    padding: 4px 10px;
+    border: 0;
+    border-radius: 99px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 12px;
+    line-height: 1.2;
+    color: var(--text-muted);
+    background: transparent;
+    transition: background .16s ease, color .16s ease;
+}
+.ee-side-tab:hover { color: #fff; background: rgba(255, 255, 255, .08); }
+.ee-side-tab.active {
+    color: #0d0f14;
+    background: #cfe2ff;
+    font-weight: 600;
+}
 .ee-side-toggle {
     display: inline-flex;
     align-items: center;
@@ -496,8 +557,16 @@ html body #eeSide *::-webkit-scrollbar { width: 0 !important; height: 0 !importa
 .ee-side-toggle:hover { background: rgba(255, 255, 255, .14); color: #fff; }
 .ee-side-toggle .chev { font-size: 14px; line-height: 1; transform: translateY(-1px); }
 
-/* 桌面端的「折叠侧栏」：!important 用来压掉 applyDoc() 里写的 style.display = 'flex' */
-.ee-main.side-collapsed .ee-side { display: none !important; }
+/* 桌面端的「折叠侧栏」：收窄到 0 + 淡出 + 轻微右移，播放完仍占 DOM（不再 display:none，
+   否则没有过渡可看）。pointer-events:none 防止折叠途中的点击落在看不见的控件上。 */
+@media (min-width: 721px) {
+    .ee-main.side-collapsed .ee-side {
+        width: 0;
+        opacity: 0;
+        transform: translateX(14px);
+        pointer-events: none;
+    }
+}
 .ee-side-open { display: none; }
 .ee-main.side-collapsed .ee-side-open {
     display: inline-flex;
@@ -527,6 +596,123 @@ html body #eeSide *::-webkit-scrollbar { width: 0 !important; height: 0 !importa
 
 /* 窄屏抽屉用的遮罩（桌面端永不显示） */
 .ee-side-mask { display: none; }
+
+/* ===== 侧栏「AI」页签：写作问答助手（v3.44.0）=====
+   只做问答：没有「插入正文」之类的按钮，消息区独立滚动，输入框常驻底部。 */
+.ee-ai { display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+.ee-ai-status {
+    flex: none;
+    padding: 6px 9px;
+    border-radius: 8px;
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: var(--text-muted);
+    background: rgba(255, 255, 255, .04);
+    border: 1px solid var(--border);
+    word-break: break-word;
+}
+.ee-ai-status.warn { color: #ffd9a8; background: rgba(240, 173, 78, .12); border-color: rgba(240, 173, 78, .34); }
+.ee-ai-status.error { color: #ffd9d5; background: rgba(239, 106, 94, .12); border-color: rgba(239, 106, 94, .34); }
+.ee-ai-status a { color: #9fc4ff; }
+.ee-ai-list {
+    flex: 1 1 auto;
+    min-height: 160px;
+    max-height: 46vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-right: 2px;
+}
+.ee-ai-empty {
+    padding: 18px 8px;
+    text-align: center;
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--text-muted);
+}
+.ee-ai-msg {
+    padding: 7px 9px;
+    border-radius: 9px;
+    font-size: 12.5px;
+    line-height: 1.65;
+    color: var(--text-secondary);
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, .03);
+}
+.ee-ai-msg.me { color: #cfe2ff; background: rgba(115, 170, 255, .12); border-color: rgba(115, 170, 255, .3); }
+.ee-ai-msg .who { display: block; margin-bottom: 3px; font-size: 10.5px; letter-spacing: .5px; color: var(--text-muted); }
+.ee-ai-msg p { margin: 0 0 6px; }
+.ee-ai-msg p:last-child { margin-bottom: 0; }
+.ee-ai-msg ul, .ee-ai-msg ol { margin: 4px 0 6px; padding-left: 18px; }
+.ee-ai-msg li { margin: 2px 0; }
+.ee-ai-msg code {
+    padding: 1px 4px;
+    border-radius: 4px;
+    font-size: 11.5px;
+    font-family: 'JetBrains Mono', Consolas, monospace;
+    background: rgba(255, 255, 255, .08);
+}
+.ee-ai-msg pre {
+    margin: 6px 0;
+    padding: 8px 10px;
+    border-radius: 7px;
+    overflow-x: auto;
+    background: #0b0d12;
+    border: 1px solid var(--border);
+}
+.ee-ai-msg pre code { padding: 0; background: none; font-size: 11.5px; line-height: 1.6; }
+.ee-ai-msg blockquote { margin: 6px 0; padding: 2px 0 2px 9px; border-left: 2px solid rgba(115, 170, 255, .5); color: var(--text-muted); }
+.ee-ai-msg strong { color: #fff; }
+/* 流式输出的光标 */
+.ee-ai-msg.streaming::after {
+    content: '▍';
+    margin-left: 1px;
+    color: #9fc4ff;
+    animation: eeAiBlink 1s steps(2) infinite;
+}
+@keyframes eeAiBlink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+.ee-ai-msg-actions { display: flex; gap: 6px; margin-top: 6px; }
+.ee-ai-mini {
+    padding: 2px 8px;
+    border-radius: 99px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 11px;
+    color: var(--text-muted);
+    background: rgba(255, 255, 255, .05);
+    border: 1px solid var(--border);
+    transition: all .15s ease;
+}
+.ee-ai-mini:hover { color: #fff; background: rgba(255, 255, 255, .12); }
+.ee-ai-quick { flex: none; display: flex; flex-wrap: wrap; gap: 5px; }
+.ee-ai-input { flex: none; display: flex; flex-direction: column; gap: 6px; }
+.ee-ai-input textarea {
+    width: 100%;
+    min-height: 56px;
+    max-height: 140px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    resize: vertical;
+    font-family: inherit;
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: var(--text);
+    background: var(--bg);
+    border: 1px solid var(--border);
+}
+.ee-ai-input textarea:focus { outline: none; border-color: rgba(115, 170, 255, .55); }
+.ee-ai-acts { display: flex; gap: 6px; }
+.ee-ai-acts .ee-btn { flex: 1; justify-content: center; }
+.ee-ai-note { font-size: 10.5px; line-height: 1.5; color: var(--text-muted); }
+
+/* 顶栏「AI」按钮：常驻（侧栏折叠时也能一键打开），和「属性」按钮区分开一点 */
+.ee-ai-btn { color: #cfe2ff; border-color: rgba(115, 170, 255, .4); background: rgba(115, 170, 255, .12); }
+.ee-ai-btn:hover { background: rgba(115, 170, 255, .24); color: #fff; }
+.ee-ai-btn.busy { animation: eeAiPulse 1.2s ease-in-out infinite; }
+@keyframes eeAiPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(115, 170, 255, .0); } 50% { box-shadow: 0 0 0 3px rgba(115, 170, 255, .22); } }
 
 /* ===== 侧栏：关联画布（v3.35.0：白板 / 导图改成文章的关联，不再插入正文）=====
    一块画布一行：类型徽标 + 名字 + 解除按钮；点整行去前台看 / 改那块画布。
@@ -1294,7 +1480,7 @@ html body .vditor-wysiwyg__block[data-type="code-block"] pre.vditor-wysiwyg__pre
  * ========================================================================== */
 @media (max-width: 900px) {
     .ee-main { padding: 10px 12px 12px; gap: 10px; }
-    .ee-side { width: clamp(190px, 32vw, 260px); }
+    .ee-side { --ee-side-w: clamp(190px, 32vw, 260px); }
     .ee-title-input { font-size: 14px; }
     .ee-cover { height: 104px; }
 }
@@ -1309,7 +1495,9 @@ html body .vditor-wysiwyg__block[data-type="code-block"] pre.vditor-wysiwyg__pre
     .ee-chapter-bar select { min-width: 0; width: 100%; }
 
     /* 属性栏变右侧抽屉：默认收起，点顶栏「属性」滑出。
-       这里的 !important 是为了压过 applyDoc() 写的 style.display='flex'。 */
+       这里的 !important 是为了压过 applyDoc() 写的 style.display='flex'。
+       抽屉宽度由外层定，内层铺满（--ee-side-w 在这里不再参与计算）。 */
+    .ee-main .ee-side-inner { width: 100%; }
     .ee-main .ee-side {
         position: fixed;
         right: 0;

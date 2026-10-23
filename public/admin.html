@@ -1206,6 +1206,55 @@
                             </div>
                             <div class="settings-tip">选择厂商与模型、粘贴 API Key 即可使用，无需手填接口地址与模型名。</div>
                         </div>
+
+                        <!-- 7. 写作助手：写作页右侧「AI」页签用的那套，独立模型 + 独立密钥。
+                             只回答写作中的疑问，不读正文、不改正文（后端 action=ai-write 代调）。
+                             写作页永远拿不到这个 key —— 设置接口的公开 GET 会把它抹掉。 -->
+                        <div class="settings-group">
+                            <h3><span class="settings-title">写作助手（写作页的 AI）</span><span class="settings-grip" title="拖动排序">⠿</span><span class="settings-chevron" title="展开/收起">▾</span></h3>
+                            <div class="settings-toggle-list" style="margin-bottom:12px">
+                                <div class="settings-toggle-item"><span>启用写作助手</span><label class="switch"><input type="checkbox" id="setAiWriteEnabled" checked><span class="slider"></span></label></div>
+                            </div>
+                            <div class="settings-field">
+                                <label>厂商 / 模型</label>
+                                <div class="settings-model-row">
+                                    <select id="setAiWriteProvider" onchange="fillModelOptions('AiWrite','')"></select>
+                                    <select id="setAiWriteModel"></select>
+                                </div>
+                            </div>
+                            <div class="settings-field" id="AiWriteCustomRow" style="display:none">
+                                <label>自定义接口地址</label>
+                                <input type="text" id="setAiWriteCustomUrl" placeholder="https://.../chat/completions">
+                                <label style="margin-top:10px">自定义模型名</label>
+                                <input type="text" id="setAiWriteCustomModel" placeholder="模型名称，如 deepseek-chat">
+                            </div>
+                            <div class="settings-field">
+                                <label>API Key（写作页专用，和上面的访客端分开）</label>
+                                <div class="settings-key-row">
+                                    <input type="password" id="setAiWriteApiKey" placeholder="填了写作页的 AI 才能回答" autocomplete="off">
+                                    <button type="button" class="btn btn-ghost btn-sm" onclick="testAiConnection('AiWrite',this)">测试连接</button>
+                                </div>
+                                <div class="settings-test-result" id="AiWriteTestResult"></div>
+                            </div>
+                            <div class="settings-advanced">
+                                <div class="settings-advanced-toggle" onclick="toggleAdvanced('AiWrite')">高级设置 <span>▾</span></div>
+                                <div class="settings-advanced-body" id="AiWriteAdvancedBody" style="display:none">
+                                    <div class="settings-field">
+                                        <label>系统提示词（可选，留空用内置的写作助手人设）</label>
+                                        <textarea id="setAiWriteSystemPrompt" rows="4" placeholder="留空即用内置：解决用词、标点、结构、Markdown、技术表述等写作疑问"></textarea>
+                                    </div>
+                                    <div class="settings-field">
+                                        <label>最大输出 Token</label>
+                                        <input type="number" id="setAiWriteMaxTokens" min="1" max="8192" placeholder="2048">
+                                    </div>
+                                    <div class="settings-field">
+                                        <label>温度（0 - 2，越大越随机）</label>
+                                        <input type="number" id="setAiWriteTemperature" min="0" max="2" step="0.1" placeholder="0.7">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="settings-tip">写作页右侧「AI」页签用这套配置：只回答写作中的疑问，不读取正文、也不会改正文；密钥独立，不影响访客端聊天。</div>
+                        </div>
                         </div>
 
                         <div class="settings-section" data-section="backend">
@@ -1432,7 +1481,7 @@
     </div>
 
         <script src="js/tag-picker.js?v=1.0.0"></script>
-        <script src="js/admin-app.js?v=1.17.2"></script>
+        <script src="js/admin-app.js?v=1.18.0"></script>
 
     <!-- 前台预览抽屉（iframe 内嵌，零跳出） -->
     <style>
