@@ -2657,7 +2657,15 @@
                 },
             };
             const r=await apiFetch('action=settings',{method:'POST',body:JSON.stringify(body)});
-            if(r.status==='success')showToast('设置已保存','success');
+            if(r.status==='success'){
+                // 明确告诉作者「两把 AI 密钥这次跟着提交了」——
+                // 之前只弹「设置已保存」，配了密钥却没点保存/保存失败时很容易误以为已经存好了
+                const hasKey=id=>{const el=document.getElementById(id);return !!(el&&el.value.trim())};
+                const keys=[];
+                if(hasKey('setAiApiKey'))keys.push('AI 助手');
+                if(hasKey('setAiWriteApiKey'))keys.push('写作助手');
+                showToast(keys.length?('设置已保存（含'+keys.join(' / ')+' 的密钥）'):'设置已保存','success');
+            }
             else showToast(r.message||'保存失败','error');
         }
         /**
