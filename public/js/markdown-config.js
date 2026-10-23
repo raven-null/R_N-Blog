@@ -8,8 +8,7 @@
  *   · renderer.image 的图片 URL 重写（/api/*-image → /images/a|t|g）、figure 图注、
  *     loading="lazy"、灯箱 onclick
  *   · renderer.code 的 .code-block 包裹（复制按钮、语言标签）
- *     且 article-app.js 的内嵌白板依赖 `.code-block code.language-excalidraw`，
- *     少了这层包裹 → 长文里的内嵌白板会显示成一段代码。
+ *     （v3.35.0 起正文不再内嵌画布，这一层只服务普通代码块）
  *
  * 因此把配置抽到本文件，由两边共同加载（浏览器 <script> / Worker importScripts）。
  *
@@ -42,79 +41,8 @@
             .replace(/"/g, '&quot;');
     }
 
-    // 画布 id 清洗：允许字母数字、下划线、短横线、点与中文
-    var ID_ALLOWED = /[^A-Za-z0-9_.\u4e00-\u9fa5-]/g;
-
-    /**
-     * 解析内嵌块声明。
-     *
-     * 推荐写法（Vditor 往返无损）：语言行只写 embed，声明放内容行
-     *     ```embed
-     *     map:mm-xyz789 :h=520 :caption="登录流程"
-     *     ```
-     *
-     * 也兼容一行式（```embed map:xxx）——注意 Vditor 会把语言行之后的部分当
-     * 代码块标题而非内容，导致 getValue() 往返时丢失，故不作为写入格式。
-     *
-     * 返回 null 表示不是内嵌块。
-     */
-    function parseEmbed(raw) {
-        var text = String(raw || '').replace(/\r/g, '').trim();
-        if (!text) return null;
-
-        var kindM = text.match(/^(board|map)\s*:/);
-        var rest;
-        if (kindM) {
-            // 内容行写法：整段就是声明
-            rest = text;
-        } else {
-            // 兼容旧的一行式：首词是 embed，其余是声明（参数在同一个 lang 里）
-            var sp = text.search(/\s/);
-            var first = sp < 0 ? text : text.slice(0, sp);
-            if (first !== 'embed') return null;
-            rest = sp < 0 ? '' : text.slice(sp + 1).trim();
-        }
-
-        var m = rest.match(/^(board|map)\s*:\s*([^\s:]+)([\s\S]*)$/);
-        if (!m) return null;
-
-        var kind = m[1];
-        var id = String(m[2] || '').replace(ID_ALLOWED, '').slice(0, 64);
-        if (!id) return null;
-
-        var tail = m[3] || '';
-        var conf = { kind: kind, id: id, height: 0, caption: '', title: '' };
-        var h = tail.match(/:h=(\d{2,4})/);
-        if (h) {
-            var n = parseInt(h[1], 10);
-            if (n >= 120 && n <= 2000) conf.height = n;
-        }
-        var cap = tail.match(/:caption="([^"]*)"/);
-        if (cap) conf.caption = cap[1];
-        var ttl = tail.match(/:title="([^"]*)"/);
-        if (ttl) conf.title = ttl[1];
-        return conf;
-    }
-
-    /**
-     * 生成内嵌块容器。kind 与 id 已清洗，这里仍做属性转义（caption/title 来自用户输入）。
-     * 真实挂载由 article-app.js 的 mountEmbeds() 负责（解析层只产出占位）。
-     */
-    function renderEmbedBlock(conf) {
-        if (!conf) return '';
-        var attrs = 'class="embed-block" data-embed="' + conf.kind + ':' + conf.id + '"' +
-            ' data-kind="' + conf.kind + '" data-id="' + escapeHtml(conf.id) + '"';
-        if (conf.height) attrs += ' data-h="' + conf.height + '"';
-        if (conf.title) attrs += ' data-title="' + escapeHtml(conf.title) + '"';
-        var label = conf.kind === 'map' ? '思维导图' : '白板';
-        var caption = conf.caption
-            ? '<figcaption class="embed-caption">' + escapeHtml(conf.caption) + '</figcaption>'
-            : '';
-        return '<figure class="embed-figure">' +
-            '<div ' + attrs + '><div class="embed-loading">' + label + '加载中…</div></div>' +
-            caption +
-            '</figure>';
-    }
+    // 注：v3.35.0 起正文不再有「内嵌画布」写法（白板 / 导图改成文章关联），
+    // 原 parseEmbed / renderEmbedBlock 与 ```embed 渲染分支一并移除。
 
     /**
      * 把自定义配置应用到传入的 marked 实例上。
@@ -179,28 +107,17 @@
         };
 
         // 代码块：.code-block 包裹 + 语言标签 + 复制按钮
-        // 内嵌白板依赖这层包裹（article-app.js 用 .code-block code.language-excalidraw 匹配）
+        // 注：v3.35.0 起正文不再有「内嵌画布」写法（白板 / 导图改成文章关联），
+        // 所以这里不再有 ```embed 的特殊分支 —— 任何代码块（含历史遗留的 ```embed）都按普通代码块渲染。
         renderer.code = function (token) {
             var language = token.lang || '';
             var text = token.text;
 
             // 本项目的 marked 版本把 fenced code 的 info string **整行**塞进 lang
             // （其内部规则为 t[2] = [^\n]*，默认 renderer 还用 notSpaceStart 只取第一个词）。
-            // 因此 ```embed board:xxx :h=520 里，id 与参数都在 lang 中，text 是空的。
-            // 这里按第一个空格切分：首词是语言，其余是内嵌块声明。
+            // 这里按第一个空格切分，语言标签只取首词。
             var sp = language.search(/\s/);
             var langWord = sp < 0 ? language : language.slice(0, sp);
-            var langRest = sp < 0 ? '' : language.slice(sp + 1).trim();
-
-            // 内嵌画布块：```embed board:xxx / ```embed map:xxx
-            // 只产出占位容器，真实挂载交给主线程的 mountEmbeds()——两个解析管线因此行为一致。
-            if (langWord === 'embed') {
-                var conf = parseEmbed(langRest || text);
-                if (conf) return renderEmbedBlock(conf);
-                return '<figure class="embed-figure"><div class="embed-block embed-error">' +
-                    '内嵌块语法无效：' + escapeHtml((langRest || text).trim().slice(0, 80)) +
-                    '<br>正确写法：```embed board:画布ID 或 ```embed map:导图ID</div></figure>';
-            }
 
             var escapedCode = escapeHtml(text);
             return '<div class="code-block">\n' +
@@ -220,8 +137,6 @@
 
     root.MarkdownConfig = {
         apply: apply,
-        escapeHtml: escapeHtml,
-        parseEmbed: parseEmbed,
-        renderEmbedBlock: renderEmbedBlock
+        escapeHtml: escapeHtml
     };
 })(typeof self !== 'undefined' ? self : this);

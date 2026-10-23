@@ -50,28 +50,21 @@
         }
     };
 
-    /** 画布占位：把 .embed-block / ```excalidraw 代码块换成说明卡片 */
+    /**
+     * 历史兜底：正文里如果还残留 ```excalidraw / ```mindmap 代码块（v3.35.0 之前的写法），
+     * 在预览里给一张说明卡片，而不是把一坨 JSON 摊开。新的内容不会再有这种块
+     * （白板 / 导图已改成文末「相关画布」，见 preview.html 的 pv-related 区）。
+     */
     function maskEmbeds(root) {
-        Array.prototype.forEach.call(root.querySelectorAll('.embed-block'), function (el) {
-            var kind = el.getAttribute('data-kind') === 'map' ? '思维导图' : '白板';
-            var id = el.getAttribute('data-id') || '';
-            var box = document.createElement('div');
-            box.className = 'pv-canvas';
-            box.innerHTML = '<span class="pv-canvas-k">' + kind + '</span>' +
-                '<span class="pv-canvas-id">' + esc(id) + '</span>' +
-                '<span class="pv-canvas-tip">预览页不加载画布。正式文章页会在这里显示可交互的' + kind +
-                '（含编辑口令校验）。</span>';
-            if (el.parentNode) el.parentNode.replaceChild(box, el);
-        });
-        // ```excalidraw / ```mindmap 代码块：前台由编辑器渲染成画布，预览里同样只给占位
         Array.prototype.forEach.call(root.querySelectorAll('pre code[class*="language-excalidraw"], pre code[class*="language-mindmap"]'), function (code) {
             var isMap = /language-mindmap/.test(code.className);
             var block = code.closest('.code-block') || code.parentNode;
             var box = document.createElement('div');
             box.className = 'pv-canvas';
             box.innerHTML = '<span class="pv-canvas-k">' + (isMap ? '思维导图' : '白板') + '</span>' +
-                '<span class="pv-canvas-id">内嵌在正文里</span>' +
-                '<span class="pv-canvas-tip">预览页不加载画布数据。正式文章页会把这段渲染成可交互画布。</span>';
+                '<span class="pv-canvas-id">历史内嵌块</span>' +
+                '<span class="pv-canvas-tip">这是旧写法（正文内嵌画布）。建议到写作页把这段删掉，' +
+                '改用侧栏「关联画布」挂到文章上。</span>';
             if (block && block.parentNode) block.parentNode.replaceChild(box, block);
         });
     }

@@ -705,31 +705,14 @@ const ArticleApp = {
                 this.mountEmbeds(stage);
             },
 
-            // 统一内嵌块挂载：把解析层产出的占位容器换成真实画布
-            //   新语法（markdown-config.js 的 renderer.code 产出）：
-            //     <figure class="embed-figure"><div class="embed-block" data-embed="board:wb-xxx" data-h="480">
-            //   历史写法（兼容）：```excalidraw 代码块 → 这里同样归一成 embed-block 再处理
-            // 挂载语义只在这一层，解析层（含 Worker）只负责产出占位 —— 两条管线行为因此一致。
+            // 画布挂载：把「相关画布」区点开的占位容器换成真实画布。
+            //   v3.35.0 起正文里不再有内嵌画布（改成文章关联），所以这里只剩一个入口：
+            //   renderRelatedCanvases() 产出的 .embed-block（data-embed / data-kind / data-id）。
+            //   历史遗留的 ```excalidraw / ```embed 现在按普通代码块渲染，不再归一成画布。
             mountEmbeds(container) {
                 if (!container) return;
                 let boards = 0;
                 let maps = 0;
-
-                // 历史写法归一：```excalidraw 代码块 → 统一容器
-                container.querySelectorAll('.code-block code.language-excalidraw').forEach(code => {
-                    const block = code.closest('.code-block');
-                    if (!block) return;
-                    const id = (code.textContent || '').trim();
-                    const div = document.createElement('div');
-                    div.className = 'embed-block';
-                    div.dataset.embed = 'board:' + id;
-                    div.dataset.kind = 'board';
-                    div.dataset.id = id;
-                    const fig = document.createElement('figure');
-                    fig.className = 'embed-figure';
-                    fig.appendChild(div);
-                    block.replaceWith(fig);
-                });
 
                 container.querySelectorAll('.embed-block[data-embed]').forEach(el => {
                     const raw = String(el.dataset.embed || '');
