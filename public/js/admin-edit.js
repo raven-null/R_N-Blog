@@ -1772,6 +1772,16 @@
             markTerm(word);
             // 标完立刻高亮 + 滚到锚点，省得还要自己找
             setTimeout(function () { refreshTermDecorations(); locateTerm(normalizeWord(word)); }, 80);
+        },
+        /** 选中的词是不是已标记的术语（右键菜单据此决定「取消术语标记」是否可点） */
+        has: function (word) {
+            return termIndex(normalizeWord(word)) >= 0;
+        },
+        /** 取消术语标记（与面板里的 × 等价，只是入口更近） */
+        unmark: function (word) {
+            var w = normalizeWord(word);
+            if (termIndex(w) < 0) { toast('「' + w + '」不是术语', 'error'); return; }
+            unmarkTerm(w);
         }
     };
 

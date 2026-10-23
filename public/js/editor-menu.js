@@ -148,6 +148,19 @@
         return (cur && cur.parentElement === root) ? cur : null;
     }
 
+    /** 光标所在的链接元素（没有就 null）——「取消链接」用 */
+    function closestAnchor() {
+        var root = editorEl();
+        if (!root) return null;
+        var sel = window.getSelection();
+        if (!sel || sel.rangeCount === 0) return null;
+        var node = sel.getRangeAt(0).startContainer;
+        var el = node && (node.nodeType === 1 ? node : node.parentElement);
+        if (!el || !root.contains(el)) return null;
+        var a = el.closest ? el.closest('a') : null;
+        return (a && root.contains(a)) ? a : null;
+    }
+
     /**
      * 改了编辑区 DOM 之后要通知一声。
      *
@@ -205,6 +218,42 @@
         },
         moveUp: function (ctx) { moveBlock(ctx, -1); },
         moveDown: function (ctx) { moveBlock(ctx, 1); },
+        /**
+         * 取消链接（v3.39.1）：把 <a> 拆成它的子节点，**文字保留**、链接去掉。
+         * 与「上移这一段」同一套做法：改 DOM + notifyEdited()，不派发 input
+         * （派发了 Vditor 会把 DOM 打回原样，见 notifyEdited 的注释）。
+         */
+        unlink: function () {
+            var a = closestAnchor();
+            if (!a) { toast('把光标放到链接上再取消'); return false; }
+            try {
+                var parent = a.parentNode;
+                if (!parent) return false;
+                // 先把子节点收起来，替换后好把光标放回文字末尾
+                var kids = Array.prototype.slice.call(a.childNodes);
+                var frag = document.createDocumentFragment();
+                kids.forEach(function (k) { frag.appendChild(k); });
+                parent.replaceChild(frag, a);
+                if (parent.normalize) parent.normalize();
+                var last = kids[kids.length - 1];
+                if (last) {
+                    try {
+                        var r = document.createRange();
+                        r.selectNodeContents(last);
+                        r.collapse(false);
+                        var sel = window.getSelection();
+                        sel.removeAllRanges();
+                        sel.addRange(r);
+                    } catch (e) { /* 光标放不回去也不影响结果 */ }
+                }
+                notifyEdited();
+                toast('已取消链接（文字保留）');
+                return true;
+            } catch (e) {
+                toast('取消链接失败：' + ((e && e.message) || e));
+                return false;
+            }
+        },
         dupBlock: function (ctx) {
             var blk = currentBlock(ctx.vditor);
             if (!blk) { toast('先把光标放到要复制的段落里'); return; }
@@ -332,8 +381,17 @@
             moveCaretTo(e.clientX, e.clientY, root);
 
             var hasSel = false;
-            try { var s = window.getSelection(); hasSel = !!(s && s.rangeCount > 0 && !s.isCollapsed); } catch (err) { /* 忽略 */ }
+            var selText = '';
+            try {
+                var s = window.getSelection();
+                hasSel = !!(s && s.rangeCount > 0 && !s.isCollapsed);
+                selText = String(s || '').trim();
+            } catch (err) { /* 忽略 */ }
             var inBlock = !!currentBlock(vd);
+            // 取消类操作的状态：光标是否在链接里、选中的词是不是已标记的术语
+            var inLink = !!closestAnchor();
+            var termHit = (selText && window.EETerms && typeof window.EETerms.has === 'function' && window.EETerms.has(selText))
+                ? selText : '';
 
             render([
                 item('剪切', 'Ctrl+X', actions.cut, !hasSel),
@@ -346,6 +404,8 @@
                 item('删除线', '', function () { clickToolbar('strike'); }, !hasSel),
                 item('行内代码', '', function () { clickToolbar('inline-code'); }, !hasSel),
                 item('链接', '', function () { clickToolbar('link'); }, !hasSel),
+                // 取消链接（v3.39.1）：光标在链接里时可用，去掉链接、保留文字
+                item('取消链接', '', actions.unlink, !inLink),
                 '-',
                 item('插入图片', '', function () { clickToolbar('upload'); }, false),
                 '-',
@@ -358,6 +418,10 @@
                     if (window.EETerms && typeof window.EETerms.mark === 'function') window.EETerms.mark(text);
                     else toast('术语功能未加载，请刷新重试', 'error');
                 }, !hasSel),
+                // 取消术语标记（v3.39.1）：选中的词已经是术语时可用
+                item(termHit ? ('取消术语标记「' + termHit + '」') : '取消术语标记', '', function () {
+                    if (window.EETerms && typeof window.EETerms.unmark === 'function') window.EETerms.unmark(termHit);
+                }, !termHit),
                 // 站内链接（v3.38.0）：选中文字 → 选目标文章 / 本文标题，自动写出 Markdown 链接
                 item('插入站内链接', '', function () {
                     var text = '';
