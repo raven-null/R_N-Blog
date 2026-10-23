@@ -104,6 +104,16 @@
     .pv-canvas-k{font-size:13px;font-weight:600;color:#cfe2ff}
     .pv-canvas-id{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:var(--text-muted)}
     .pv-canvas-tip{flex-basis:100%;font-size:12.5px;color:var(--text-muted);line-height:1.7}
+    /* 相关画布（文末） */
+    .pv-related{margin-top:34px;padding-top:20px;border-top:1px solid var(--border)}
+    .pv-related-head{display:flex;align-items:center;gap:8px;margin-bottom:12px;font-size:14.5px;font-weight:600}
+    .pv-related-count{padding:1px 8px;border-radius:99px;font-size:11.5px;font-weight:500;color:#cfe2ff;background:rgba(115,170,255,.16);border:1px solid rgba(115,170,255,.32)}
+    .pv-related-list{display:flex;flex-direction:column;gap:9px}
+    .pv-related-row{display:flex;align-items:center;gap:10px;padding:11px 13px;border-radius:11px;font-size:13px;background:rgba(255,255,255,.04);border:1px solid var(--border)}
+    .pv-related-k{flex:none;padding:1px 8px;border-radius:99px;font-size:11.5px;font-weight:600;color:#cfe2ff;background:rgba(115,170,255,.18);border:1px solid rgba(115,170,255,.34)}
+    .pv-related-row.map .pv-related-k{color:#f0d7ff;background:rgba(180,120,255,.18);border-color:rgba(180,120,255,.36)}
+    .pv-related-n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-secondary)}
+    .pv-related-note{flex:none;font-size:11.5px;color:var(--text-muted)}
     /* 未收到数据 / 已断开 */
     .pv-empty{
         width:min(560px,90vw);margin:14vh auto;padding:26px 28px;border-radius:16px;
@@ -136,6 +146,8 @@
         <div class="pv-cover" id="pvCover"></div>
         <div class="pv-excerpt" id="pvExcerpt" style="display:none"></div>
         <div class="pv-body" id="pvBody"></div>
+        <!-- 相关画布：关联的白板 / 导图。预览页不加载画布本体，只列出来 -->
+        <div class="pv-related" id="pvRelated" style="display:none"></div>
     </article>
 
     <div class="pv-empty" id="pvEmpty">

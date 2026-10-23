@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 编辑器右键菜单增强（v1.0.0）
  *
  * 为什么要有它：顶部工具栏塞不下所有功能，塞满了又占地方、又难找。
@@ -347,7 +347,6 @@
                 item('行内代码', '', function () { clickToolbar('inline-code'); }, !hasSel),
                 item('链接', '', function () { clickToolbar('link'); }, !hasSel),
                 '-',
-                item('插入白板 / 导图', '', function () { clickToolbar('eeEmbedPick'); }, false),
                 item('插入图片', '', function () { clickToolbar('upload'); }, false),
                 '-',
                 item('上移这一段', '', actions.moveUp, !inBlock),

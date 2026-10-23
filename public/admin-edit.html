@@ -12,15 +12,13 @@
 <!-- 写作页样式：原来整段内联在 <style> 里（34.6KB / 156 个 !important，
      Vditor 覆盖规则还被追加过三遍），现已抽成独立文件并合并去重。
      顺序有讲究：必须排在 vditor/dist/index.css 之后，靠 html body 前缀 + !important 压过组件样式。 -->
-<link rel="stylesheet" href="/css/editor-write.css?v=1.0.0">
+<link rel="stylesheet" href="/css/editor-write.css?v=1.1.0">
     <link rel="stylesheet" href="/css/scrollbar.css?v=1.0.1">
     <link rel="stylesheet" href="/css/responsive.css?v=1.0.0">
     <link rel="stylesheet" href="/css/mobile.css?v=1.0.0">
-    <!-- 内嵌白板由白板编辑器渲染，写作页与阅读页刻意做成两套形态：
-         写作页隐藏白板自带的操作胶囊（见 embed-picker.js 的 .ep-canvas .mm-capsule），
-         胶囊里的「返回/导出/编辑/留言/信息」只属于阅读页与独立白板页。
-         capsule.css 仍要引入 —— 加密白板的编辑口令输入框（.mm-key）用它；
-         drawer.css 给留言抽屉兜底（万一其它入口把 .mm-drawer 打开）。 -->
+    <!-- capsule.css 仍要引入 —— 加密白板的编辑口令输入框（.mm-key）用它；
+         drawer.css 给留言抽屉兜底（万一其它入口把 .mm-drawer 打开）。
+         注：v3.35.0 起正文不再内嵌白板 / 导图（改成文章「关联画布」），本页不再加载 embed-picker.js。 -->
     <link rel="stylesheet" href="/css/capsule.css?v=1.0.0">
     <link rel="stylesheet" href="/css/drawer.css?v=1.0.1">
 </head>
@@ -114,9 +112,21 @@
                         <label>摘要（留空自动提取）</label>
                         <textarea id="eeExcerpt" rows="3" oninput="eeMarkDirty()"></textarea>
                     </div>
-                    <div class="ee-card" id="eeCanvasCard">
-                        <label>本文内嵌画布</label>
-                        <div class="ee-canvas-list" id="eeCanvasList"></div>
+                    <!-- 关联画布：白板 / 导图挂在文章上，不再「插入正文」。
+                         关联存在文章的 canvasRefs 字段，前台在文末「相关画布」区展示；
+                         点整行去前台看 / 改那块画布，× 解除关联。 -->
+                    <div class="ee-card" id="eeRelatedCard">
+                        <label>关联画布</label>
+                        <div class="ee-related-list" id="eeRelatedList"></div>
+                        <div class="ee-related-add">
+                            <select id="eeRelatedBoardSel" aria-label="选择要关联的白板"><option value="">选择一块白板…</option></select>
+                            <button type="button" class="ee-btn" onclick="eeLinkCanvas('board')">关联</button>
+                        </div>
+                        <div class="ee-related-add">
+                            <select id="eeRelatedMapSel" aria-label="选择要关联的导图"><option value="">选择一张导图…</option></select>
+                            <button type="button" class="ee-btn" onclick="eeLinkCanvas('map')">关联</button>
+                        </div>
+                        <div class="ee-hint ee-related-hint">正文只写文字；白板 / 导图作为「相关画布」挂在文章上，前台在文末列出。新画布请先到「新建」页创建再回来关联。</div>
                     </div>
                     <div class="ee-card" id="eeBoardAdminCard" style="display:none">
                         <label>白板管理</label>
@@ -198,14 +208,13 @@
 
     <div class="ee-toast" id="eeToast"></div>
     <script src="js/markdown-config.js?v=1.2.0"></script>
-<script src="js/embed-picker.js?v=1.10.0"></script>
 <script src="js/editor-menu.js?v=1.0.0"></script>
 <script src="js/editor-outline.js?v=1.0.0"></script>
 <script src="js/tag-picker.js?v=1.0.0"></script>
-    <!-- 基础设施（提示 / 请求兜底 / 自绘确认框 / 净字数 / 本地草稿 / 快捷键面板） -->
-    <script src="js/editor-kit.js?v=1.0.0"></script>
+    <!-- 基础设施（提示 / 请求兜底 / 自绘确认框 / 净字数 / 本地草稿 / 快捷键面板 / 旧内嵌块迁移） -->
+    <script src="js/editor-kit.js?v=1.1.0"></script>
     <!-- 白板与导图管理（权限 / 口令 / 历史回滚 / 绑定），由 admin-edit.js 注入上下文 -->
     <script src="js/editor-embed-admin.js?v=1.0.0"></script>
-    <script src="js/admin-edit.js?v=1.20.0"></script>
+    <script src="js/admin-edit.js?v=1.21.0"></script>
 </body>
 </html>

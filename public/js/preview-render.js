@@ -125,6 +125,32 @@
         body.innerHTML = html;
         maskEmbeds(body);
 
+        // 相关画布（v3.35.0：白板 / 导图改成文章的关联）。预览页不加载画布本体，只列出来
+        var rel = $('pvRelated');
+        var refs = Array.isArray(p.canvasRefs) ? p.canvasRefs.filter(function (r) {
+            return r && (r.kind === 'board' || r.kind === 'map') && r.id;
+        }) : [];
+        if (rel) {
+            if (!refs.length) {
+                rel.style.display = 'none';
+                rel.innerHTML = '';
+            } else {
+                rel.style.display = '';
+                rel.innerHTML = '<div class="pv-related-head">相关画布' +
+                    '<span class="pv-related-count">' + refs.length + '</span></div>' +
+                    '<div class="pv-related-list">' + refs.map(function (r) {
+                        var k = r.kind === 'map' ? 'map' : 'board';
+                        var label = k === 'map' ? '思维导图' : '白板';
+                        var name = String(r.name || '').trim() || ('未命名' + label);
+                        return '<div class="pv-related-row ' + k + '">' +
+                            '<span class="pv-related-k">' + label + '</span>' +
+                            '<span class="pv-related-n">' + esc(name) + '</span>' +
+                            '<span class="pv-related-note">正式页面点开展开</span>' +
+                            '</div>';
+                    }).join('') + '</div>';
+            }
+        }
+
         if (typeof hljs !== 'undefined') {
             Array.prototype.forEach.call(body.querySelectorAll('pre code'), function (block) {
                 try { hljs.highlightElement(block); } catch (e) { /* 忽略 */ }

@@ -108,6 +108,9 @@ const ArticleApp = {
                     type: d.type || 'article',
                     boardId: d.boardId || '',
                     mapId: d.mapId || '', // 思维导图关联 id
+                    // v3.35.0：白板 / 导图改成文章的「关联」列表（正文里不再内嵌），
+                    // 由 admin-edit 的「关联画布」面板维护，前台在文末「相关画布」区展示。
+                    canvasRefs: Array.isArray(d.canvasRefs) ? d.canvasRefs : [],
                     frontmatter: {},
                 };
                 this.renderArticle();
@@ -417,6 +420,10 @@ const ArticleApp = {
                 // 渲染文章头部信息（与白板文章共用）
                 this.renderArticleHeader(header);
 
+                // v3.35.0：文末「相关画布」（白板 / 导图关联）。与正文渲染完全独立，
+                // 所以放在这里一次性建好；分章文章后续追加章节不会影响它（它是 #article-content 的兄弟节点）。
+                this.renderRelatedCanvases();
+
                 // 异步解析 Markdown（长文使用 Web Worker）
                 const html = await MarkdownParser.parseMarkdownAsync(this.currentPost.content);
 
@@ -630,6 +637,74 @@ const ArticleApp = {
             },
 
             // 画布舞台控件：信息/评论抽屉/画廊导航/闲置自动隐藏
+            /**
+             * 文末「相关画布」区（v3.35.0）。
+             * 数据来自文章的 canvasRefs（关联列表），与正文无关 —— 正文里不会再出现画布。
+             * 卡片默认收起，点一下才在下面挂真实画布（白板走 Excalidraw、导图走 mindmap.html），
+             * 再点一次收起：首屏不为下面的画布付代价，也不会出现「正文中间卡一块」的排版问题。
+             */
+            renderRelatedCanvases() {
+                const host = document.getElementById('related-canvas');
+                if (!host) return;
+                const refs = (this.currentPost && Array.isArray(this.currentPost.canvasRefs)) ? this.currentPost.canvasRefs : [];
+                const valid = refs.filter(r => r && (r.kind === 'board' || r.kind === 'map') && r.id);
+                if (!valid.length) {
+                    host.style.display = 'none';
+                    host.innerHTML = '';
+                    return;
+                }
+                host.style.display = '';
+                const label = k => (k === 'map' ? '思维导图' : '白板');
+                host.innerHTML =
+                    '<div class="related-canvas-head">相关画布' +
+                    '<span class="rc-count">' + valid.length + '</span>' +
+                    '<span class="rc-tip">点开可就地查看</span></div>' +
+                    '<div class="related-canvas-list">' +
+                    valid.map((r, i) => {
+                        const k = r.kind === 'map' ? 'map' : 'board';
+                        const name = String(r.name || '').trim();
+                        return '<button type="button" class="rc-card ' + k + '" data-rc="' + i + '" aria-expanded="false">' +
+                            '<span class="rc-k">' + label(k) + '</span>' +
+                            '<span class="rc-n">' + this.esc(name || ('未命名' + label(k))) + '</span>' +
+                            '<span class="rc-act">展开</span>' +
+                            '</button>' +
+                            '<div class="rc-stage" data-rc-stage="' + i + '"></div>';
+                    }).join('') +
+                    '</div>';
+                host.querySelectorAll('.rc-card').forEach(btn => {
+                    btn.addEventListener('click', () => this.toggleRelatedCanvas(Number(btn.dataset.rc), valid));
+                });
+            },
+
+            toggleRelatedCanvas(index, refs) {
+                const host = document.getElementById('related-canvas');
+                if (!host) return;
+                const btn = host.querySelector('.rc-card[data-rc="' + index + '"]');
+                const stage = host.querySelector('.rc-stage[data-rc-stage="' + index + '"]');
+                const ref = refs[index];
+                if (!btn || !stage || !ref) return;
+                const act = btn.querySelector('.rc-act');
+                if (btn.getAttribute('aria-expanded') === 'true') {
+                    btn.setAttribute('aria-expanded', 'false');
+                    if (act) act.textContent = '展开';
+                    stage.innerHTML = '';   // 收起时卸掉画布，避免后台还挂着一堆 iframe
+                    return;
+                }
+                btn.setAttribute('aria-expanded', 'true');
+                if (act) act.textContent = '收起';
+                if (!stage.querySelector('.embed-block')) {
+                    const el = document.createElement('div');
+                    el.className = 'embed-block';
+                    el.dataset.embed = (ref.kind === 'map' ? 'map:' : 'board:') + ref.id;
+                    el.dataset.kind = ref.kind === 'map' ? 'map' : 'board';
+                    el.dataset.id = ref.id;
+                    el.dataset.h = '560';
+                    stage.appendChild(el);
+                }
+                // 复用正文那套内嵌挂载逻辑（.embed-block → iframe / Excalidraw）
+                this.mountEmbeds(stage);
+            },
+
             // 统一内嵌块挂载：把解析层产出的占位容器换成真实画布
             //   新语法（markdown-config.js 的 renderer.code 产出）：
             //     <figure class="embed-figure"><div class="embed-block" data-embed="board:wb-xxx" data-h="480">

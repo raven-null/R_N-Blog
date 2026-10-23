@@ -1843,6 +1843,53 @@
         .toc-chapter-item .ci-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .toc-chapter-item .ci-words { flex: none; font-size: 11px; color: rgba(255,255,255,.4); }
     </style>
+    <style>
+        /* ===== 相关画布（v3.35.0：白板 / 导图与文章的关联，不再内嵌正文）=====
+           文末一块独立区域，默认只列卡片；点卡片在下方就地展开可交互画布，
+           再点一次收起。展开后才挂 iframe / Excalidraw，首屏不为画布付代价。 */
+        .related-canvas {
+            margin: 42px 0 8px;
+            padding-top: 22px;
+            border-top: 1px solid rgba(255,255,255,.1);
+        }
+        .related-canvas-head {
+            display: flex; align-items: center; gap: 8px;
+            margin-bottom: 14px;
+            font-size: 15px; font-weight: 600; color: var(--text-primary, #e8e9f2);
+        }
+        .related-canvas-head .rc-count {
+            padding: 1px 8px; border-radius: 99px; font-size: 11.5px; font-weight: 500;
+            color: #cfe2ff; background: rgba(115,170,255,.16); border: 1px solid rgba(115,170,255,.32);
+        }
+        .related-canvas-head .rc-tip { margin-left: auto; font-size: 11.5px; font-weight: 400; color: rgba(255,255,255,.42); }
+        .related-canvas-list { display: flex; flex-direction: column; gap: 10px; }
+        .rc-card {
+            display: flex; align-items: center; gap: 10px; width: 100%;
+            padding: 12px 14px; border-radius: 12px; cursor: pointer; text-align: left;
+            font-family: inherit; font-size: 13.5px;
+            color: var(--text-primary, #e8e9f2);
+            background: rgba(255,255,255,.04);
+            border: 1px solid rgba(255,255,255,.12);
+            transition: border-color .18s ease, background .18s ease;
+        }
+        .rc-card:hover { border-color: rgba(115,170,255,.55); background: rgba(115,170,255,.1); }
+        .rc-card .rc-k {
+            flex: none; padding: 2px 9px; border-radius: 99px; font-size: 11.5px; font-weight: 600;
+            color: #cfe2ff; background: rgba(115,170,255,.18); border: 1px solid rgba(115,170,255,.34);
+        }
+        .rc-card.map .rc-k { color: #f0d7ff; background: rgba(180,120,255,.18); border-color: rgba(180,120,255,.36); }
+        .rc-card .rc-n { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .rc-card .rc-act { flex: none; font-size: 12px; color: rgba(255,255,255,.45); }
+        .rc-card[aria-expanded="true"] .rc-act { color: #7fb2ff; }
+        .rc-stage { margin: -2px 0 4px; border-radius: 12px; overflow: hidden; }
+        .rc-stage:empty { display: none; }
+        .rc-stage .embed-block { border-radius: 12px; }
+        @media (max-width: 640px) {
+            .related-canvas { margin-top: 30px; }
+            .rc-card { font-size: 13px; padding: 11px 12px; }
+            .related-canvas-head .rc-tip { display: none; }
+        }
+    </style>
     <link rel="stylesheet" href="/css/responsive.css?v=1.0.0">
     <link rel="stylesheet" href="/css/mobile.css?v=1.0.0">
 </head>
@@ -2032,6 +2079,9 @@
                 <!-- 由 JavaScript 动态生成 -->
             </div>
 
+            <!-- 相关画布（v3.35.0）：白板 / 导图与本文关联后在这里列出，点开就地查看 -->
+            <section class="related-canvas" id="related-canvas" style="display:none"></section>
+
             <!-- 留言区 -->
             <div class="dash-panel comment-section" id="comment-section" style="display:none;">
                 <div class="dash-panel-title">留言</div>
@@ -2083,7 +2133,7 @@
     <script src="js/reader.js?v=3.13.7" defer></script>
     <script src="js/animations.js?v=3.14.0" defer></script>
 
-    <script src="js/article-app.js?v=1.4.8" defer></script>
+    <script src="js/article-app.js?v=1.5.0" defer></script>
 
 </body>
 </html>

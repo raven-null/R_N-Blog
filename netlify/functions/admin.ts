@@ -24,6 +24,8 @@ const ALLOWED_MIME: Record<string, string> = {
 interface CanvasRef {
   kind: "board" | "map"
   id: string
+  /** 关联时的画布名字，纯展示用（前台「相关画布」区不必再为每块画布多打一次接口） */
+  name?: string
 }
 
 interface ArticleMeta {
@@ -84,12 +86,50 @@ async function getArticleIndexStrong(store: ReturnType<typeof getBlobStore>): Pr
 /** 画布 id 的合法形状：wb- / mm- 前缀 + base36 随机段（与 embed-picker.js 的约定一致） */
 const CANVAS_ID_RE = /^(?:wb|mm)-[A-Za-z0-9-]{2,61}$/
 
+/** 一篇文章最多关联多少块画布（够用即可，挡住异常请求把索引撑大） */
+const MAX_CANVAS_REFS = 20
+
 /**
- * 从正文里提取内嵌画布引用。支持三种历史写法：
+ * 关联画布的规范化（v3.35.0 起「关联」取代「正文内嵌」）。
+ *
+ * 语义变化：
+ *   - 以前 canvasRefs 只能由服务端从正文里 ` ```embed board:xxx ` 抽出来；
+ *   - 现在它是文章的**关联列表**，由客户端显式提交（admin-edit 的「关联画布」面板）。
+ *
+ * 兼容：
+ *   - 客户端没传这个字段（老版本后台、导入 .md、脚本）→ 仍按正文推导一次，
+ *     这样历史数据与旧客户端的行为不变；
+ *   - 显式传了空数组 = 「作者把关联都解除了」，此时必须以空为准，不能又去正文里抽。
+ */
+function normalizeCanvasRefs(raw: unknown, content: string): CanvasRef[] {
+  if (!Array.isArray(raw)) return extractCanvasRefs(content || "")
+  const out: CanvasRef[] = []
+  const seen = new Set<string>()
+  for (const item of raw) {
+    if (!item || typeof item !== "object") continue
+    const kind = (item as any).kind === "map" ? "map" : "board"
+    const id = String((item as any).id || "").trim()
+    if (!CANVAS_ID_RE.test(id)) continue
+    const key = kind + ":" + id
+    if (seen.has(key)) continue
+    seen.add(key)
+    // 名字只做展示：去掉换行/控制字符并截断，避免把奇怪的字符串写进索引
+    const name = String((item as any).name || "").replace(/[\r\n\t]+/g, " ").trim().slice(0, 60)
+    out.push(name ? { kind, id, name } : { kind, id })
+    if (out.length >= MAX_CANVAS_REFS) break
+  }
+  return out
+}
+
+
+/**
+ * 从正文里提取内嵌画布引用（**仅作历史兼容**）。
+ * v3.35.0 起正文不再「插入画布」，关联关系改由文章的 canvasRefs 字段显式表达；
+ * 这个函数现在只服务两处：旧客户端没传 canvasRefs 时的兜底，以及 sync-canvas-refs 的补扫。
+ * 识别三种历史写法：
  *   1. ```embed 换行 board:<id>      —— 现在的写法（Vditor 往返不会丢 id）
  *   2. ```embed board:<id>           —— 单行写法（Vditor 会把后半截当代码块标题，但仍要认）
  *   3. ```excalidraw 换行 <id>       —— 更早的写法
- * 与 public/js/embed-picker.js 的 extractBlockRefs 保持同样的识别范围。
  */
 function extractCanvasRefs(md: string): CanvasRef[] {
   if (!md) return []
@@ -399,6 +439,11 @@ export default async (req: Request) => {
       // 生成文件名
       const filename = staticFile || `${articleId}.md`
 
+      // 关联画布（白板 / 导图）。记录与索引各存一份：
+      //   - 记录里这份给编辑页读（admin-edit 打开文章时拉的是记录，不是索引）；
+      //   - 索引里这份给后台卡片与前台列表读。
+      const canvasRefs = normalizeCanvasRefs((body as any).canvasRefs, content || "")
+
       const articleData = {
         id: articleId,
         filename,
@@ -413,6 +458,7 @@ export default async (req: Request) => {
         type,
         boardId,
         mapId,
+        canvasRefs,
         createdAt: now,
         updatedAt: now,
       }
@@ -478,9 +524,9 @@ export default async (req: Request) => {
         // 此前漏写导致 admin-app.js 的导图去重（a.mapId === currentMapId）永远匹配不到，
         // 结果是每次「发布」都新建一篇文章而不是更新同一篇。
         mapId: mapId || undefined,
-        // 正文里内嵌的画布：后台卡片据此给出「直接去改这块白板」的链接。
-        // 只对 article 有意义（白板/导图形态本身就是一整块画布，卡片点进去就是它）。
-        canvasRefs: type === "article" ? extractCanvasRefs(content || "") : [],
+        // 关联画布（白板 / 导图）：后台卡片据此给出「直接去改这块白板」的链接，
+        // 前台文章页据此在文末渲染「相关画布」区。客户端显式提交，老客户端仍从正文兜底。
+        canvasRefs,
       }
 
       if (existing >= 0) {

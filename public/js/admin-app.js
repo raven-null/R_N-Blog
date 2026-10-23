@@ -284,15 +284,16 @@
             }
             bits.push('<span>'+esc(a.date||'')+'</span>');
             if(a.update)bits.push('<span class="up">更新 '+esc(a.update)+'</span>');
-            // 正文里内嵌的画布：给一个直达链接，单独去改那块画布而不必先打开文章
+            // 与本文关联的画布（v3.35.0 起是「关联」而不是正文内嵌）：给一个直达链接，
+            // 单独去改那块画布而不必先打开文章。
             const refs=(type==='article'&&Array.isArray(a.canvasRefs))?a.canvasRefs:[];
             const canvases=refs.length
                 ?'<div class="ac-canvases">'+refs.map(function(r){
                     const isMap=r.kind==='map';
                     return '<button type="button" class="ac-canvas'+(isMap?' map':'')+'" '+
-                        'title="'+(isMap?'单独编辑这张思维导图':'单独编辑这块白板')+'" '+
+                        'title="'+(isMap?'单独编辑这张思维导图（本文关联）':'单独编辑这块白板（本文关联）')+'" '+
                         'onclick="artOpenCanvas(\''+escJs(r.id)+'\',\''+(isMap?'map':'board')+'\',event)">'+
-                        '<span class="k">'+(isMap?'导图':'白板')+'</span>'+esc(r.id)+'<span class="arw">↗</span></button>';
+                        '<span class="k">'+(isMap?'导图':'白板')+'</span>'+escJs(r.name||r.id)+'<span class="arw">↗</span></button>';
                 }).join('')+'</div>'
                 :'';
             const pubBtn=isPub

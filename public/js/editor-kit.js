@@ -1,6 +1,9 @@
 /**
  * 写作页基础设施（admin-edit.html 专用，也被后续页面复用）
  * ------------------------------------------------------------------
+ * v1.1.0
+ *   - 新增 parseLegacyCanvasRefs / stripCanvasBlocks：白板 / 导图改成「关联」后，
+ *     旧文章正文里的内嵌块需要能被认出来并一键移出正文（详见文件内注释）
  * v1.0.0
  *   - 从 admin-edit.js 里抽出的公共件，让主文件只留「写作这件事」本身
  *   - toast / esc：与原来完全一致，调用点不用改
@@ -211,6 +214,50 @@
         var zh = (text.match(/[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\u3040-\u30ff]/g) || []).length;
         var latin = (text.match(/[A-Za-z0-9]+(?:['\u2019-][A-Za-z0-9]+)*/g) || []).length;
         return { words: zh + latin, chars: text.length };
+    };
+
+    // ===== 旧「正文内嵌画布」的兼容与迁移（v1.1.0）=====
+    /**
+     * v3.35.0 起，白板 / 导图不再「插入正文」，而是作为文章的**关联**（canvasRefs）。
+     * 这两个函数只服务历史数据：
+     *   parseLegacyCanvasRefs(md) —— 从旧正文里认出内嵌的画布，供编辑页提示「转为关联」
+     *   stripCanvasBlocks(md)     —— 把正文里的内嵌块整段移出（迁移时用）
+     * 识别三种历史写法：```embed 换行 board:id / ```embed board:id / ```excalidraw 换行 id
+     */
+    var CANVAS_ID_RE = /^(?:wb|mm)-[A-Za-z0-9_-]{2,61}$/;
+
+    EE.parseLegacyCanvasRefs = function (md) {
+        var s = String(md == null ? '' : md);
+        var out = [], seen = {};
+        function push(kind, id) {
+            id = String(id || '').trim();
+            if (!CANVAS_ID_RE.test(id)) return;
+            var key = kind + ':' + id;
+            if (seen[key]) return;
+            seen[key] = 1;
+            out.push({ kind: kind, id: id });
+        }
+        var re1 = /```embed[^\n]*\n\s*(board|map)\s*:\s*([^\s:]+)/g;
+        var re2 = /```embed\s+(board|map)\s*:\s*([^\s:]+)/g;
+        var re3 = /```excalidraw[^\n]*\n\s*(\S+)/g;
+        var m;
+        while ((m = re1.exec(s))) push(m[1] === 'map' ? 'map' : 'board', m[2]);
+        while ((m = re2.exec(s))) push(m[1] === 'map' ? 'map' : 'board', m[2]);
+        while ((m = re3.exec(s))) {
+            var bare = m[1].trim();
+            push(bare.indexOf('mm-') === 0 ? 'map' : 'board', bare);
+        }
+        return out;
+    };
+
+    /** 把正文里的内嵌画布块整段移出，返回清理后的 Markdown */
+    EE.stripCanvasBlocks = function (md) {
+        var s = String(md == null ? '' : md);
+        // ```embed ... ``` 整块（开栏行可能自带 board:id，也可能写在下一行）
+        s = s.replace(/(^|\n)[ \t]*```embed[^\n]*\n[\s\S]*?\n[ \t]*```[ \t]*(?=\n|$)/g, '$1');
+        // ```excalidraw ... ``` 整块（更早的写法，块内是裸 id）
+        s = s.replace(/(^|\n)[ \t]*```excalidraw[^\n]*\n[\s\S]*?\n[ \t]*```[ \t]*(?=\n|$)/g, '$1');
+        return s.replace(/\n{3,}/g, '\n\n').replace(/[ \t]+\n/g, '\n').trim();
     };
 
     // ===== 本地草稿 =====

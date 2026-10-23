@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -632,11 +632,9 @@
     <link rel="stylesheet" href="/css/responsive.css?v=1.0.0">
     <link rel="stylesheet" href="/css/mobile.css?v=1.0.0">
     <link rel="stylesheet" href="/css/login.css?v=1.0.0">
-    <!-- 内嵌白板由白板编辑器渲染，写作页与阅读页刻意做成两套形态：
-         写作页隐藏白板自带的操作胶囊（见 embed-picker.js 的 .ep-canvas .mm-capsule），
-         胶囊里的「返回/导出/编辑/留言/信息」只属于阅读页与独立白板页。
-         capsule.css 仍要引入 —— 加密白板的编辑口令输入框（.mm-key）用它；
-         drawer.css 给留言抽屉兜底（万一其它入口把 .mm-drawer 打开）。 -->
+    <!-- capsule.css 仍要引入 —— 加密白板的编辑口令输入框（.mm-key）用它；
+         drawer.css 给留言抽屉兜底（万一其它入口把 .mm-drawer 打开）。
+         注：v3.35.0 起正文不再内嵌白板 / 导图（改成文章关联），后台已不再加载 embed-picker.js。 -->
     <link rel="stylesheet" href="/css/capsule.css?v=1.0.0">
     <link rel="stylesheet" href="/css/drawer.css?v=1.0.1">
 </head>
@@ -1418,9 +1416,8 @@
         </div>
     </div>
 
-        <script src="js/embed-picker.js?v=1.10.0"></script>
-<script src="js/tag-picker.js?v=1.0.0"></script>
-        <script src="js/admin-app.js?v=1.17.0"></script>
+        <script src="js/tag-picker.js?v=1.0.0"></script>
+        <script src="js/admin-app.js?v=1.17.1"></script>
 
     <!-- 前台预览抽屉（iframe 内嵌，零跳出） -->
     <style>

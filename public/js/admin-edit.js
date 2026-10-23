@@ -75,7 +75,7 @@
     function normalizeType(t) {
         return (t === 'whiteboard' || t === 'mindmap' || t === 'card') ? t : 'article';
     }
-    /** 画布 id：沿用全站约定 wb- / mm- + 8 位 base36 随机段（见 embed-picker.js） */
+    /** 画布 id：沿用全站约定 wb- / mm- + 8 位 base36 随机段（与后端 CANVAS_ID_RE 一致） */
     function newCanvasId(t) {
         return (t === 'mindmap' ? 'mm-' : 'wb-') + Math.random().toString(36).slice(2, 10);
     }
@@ -106,16 +106,10 @@
     }
 
     // ===== 未保存状态 / 本地草稿（P0-2）=====
-    var canvasListTimer = null;
-    function scheduleCanvasListRefresh() {
-        clearTimeout(canvasListTimer);
-        canvasListTimer = setTimeout(function () { refreshCanvasList(false); }, 400);
-    }
     window.eeMarkDirty = function () {
         dirty = true;
         $('eeSaved').textContent = '有未保存改动';
         $('eeSaved').style.color = '#ffb020';
-        scheduleCanvasListRefresh();
         scheduleDraftSave();
     };
     window.addEventListener('beforeunload', function (e) {
@@ -159,6 +153,7 @@
             image: snap.image || '',
             status: snap.status || '',
             chunked: !!snap.chunked,
+            canvasRefs: snap.canvasRefs || [],
             content: snap.content || '',
             chapters: chapters
         });
@@ -173,6 +168,7 @@
             image: $('eeImage').value,
             status: $('eeStatusSel').value,
             chunked: !!chunkEdit,
+            canvasRefs: relatedCanvases.slice(),
             content: isCanvasType() ? '' : getEditorContent()
         };
         if (chunkEdit) {
@@ -264,7 +260,12 @@
         } else if (typeof d.content === 'string' && !isCanvasType()) {
             setEditorContent(d.content);
         }
-        refreshCanvasList(true);
+        if (Array.isArray(d.canvasRefs)) {
+            relatedCanvases = d.canvasRefs.filter(function (r) {
+                return r && (r.kind === 'board' || r.kind === 'map') && r.id;
+            }).map(function (r) { return { kind: r.kind, id: String(r.id) }; });
+            renderRelatedPanel();
+        }
     }
 
     // ===== 编辑器 =====
@@ -403,16 +404,15 @@
             // P2-16：more 里不再给 content-theme / code-theme —— 页面有一套 editor_theme
             // （顶部工具栏 + localStorage），Vditor 自带那套会把同一批 CSS 变量改回去，
             // 两套开关互相覆盖，表现为「换了主题又变回去」。
+            // v1.21.0：工具栏不再有「插入画布」。白板 / 导图改成文章的**关联**（见侧栏
+            // 「关联画布」面板），正文保持纯 Markdown —— 前后台都不再需要渲染内嵌块。
             toolbar: [
                 'headings', 'bold', 'italic', 'link',
                 '|', 'list', 'ordered-list', 'quote',
                 '|', 'code', 'table', 'upload',
-                '|', window.EmbedPickerToolbarItem || { name: 'eeEmbedPick', tip: '插入白板 / 思维导图', click: function () {} },
                 '|', 'undo', 'redo',
                 { name: 'more', toolbar: ['strike', 'inline-code', 'check', 'outdent', 'indent', 'line', 'edit-mode', 'export', 'help'] }
             ],
-            // 内嵌画布块在编辑器内显示为卡片（逻辑在 /js/embed-picker.js）
-            customRenders: window.EmbedPicker ? window.EmbedPicker.customRenders : [],
             upload: {
                 accept: 'image/*',
                 multiple: true,
@@ -440,13 +440,6 @@
                 }
                 updateInfo();
                 fitEditor();
-                // 工具栏「插入画布」按钮：面板与逻辑在 /js/embed-picker.js（与写文章页共用）
-                if (window.EmbedPicker) {
-                    window.EmbedPicker.setVditor(vditor);
-                    window.EmbedPicker.bindToolbar(vditor);
-                }
-                // 正文就位后再刷一次侧栏画布清单（setValue 是异步渲染的，这里做一次全文解析兜底）
-                refreshCanvasList(true);
                 stripVditorPopover();
                 // 右键菜单（剪贴板 / 格式 / 插入 / 段落操作），见 /js/editor-menu.js
                 if (window.EditorMenu) window.EditorMenu.attach(vditor);
@@ -474,8 +467,6 @@
         var ed = initEditor();
         if (!ed) return;
         md = md || '';
-        // 内容整体换了：画布清单要重新做一次全文解析（DOM 卡片还没渲染出来）
-        sawDomCards = false;
         if (!vditorReady) { pendingMd = md; return; }
         ed.setValue(md);
         updateInfo();
@@ -753,11 +744,11 @@
             var excerptCard = $('eeExcerptCard');
             if (excerptCard) excerptCard.style.display = 'none';
         }
-        // 「本文内嵌画布」只给文章用：白板和导图本身就是一块画布，随记是短内容、不内嵌画布
-        if (docType !== 'article') {
-            var canvasCard = $('eeCanvasCard');
-            if (canvasCard) canvasCard.style.display = 'none';
-        }
+        // 关联画布：从记录里读出关联列表（白板 / 导图形态与随记不显示这块面板，见 renderRelatedPanel）
+        relatedCanvases = (Array.isArray(doc.canvasRefs) ? doc.canvasRefs : []).filter(function (r) {
+            return r && (r.kind === 'board' || r.kind === 'map') && r.id;
+        }).map(function (r) { return { kind: r.kind, id: String(r.id) }; });
+        renderRelatedPanel(true);
         if (docType === 'mindmap') $('eeViewBtn').textContent = '前台查看';
         // 新建：还没有记录可删、也还没法从前台打开
         if (isNew) {
@@ -869,7 +860,6 @@
         setEditorContent(chunkEdit.chunks[i] || '');
         chunkEdit.current = i;
         if (sel) sel.value = String(i);
-        refreshCanvasList(true);
         toast('已切换到第 ' + (i + 1) + ' 章（原内容已暂存）', 'success');
     };
 
@@ -907,25 +897,15 @@
         var tags = currentTags();
         var content = await assembleContent();
 
-        // ===== 内容形态判定 =====
-        // 规则：正文去掉块标记后为空、且只引用了一个块 → 保留独立画布形态（阅读页整页展示）；
-        // 否则按 article（阅读页内联渲染）。已在 embed-picker.js 里实现，含两个例外：
-        // 随记保持随记；写文章页显式选了白板/导图形态时尊重该选择。
+        // ===== 内容形态 =====
+        // v1.21.0：形态只由作者当初选的那一种决定（文章 / 随记 / 白板 / 导图），
+        // 不再从正文里「推断」—— 正文已经不内嵌画布了，推断的依据没有了。
         var finalType = docType;
-        if (window.EmbedPicker && typeof window.EmbedPicker.deriveContentType === 'function') {
-            try { finalType = window.EmbedPicker.deriveContentType(docType, content); } catch (e) { finalType = docType; }
-        }
 
-        // 关联 id：优先用正文里引用的块（单块）→ 独立画布形态；
-        // 否则沿用原有关联（白板/导图文章照常）。mapId 不传空串——服务端在 type=mindmap 时用它覆盖，等于清掉关联。
+        // 画布关联：白板 / 导图挂在文章的 canvasRefs 上（关联面板里维护）。
+        // boardId / mapId 只对「白板 / 导图形态」的内容有意义（那类内容本身就是一整块画布）。
         var boardId = (doc && doc.boardId) || '';
         var mapId = (doc && doc.mapId) || '';
-        if (window.EmbedPicker && typeof window.EmbedPicker.extractBlockRefs === 'function') {
-            var refs = [];
-            try { refs = window.EmbedPicker.extractBlockRefs(content) || []; } catch (e) { refs = []; }
-            if (finalType === 'whiteboard' && refs.length === 1 && refs[0].kind === 'board') boardId = refs[0].id;
-            if (finalType === 'mindmap' && refs.length === 1 && refs[0].kind === 'map') mapId = refs[0].id;
-        }
 
         var body = {
             id: doc ? doc.id : docId,
@@ -935,9 +915,16 @@
             image: finalType === 'card' ? '' : $('eeImage').value.trim(),
             status: $('eeStatusSel').value,
             type: finalType,
-            boardId: finalType === 'whiteboard' ? boardId : ((doc && doc.boardId) || ''),
+            boardId: finalType === 'whiteboard' ? boardId : '',
             content: content,
-            author: (doc && doc.author) || ''
+            author: (doc && doc.author) || '',
+            // 显式提交关联列表：空数组表示「作者把关联都解除了」，
+            // 服务端据此不再回退去正文里猜（见 admin.ts 的 normalizeCanvasRefs）。
+            // 顺带把画布名字写进去：前台「相关画布」区直接用它展示，不必为每块画布多打一次接口。
+            canvasRefs: finalType === 'article' ? relatedCanvases.map(function (r) {
+                var name = (canvasNameCache[r.kind] || {})[r.id] || '';
+                return name ? { kind: r.kind, id: r.id, name: name } : { kind: r.kind, id: r.id };
+            }) : []
         };
         if (finalType === 'mindmap' && mapId) body.mapId = mapId;
         return body;
@@ -976,17 +963,9 @@
             if (!body.title) { toast('请填写标题', 'error'); return false; }
             if (body.type !== 'whiteboard' && body.type !== 'mindmap' && !body.content) { toast('请填写正文内容', 'error'); return false; }
 
-            // 内嵌块的真实内容在画布自己的 store（excalidraw / mindmaps），与文章正文是两套存储。
-            // 若画布保存失败仍提交文章，就会出现「文章存了、画布改动丢了」——故此处必须阻断。
-            var flush = { ok: true, failed: [] };
-            if (window.EmbedPicker && typeof window.EmbedPicker.flushEmbeds === 'function') {
-                try { flush = await window.EmbedPicker.flushEmbeds(vditor); } catch (e) { flush = { ok: true, failed: [] }; }
-            }
-            if (!flush.ok) {
-                toast('引用的画布保存失败：' + flush.failed.join('、') +
-                    '。文章未提交，请处理后重试（常见原因：画布设有编辑口令未通过、网络中断）', 'error');
-                return false;
-            }
+            // 以前这里要先把正文里内嵌的画布落盘（画布与正文两套存储，画布失败就得阻断）。
+            // v1.21.0 起正文不再内嵌画布，关联只是一条 id 记录，不存在「画布没存上」的情况，
+            // 所以这段 flush 一并删掉了。
 
             var r = await api('action=articles', { method: 'POST', body: JSON.stringify(body), retry: 0 });
             if (r.status !== 'success') { toast('保存失败：' + (r.message || ''), 'error'); return false; }
@@ -1077,6 +1056,7 @@
             status: $('eeStatusSel').value,
             statusText: $('eeStatusSel').value === 'draft' ? '草稿' : '已发布',
             content: content,
+            canvasRefs: docType === 'article' ? relatedCanvases.slice() : [],
             words: EE.countWords(content).words,
             at: Date.now()
         };
@@ -1152,15 +1132,23 @@
         window.open('/article.html?post=' + name + '&blob=' + encodeURIComponent(doc.id || docId), '_blank');
     };
 
-    // ===== 侧栏：本文内嵌画布清单（P1-5：读 DOM，不全文序列化）=====
-    // 把正文里引用的白板 / 导图列出来（显示画布名称），点一下滚动定位到正文里那个块。
-    // 名称走与「插入画布」面板同一个列表接口；结果缓存住，避免每次刷新清单都重新请求。
+    // ===== 侧栏：关联画布（v1.21.0）=====
+    // 白板 / 导图不再「插入正文」，改成跟文章建立**关联**：
+    //   - 关联存在文章的 canvasRefs 字段（记录与索引各存一份），保存时随文章一起提交；
+    //   - 后台列表卡片据此给出「直接去改这块画布」的直达链接；
+    //   - 前台文章页据此在文末渲染「相关画布」区。
+    // 正文因此保持纯 Markdown：编辑器不用再渲染卡片、不用再 flush 画布、也不用再从正文里猜关联。
+    var relatedCanvases = [];                      // [{kind:'board'|'map', id}]
     var canvasNameCache = { board: null, map: null };
-    var lastRefs = [];        // 上一次已知的引用（全文解析结果或 DOM 结果）
-    var sawDomCards = false;  // 是否见过 DOM 里的画布卡片（用于区分「没渲染出来」和「被删了」）
 
-    function loadCanvasNames() {
-        var kinds = ['board', 'map'].filter(function (k) { return canvasNameCache[k] === null; });
+    function canvasKindLabel(kind) { return kind === 'map' ? '导图' : '白板'; }
+    function hasRelated(kind, id) {
+        return relatedCanvases.some(function (r) { return r.kind === kind && r.id === id; });
+    }
+
+    /** 画布名字表（侧栏要显示「这块白板叫什么」），结果缓存住，避免每次重画都请求 */
+    function loadCanvasNames(force) {
+        var kinds = ['board', 'map'].filter(function (k) { return force || canvasNameCache[k] === null; });
         if (!kinds.length) return Promise.resolve();
         return Promise.all(kinds.map(function (k) {
             var url = k === 'map' ? '/api/mindmap?action=list' : '/api/excalidraw?action=list';
@@ -1174,82 +1162,123 @@
         }));
     }
 
-    /** 直接读编辑器里已渲染的画布卡片：O(卡片数)，不做全文 getValue() */
-    function refsFromDom() {
-        var cards = document.querySelectorAll('#eeVditor .vditor-wysiwyg .ep-canvas-card');
-        var out = [], seen = {};
-        for (var i = 0; i < cards.length; i++) {
-            var id = cards[i].getAttribute('data-id') || '';
-            if (!id || seen[id]) continue;
-            seen[id] = 1;
-            var kind = cards[i].getAttribute('data-kind') || (id.indexOf('mm-') === 0 ? 'map' : 'board');
-            out.push({ id: id, kind: kind === 'map' ? 'map' : 'board' });
-        }
-        return out;
+    /** 两个下拉：只列还没关联的画布 */
+    function fillRelatedSelects() {
+        [
+            ['eeRelatedBoardSel', 'board', '选择一块白板…'],
+            ['eeRelatedMapSel', 'map', '选择一张导图…']
+        ].forEach(function (conf) {
+            var sel = $(conf[0]);
+            if (!sel) return;
+            var names = canvasNameCache[conf[1]] || {};
+            var opts = Object.keys(names)
+                .filter(function (id) { return !hasRelated(conf[1], id); })
+                .map(function (id) {
+                    var name = names[id] || '未命名';
+                    return '<option value="' + esc(id) + '">' + esc(name) + '（' + esc(id) + '）</option>';
+                });
+            var prev = sel.value;
+            sel.innerHTML = '<option value="">' + conf[2] + (opts.length ? '' : '（还没有可关联的）') + '</option>' + opts.join('');
+            if (prev && opts.length) sel.value = prev;
+        });
     }
 
-    /**
-     * 当前正文引用的画布（顺序 = 在正文里出现的顺序）
-     * @param {boolean} force true = 做一次全文解析（内容刚整体载入时用，DOM 卡片还没渲染）
-     */
-    function currentCanvasRefs(force) {
-        if (force && window.EmbedPicker && typeof window.EmbedPicker.extractBlockRefs === 'function') {
-            try { return window.EmbedPicker.extractBlockRefs(getEditorContent()) || []; } catch (e) { return []; }
-        }
-        var dom = refsFromDom();
-        if (dom.length) { sawDomCards = true; return dom; }
-        // DOM 里没有卡片：见过卡片 = 用户删掉了；一次都没见过 = 还没渲染，沿用上次解析结果
-        if (vditorReady && sawDomCards) return [];
-        return lastRefs;
-    }
-
-    /** 在正文编辑器里找到这块画布的卡片（不用属性选择器：画布 id 可能含中文等字符） */
-    function findCanvasCard(id) {
-        var list = document.querySelectorAll('.vditor-wysiwyg .ep-canvas-card');
-        for (var i = 0; i < list.length; i++) {
-            if (list[i].getAttribute('data-id') === id) return list[i];
-        }
-        return null;
-    }
-
-    function paintCanvasList(refs) {
-        var box = $('eeCanvasList');
+    function paintRelatedList() {
+        var box = $('eeRelatedList');
         if (!box) return;
-        box.innerHTML = refs.map(function (r) {
+        if (!relatedCanvases.length) {
+            box.innerHTML = '<div class="ee-related-empty">还没有关联画布。白板 / 导图挂在文章上，前台会在文末列出「相关画布」。</div>';
+            return;
+        }
+        box.innerHTML = relatedCanvases.map(function (r) {
             var name = (canvasNameCache[r.kind] || {})[r.id];
             return '<div class="ee-canvas-item" data-kind="' + r.kind + '" data-id="' + esc(r.id) + '">' +
-                '<span class="k">' + (r.kind === 'map' ? '导图' : '白板') + '</span>' +
+                '<span class="k">' + canvasKindLabel(r.kind) + '</span>' +
                 '<span class="n' + (name ? '' : ' unnamed') + '">' + (name ? esc(name) : '未命名') + '</span>' +
+                '<button type="button" class="ee-canvas-unlink" data-unlink="1" title="解除关联">×</button>' +
                 '</div>';
         }).join('');
         Array.prototype.forEach.call(box.querySelectorAll('.ee-canvas-item'), function (row) {
-            row.addEventListener('click', function () {
+            row.addEventListener('click', function (e) {
+                var kind = this.getAttribute('data-kind');
                 var id = this.getAttribute('data-id');
-                var el = findCanvasCard(id);
-                if (!el) { toast('正文里没找到这块画布，可能已被删除'); return; }
-                try { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) { el.scrollIntoView(); }
-                el.classList.remove('ee-canvas-flash');
-                void el.offsetWidth;                       // 强制重排，让动画能重复播放
-                el.classList.add('ee-canvas-flash');
-                setTimeout(function () { el.classList.remove('ee-canvas-flash'); }, 1300);
+                if (e.target && e.target.getAttribute && e.target.getAttribute('data-unlink')) {
+                    e.stopPropagation();
+                    unlinkCanvas(kind, id);
+                    return;
+                }
+                // 点整行 = 去前台看 / 改这块画布（新窗口，不离开写作页）
+                var url = kind === 'map'
+                    ? '/mindmap.html?note=' + encodeURIComponent(id) + '&edit=1&from=admin'
+                    : '/excalidraw.html?note=' + encodeURIComponent(id) + '&edit=1';
+                window.open(url, '_blank');
             });
         });
     }
 
-    function refreshCanvasList(force) {
-        var box = $('eeCanvasList');
-        if (!box) return;
-        if (docType !== 'article') return;   // 只有文章用这个清单，别的形态连名字都不必去拉
-        lastRefs = currentCanvasRefs(!!force);
-        if (!lastRefs.length) {
-            box.innerHTML = '<div class="ee-hint">正文里还没有白板 / 导图。工具栏点「插入画布」加一块。</div>';
-            return;
-        }
-        paintCanvasList(lastRefs);                          // 先用缓存里的名字画出来，不阻塞
-        if (canvasNameCache.board === null || canvasNameCache.map === null) {
-            loadCanvasNames().then(function () { paintCanvasList(lastRefs); });
-        }
+    function renderRelatedPanel(forceNames) {
+        var card = $('eeRelatedCard');
+        if (!card) return;
+        // 关联只对「文章」有意义：白板 / 导图形态本身就是一整块画布，随记是短内容
+        if (docType !== 'article') { card.style.display = 'none'; return; }
+        card.style.display = '';
+        paintRelatedList();
+        loadCanvasNames(!!forceNames).then(function () {
+            fillRelatedSelects();
+            paintRelatedList();
+        });
     }
+
+    function linkCanvas(kind, id) {
+        id = String(id || '').trim();
+        if (!id) { toast('先选一张画布', 'error'); return; }
+        if (hasRelated(kind, id)) { toast('已经关联过了'); return; }
+        relatedCanvases.push({ kind: kind, id: id });
+        window.eeMarkDirty();
+        renderRelatedPanel();
+        toast('已关联' + canvasKindLabel(kind), 'success');
+    }
+
+    function unlinkCanvas(kind, id) {
+        relatedCanvases = relatedCanvases.filter(function (r) { return !(r.kind === kind && r.id === id); });
+        window.eeMarkDirty();
+        renderRelatedPanel();
+        toast('已解除关联（保存后生效）', 'success');
+    }
+
+    window.eeLinkCanvas = function (kind) {
+        var sel = $(kind === 'map' ? 'eeRelatedMapSel' : 'eeRelatedBoardSel');
+        var v = sel ? sel.value : '';
+        linkCanvas(kind, v);
+        if (sel) sel.value = '';
+    };
+
+    /**
+     * 旧文章迁移：正文里还有 ```embed / ```excalidraw 内嵌块的，提示一键转成关联。
+     * 选「保持原样」就不动正文（前台仍按旧方式渲染），下次打开还会问 —— 直到转完或作者清掉。
+     */
+    function maybeMigrateLegacyEmbeds() {
+        if (docType !== 'article' || isNew || !doc) return;
+        var legacy = EE.parseLegacyCanvasRefs(getEditorContent());
+        var add = legacy.filter(function (r) { return !hasRelated(r.kind, r.id); });
+        if (!add.length) return;
+        var list = add.map(function (r) { return canvasKindLabel(r.kind) + ' ' + r.id; }).join('、');
+        EE.confirm({
+            title: '把内嵌画布转成关联',
+            message: '这篇的正文里还有 ' + add.length + ' 个内嵌画布（' + list + '）。现在白板 / 导图改成「关联」：' +
+                '转为关联后它们会从正文移出，前台在文末「相关画布」区展示。选「保持原样」则不动正文。',
+            okText: '转为关联',
+            cancelText: '保持原样'
+        }).then(function (yes) {
+            if (!yes) return;
+            add.forEach(function (r) { relatedCanvases.push(r); });
+            setEditorContent(EE.stripCanvasBlocks(getEditorContent()));
+            window.eeMarkDirty();
+            renderRelatedPanel(true);
+            toast('已转为关联并移出正文，记得保存', 'success');
+        });
+    }
+
 
     // ===== 启动 =====
     var booted = false;
@@ -1298,7 +1327,9 @@
 
         (isNew ? initNewDoc() : load()).then(function () {
             setTimeout(fitEditor, 120);
-            refreshCanvasList(true);
+            // 关联画布面板（文章形态才显示）；旧文章正文里若还有内嵌块，问一次要不要转成关联
+            renderRelatedPanel(true);
+            maybeMigrateLegacyEmbeds();
             maybeRestoreDraft();
         });
     }
