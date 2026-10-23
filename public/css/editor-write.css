@@ -598,7 +598,8 @@ html body #eeSide *::-webkit-scrollbar { width: 0 !important; height: 0 !importa
 .ee-side-mask { display: none; }
 
 /* ===== 侧栏「AI」页签：写作问答助手（v3.44.0）=====
-   只做问答：没有「插入正文」之类的按钮，消息区独立滚动，输入框常驻底部。 */
+   职责只有「回答问题」：面板里除了消息和输入框，只有未配置 / 出错这类必要状态提示，
+   没有快捷提问、没有复制按钮、没有会话管理。 */
 .ee-ai { display: flex; flex-direction: column; gap: 8px; min-height: 0; }
 .ee-ai-status {
     flex: none;
@@ -674,7 +675,7 @@ html body #eeSide *::-webkit-scrollbar { width: 0 !important; height: 0 !importa
     animation: eeAiBlink 1s steps(2) infinite;
 }
 @keyframes eeAiBlink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
-.ee-ai-msg-actions { display: flex; gap: 6px; margin-top: 6px; }
+/* 小的行内按钮：只用在「重试」这类状态提示里 */
 .ee-ai-mini {
     padding: 2px 8px;
     border-radius: 99px;
@@ -687,7 +688,6 @@ html body #eeSide *::-webkit-scrollbar { width: 0 !important; height: 0 !importa
     transition: all .15s ease;
 }
 .ee-ai-mini:hover { color: #fff; background: rgba(255, 255, 255, .12); }
-.ee-ai-quick { flex: none; display: flex; flex-wrap: wrap; gap: 5px; }
 .ee-ai-input { flex: none; display: flex; flex-direction: column; gap: 6px; }
 .ee-ai-input textarea {
     width: 100%;

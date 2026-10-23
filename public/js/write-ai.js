@@ -1,33 +1,30 @@
 /**
- * 写作页「AI」页签：写作问答助手（v1.0.0）
+ * 写作页「AI」页签：写作问答助手（v1.1.0）
  * ------------------------------------------------------------------
- * 定位（作者明确要求的三条）：
- *   1. **只读问答** —— 不做「插入正文 / 替换选中」，一个字都不会自己写进文章；
- *      需要内容时作者自己复制（每条回答都有「复制」）。
- *   2. **不带正文上下文** —— 请求里只有对话本身，不读标题、不读正文、不读选中；
- *      作者想让人看片段，自己贴进来。
- *   3. **独立配置** —— 用后台「博客设置 → AI 助手 → 写作助手」那一套模型和密钥，
- *      和访客端聊天机器人完全分开；密钥不出服务端（本模块调用 action=ai-write 代调）。
+ * 职责只有一个：回答问题。除此之外没有任何功能 ——
+ *   · 不写入正文（没有插入 / 替换按钮）
+ *   · 不读正文上下文（请求体里只有对话本身）
+ *   · 没有快捷提问、没有复制按钮、没有会话管理、不落本地存储
+ * 面板里除消息和输入框之外，只有「未配置 / 已关闭 / 出错」这类必要状态提示。
+ *
+ * 密钥不出服务端：本模块只调用 action=ai-write，由 functions/admin.ts 代调上游。
  *
  * 用法：
  *     WriteAi.init({ host: document.getElementById('eeSideAi') });
  *     WriteAi.onShow();   // 切到 AI 页签时调用（顺带聚焦输入框）
- *     WriteAi.stop();     // 离开时中断生成（可选）
  */
 (function () {
     'use strict';
 
     var STREAM_URL = '/api/admin?action=ai-write';
     var SETTINGS_URL = '/api/admin?action=settings';
-    var STORE_KEY = 'ee_ai_chat_v1';
-    var MAX_KEEP = 12;              // 本地最多留多少条消息
     var PAINT_EVERY = 60;           // 流式渲染节流（毫秒）
 
     var els = {};
     var host = null;
     var config = null;              // ai.write
     var state = 'loading';          // loading | disabled | nokey | ready | error
-    var messages = [];              // [{role, content}]（渲染用，也是请求体）
+    var messages = [];              // [{role, content}]：渲染用，也是请求体
     var controller = null;          // 正在进行的请求
     var streaming = null;           // 当前流式气泡
     var streamText = '';
@@ -72,7 +69,6 @@
                 parent.removeChild(node);
                 return;
             }
-            // 属性：只留白名单里的
             Array.prototype.slice.call(node.attributes).forEach(function (attr) {
                 var name = attr.name.toLowerCase();
                 var keep = false;
@@ -115,22 +111,6 @@
         return escapeHtml(src).replace(/\n/g, '<br>');
     }
 
-    // ===== 本地记忆（刷新页面后对话还在；关掉标签页就没了）=====
-    function loadMemory() {
-        try {
-            var raw = sessionStorage.getItem(STORE_KEY);
-            if (!raw) return [];
-            var arr = JSON.parse(raw);
-            if (!Array.isArray(arr)) return [];
-            return arr
-                .filter(function (m) { return m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string'; })
-                .slice(-MAX_KEEP);
-        } catch (e) { return []; }
-    }
-    function saveMemory() {
-        try { sessionStorage.setItem(STORE_KEY, JSON.stringify(messages.slice(-MAX_KEEP))); } catch (e) { /* 隐私模式，忽略 */ }
-    }
-
     // ===== 界面 =====
     function build() {
         if (!host || host.dataset.built) return;
@@ -140,24 +120,10 @@
 
         els.status = el('div', 'ee-ai-status');
         els.status.id = 'eeAiStatus';
+        els.status.hidden = true;          // 只有出状态（未配置 / 出错）时才出现
+
         els.list = el('div', 'ee-ai-list');
         els.list.id = 'eeAiList';
-
-        els.quick = el('div', 'ee-ai-quick');
-        els.quick.id = 'eeAiQuick';
-        var quickList = [
-            '这句话怎么改写更通顺',
-            'Markdown 表格怎么写',
-            '段落之间怎么过渡',
-            '标题怎么起更抓人'
-        ];
-        quickList.forEach(function (q) {
-            var b = el('button', 'ee-ai-mini', q);
-            b.type = 'button';
-            b.title = '直接提问：' + q;
-            b.addEventListener('click', function () { send(q); });
-            els.quick.appendChild(b);
-        });
 
         var inputBox = el('div', 'ee-ai-input');
         els.input = document.createElement('textarea');
@@ -174,13 +140,8 @@
         els.stop.type = 'button';
         els.stop.id = 'eeAiStop';
         els.stop.hidden = true;
-        els.clear = el('button', 'ee-btn danger', '清空');
-        els.clear.type = 'button';
-        els.clear.id = 'eeAiClear';
-        els.clear.hidden = true;
         acts.appendChild(els.send);
         acts.appendChild(els.stop);
-        acts.appendChild(els.clear);
 
         inputBox.appendChild(els.input);
         inputBox.appendChild(acts);
@@ -189,14 +150,12 @@
 
         wrap.appendChild(els.status);
         wrap.appendChild(els.list);
-        wrap.appendChild(els.quick);
         wrap.appendChild(inputBox);
         wrap.appendChild(note);
         host.appendChild(wrap);
 
         els.send.addEventListener('click', function () { send(); });
         els.stop.addEventListener('click', stop);
-        els.clear.addEventListener('click', clearChat);
         els.input.addEventListener('keydown', onKey);
 
         paintStatus();
@@ -208,33 +167,34 @@
         els.status.className = 'ee-ai-status';
         var link = '<a href="/admin.html" target="_blank" rel="noopener">后台 → 博客设置 → AI 助手 → 写作助手</a>';
         if (state === 'loading') {
+            els.status.hidden = false;
             els.status.textContent = '正在读取 AI 配置…';
         } else if (state === 'disabled') {
+            els.status.hidden = false;
             els.status.className = 'ee-ai-status warn';
             els.status.innerHTML = '写作助手已在后台关闭。去 ' + link + ' 打开「启用写作助手」。';
         } else if (state === 'nokey') {
+            els.status.hidden = false;
             els.status.className = 'ee-ai-status warn';
             els.status.innerHTML = '还没填写作助手的 API Key。去 ' + link + ' 填一个（独立于访客端），填完点「重试」。';
-            if (!els.status.querySelector('.ee-ai-retry')) {
-                var retry = el('button', 'ee-ai-mini ee-ai-retry', '重试');
-                retry.type = 'button';
-                retry.style.marginTop = '6px';
-                retry.addEventListener('click', function () { reloadConfig(); });
-                els.status.appendChild(document.createElement('br'));
-                els.status.appendChild(retry);
-            }
+            var retry = el('button', 'ee-ai-mini', '重试');
+            retry.type = 'button';
+            retry.className = 'ee-ai-mini ee-ai-retry';
+            retry.style.marginTop = '6px';
+            retry.addEventListener('click', function () { reloadConfig(); });
+            els.status.appendChild(document.createElement('br'));
+            els.status.appendChild(retry);
         } else if (state === 'error') {
+            els.status.hidden = false;
             els.status.className = 'ee-ai-status error';
             els.status.textContent = '读取 AI 配置失败：' + (els.status.dataset.err || '接口无响应');
         } else {
-            var model = (config && config.model) || 'AI';
-            els.status.textContent = '写作助手 · ' + model + '（密钥在服务端，只做问答）';
+            // 正常状态不摆状态条：这个面板只回答问题，不放别的东西
+            els.status.hidden = true;
         }
         var usable = state === 'ready';
         if (els.input) els.input.disabled = !usable;
         if (els.send) els.send.disabled = !usable || !!controller;
-        if (els.quick) els.quick.hidden = !usable || messages.length > 0;
-        if (els.clear) els.clear.hidden = messages.length === 0;
     }
 
     function scrollBottom() {
@@ -254,54 +214,19 @@
         if (!els.list) return;
         els.list.innerHTML = '';
         if (!messages.length) {
-            var empty = el('div', 'ee-ai-empty');
-            empty.innerHTML = '写作中拿不准的地方，直接问。<br>例如用词、标点、结构、Markdown 写法。';
-            els.list.appendChild(empty);
+            els.list.appendChild(el('div', 'ee-ai-empty', '写作中拿不准的地方，直接问。'));
         } else {
-            messages.forEach(function (m) {
-                var box = bubbleFor(m);
-                if (m.role === 'assistant' && m.content) {
-                    var acts = el('div', 'ee-ai-msg-actions');
-                    var copy = el('button', 'ee-ai-mini', '复制');
-                    copy.type = 'button';
-                    copy.addEventListener('click', function () { copyText(m.content, copy); });
-                    acts.appendChild(copy);
-                    box.appendChild(acts);
-                }
-                els.list.appendChild(box);
-            });
+            messages.forEach(function (m) { els.list.appendChild(bubbleFor(m)); });
         }
         paintStatus();
         scrollBottom();
-    }
-
-    function copyText(text, btn) {
-        var done = function () {
-            if (btn) { btn.textContent = '已复制'; setTimeout(function () { btn.textContent = '复制'; }, 1200); }
-        };
-        try {
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(text).then(done, function () { fallback(); });
-            } else { fallback(); }
-        } catch (e) { fallback(); }
-        function fallback() {
-            var ta = document.createElement('textarea');
-            ta.value = text;
-            ta.style.position = 'fixed';
-            ta.style.opacity = '0';
-            document.body.appendChild(ta);
-            ta.select();
-            try { document.execCommand('copy'); done(); } catch (e) { }
-            document.body.removeChild(ta);
-        }
     }
 
     // ===== 配置 =====
     function reloadConfig() {
         state = 'loading';
         paintStatus();
-        var headers = { 'X-Admin-Key': adminKey() };
-        return fetch(SETTINGS_URL, { headers: headers })
+        return fetch(SETTINGS_URL, { headers: { 'X-Admin-Key': adminKey() } })
             .then(function (r) { return r.json(); })
             .then(function (d) {
                 var ai = (d && d.data && d.data.ai) || {};
@@ -431,45 +356,15 @@
             box.classList.remove('streaming');
             var body = box.querySelector('.ee-ai-body');
             if (body) body.innerHTML = renderMd(streamText || (note || '（没有返回内容）'));
-            if (streamText) {
-                var acts = el('div', 'ee-ai-msg-actions');
-                var copy = el('button', 'ee-ai-mini', '复制');
-                copy.type = 'button';
-                var snapshot = streamText;
-                copy.addEventListener('click', function () { copyText(snapshot, copy); });
-                acts.appendChild(copy);
-                box.appendChild(acts);
-            }
         }
         if (ok && streamText) messages.push({ role: 'assistant', content: streamText });
         streamText = '';
-        saveMemory();
         paintStatus();
         scrollBottom();
     }
 
     function stop() {
         if (controller) controller.abort();
-    }
-
-    function clearChat() {
-        if (!messages.length && !streaming) return;
-        var doClear = function () {
-            stop();
-            messages = [];
-            try { sessionStorage.removeItem(STORE_KEY); } catch (e) { }
-            paintMessages();
-        };
-        if (window.EE && typeof window.EE.confirm === 'function') {
-            window.EE.confirm({
-                title: '清空对话',
-                message: '清空这次与写作助手的对话？文章内容不受影响。',
-                okText: '清空',
-                danger: true
-            }).then(function (ok) { if (ok) doClear(); });
-            return;
-        }
-        doClear();
     }
 
     function onKey(e) {
@@ -492,7 +387,6 @@
         opts = opts || {};
         host = opts.host || document.getElementById('eeSideAi');
         if (!host) return false;
-        messages = loadMemory();
         build();
         reloadConfig();
         return true;
@@ -508,7 +402,6 @@
     };
 
     WriteAi.stop = stop;
-    WriteAi.clear = clearChat;
     WriteAi.reloadConfig = reloadConfig;
     WriteAi.isBusy = function () { return !!controller; };
     WriteAi.state = function () { return state; };
