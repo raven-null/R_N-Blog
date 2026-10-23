@@ -1,0 +1,48 @@
+/* ==========================================================================
+ * 表单控件统一深色（v3.44.6）
+ *
+ * 问题：<select> 在 Windows 上默认是浅色，箭头也按系统画。写作页只是给了个
+ * 「半透明白」当底色，展开后的选项列表仍是白底黑字；后台设置页那些 select
+ * （厂商 / 模型 / 状态下拉）连底色都没给，直接就是系统白。
+ *
+ * 做法：
+ *   1. 黑底白字 —— 包括展开后的 option 列表（Windows Chrome 认 option 的底色）。
+ *   2. appearance: none 去掉系统样式，自己用 SVG 画一个白色小箭头；
+ *      否则黑色底上那枚系统箭头基本看不见。
+ *   3. 全部加 !important：各页面已有 `.ee-card select { background: var(--bg-input) }`
+ *      这类规则（一个类 + 一个标签，比裸 select 优先），不加会被压回半透明灰。
+ *      同一批 !important 里必须把 background-image / position / size 一起写全，
+ *      因为别处用的是 `background:` 简写，会把自定义箭头重置成 none。
+ *
+ * 引入页面：admin.html、admin-edit.html（目前只有这两页有 <select>）。
+ * ========================================================================== */
+
+select {
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    background-color: #000 !important;
+    /* 白色 V 形箭头（内联 SVG，避免额外请求） */
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 10px center !important;
+    background-size: 12px 12px !important;
+    color: #fff !important;
+    padding-right: 30px !important;   /* 给箭头留位置，别把文字压在箭头下 */
+    border: 1px solid var(--border, rgba(255, 255, 255, .14));
+    cursor: pointer;
+}
+select:disabled {
+    background-color: #000 !important;
+    color: rgba(255, 255, 255, .45) !important;
+    cursor: not-allowed;
+}
+/* 展开后的选项列表（Windows 上 Chrome 会按这里的底色画） */
+select option,
+select optgroup {
+    background-color: #000;
+    color: #fff;
+}
+select option:checked {
+    background-color: #1b2a44;
+    color: #fff;
+}
