@@ -162,6 +162,66 @@
     }
 
     /**
+     * 把光标所在的 <a> 拆成它的子节点（文字与内部格式保留）。
+     * @returns {boolean|null} true=取消了；null=光标不在链接里；false=失败
+     */
+    function unwrapAnchor() {
+        var a = closestAnchor();
+        if (!a) return null;
+        try {
+            var parent = a.parentNode;
+            if (!parent) return false;
+            // 先把子节点收起来，替换后好把光标放回文字末尾
+            var kids = Array.prototype.slice.call(a.childNodes);
+            var frag = document.createDocumentFragment();
+            kids.forEach(function (k) { frag.appendChild(k); });
+            parent.replaceChild(frag, a);
+            if (parent.normalize) parent.normalize();
+            var last = kids[kids.length - 1];
+            if (last) {
+                try {
+                    var r = document.createRange();
+                    r.selectNodeContents(last);
+                    r.collapse(false);
+                    var sel = window.getSelection();
+                    sel.removeAllRanges();
+                    sel.addRange(r);
+                } catch (e) { /* 光标放不回去也不影响结果 */ }
+            }
+            notifyEdited();
+            return true;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    /**
+     * 取消链接 + 取消术语标记（v3.40.0）。
+     * 一次把「选中的这段内容」上的两样标记都清掉：
+     *   · 光标在链接里 → 拆掉链接（文字保留）
+     *   · 选中的词是已标记的术语 → 取消术语
+     * @param {string} selText 右键时刻/划词时刻的选中文字
+     * @returns {string[]} 实际取消掉的东西（用于提示）
+     */
+    function cancelLinkAndTerm(selText) {
+        var did = [];
+        var unwrapped = unwrapAnchor();
+        if (unwrapped === true) did.push('链接');
+        var text = String(selText || '').trim();
+        if (text && window.EETerms && typeof window.EETerms.has === 'function' && window.EETerms.has(text)) {
+            if (typeof window.EETerms.unmark === 'function') {
+                // unmark 自己会 toast 一次，这里用静默版避免连着弹两条
+                window.EETerms.unmark(text, { silent: true });
+                did.push('术语标记');
+            }
+        }
+        if (!did.length) toast('选中的内容既不是链接也不是术语', 'error');
+        else toast('已取消：' + did.join(' + '));
+        return did;
+    }
+    window.eeCancelLinkAndTerm = cancelLinkAndTerm;
+
+    /**
      * 改了编辑区 DOM 之后要通知一声。
      *
      * 刻意**不派发 input 事件**：实测（headless Chrome）纯 DOM 交换段落顺序能保持
@@ -224,35 +284,11 @@
          * （派发了 Vditor 会把 DOM 打回原样，见 notifyEdited 的注释）。
          */
         unlink: function () {
-            var a = closestAnchor();
-            if (!a) { toast('把光标放到链接上再取消'); return false; }
-            try {
-                var parent = a.parentNode;
-                if (!parent) return false;
-                // 先把子节点收起来，替换后好把光标放回文字末尾
-                var kids = Array.prototype.slice.call(a.childNodes);
-                var frag = document.createDocumentFragment();
-                kids.forEach(function (k) { frag.appendChild(k); });
-                parent.replaceChild(frag, a);
-                if (parent.normalize) parent.normalize();
-                var last = kids[kids.length - 1];
-                if (last) {
-                    try {
-                        var r = document.createRange();
-                        r.selectNodeContents(last);
-                        r.collapse(false);
-                        var sel = window.getSelection();
-                        sel.removeAllRanges();
-                        sel.addRange(r);
-                    } catch (e) { /* 光标放不回去也不影响结果 */ }
-                }
-                notifyEdited();
-                toast('已取消链接（文字保留）');
-                return true;
-            } catch (e) {
-                toast('取消链接失败：' + ((e && e.message) || e));
-                return false;
-            }
+            var okUnlink = unwrapAnchor();
+            if (okUnlink === null) { toast('把光标放到链接上再取消'); return false; }
+            if (okUnlink === false) { toast('取消链接失败'); return false; }
+            toast('已取消链接（文字保留）');
+            return true;
         },
         dupBlock: function (ctx) {
             var blk = currentBlock(ctx.vditor);
@@ -418,10 +454,11 @@
                     if (window.EETerms && typeof window.EETerms.mark === 'function') window.EETerms.mark(text);
                     else toast('术语功能未加载，请刷新重试', 'error');
                 }, !hasSel),
-                // 取消术语标记（v3.39.1）：选中的词已经是术语时可用
-                item(termHit ? ('取消术语标记「' + termHit + '」') : '取消术语标记', '', function () {
-                    if (window.EETerms && typeof window.EETerms.unmark === 'function') window.EETerms.unmark(termHit);
-                }, !termHit),
+                // 取消链接 + 术语标记（v3.40.0）：一处清掉两样标记。
+                // 光标在链接里 / 选中的词是术语时可用；两样都在时一次全清。
+                item('取消链接和术语标记', '', function () {
+                    cancelLinkAndTerm(termHit || selText);
+                }, !(inLink || termHit)),
                 // 站内链接（v3.38.0）：选中文字 → 选目标文章 / 本文标题，自动写出 Markdown 链接
                 item('插入站内链接', '', function () {
                     var text = '';

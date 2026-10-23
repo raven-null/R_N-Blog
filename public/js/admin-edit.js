@@ -1507,11 +1507,11 @@
         toast('已标记术语「' + word + '」', 'success');
     }
 
-    function unmarkTerm(word) {
+    function unmarkTerm(word, opts) {
         terms = terms.filter(function (t) { return t.word !== word; });
         window.eeMarkDirty();
         renderTermsPanel();
-        toast('已移除术语「' + word + '」', 'success');
+        if (!opts || !opts.silent) toast('已移除术语「' + word + '」', 'success');
     }
 
     /** 把某个术语的定义锚点改到「编辑器当前光标所在段落」 */
@@ -1777,11 +1777,11 @@
         has: function (word) {
             return termIndex(normalizeWord(word)) >= 0;
         },
-        /** 取消术语标记（与面板里的 × 等价，只是入口更近） */
-        unmark: function (word) {
+        /** 取消术语标记（与面板里的 × 等价，只是入口更近；silent 时不弹提示，给合并取消用） */
+        unmark: function (word, opts) {
             var w = normalizeWord(word);
             if (termIndex(w) < 0) { toast('「' + w + '」不是术语', 'error'); return; }
-            unmarkTerm(w);
+            unmarkTerm(w, opts);
         }
     };
 
@@ -1952,6 +1952,53 @@
         }, true);
     }
 
+    // ===== 划词悬浮按钮组（v3.40.0）=====
+    // 在编辑器里选中一段文字，选区上方浮出一排快捷按钮。按钮列表按上下文生成：
+    //   · 总是有：加粗 / 斜体 / 行内代码 / 插入链接
+    //   · 选中文字还不是术语 → 「标记术语」；已经是 → 「取消链接和术语标记」
+    // 点按钮不会丢选区（按钮的 mousedown 已 preventDefault，见 selection-toolbar.js）。
+    function toolbarBtn(name) {
+        var btn = document.querySelector('#eeVditor .vditor-toolbar [data-type="' + name + '"]');
+        if (btn) { btn.click(); return true; }
+        return false;
+    }
+
+    function buildSelectionActions(selText) {
+        var text = String(selText || '').trim();
+        var actions = [
+            { id: 'bold', label: 'B', title: '加粗', run: function () { toolbarBtn('bold'); } },
+            { id: 'italic', label: 'I', title: '斜体', run: function () { toolbarBtn('italic'); } },
+            { id: 'code', label: '&lt;/&gt;', title: '行内代码', run: function () { toolbarBtn('inline-code'); } },
+            {
+                id: 'link', label: '🔗', title: '插入站点内 / 本文标题的链接',
+                run: function () { if (window.eeOpenLinkPicker) window.eeOpenLinkPicker('article', text); }
+            }
+        ];
+        if (!text) return actions;
+        var isTerm = !!(window.EETerms && typeof window.EETerms.has === 'function' && window.EETerms.has(text));
+        if (!isTerm) {
+            actions.push({
+                id: 'term', label: '术语', title: '把「' + text + '」标记为术语',
+                run: function () { if (window.EETerms) window.EETerms.mark(text); }
+            });
+        } else {
+            actions.push({
+                id: 'cancel', label: '取消标记', title: '取消「' + text + '」的链接与术语标记', danger: true,
+                run: function () { if (window.eeCancelLinkAndTerm) window.eeCancelLinkAndTerm(text); }
+            });
+        }
+        return actions;
+    }
+
+    function initSelectionToolbar() {
+        if (!window.SelectionToolbar) return;
+        window.SelectionToolbar.attach({
+            host: $('eeVditor'),
+            selectors: '.vditor-wysiwyg, .vditor-ir',
+            resolve: function (selText) { return buildSelectionActions(selText); }
+        });
+    }
+
     // ===== 启动 =====
     var booted = false;
     function boot() {
@@ -2005,6 +2052,7 @@
             renderRelatedPostsPanel(true);
             renderTermsPanel();
             wireLinkPickerSearch();
+            initSelectionToolbar();
             offerStripLegacyEmbeds();
             maybeRestoreDraft();
         });
