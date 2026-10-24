@@ -46,6 +46,19 @@
         return String((el && el.textContent) || '').replace(/\s+/g, ' ').trim();
     }
 
+    /**
+     * 解析某个词的「解释」：等级 def（作者自写）> quote（正文里摘的语句）> 锚点段落。
+     * 只填了 anchor 的老数据行为完全不变（v3.45.0）。
+     * @returns {{kind:'def'|'quote'|'anchor'|'none', text:string}}
+     */
+    function resolveDefinition(word, info) {
+        if (!info) return { kind: 'none', text: '' };
+        if (info.def) return { kind: 'def', text: String(info.def) };
+        if (info.quote) return { kind: 'quote', text: String(info.quote) };
+        var t = info.el ? blockText(info.el) : '';
+        return t ? { kind: 'anchor', text: t } : { kind: 'none', text: '' };
+    }
+
     /** 词 -> 稳定的 DOM id 片段 */
     function slug(word) {
         var s = String(word || '').replace(/[^A-Za-z0-9\u4e00-\u9fa5_-]/g, '');
@@ -185,17 +198,21 @@
     /**
      * 显示气泡：**内容不截断**（整个锚点段落），尺寸由 CSS 限死（max-width/max-height）
      * 并允许内部滚动（overflow-y:auto）。上方空间不够就翻到下方，左右夹在视口内。
+     * v1.1.0：解释来源改成 def（作者自写）→ quote（正文里摘的语句）→ 锚点段落，
+     * 前两者优先，因为它们才是「作者想让人看到的定义」。
      */
     function showBubble(span, word) {
         var info = anchors[word];
-        if (!info || !info.el) return;
+        if (!info) return;
+        var d = resolveDefinition(word, info);
+        if (!d.text) return;
         var b = ensureBubble();
         activeWord = word;
         clearTimeout(hideTimer);
         b.innerHTML =
             '<div class="term-bubble-head"><span class="term-bubble-word">' + esc(word) + '</span>' +
-            '<span class="term-bubble-hint">点击跳回定义</span></div>' +
-            '<div class="term-bubble-def">' + esc(blockText(info.el)) + '</div>';
+            '<span class="term-bubble-hint">' + (info.el ? '点击跳回定义' : '') + '</span></div>' +
+            '<div class="term-bubble-def' + (d.kind === 'def' ? ' is-def' : '') + '">' + esc(d.text) + '</div>';
         b.style.display = 'block';
 
         var r = span.getBoundingClientRect();
@@ -278,24 +295,39 @@
         // 词条只在第一次调用时设置；后续分章追加沿用（避免重复 normalize）
         if (Array.isArray(list) && list.length) {
             terms = list.filter(function (t) { return t && t.word; }).map(function (t) {
-                return { word: String(t.word), anchor: String(t.anchor || 'first') };
+                var o = { word: String(t.word), anchor: String(t.anchor || 'first') };
+                // v3.45.0：解释可以自写（def）或从正文摘（quote），有就带着
+                if (t.def) o.def = String(t.def);
+                if (t.quote) o.quote = String(t.quote);
+                return o;
             });
         }
         if (!terms.length) return { terms: 0, links: 0 };
         bindDelegation();
 
-        var nodes = textNodes(container);
         var links = 0;
         terms.forEach(function (term) {
+            // 每个词都重新扫一遍当前 DOM，而不是复用循环外缓存的节点列表。
+            // 原因：wrapOccurrences() 会把一个文本节点拆成「前段 + span + 后段」，
+            // 后段是**新插入**的节点，不在旧列表里 —— 复用旧列表的话，同一段里排在
+            // 前一个术语后面的词就永远扫不到（实测「字符串…不可变」这种同段两句只包到了前者）。
+            // 已被包过的位置由 SKIP_SELECTOR 里的 .term-link 排除，不会重复包。
+            var nodes = textNodes(container);
             var hits = findOccurrences(nodes, term.word);
-            if (!hits.length) return;
+            // 有自写解释时，即使正文里一次都没出现也登记（术语表要能列出来）
+            if (!hits.length) {
+                if (!anchors[term.word] && (term.def || term.quote)) {
+                    anchors[term.word] = { el: null, id: '', def: term.def, quote: term.quote };
+                }
+                return;
+            }
             // 锚点：本容器还没定锚的话，用这里的首次出现
             if (!anchors[term.word]) {
                 var el = resolveAnchorEl(term, hits[0]);
                 if (el) {
                     var id = ANCHOR_PREFIX + slug(term.word);
                     if (!el.id) el.id = id;
-                    anchors[term.word] = { el: el, id: el.id };
+                    anchors[term.word] = { el: el, id: el.id, def: term.def, quote: term.quote };
                 }
             }
             wrapOccurrences(hits, term.word);
@@ -310,16 +342,23 @@
         return info ? info.el : null;
     };
 
-    /** 定义片段（不截断；调用方决定怎么展示） */
+    /**
+     * 定义片段（不截断；调用方决定怎么展示）。
+     * v1.1.0：优先 def（作者自写）→ quote（正文语句）→ 锚点段落。
+     */
     TermLinks.definitionOf = function (word) {
-        var info = anchors[word];
-        return info && info.el ? blockText(info.el) : '';
+        return resolveDefinition(word, anchors[word]).text;
     };
 
-    /** 跳转到某个词的定义处（术语表点击用） */
+    /** 定义来源：'def' | 'quote' | 'anchor' | 'none'（术语表可据此加徽标） */
+    TermLinks.definitionKind = function (word) {
+        return resolveDefinition(word, anchors[word]).kind;
+    };
+
+    /** 跳转到某个词的定义处（术语表点击用）。只填了解释、正文没出现的词没有锚点，静默忽略 */
     TermLinks.jumpToWord = function (word) {
         var info = anchors[word];
-        if (info) jumpTo(info.el);
+        if (info && info.el) jumpTo(info.el);
     };
 
     /** 清空（换文章 / 预览重渲染时用） */

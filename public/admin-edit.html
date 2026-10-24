@@ -16,7 +16,7 @@
 <!-- 写作页样式：原来整段内联在 <style> 里（34.6KB / 156 个 !important，
      Vditor 覆盖规则还被追加过三遍），现已抽成独立文件并合并去重。
      顺序有讲究：必须排在 vditor/dist/index.css 之后，靠 html body 前缀 + !important 压过组件样式。 -->
-<link rel="stylesheet" href="/css/editor-write.css?v=1.16.0">
+<link rel="stylesheet" href="/css/editor-write.css?v=1.17.0">
     <link rel="stylesheet" href="/css/scrollbar.css?v=1.0.1">
     <link rel="stylesheet" href="/css/responsive.css?v=1.0.0">
     <link rel="stylesheet" href="/css/mobile.css?v=1.0.0">
@@ -67,13 +67,16 @@
         </section>
 
         <aside class="ee-side" id="eeSide">
-            <!-- 「属性」与「AI」是同一列的两个页签，永远只显示一个（侧栏只有一个位置）。
-                 v3.44.0：外层 .ee-side-inner 让折叠动画期间内容宽度不变，不会一边收窄一边重排。 -->
+            <!-- 「属性 / 术语 / AI」是同一列的三个页签，永远只显示一个（侧栏只有一个位置）。
+                 v3.44.0：外层 .ee-side-inner 让折叠动画期间内容宽度不变，不会一边收窄一边重排。
+                 v3.45.0：术语从「属性 → 更多设置」里搬出来，单独一个页签，方便搜索与逐条编辑解释。 -->
             <div class="ee-side-inner">
                 <div class="ee-side-head">
                     <div class="ee-side-tabs" role="tablist" aria-label="侧栏内容">
                         <button type="button" class="ee-side-tab active" id="eeTabProps" role="tab"
                                 aria-selected="true" aria-controls="eeSideProps" onclick="eeSideMode('props')">属性</button>
+                        <button type="button" class="ee-side-tab" id="eeTabTerms" role="tab"
+                                aria-selected="false" aria-controls="eeSideTerms" onclick="eeSideMode('terms')">术语</button>
                         <button type="button" class="ee-side-tab" id="eeTabAi" role="tab"
                                 aria-selected="false" aria-controls="eeSideAi" onclick="eeSideMode('ai')">AI</button>
                     </div>
@@ -140,16 +143,7 @@
                         <input type="search" id="eeRelatedPostsSearch" class="ee-rel-search" placeholder="搜索标题或 id…" autocomplete="off">
                         <div class="ee-rel-results" id="eeRelatedPostsResults"></div>
                     </div>
-                    <!-- 本篇术语（v3.37.0）：文内术语回链。
-                         正文里选中词 → 右键「标记为术语」；词从第二次出现起自动链回定义处。
-                         定义锚点默认是「首次出现那段」，也可以点「锚到当前段落」改到光标所在段。
-                         v3.39.0：编辑区里用非侵入式高亮标出术语（锚点橙色实线、其余蓝色虚线），
-                         面板显示每词出现次数并可「定位」；高亮不写进正文，Markdown 源码保持干净。 -->
-                    <div class="ee-card" id="eeTermsCard">
-                        <label>本篇术语<span class="ee-help" tabindex="0" role="note" aria-label="说明"
-                              data-tip="正文里选中一个词 → 右键「标记为术语」。读者在第二次出现处可悬停看定义、点击跳回。">?</span></label>
-                        <div class="ee-related-list" id="eeTermsList"></div>
-                    </div>
+                    <!-- 本篇术语已搬到独立的「术语」页签（v3.45.0），这里不再重复放一份。 -->
                     <!-- 关联画布：白板 / 导图挂在文章上，不再「插入正文」。
                          关联存在文章的 canvasRefs 字段，前台在文末「相关画布」区展示；
                          点整行去前台看 / 改那块画布，× 解除关联。 -->
@@ -207,6 +201,9 @@
                 </div>
             </details>
                 </div>
+                <!-- 术语（v3.45.0）：由 term-editor.js 填内容。
+                     搜索 + 列表 + 单条编辑（写解释 / 用正文选中语句当解释 / 改锚点）。 -->
+                <div class="ee-side-terms" id="eeSideTerms" role="tabpanel" aria-labelledby="eeTabTerms" hidden></div>
                 <!-- AI 写作助手（v3.44.0）：由 write-ai.js 填内容。
                      只做问答：不读正文、不改正文，密钥留在服务端（action=ai-write 代调）。 -->
                 <div class="ee-side-ai" id="eeSideAi" role="tabpanel" aria-labelledby="eeTabAi" hidden></div>
@@ -216,10 +213,12 @@
         <!-- 窄屏抽屉的遮罩（桌面端 display:none，由 CSS 控制） -->
         <div class="ee-side-mask" id="eeSideMask"></div>
 
-        <!-- 侧栏折叠后的边缘展开把手：属性 / AI 两个入口，点哪个就展开到哪个页签 -->
+        <!-- 侧栏折叠后的边缘展开把手：属性 / 术语 / AI 三个入口 -->
         <div class="ee-side-open" id="eeSideOpen" aria-hidden="true">
             <button type="button" class="ee-side-open-btn" id="eeSideOpenProps"
                     onclick="eeOpenSide('props')" title="展开属性栏（Ctrl+.）">‹ 属性</button>
+            <button type="button" class="ee-side-open-btn" id="eeSideOpenTerms"
+                    onclick="eeOpenSide('terms')" title="展开术语面板">‹ 术语</button>
             <button type="button" class="ee-side-open-btn" id="eeSideOpenAi"
                     onclick="eeOpenSide('ai')" title="展开 AI 助手">‹ AI</button>
         </div>
@@ -281,8 +280,10 @@
     <script src="js/editor-kit.js?v=1.1.1"></script>
     <!-- 白板与导图管理（权限 / 口令 / 历史回滚 / 绑定），由 admin-edit.js 注入上下文 -->
     <script src="js/editor-embed-admin.js?v=1.0.0"></script>
+    <!-- 侧栏「术语」页签：搜索 + 列表 + 单条编辑（解释 / 引用正文语句 / 锚点） -->
+    <script src="js/term-editor.js?v=1.0.0"></script>
     <!-- 侧栏「AI」页签：写作问答助手（只读，不碰正文） -->
     <script src="js/write-ai.js?v=1.4.0"></script>
-    <script src="js/admin-edit.js?v=1.33.0"></script>
+    <script src="js/admin-edit.js?v=1.34.0"></script>
 </body>
 </html>

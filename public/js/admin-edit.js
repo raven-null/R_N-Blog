@@ -172,7 +172,7 @@
             chunked: !!chunkEdit,
             canvasRefs: relatedCanvases.slice(),
             relatedIds: relatedPosts.slice(),
-            terms: terms.map(function (t) { return { word: t.word, anchor: t.anchor || 'first' }; }),
+            terms: terms.map(termForSave),
             content: isCanvasType() ? '' : getEditorContent()
         };
         if (chunkEdit) {
@@ -276,7 +276,7 @@
         }
         if (Array.isArray(d.terms)) {
             terms = d.terms.filter(function (t) { return t && t.word; })
-                .map(function (t) { return { word: String(t.word), anchor: String(t.anchor || 'first') }; });
+                .map(termFromRecord);
             renderTermsPanel();
         }
     }
@@ -339,17 +339,21 @@
         setTimeout(fitEditor, 320);
     }
 
-    // ===== 侧栏两个页签：属性 / AI（v3.44.0，二者互斥，同一列只有一个可见）=====
+    // ===== 侧栏三个页签：属性 / 术语 / AI（v3.44.0 起，v3.45.0 加术语；同一列只有一个可见）=====
     var SIDE_MODE_KEY = 'ee_side_mode';
+    var SIDE_MODES = ['props', 'terms', 'ai'];
     function sideMode() {
-        try { return localStorage.getItem(SIDE_MODE_KEY) === 'ai' ? 'ai' : 'props'; } catch (e) { return 'props'; }
+        try {
+            var m = localStorage.getItem(SIDE_MODE_KEY);
+            return SIDE_MODES.indexOf(m) >= 0 ? m : 'props';
+        } catch (e) { return 'props'; }
     }
-    /** 只做 DOM 同步（不抢焦点）：页签高亮 + 两个面板的显隐 + 折叠把手上的当前页签 */
+    /** 只做 DOM 同步（不抢焦点）：页签高亮 + 三个面板的显隐 + 折叠把手上的当前页签 */
     function applySideMode() {
         var mode = sideMode();
         var main = document.querySelector('.ee-main');
         if (main) main.setAttribute('data-side-mode', mode);
-        var tabs = { props: $('eeTabProps'), ai: $('eeTabAi') };
+        var tabs = { props: $('eeTabProps'), terms: $('eeTabTerms'), ai: $('eeTabAi') };
         Object.keys(tabs).forEach(function (k) {
             var t = tabs[k];
             if (!t) return;
@@ -357,23 +361,24 @@
             t.setAttribute('aria-selected', k === mode ? 'true' : 'false');
             t.tabIndex = k === mode ? 0 : -1;
         });
-        // 折叠后的边缘把手也分「属性 / AI」两个入口，标一下当前停在哪个
-        var handleBtns = { props: $('eeSideOpenProps'), ai: $('eeSideOpenAi') };
+        // 折叠后的边缘把手也分「属性 / 术语 / AI」三个入口，标一下当前停在哪个
+        var handleBtns = { props: $('eeSideOpenProps'), terms: $('eeSideOpenTerms'), ai: $('eeSideOpenAi') };
         Object.keys(handleBtns).forEach(function (k) {
             var b = handleBtns[k];
             if (b) b.classList.toggle('active', k === mode);
         });
-        var props = $('eeSideProps');
-        var ai = $('eeSideAi');
-        if (props) props.hidden = mode !== 'props';
-        if (ai) ai.hidden = mode !== 'ai';
+        var panels = { props: $('eeSideProps'), terms: $('eeSideTerms'), ai: $('eeSideAi') };
+        Object.keys(panels).forEach(function (k) {
+            var p = panels[k];
+            if (p) p.hidden = k !== mode;
+        });
     }
     /**
      * 切到某个页签。顺带保证「切过去就能看到」：
      * 桌面端折叠着就展开，窄屏抽屉关着就滑出 —— 否则点了像没反应。
      */
     window.eeSideMode = function (mode) {
-        mode = mode === 'ai' ? 'ai' : 'props';
+        mode = SIDE_MODES.indexOf(mode) >= 0 ? mode : 'props';
         try { localStorage.setItem(SIDE_MODE_KEY, mode); } catch (e) { /* 隐私模式，忽略 */ }
         if (isNarrow()) {
             var side = $('eeSide');
@@ -384,15 +389,21 @@
         }
         applySideMode();
         if (mode === 'ai' && window.WriteAi && window.WriteAi.onShow) window.WriteAi.onShow();
+        if (mode === 'terms' && window.TermEditor && window.TermEditor.onShow) window.TermEditor.onShow();
     };
     /** 顶栏「AI」按钮：一键到 AI 页签 */
     window.eeOpenAi = function () { window.eeSideMode('ai'); };
+    /** 一键到术语页签（右键菜单「编辑解释」也走这里） */
+    window.eeOpenTerms = function (word) {
+        window.eeSideMode('terms');
+        if (word && window.TermEditor && window.TermEditor.edit) window.TermEditor.edit(word);
+    };
     /**
      * 折叠后右侧把手上的两个入口（属性 / AI）：展开侧栏并切到对应页签。
      * 桌面端折叠态要先取消折叠；窄屏则保证抽屉是开的。
      */
     window.eeOpenSide = function (mode) {
-        window.eeSideMode(mode === 'ai' ? 'ai' : 'props');
+        window.eeSideMode(SIDE_MODES.indexOf(mode) >= 0 ? mode : 'props');
     };
     window.eeToggleSide = function () {
         var main = document.querySelector('.ee-main');
@@ -907,7 +918,7 @@
         // 本篇术语（v3.37.0）：只存记录里，面板列出词条与锚点状态
         terms = (Array.isArray(doc.terms) ? doc.terms : [])
             .filter(function (t) { return t && t.word; })
-            .map(function (t) { return { word: String(t.word), anchor: String(t.anchor || 'first') }; });
+            .map(termFromRecord);
         renderTermsPanel();
         if (docType === 'mindmap') $('eeViewBtn').textContent = '前台查看';
         // 新建：还没有记录可删、也还没法从前台打开。
@@ -1096,7 +1107,7 @@
             // 关联文章（v3.36.0）：单向列表，服务端会去重、去掉自己、限 12 条。
             relatedIds: relatedPosts.slice(),
             // 本篇术语（v3.37.0）：服务端会去重、限 30 条、限词长。
-            terms: terms.map(function (t) { return { word: t.word, anchor: t.anchor || 'first' }; })
+            terms: terms.map(termForSave)
         };
         if (finalType === 'mindmap' && mapId) body.mapId = mapId;
         return body;
@@ -1610,11 +1621,29 @@
     //   - 定义锚点：默认 = 该词首次出现的那一段；也可以在面板里点「锚到当前段落」改锚点
     //     （存的是那一段开头若干字作为「段落指纹」，渲染时按前缀匹配定位）；
     //   - 数据随文章 POST 提交（terms），只写进记录、不进索引。
-    var terms = [];   // [{word, anchor}]
+    var terms = [];   // [{word, anchor, def?, quote?}]
 
     var MAX_TERMS_CLIENT = 30;
     var MAX_TERM_WORD_CLIENT = 24;
     var MAX_TERM_ANCHOR_CLIENT = 48;
+    var MAX_TERM_DEF_CLIENT = 300;
+    var MAX_TERM_QUOTE_CLIENT = 240;
+
+    /** 词条 → 存库形态（def / quote 为空就不写，保持老记录形状干净） */
+    function termForSave(t) {
+        var o = { word: t.word, anchor: t.anchor || 'first' };
+        if (t.def) o.def = String(t.def).slice(0, MAX_TERM_DEF_CLIENT);
+        if (t.quote) o.quote = String(t.quote).slice(0, MAX_TERM_QUOTE_CLIENT);
+        return o;
+    }
+
+    /** 记录 → 内存形态（老数据只有 word/anchor，def/quote 让它们保持 undefined） */
+    function termFromRecord(t) {
+        var o = { word: String(t.word), anchor: String(t.anchor || 'first') };
+        if (t.def) o.def = String(t.def);
+        if (t.quote) o.quote = String(t.quote);
+        return o;
+    }
 
     function normalizeWord(w) {
         return String(w || '').replace(/[\r\n\t]+/g, ' ').trim().slice(0, MAX_TERM_WORD_CLIENT);
@@ -1849,65 +1878,68 @@
         return false;
     }
 
+    /**
+     * 术语面板的「总刷新」：重算编辑区高亮 / 出现次数，并让 term-editor.js 重画列表。
+     * v3.45.0 起面板 UI 全在 term-editor.js 里（搜索、列表、单条编辑），这里只负责数据与高亮。
+     */
     function renderTermsPanel() {
-        var card = $('eeTermsCard');
-        if (!card) return;
-        if (docType === 'card') { card.style.display = 'none'; clearTermDecorations(); return; }
-        card.style.display = '';
-        var box = $('eeTermsList');
-        if (!box) return;
+        if (docType === 'card') { clearTermDecorations(); if (window.TermEditor) window.TermEditor.refresh(); return; }
         if (!terms.length) {
-            box.innerHTML = '<div class="ee-related-empty">还没有术语。在正文里选中一个词，右键「标记为术语」即可。</div>';
             clearTermDecorations();
+            if (window.TermEditor) window.TermEditor.refresh();
             return;
         }
-
-        // 先算一遍出现次数（同时把编辑区高亮刷新出来）
         var decor = refreshTermDecorations();
-        var counts = (decor && decor.counts) || {};
-        var legend = '';
-        if (decor && decor.ok) {
-            legend = '<div class="ee-term-legend">' +
-                '<span class="lg-anchor"></span>定义锚点' +
-                '<span class="lg-link"></span>其余出现（前台会变成回链）' +
-                '</div>';
-        } else if (decor && decor.reason === 'toolong') {
-            legend = '<div class="ee-term-legend muted">正文超过 30 万字，编辑区不显示高亮（前台不受影响）</div>';
-        } else if (decor && decor.reason === 'unsupported') {
-            legend = '<div class="ee-term-legend muted">当前浏览器不支持编辑区高亮，可用下方「定位」按钮查看</div>';
-        }
+        if (window.TermEditor) window.TermEditor.refresh(decor);
+    }
 
-        box.innerHTML = legend + terms.map(function (t) {
-            var custom = !!(t.anchor && t.anchor !== 'first');
-            var n = counts[t.word] || 0;
-            return '<div class="ee-term-item" data-word="' + esc(t.word) + '">' +
-                '<div class="ee-term-row">' +
-                '<span class="ee-term-word">' + esc(t.word) + '</span>' +
-                '<span class="ee-term-count' + (n ? '' : ' zero') + '" title="正文里出现的次数">' + n + ' 处</span>' +
-                '<span class="ee-term-anchor' + (custom ? ' custom' : '') + '" title="' +
-                esc(custom ? ('锚点段落：' + t.anchor) : '锚点：首次出现处') + '">' +
-                (custom ? '自定义锚点' : '首次出现') + '</span>' +
-                '<button type="button" class="ee-canvas-unlink" data-act="del" title="移除术语">×</button>' +
-                '</div>' +
-                '<div class="ee-term-ops">' +
-                '<button type="button" class="ee-term-op" data-act="locate">定位</button>' +
-                '<button type="button" class="ee-term-op" data-act="anchor">锚到当前段落</button>' +
-                (custom ? '<button type="button" class="ee-term-op" data-act="reset">改回首次</button>' : '') +
-                '</div>' +
-                '</div>';
-        }).join('');
-        Array.prototype.forEach.call(box.querySelectorAll('.ee-term-item'), function (row) {
-            var word = row.getAttribute('data-word');
-            Array.prototype.forEach.call(row.querySelectorAll('[data-act]'), function (btn) {
-                btn.addEventListener('click', function () {
-                    var act = this.getAttribute('data-act');
-                    if (act === 'del') unmarkTerm(word);
-                    else if (act === 'anchor') anchorTermToCaret(word);
-                    else if (act === 'reset') resetTermAnchor(word);
-                    else if (act === 'locate') locateTerm(word);
-                });
-            });
-        });
+    /** 词在正文里出现了几次（面板的「n 处」和快捷搜索都用它） */
+    function countTermInContent(word) {
+        var host = document.querySelector('#eeVditor .vditor-wysiwyg') ||
+            document.querySelector('#eeVditor .vditor-ir');
+        if (!host) return 0;
+        var re = matcherOf(word);
+        if (!re) return 0;
+        var nodes = decorTextNodes(host);
+        var n = 0;
+        for (var i = 0; i < nodes.length; i++) {
+            re.lastIndex = 0;
+            var text = nodes[i].nodeValue || '';
+            var m;
+            while ((m = re.exec(text))) {
+                n++;
+                if (m.index === re.lastIndex) re.lastIndex++;
+                if (n > 500) return n;
+            }
+        }
+        return n;
+    }
+
+    /** 编辑器里当前选中的文字（「用正文选中的语句当解释」用） */
+    function editorSelectionText() {
+        try {
+            var sel = window.getSelection();
+            if (!sel || !sel.rangeCount || sel.isCollapsed) return '';
+            var host = $('eeVditor');
+            var node = sel.getRangeAt(0).startContainer;
+            var el = node && (node.nodeType === 1 ? node : node.parentElement);
+            if (!host || !el || !host.contains(el)) return '';
+            return String(sel).replace(/\s+/g, ' ').trim().slice(0, MAX_TERM_QUOTE_CLIENT);
+        } catch (e) { return ''; }
+    }
+
+    /** 保存某个词的解释（自写文本 + 正文语句），不改正文、只改元数据 */
+    function setTermDefinition(word, patch) {
+        var i = termIndex(word);
+        if (i < 0) return false;
+        var def = String((patch && patch.def) || '').replace(/\r\n?/g, '\n').trim().slice(0, MAX_TERM_DEF_CLIENT);
+        var quote = String((patch && patch.quote) || '').replace(/\s+/g, ' ').trim().slice(0, MAX_TERM_QUOTE_CLIENT);
+        if (def) terms[i].def = def; else delete terms[i].def;
+        if (quote) terms[i].quote = quote; else delete terms[i].quote;
+        window.eeMarkDirty();
+        renderTermsPanel();
+        toast(def || quote ? '「' + word + '」的解释已保存' : '「' + word + '」已清空解释', 'success');
+        return true;
     }
 
     // 右键菜单（editor-menu.js）通过这个入口回调
@@ -1926,6 +1958,20 @@
             var w = normalizeWord(word);
             if (termIndex(w) < 0) { toast('「' + w + '」不是术语', 'error'); return; }
             unmarkTerm(w, opts);
+        },
+        /** 打开术语页签并进入这条术语的编辑（右键菜单「编辑解释」用） */
+        edit: function (word) {
+            var w = normalizeWord(word);
+            if (termIndex(w) < 0) { toast('「' + w + '」还不是术语', 'error'); return; }
+            window.eeOpenTerms(w);
+        },
+        /** 当前某词的解释文本（
+         *  自写解释 > 正文语句 > 空），外部只读用 */
+        definition: function (word) {
+            var i = termIndex(normalizeWord(word));
+            if (i < 0) return '';
+            var t = terms[i];
+            return t.def || t.quote || '';
         }
     };
 
@@ -2230,6 +2276,22 @@
         // 侧栏页签（属性 / AI）：先把持久化的模式应用上，再初始化 AI 面板。
         // AI 面板只在页签切过去时才渲染内容，这里初始化是为了切页签不再有延迟。
         applySideMode();
+        // 术语面板（v3.45.0）：数据仍在这里，界面交给 term-editor.js
+        if (window.TermEditor) {
+            window.TermEditor.init({
+                host: $('eeSideTerms'),
+                getTerms: function () { return terms; },
+                markTerm: function (w) { window.EETerms.mark(w); },
+                removeTerm: function (w) { unmarkTerm(w); },
+                setTerm: setTermDefinition,
+                findInContent: countTermInContent,
+                locate: locateTerm,
+                selectionText: editorSelectionText,
+                anchorToCaret: anchorTermToCaret,
+                resetAnchor: resetTermAnchor,
+                toast: toast
+            });
+        }
         if (window.WriteAi) window.WriteAi.init({ host: $('eeSideAi') });
         // 顶栏「⋯」菜单搬到 <body>：脱离顶栏的层叠上下文，才能压过编辑器
         initMoreMenu();

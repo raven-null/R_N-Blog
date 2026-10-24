@@ -112,10 +112,16 @@ interface ArticleMeta {
 }
 
 /** 术语词条：word = 要回链的词；anchor = 'first'（首次出现处，默认）
- *  或一段「段落指纹」（该段落开头若干字，用于在自定义锚点时定位）。 */
+ *  或一段「段落指纹」（该段落开头若干字，用于在自定义锚点时定位）。
+ *  def / quote 是 v3.45.0 新增的「解释」两种来源：
+ *    def   = 作者自己写的解释（多行）
+ *    quote = 从正文里摘出来当解释的一句话
+ *  前台取值顺序 def → quote → anchor 所在段落，所以只填 anchor 的老数据行为不变。 */
 interface TermRef {
   word: string
   anchor?: string
+  def?: string
+  quote?: string
 }
 
 // ===================== 认证 =====================
@@ -166,6 +172,8 @@ const MAX_CANVAS_REFS = 20
 const MAX_TERMS = 30
 const MAX_TERM_WORD = 24
 const MAX_TERM_ANCHOR = 48
+const MAX_TERM_DEF = 300     // 自己写的解释
+const MAX_TERM_QUOTE = 240   // 从正文里摘的「解释语句」
 
 function normalizeTerms(raw: unknown): TermRef[] {
   if (!Array.isArray(raw)) return []
@@ -181,7 +189,14 @@ function normalizeTerms(raw: unknown): TermRef[] {
     const anchor = (!rawAnchor || rawAnchor === "first")
       ? "first"
       : rawAnchor.slice(0, MAX_TERM_ANCHOR)
-    out.push({ word, anchor })
+    // 定义可以是「自己写的解释」或「从正文摘的语句」，两种都存；前台按 def → quote →
+    // 锚点所在段落 的顺序取第一个非空的，所以老数据（只有一个 anchor）行为完全不变。
+    const def = String(o.def || "").replace(/\r\n?/g, "\n").trim().slice(0, MAX_TERM_DEF)
+    const quote = String(o.quote || "").replace(/\s+/g, " ").trim().slice(0, MAX_TERM_QUOTE)
+    const term: TermRef = { word, anchor }
+    if (def) term.def = def
+    if (quote) term.quote = quote
+    out.push(term)
     if (out.length >= MAX_TERMS) break
   }
   return out

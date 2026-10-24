@@ -488,6 +488,7 @@ html body .vditor-toolbar { position: relative !important; z-index: 3001 !import
 }
 /* 两个页签面板：卡片原来是 .ee-side 的直接子元素，现在多了一层容器，间距要自己带 */
 .ee-side-props,
+.ee-side-terms,
 .ee-side-ai {
     display: flex;
     flex-direction: column;
@@ -495,6 +496,7 @@ html body .vditor-toolbar { position: relative !important; z-index: 3001 !import
 }
 /* 显式写出来：上面给了 display:flex，UA 的 [hidden]{display:none} 就压不住了 */
 .ee-side-props[hidden],
+.ee-side-terms[hidden],
 .ee-side-ai[hidden] { display: none !important; }
 /* 系统开了「减少动态效果」就不做过渡 */
 @media (prefers-reduced-motion: reduce) {
@@ -969,6 +971,117 @@ html body #eeSide *::-webkit-scrollbar { width: 0 !important; height: 0 !importa
 .ee-term-count.zero { color: #ffb4ad; background: rgba(239, 106, 94, .12); border-color: rgba(239, 106, 94, .35); }
 /* 「定位」时正文块的闪烁提示 */
 .ee-term-flash { animation: eeTermFlash 1.4s ease; }
+
+/* ===== 术语页签（v3.45.0）=====
+   搜索 + 列表 + 单条编辑区。术语从「属性 → 更多设置」里搬出来单独成一页。 */
+.ee-side-terms { flex: 1 1 auto; min-height: 0; }
+.ee-terms { display: flex; flex-direction: column; gap: 8px; min-height: 0; flex: 1 1 auto; }
+.ee-terms-search { flex: none; display: flex; gap: 6px; }
+.ee-terms-search input { flex: 1 1 auto; min-width: 0; }
+.ee-terms-search .ee-btn { flex: none; height: 32px; padding: 0 12px; font-size: 12.5px; }
+.ee-terms-hint {
+    flex: none;
+    font-size: 11.5px;
+    line-height: 1.6;
+    color: var(--text-muted);
+}
+.ee-terms-dim { color: rgba(255, 255, 255, .38); }
+.ee-terms-add { color: #ffd9a8; }
+.ee-terms-link {
+    padding: 0 2px;
+    border: 0;
+    background: none;
+    color: #9fc4ff;
+    font-family: inherit;
+    font-size: 11.5px;
+    cursor: pointer;
+    text-decoration: underline;
+}
+.ee-terms-link:hover { color: #fff; }
+.ee-terms-list {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-right: 2px;
+}
+.ee-terms-empty { padding: 16px 8px; text-align: center; font-size: 12px; color: var(--text-muted); }
+.ee-term-item { cursor: default; }
+.ee-term-item.active { border-color: rgba(115, 170, 255, .55); background: rgba(115, 170, 255, .1); }
+.ee-term-def-preview {
+    margin-top: 4px;
+    font-size: 11.5px;
+    line-height: 1.55;
+    color: var(--text-muted);
+    word-break: break-word;
+}
+.ee-term-def-preview em { color: rgba(255, 255, 255, .35); font-style: normal; }
+/* 解释来源徽标：自写 / 正文语句 / 锚点段落 */
+.ee-term-src {
+    flex: none;
+    padding: 1px 6px;
+    border-radius: 99px;
+    font-size: 10.5px;
+    line-height: 1.6;
+    color: var(--text-muted);
+    background: rgba(255, 255, 255, .06);
+    border: 1px solid var(--border);
+}
+.ee-term-src[data-kind="def"] { color: #cfe2ff; border-color: rgba(115, 170, 255, .4); background: rgba(115, 170, 255, .14); }
+.ee-term-src[data-kind="quote"] { color: #b7f0c2; border-color: rgba(90, 200, 120, .35); background: rgba(90, 200, 120, .12); }
+.ee-term-op.danger:hover { color: #ffd9d5; background: rgba(239, 106, 94, .18); border-color: rgba(239, 106, 94, .4); }
+
+/* 单条编辑区：钉在列表下方，不挤进每条里 */
+.ee-terms-editor {
+    flex: none;
+    margin-top: 2px;
+    padding: 10px 11px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, .04);
+    border: 1px solid rgba(115, 170, 255, .35);
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+.ee-terms-editor[hidden] { display: none !important; }
+.ee-term-edit-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #cfe2ff;
+}
+.ee-term-label { font-size: 11.5px; color: var(--text-muted); }
+.ee-terms-editor textarea {
+    width: 100%;
+    min-height: 70px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    resize: vertical;
+    font-family: inherit;
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: var(--text);
+    background: var(--bg);
+    border: 1px solid var(--border);
+}
+.ee-terms-editor textarea:focus { outline: none; border-color: rgba(115, 170, 255, .55); }
+.ee-term-edit-row { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.ee-term-edit-row .ee-btn { height: 30px; padding: 0 10px; font-size: 12px; }
+.ee-term-quote {
+    flex: 1 1 100%;
+    font-size: 11px;
+    color: var(--text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.ee-term-edit-tip { font-size: 10.5px; line-height: 1.55; color: rgba(255, 255, 255, .4); }
 @keyframes eeTermFlash {
     0%, 100% { box-shadow: none; }
     20%, 60% { box-shadow: 0 0 0 3px rgba(255, 176, 32, .55); border-radius: 6px; }
