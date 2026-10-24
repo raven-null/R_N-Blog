@@ -1955,6 +1955,9 @@
             transition: border-color .18s ease, background .18s ease;
         }
         .rt-item:hover { border-color: rgba(115,170,255,.55); background: rgba(115,170,255,.1); }
+        /* 自写解释的词条：定义不在正文里，没有可跳的位置 → 不可点、不给手型与 hover 反馈 */
+        .rt-item-plain { cursor: default; }
+        .rt-item-plain:hover { border-color: rgba(255,255,255,.12); background: rgba(255,255,255,.04); }
         .rt-item .rt-word {
             display: block; margin-bottom: 4px;
             font-size: 13.5px; font-weight: 600; color: #cfe2ff;
@@ -2263,7 +2266,7 @@
     <script src="js/reader.js?v=3.13.7" defer></script>
     <script src="js/animations.js?v=3.14.0" defer></script>
 
-    <script src="js/article-app.js?v=2.0.0" defer></script>
+    <script src="js/article-app.js?v=2.1.0" defer></script>
 
 </body>
 </html>

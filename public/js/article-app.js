@@ -559,27 +559,51 @@ const ArticleApp = {
                 this.renderTermList();
             },
 
-            /** 文末「本篇术语」：词 + 定义（不截断）+ 点击跳回定义处 */
+            /**
+             * 文末「本篇术语」：词 + 定义（不截断）
+             *
+             * 只有「定义在正文里」的词条才给跳转：
+             *   · kind === 'def'（作者自己写的解释）—— 正文里没有这段文字，跳过去没有意义，
+             *     所以渲染成不可点的普通卡片，也不加 hover 与手型光标；
+             *   · kind === 'quote'（从正文摘的语句）/ 'anchor'（用锚点段落当解释）—— 定义就在
+             *     正文里，点一下滚回去并闪一下定位。
+             */
             renderTermList() {
                 const host = document.getElementById('related-terms');
                 if (!host || !window.TermLinks) return;
                 const terms = (this.currentPost && Array.isArray(this.currentPost.terms)) ? this.currentPost.terms : [];
                 const rows = terms
-                    .map(t => ({ word: String(t.word || ''), def: window.TermLinks.definitionOf(String(t.word || '')) }))
+                    .map(t => {
+                        const word = String(t.word || '');
+                        return {
+                            word,
+                            def: window.TermLinks.definitionOf(word),
+                            kind: window.TermLinks.definitionKind(word)
+                        };
+                    })
                     .filter(r => r.word && r.def);
                 if (!rows.length) { host.style.display = 'none'; host.innerHTML = ''; return; }
+                const jumpable = rows.filter(r => r.kind !== 'def').length;
+                const tip = jumpable === 0
+                    ? ''      // 全是自写解释：没有可跳的位置，连提示都不显示
+                    : '<span class="rt-tip">点词条跳到正文中的定义' +
+                      (jumpable < rows.length ? '（自写解释不跳转）' : '') + '</span>';
                 host.style.display = '';
                 host.innerHTML =
                     '<div class="related-terms-head">本篇术语' +
                     '<span class="rt-count">' + rows.length + '</span>' +
-                    '<span class="rt-tip">点词条跳到定义处</span></div>' +
-                    '<div class="rt-list">' + rows.map(r =>
-                        '<button type="button" class="rt-item" data-word="' + this.esc(r.word) + '">' +
-                        '<span class="rt-word">' + this.esc(r.word) + '</span>' +
-                        '<span class="rt-def">' + this.esc(r.def) + '</span>' +
-                        '</button>'
-                    ).join('') + '</div>';
-                host.querySelectorAll('.rt-item').forEach(btn => {
+                    tip + '</div>' +
+                    '<div class="rt-list">' + rows.map(r => {
+                        const inner =
+                            '<span class="rt-word">' + this.esc(r.word) + '</span>' +
+                            '<span class="rt-def">' + this.esc(r.def) + '</span>';
+                        if (r.kind === 'def') {
+                            return '<div class="rt-item rt-item-plain" data-kind="def">' + inner + '</div>';
+                        }
+                        return '<button type="button" class="rt-item" data-kind="' + this.esc(r.kind) +
+                            '" data-word="' + this.esc(r.word) + '">' + inner + '</button>';
+                    }).join('') + '</div>';
+                host.querySelectorAll('.rt-item[data-word]').forEach(btn => {
                     btn.addEventListener('click', () => window.TermLinks.jumpToWord(btn.dataset.word));
                 });
             },
