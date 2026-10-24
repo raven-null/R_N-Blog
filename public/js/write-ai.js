@@ -20,16 +20,47 @@
     var SETTINGS_URL = '/api/admin?action=settings';
     var PAINT_EVERY = 60;           // 流式渲染节流（毫秒）
 
+    // ===== 上下文窗口（v1.4.0）=====
+    // 历史**不落盘**（刷新即全新），但同一页里的多轮对话仍然要发给模型，
+    // 否则它会「忘记上一句」。发多少有预算，太长既贵又容易跑偏：
+    var HISTORY_ROUNDS = 6;         // 最多带最近 6 轮（12 条：user + assistant）
+    var HISTORY_MAX_CHARS = 6000;   // 历史部分的字符预算（不含本次提问）
+    var HISTORY_MSG_MAX = 2000;     // 单条历史消息截断（服务端另有 4000 字硬上限）
+
     var els = {};
     var host = null;
     var config = null;              // ai.write
-    var state = 'loading';          // loading | disabled | nokey | ready | error
-    var messages = [];              // [{role, content}]：渲染用，也是请求体
+    var state = 'loading';          // loading | disabled | nokey | unauth | ready | error
+    var messages = [];              // [{role, content}]：面板里显示的全部对话（只在内存里）
     var controller = null;          // 正在进行的请求
     var streaming = null;           // 当前流式气泡
     var streamText = '';
     var paintTimer = null;
     var lastPaint = 0;
+
+    /**
+     * 取出发给模型的上下文：最近 N 轮 + 字数预算，从最旧的一端开始丢。
+     * 规则：
+     *   · 单条超长先截断（assistant 回答里常有代码块，很容易上万字）；
+     *   · 起点必须是 user —— 以 assistant 开头的历史容易让模型跑偏；
+     *   · 超预算就成对丢弃（丢一条 user 连带它后面的 assistant 一起丢）；
+     *   · 永远保留最后一问，哪怕它自己就超预算（已经按单条上限截断了）。
+     */
+    function trimHistory(all) {
+        var tail = all.slice(-HISTORY_ROUNDS * 2).map(function (m) {
+            var c = String(m.content || '');
+            if (c.length > HISTORY_MSG_MAX) c = c.slice(0, HISTORY_MSG_MAX);
+            return { role: m.role, content: c };
+        });
+        while (tail.length && tail[0].role !== 'user') tail.shift();
+        var total = tail.reduce(function (n, m) { return n + m.content.length; }, 0);
+        while (total > HISTORY_MAX_CHARS && tail.length > 1) {
+            total -= tail.shift().content.length;
+            // 丢到 user 开头为止，保持成对
+            while (tail.length > 1 && tail[0].role !== 'user') total -= tail.shift().content.length;
+        }
+        return tail;
+    }
 
     // ===== 小工具 =====
     function el(tag, cls, text) {
@@ -354,9 +385,8 @@
         paintStatus();
         setSubmitMode(true);
 
-        var payload = {
-            messages: messages.map(function (m) { return { role: m.role, content: m.content }; })
-        };
+        // 只把裁剪过的窗口发给模型（见 trimHistory）；面板里显示的仍然是完整对话
+        var payload = { messages: trimHistory(messages) };
 
         fetch(STREAM_URL, {
             method: 'POST',
@@ -477,6 +507,8 @@
     WriteAi.isBusy = function () { return !!controller; };
     WriteAi.state = function () { return state; };
     WriteAi.messages = function () { return messages.slice(); };
+    /** 测试用：看一下此刻会发给模型的上下文窗口（不含尚未发送的提问） */
+    WriteAi.contextPreview = function () { return trimHistory(messages); };
     /** 测试用：不经过界面直接发一条（行为与点「发送」完全一致） */
     WriteAi.send = function (text) { send(text); };
 
