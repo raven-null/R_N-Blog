@@ -1,5 +1,5 @@
 /**
- * 文内术语回链（v1.3.0）
+ * 文内术语回链（v1.3.1）
  * ------------------------------------------------------------------
  * 解决的问题：文章里某个词（比如「字符串」）第一次出现时讲过它的定义，
  * 几百字后再出现时读者已经忘了，又不想往回翻。
@@ -243,8 +243,7 @@
         activeWord = word;
         clearTimeout(hideTimer);
         b.innerHTML =
-            '<div class="term-bubble-head"><span class="term-bubble-word">' + esc(word) + '</span>' +
-            '<span class="term-bubble-hint">' + (info.el ? '点击跳回定义' : '') + '</span></div>' +
+            '<div class="term-bubble-head"><span class="term-bubble-word">' + esc(word) + '</span></div>' +
             '<div class="term-bubble-def' + (d.kind === 'def' ? ' is-def' : '') + '">' + esc(d.text) + '</div>';
         b.style.display = 'block';
 
