@@ -1,5 +1,5 @@
 /**
- * 写作页「术语」页签：搜索 + 列表 + 单条编辑（v1.0.0）
+ * 写作页「术语」页签：搜索 + 列表 + 单条编辑（v1.2.0）
  * ------------------------------------------------------------------
  * v3.45.0 把术语从「属性 → 更多设置」里搬出来单独成一页，因为要做两件属性区放不下的事：
  *
@@ -189,7 +189,10 @@
             row.setAttribute('data-word', t.word);
             if (t.word === editing) row.classList.add('active');
             var d = defOf(t);
-            var badge = d.kind === 'def' ? '自写解释' : (d.kind === 'quote' ? '正文语句' : '锚点段落');
+            // 自写解释与「正文语句」可以同时存在：两种都有时徽标上两个都写出来
+            var badge = (t.def && t.quote)
+                ? '自写解释 + 正文语句'
+                : (t.def ? '自写解释' : (t.quote ? '正文语句' : '锚点段落'));
             var n = api.findInContent ? api.findInContent(t.word) : 0;
             var custom = !!(t.anchor && t.anchor !== 'first');
             row.innerHTML =
@@ -251,9 +254,11 @@
             '<button type="button" class="ee-btn" data-act="anchor">锚到当前段落</button>' +
             (t.anchor && t.anchor !== 'first' ? '<button type="button" class="ee-term-op" data-act="reset">改回首次</button>' : '') +
             '</div>' +
-            '<div class="ee-term-edit-tip">当前解释来源：' +
-            (d.kind === 'def' ? '你写的解释' : (d.kind === 'quote' ? '正文里选的语句' : '锚点所在段落')) +
-            '　·　正文选词后点「用正文选中的语句」即可摘录' +
+            '<div class="ee-term-edit-tip">' +
+            (t.def && t.quote
+                ? '前台显示你写的解释；因为同时有正文语句，术语表里点它还会跳回那句引用'
+                : ('当前解释来源：' + (d.kind === 'def' ? '你写的解释（正文里没有位置，术语表不可点）' : (d.kind === 'quote' ? '正文里选的语句（术语表可点，跳回那句）' : '锚点所在段落（术语表不可点）')))) +
+            '　·　正文选词后点「用正文选中的语句」即可摘录，可与自写解释共存' +
             (sel ? '（现在选中了 ' + sel.length + ' 个字）' : '') +
             '</div>';
 

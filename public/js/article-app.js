@@ -562,11 +562,11 @@ const ArticleApp = {
             /**
              * 文末「本篇术语」：词 + 定义（不截断）
              *
-             * 只有「定义在正文里」的词条才给跳转：
-             *   · kind === 'def'（作者自己写的解释）—— 正文里没有这段文字，跳过去没有意义，
-             *     所以渲染成不可点的普通卡片，也不加 hover 与手型光标；
-             *   · kind === 'quote'（从正文摘的语句）/ 'anchor'（用锚点段落当解释）—— 定义就在
-             *     正文里，点一下滚回去并闪一下定位。
+             * 「能不能跳」只看有没有 terms[].quote（作者从正文里摘的那句定义引用）：
+             *   · 有 quote（哪怕同时还有自写解释）—— 点词条滚到那句引用所在的段落并闪一下；
+             *   · 只有自写解释 / 只填了锚点 —— 正文里没有「那句定义」，渲染成不可点的普通卡片，
+             *     也不给 hover 与手型光标（点了没反应比不能点更像坏掉）。
+             * 显示的文字仍是 def → quote → 锚点段落 的优先级。
              */
             renderTermList() {
                 const host = document.getElementById('related-terms');
@@ -578,16 +578,17 @@ const ArticleApp = {
                         return {
                             word,
                             def: window.TermLinks.definitionOf(word),
-                            kind: window.TermLinks.definitionKind(word)
+                            kind: window.TermLinks.definitionKind(word),
+                            jumpable: !!window.TermLinks.hasQuote(word)
                         };
                     })
                     .filter(r => r.word && r.def);
                 if (!rows.length) { host.style.display = 'none'; host.innerHTML = ''; return; }
-                const jumpable = rows.filter(r => r.kind !== 'def').length;
+                const jumpable = rows.filter(r => r.jumpable).length;
                 const tip = jumpable === 0
-                    ? ''      // 全是自写解释：没有可跳的位置，连提示都不显示
-                    : '<span class="rt-tip">点词条跳到正文中的定义' +
-                      (jumpable < rows.length ? '（自写解释不跳转）' : '') + '</span>';
+                    ? ''      // 一个可跳的都没有：不显示提示
+                    : '<span class="rt-tip">点词条跳到正文中的定义引用' +
+                      (jumpable < rows.length ? '（没有引用的不跳转）' : '') + '</span>';
                 host.style.display = '';
                 host.innerHTML =
                     '<div class="related-terms-head">本篇术语' +
@@ -597,8 +598,8 @@ const ArticleApp = {
                         const inner =
                             '<span class="rt-word">' + this.esc(r.word) + '</span>' +
                             '<span class="rt-def">' + this.esc(r.def) + '</span>';
-                        if (r.kind === 'def') {
-                            return '<div class="rt-item rt-item-plain" data-kind="def">' + inner + '</div>';
+                        if (!r.jumpable) {
+                            return '<div class="rt-item rt-item-plain" data-kind="' + this.esc(r.kind) + '">' + inner + '</div>';
                         }
                         return '<button type="button" class="rt-item" data-kind="' + this.esc(r.kind) +
                             '" data-word="' + this.esc(r.word) + '">' + inner + '</button>';

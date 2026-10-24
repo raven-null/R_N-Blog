@@ -1,11 +1,11 @@
 /**
- * 文内术语回链（v1.0.0）
+ * 文内术语回链（v1.2.0）
  * ------------------------------------------------------------------
  * 解决的问题：文章里某个词（比如「字符串」）第一次出现时讲过它的定义，
  * 几百字后再出现时读者已经忘了，又不想往回翻。
  *
- * 数据来源：文章的 terms 字段（写作页「本篇术语」面板维护）
- *     [{ word: '字符串', anchor: 'first' | '<段落指纹>' }]
+ * 数据来源：文章的 terms 字段（写作页「术语」页签维护）
+ *     [{ word: '字符串', anchor: 'first' | '<段落指纹>', def?: '自写解释', quote?: '从正文摘的语句' }]
  *
  * 渲染规则：
  *   - 词的**第一次出现**所在的段落 = 定义锚点，给它挂一个 id；
@@ -14,12 +14,20 @@
  *   - 英文词按词边界匹配（\bString\b）且忽略大小写，避免误伤 substring；
  *   - 每个词最多包 200 处，术语最多 30 个（服务端也限了）。
  *
- * 气泡（按需求）：**内容不截断**，显示锚点段落的完整文字；限定气泡尺寸并允许内部滚动。
+ * 解释取值（def → quote → 锚点段落）与「能不能跳」是两件事（v1.2.0）：
+ *   - 显示的文字：有自写解释就用它，其次用正文摘的语句，都没有就用锚点段落；
+ *   - 能不能跳：**只看有没有 quote**。v1.2.0 起跳转目标是那句引用所在的段落，
+ *     而不是锚点位置；只有自写解释（或只填了锚点）的词条不参与跳转。
+ *     def 与 quote 可以同时存在 —— 前台显示 def，跳转仍按 quote 走。
+ *
+ * 气泡（按需求）：**内容不截断**，显示上面取到的那段完整文字；限定气泡尺寸并允许内部滚动。
  *
  * 用法：
  *     TermLinks.enhance(container, terms)      // 就地增强，可重复调用（分章文章逐章扫）
  *     TermLinks.clear()                         // 拆掉所有样式与气泡（换文章时用）
  *     TermLinks.anchorIdOf(word)                // 供文末术语表跳转用
+ *     TermLinks.hasQuote(word)                  // 该词有没有「定义引用」（决定术语表是否可点）
+ *     TermLinks.jumpToWord(word)                // 跳到引用语句所在段落（没有则退回锚点段落）
  */
 (function () {
     'use strict';
@@ -144,6 +152,20 @@
             if (blockText(cands[i]).indexOf(fp) === 0) return cands[i];
         }
         return firstHit ? blockOf(firstHit.node) : null;
+    }
+
+    /**
+     * 找「定义引用」那句话所在的块（v1.2.0）。
+     * 文末术语表的跳转以它为目标：作者从正文里摘了哪句话当解释，就跳回那句。
+     */
+    function resolveQuoteEl(quote) {
+        var q = String(quote || '').replace(/\s+/g, ' ').trim();
+        if (!q || !root) return null;
+        var cands = root.querySelectorAll('p, li, blockquote, td, th');
+        for (var i = 0; i < cands.length; i++) {
+            if (blockText(cands[i]).indexOf(q) >= 0) return cands[i];
+        }
+        return null;
     }
 
     /** 把第 n 处（>=1）出现包成 term-link；从后往前替换，避免索引漂移 */
@@ -317,7 +339,7 @@
             // 有自写解释时，即使正文里一次都没出现也登记（术语表要能列出来）
             if (!hits.length) {
                 if (!anchors[term.word] && (term.def || term.quote)) {
-                    anchors[term.word] = { el: null, id: '', def: term.def, quote: term.quote };
+                    anchors[term.word] = { el: null, id: '', def: term.def, quote: term.quote, quoteEl: resolveQuoteEl(term.quote) };
                 }
                 return;
             }
@@ -327,7 +349,7 @@
                 if (el) {
                     var id = ANCHOR_PREFIX + slug(term.word);
                     if (!el.id) el.id = id;
-                    anchors[term.word] = { el: el, id: el.id, def: term.def, quote: term.quote };
+                    anchors[term.word] = { el: el, id: el.id, def: term.def, quote: term.quote, quoteEl: resolveQuoteEl(term.quote) };
                 }
             }
             wrapOccurrences(hits, term.word);
@@ -355,10 +377,25 @@
         return resolveDefinition(word, anchors[word]).kind;
     };
 
-    /** 跳转到某个词的定义处（术语表点击用）。只填了解释、正文没出现的词没有锚点，静默忽略 */
+    /**
+     * 这个词有没有「从正文摘的语句」（terms[].quote）。
+     * 文末术语表的跳转只认它：自写解释在正文里没有位置，锚点段落也不算「定义引用」。
+     * 注意 def 与 quote 可以同时存在 —— 前台显示 def，但仍然按 quote 给跳转。
+     */
+    TermLinks.hasQuote = function (word) {
+        var info = anchors[word];
+        return !!(info && info.quote);
+    };
+
+    /**
+     * 跳转到某个词的定义处（术语表点击用）。
+     * 有「定义引用」→ 跳到那句话所在的段落；否则退回锚点段落。
+     * 两者都没有（只有自写解释）→ 静默忽略，调用方本来也不该把它渲染成可点控件。
+     */
     TermLinks.jumpToWord = function (word) {
         var info = anchors[word];
-        if (info && info.el) jumpTo(info.el);
+        if (!info) return;
+        jumpTo(info.quoteEl || info.el);
     };
 
     /** 清空（换文章 / 预览重渲染时用） */
