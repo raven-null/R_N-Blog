@@ -44,6 +44,8 @@ const AIChat = {
         this.createChatUI();
         this.bindEvents();
         await this.loadSessions();
+        // 会话按文章绑定：进哪篇就切到哪篇自己的对话（否则会拿 A 的历史去答 B）
+        this.ensureSessionForPost();
         this.initDrag();
         this.initResize();
         this.initSelectionBubble();
@@ -541,6 +543,8 @@ const AIChat = {
         this.addMessage('user', msgContent);
         this.messages.push({ role: 'user', content: msgContent });
         this.updateSessionName();
+        // 当前正在用的会话就是这篇文章的会话（手动切过别的会话也会被记住）
+        this.bindCurrentSessionToPost();
         // 外部调用（划词助手）可指定更有意义的会话名
         if (opts.sessionName) {
             const session = this.getSession();
@@ -814,11 +818,20 @@ const AIChat = {
         return this.sessions.find(s => s.id === this.currentSessionId) || this.sessions[0];
     },
 
-    newSession() {
-        const id = Date.now().toString(36);
-        const session = { id, name: `会话 ${this.sessions.length + 1}`, messages: [] };
+    newSession(name) {
+        // id 用时间戳，但要防同毫秒撞车：ensureSessionForPost() 紧跟着 createDefaultSession()
+        // 执行时会落在同一毫秒里，撞了以后 switchSession 的 find() 会命中旧会话，
+        // 新会话变成永远进不去的空壳（这个坑真实踩到过，表现为多出一个「会话 1」）
+        let id = Date.now().toString(36);
+        while (this.sessions.some(s => s.id === id)) {
+            id = Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+        }
+        const session = { id, name: name || `会话 ${this.sessions.length + 1}`, messages: [] };
         this.sessions.push(session);
         this.switchSession(id);
+        // 新建的会话默认属于「当前正在看的这篇文章」（手动点「新建会话」也是这个语义）
+        this.bindCurrentSessionToPost();
+        return session;
     },
 
     switchSession(id) {
@@ -841,6 +854,8 @@ const AIChat = {
         const idx = this.sessions.findIndex(s => s.id === id);
         if (idx < 0) return;
         this.sessions.splice(idx, 1);
+        // 会话被删了，文章映射里指向它的那条也要清掉，否则下次进那篇会指到不存在的会话
+        this._unbindSession(id);
         if (this.currentSessionId === id) {
             const next = this.sessions[Math.max(0, idx - 1)] || this.sessions[0];
             this.currentSessionId = next.id;
@@ -896,6 +911,89 @@ const AIChat = {
             this.saveSessions();
             this.renderSessionList();
         }
+    },
+
+    // ===== 会话 ↔ 文章绑定（v1.2.0）=====
+    // 背景：原来所有文章共用一份聊天历史，而每轮又问的是「当前文章」的正文 ——
+    // 从 A 聊到 B 时，模型看到的是「A 的问答历史 + B 的正文」，很容易答串。
+    // 这里加一层**纯本地**映射（文章 → 会话 id）：进哪篇就切到哪篇自己的会话，
+    // 旧会话仍留在列表里可回看。服务端结构不用动（会话本来就只有 id/name/messages）。
+    _POST_MAP_KEY: 'chat-session-by-post',
+    _MAX_POST_BINDINGS: 50,
+
+    /** 当前文章的标识：优先文章 id，其次文件名，最后退回地址栏参数 */
+    getPostKey() {
+        const info = window.__currentPostInfo || {};
+        const key = String(info.id || info.filename || '').trim();
+        if (key) return key;
+        try {
+            const u = new URL(location.href);
+            return (u.searchParams.get('blob') || u.searchParams.get('post') || '').trim();
+        } catch (e) { return ''; }
+    },
+
+    /** 会话名用文章标题，列表里一眼能看出这段对话属于哪篇 */
+    getPostTitle() {
+        const info = window.__currentPostInfo || {};
+        const raw = String(info.title || document.title || '本站').replace(/\s+/g, ' ').trim();
+        return raw.slice(0, 20) || '文章对话';
+    },
+
+    _readPostMap() {
+        try { return JSON.parse(localStorage.getItem(this._POST_MAP_KEY) || '{}') || {}; } catch (e) { return {}; }
+    },
+
+    _writePostMap(map) {
+        // 限长：只保留最近 50 条映射，避免 localStorage 无限增长
+        const keys = Object.keys(map);
+        if (keys.length > this._MAX_POST_BINDINGS) {
+            keys.slice(0, keys.length - this._MAX_POST_BINDINGS).forEach(k => delete map[k]);
+        }
+        try { localStorage.setItem(this._POST_MAP_KEY, JSON.stringify(map)); } catch (e) { }
+    },
+
+    /** 把当前会话登记到当前文章名下（发消息时也调一次，手动切过去的会话会被记住） */
+    bindCurrentSessionToPost() {
+        const key = this.getPostKey();
+        if (!key || !this.currentSessionId) return;
+        const map = this._readPostMap();
+        if (map[key] === this.currentSessionId) return;
+        map[key] = this.currentSessionId;
+        this._writePostMap(map);
+    },
+
+    /** 删掉某个会话时，把它从所有文章映射里摘掉，下次进那篇会新建 */
+    _unbindSession(sessionId) {
+        const map = this._readPostMap();
+        let changed = false;
+        Object.keys(map).forEach(k => { if (map[k] === sessionId) { delete map[k]; changed = true; } });
+        if (changed) this._writePostMap(map);
+    },
+
+    /** 进入一篇文章时调用：有绑定就续上，没有就新建一个以文章标题命名的会话 */
+    ensureSessionForPost() {
+        const key = this.getPostKey();
+        if (!key) return false;
+        const map = this._readPostMap();
+        const bound = map[key] ? this.sessions.find(s => s.id === map[key]) : null;
+        if (bound) {
+            if (bound.id !== this.currentSessionId) this.switchSession(bound.id);
+            return true;
+        }
+        // 只有一个「空的默认会话」时直接接管它，别再建一个空壳——
+        // 老用户原来那条「会话 1」也会这样被第一篇文章接手，不丢历史也不堆垃圾会话
+        const only = this.sessions.length === 1 ? this.sessions[0] : null;
+        if (only && !only.messages.length && /^会话\s*\d+$/.test(String(only.name || ''))) {
+            only.name = this.getPostTitle();
+            this.currentSessionId = only.id;
+            this.messages = only.messages;
+            this.saveSessions();
+            this.renderSessionList();
+            this.bindCurrentSessionToPost();
+            return true;
+        }
+        this.newSession(this.getPostTitle());
+        return true;
     },
 
     // 获取访客唯一标识（本地持久化，用于将会话同步到服务端 Blobs）

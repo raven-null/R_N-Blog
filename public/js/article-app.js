@@ -71,6 +71,12 @@ const ArticleApp = {
                 // 文章页保持干净：不挂底部胶囊（胶囊只属于导图 / 白板这类画布页）
                 // 供聊天窗口直接提问时结合当前文章内容
                 window.__currentArticleContext = (this.currentPost && this.currentPost.content) || '';
+                // 供聊天窗口把「会话」绑定到当前文章（否则会拿上一篇的问答历史去答这篇）
+                window.__currentPostInfo = {
+                    id: (this.currentPost && this.currentPost.id) || blobId || postFile || '',
+                    filename: (this.currentPost && this.currentPost.filename) || postFile || '',
+                    title: (this.currentPost && this.currentPost.title) || ''
+                };
                 // 异步加载文章列表，不阻塞文章渲染（资讯模式不加载，避免上下篇导航错乱）
                 if (!isNews) {
                     this.loadAllPosts().then(() => this.renderNavigation());
