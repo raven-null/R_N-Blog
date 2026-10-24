@@ -1709,14 +1709,16 @@
         toast('「' + word + '」的锚点已改回首次出现');
     }
 
-    // ===== 编辑区里的术语高亮（v3.39.0）=====
+    // ===== 编辑区里的术语高亮（v3.39.0，v3.46.0 改两组语义）=====
     // 术语是元数据，正文本身是纯文本 —— 所以作者在编辑器里看不出哪里标了。
     // 这里用 **CSS Custom Highlight API**（CSS.highlights + Range）做非侵入式高亮：
     //   · 不往正文塞 span，不动 DOM 结构，也就不会污染 Markdown 源码
-    //   · 定义锚点（首次出现处）用一种颜色，其余出现用另一种
+    //   · 蓝色虚线 = 术语在正文里的**每一次**出现
+    //   · 橙色实线 = **定义引用的那段正文**（terms[].quote 指向的那句话），不再表示锚点位置
     // 浏览器不支持时静默降级（面板里仍有出现次数与「定位」按钮）。
-    var TERM_HL_LINK = 'ee-term-link';
-    var TERM_HL_ANCHOR = 'ee-term-anchor';
+    var TERM_HL_LINK = 'ee-term-link';    // 蓝色虚线：术语出现处
+    var TERM_HL_QUOTE = 'ee-term-quote';  // 橙色实线：被当作定义引用的那段正文
+    var TERM_DECOR_QUOTE_MAX = 20;        // 一次最多标 20 段引用，防止极端数据拖慢输入
     var termDecorTimer = null;
     var termDecorBusy = false;
     var TERM_DECOR_MAX_CHARS = 300000;   // 超长正文跳过编辑期高亮（前台不受影响）
@@ -1772,7 +1774,7 @@
         }
 
         var nodes = decorTextNodes(host);
-        var anchorRanges = [];
+        var quoteRanges = [];
         var linkRanges = [];
         var counts = {};
 
@@ -1791,52 +1793,120 @@
                 }
             }
             counts[term.word] = hits.length;
-            if (!hits.length) return;
-            // 锚点：自定义指纹优先，否则首次出现
-            var anchorIdx = 0;
-            if (term.anchor && term.anchor !== 'first') {
-                var fp = String(term.anchor).replace(/\s+/g, ' ').trim();
-                for (var k = 0; k < hits.length; k++) {
-                    var blk = hits[k].node.parentElement &&
-                        hits[k].node.parentElement.closest('p, li, blockquote, td, th, h1, h2, h3, h4, h5, h6');
-                    var bt = blk ? String(blk.textContent || '').replace(/\s+/g, ' ').trim() : '';
-                    if (bt.indexOf(fp) === 0) { anchorIdx = k; break; }
-                }
-            }
-            hits.forEach(function (h, idx) {
+            // 蓝色虚线：每一次出现都标，不再把「锚点那一次」挑出来单独上色
+            hits.forEach(function (h) {
                 try {
                     var r = document.createRange();
                     r.setStart(h.node, h.start);
                     r.setEnd(h.node, h.end);
-                    (idx === anchorIdx ? anchorRanges : linkRanges).push(r);
+                    linkRanges.push(r);
                 } catch (e) { /* 节点可能刚被替换，忽略 */ }
             });
+            // 橙色实线：这个词的「定义引用」在正文里的位置（terms[].quote）
+            if (term.quote && quoteRanges.length < TERM_DECOR_QUOTE_MAX) {
+                var qrs = quoteRangesOf(term.quote, nodes);
+                for (var qi = 0; qi < qrs.length && quoteRanges.length < TERM_DECOR_QUOTE_MAX; qi++) {
+                    quoteRanges.push(qrs[qi]);
+                }
+            }
         });
 
         try {
             CSS.highlights.delete(TERM_HL_LINK);
-            CSS.highlights.delete(TERM_HL_ANCHOR);
-            if (linkRanges.length) {
-                var h1 = new Highlight();
-                linkRanges.forEach(function (r) { h1.add(r); });
-                CSS.highlights.set(TERM_HL_LINK, h1);
+            CSS.highlights.delete(TERM_HL_QUOTE);
+            // 先注册橙色引用、再注册蓝色术语：后注册的画在上层，于是引用句里出现的
+            // 那个术语词仍然保持蓝色虚线下划线，不会整段被橙色盖住。
+            if (quoteRanges.length) {
+                var hq = new Highlight();
+                quoteRanges.forEach(function (r) { hq.add(r); });
+                CSS.highlights.set(TERM_HL_QUOTE, hq);
             }
-            if (anchorRanges.length) {
-                var h2 = new Highlight();
-                anchorRanges.forEach(function (r) { h2.add(r); });
-                CSS.highlights.set(TERM_HL_ANCHOR, h2);
+            if (linkRanges.length) {
+                var hl = new Highlight();
+                linkRanges.forEach(function (r) { hl.add(r); });
+                CSS.highlights.set(TERM_HL_LINK, hl);
             }
         } catch (e) {
             return { ok: false, reason: 'error' };
         }
-        return { ok: true, counts: counts };
+        return { ok: true, counts: counts, quotes: quoteRanges.length };
+    }
+
+    /**
+     * 把一句「定义引用」（terms[].quote）在编辑区里定位成 Range。
+     *
+     * 单个文本节点里能直接找到就不说了；麻烦在于引用句可能被 **加粗** / 链接 / 行内代码
+     * 切成好几个文本节点，所以按「同一个块」把文本节点拼起来再找。拼出来的字符串与
+     * Markdown 源文不同（格式符没了），空白也可能被折过，因此用「空白折叠 + 原始下标映射」
+     * 的方式比对：normalize 时记下每个字符对应的原始偏移，命中后按节点切回若干段 Range。
+     */
+    function quoteRangesOf(quote, nodes) {
+        var out = [];
+        var q = String(quote || '').replace(/\s+/g, ' ').trim();
+        if (!q || !nodes || !nodes.length) return out;
+
+        // 按所属块分组（引用不会跨段落）
+        var groups = [];
+        var cur = null;
+        nodes.forEach(function (n) {
+            var el = n.parentElement;
+            var block = el ? el.closest('p, li, blockquote, td, th, h1, h2, h3, h4, h5, h6') : null;
+            if (!cur || cur.block !== block) { cur = { block: block, nodes: [] }; groups.push(cur); }
+            cur.nodes.push(n);
+        });
+
+        groups.forEach(function (g) {
+            var raw = '';
+            var owner = [];             // 每个原始字符属于哪个节点
+            g.nodes.forEach(function (n) {
+                var v = n.nodeValue || '';
+                for (var i = 0; i < v.length; i++) owner.push({ node: n, offset: i });
+                raw += v;
+            });
+            // 空白折叠（并保留「折叠后的字符 → 原始下标」映射）
+            var norm = '';
+            var map = [];
+            var prevSpace = false;
+            for (var i = 0; i < raw.length; i++) {
+                var ch = raw.charAt(i);
+                if (/\s/.test(ch)) {
+                    if (prevSpace) continue;
+                    norm += ' ';
+                    map.push(i);
+                    prevSpace = true;
+                } else {
+                    norm += ch;
+                    map.push(i);
+                    prevSpace = false;
+                }
+            }
+            var idx = norm.indexOf(q);
+            if (idx < 0) return;
+            var rawStart = map[idx];
+            var rawEnd = map[idx + q.length - 1] + 1;   // 不含
+
+            // 把 [rawStart, rawEnd) 按节点切成若干段 Range
+            var runStart = rawStart;
+            for (var k = rawStart + 1; k <= rawEnd; k++) {
+                var sameNode = k < rawEnd && owner[k].node === owner[runStart].node;
+                if (sameNode) continue;
+                try {
+                    var r = document.createRange();
+                    r.setStart(owner[runStart].node, owner[runStart].offset);
+                    r.setEnd(owner[k - 1].node, owner[k - 1].offset + 1);
+                    out.push(r);
+                } catch (e) { /* 忽略 */ }
+                runStart = k;
+            }
+        });
+        return out;
     }
 
     function clearTermDecorations() {
         if (!(window.CSS && CSS.highlights)) return;
         try {
             CSS.highlights.delete(TERM_HL_LINK);
-            CSS.highlights.delete(TERM_HL_ANCHOR);
+            CSS.highlights.delete(TERM_HL_QUOTE);
         } catch (e) { /* 忽略 */ }
     }
 

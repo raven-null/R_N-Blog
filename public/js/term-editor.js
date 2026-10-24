@@ -32,6 +32,7 @@
     var editing = '';        // 正在编辑的词（空 = 列表态）
     var keyword = '';        // 搜索关键词
     var decorOk = false;     // 编辑区高亮是否可用（决定要不要显示颜色图例）
+    var decorQuotes = 0;     // 这一轮标出了几段「定义引用」（0 = 不显示橙色图例）
 
     function el(tag, cls, text) {
         var d = document.createElement(tag);
@@ -169,10 +170,15 @@
 
         // 列表
         els.list.innerHTML = '';
-        // 颜色图例：解释编辑区里两种高亮颜色的含义（与旧面板那条保持一致）
+        // 颜色图例：解释编辑区里两种高亮颜色的含义
+        //   橙色实线 = 定义引用（terms[].quote 指向的那句正文）
+        //   蓝色虚线 = 术语出现（这个词在正文里的每一次出现）
+        // 没有引用句时不画橙色那一段，免得给不存在的颜色。
         if (terms.length && decorOk) {
             var legend = el('div', 'ee-term-legend');
-            legend.innerHTML = '<span class="lg-anchor"></span>定义锚点<span class="lg-link"></span>其余出现（前台会变成回链）';
+            legend.innerHTML =
+                (decorQuotes > 0 ? '<span class="lg-quote"></span>定义引用' : '') +
+                '<span class="lg-link"></span>术语出现';
             els.list.appendChild(legend);
         }
         if (!shown.length) {
@@ -314,7 +320,10 @@
         paint();
     };
     TermEditor.refresh = function (decor) {
-        if (decor) decorOk = !!decor.ok;
+        if (decor) {
+            decorOk = !!decor.ok;
+            decorQuotes = decor.quotes || 0;
+        }
         paint();
     };
 

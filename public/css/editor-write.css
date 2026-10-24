@@ -764,6 +764,15 @@ html body #eeSide *::-webkit-scrollbar { width: 0 !important; height: 0 !importa
 .ee-main[data-side-mode="ai"] .ee-side-inner { flex: 1 1 auto; min-height: 0; }
 .ee-side-ai { flex: 1 1 auto; min-height: 0; }
 
+/* 术语模式同理（v3.46.0）：术语一多，列表必须自己在侧栏高度内滚，
+   而不是把整条侧栏撑成一长条 —— 那样搜索框和单条编辑区都会被顶出视口。
+   注意 .ee-terms-list 原来带 overscroll-behavior: contain，列表自身不滚时
+   反而把滚轮事件吞掉，鼠标停在列表上怎么滚都没反应（实测就是这个现象）。 */
+.ee-main[data-side-mode="terms"] .ee-side { overflow: hidden; }
+.ee-main[data-side-mode="terms"] .ee-side-inner { flex: 1 1 auto; min-height: 0; }
+.ee-main[data-side-mode="terms"] .ee-side-terms { flex: 1 1 auto; min-height: 0; }
+.ee-main[data-side-mode="terms"] .ee-terms-list { overscroll-behavior: auto; }
+
 /* 顶栏「AI」按钮：常驻（侧栏折叠时也能一键打开），和「属性」按钮区分开一点 */
 .ee-ai-btn { color: #cfe2ff; border-color: rgba(115, 170, 255, .4); background: rgba(115, 170, 255, .12); }
 .ee-ai-btn:hover { background: rgba(115, 170, 255, .24); color: #fff; }
@@ -920,10 +929,10 @@ html body #eeSide *::-webkit-scrollbar { width: 0 !important; height: 0 !importa
 }
 .ee-term-op:hover { color: #fff; background: rgba(115, 170, 255, .16); border-color: rgba(115, 170, 255, .4); }
 
-/* ===== 编辑区术语高亮（v3.39.0）=====
-   用 CSS Custom Highlight API 给正文里的术语打标记：不动 DOM、不改 Markdown 源码。
-   两个分组：定义锚点（首次出现/自定义）与其余出现，颜色区分。 */
-::highlight(ee-term-anchor) {
+/* ===== 编辑区术语高亮（v3.39.0，v3.46.0 改语义）=====
+   用 CSS Custom Highlight API 给正文里的词打标记：不动 DOM、不改 Markdown 源码。
+   两个分组：定义引用（terms[].quote 指向的那段正文）与术语出现（每一次出现）。 */
+::highlight(ee-term-quote) {
     background-color: rgba(255, 176, 32, .28);
     text-decoration: underline;
     text-decoration-color: rgba(255, 176, 32, .95);
@@ -949,14 +958,14 @@ html body #eeSide *::-webkit-scrollbar { width: 0 !important; height: 0 !importa
     color: var(--text-muted);
 }
 .ee-term-legend.muted { display: block; line-height: 1.7; }
-.ee-term-legend .lg-anchor,
+.ee-term-legend .lg-quote,
 .ee-term-legend .lg-link {
     display: inline-block;
     width: 16px;
     height: 9px;
     border-radius: 2px;
 }
-.ee-term-legend .lg-anchor { background: rgba(255, 176, 32, .28); border-bottom: 2px solid rgba(255, 176, 32, .95); }
+.ee-term-legend .lg-quote { background: rgba(255, 176, 32, .28); border-bottom: 2px solid rgba(255, 176, 32, .95); }
 .ee-term-legend .lg-link { background: rgba(115, 170, 255, .16); border-bottom: 2px dashed rgba(115, 170, 255, .9); }
 /* 出现次数 */
 .ee-term-count {
@@ -1008,6 +1017,17 @@ html body #eeSide *::-webkit-scrollbar { width: 0 !important; height: 0 !importa
     gap: 6px;
     padding-right: 2px;
 }
+/* 列表是真正的滚动容器，给一根细滚动条（侧栏整体仍然不显示滚动条）：
+   滚动条被藏掉时，「能滚」和「滚不动」在视觉上完全没法区分。 */
+html body #eeSide #eeTermsList,
+html body #eeSide #eeTermsList * { scrollbar-width: thin !important; }
+html body #eeSide #eeTermsList::-webkit-scrollbar { width: 6px !important; height: 6px !important; display: block !important; }
+html body #eeSide #eeTermsList::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, .18) !important;
+    border-radius: 99px;
+}
+html body #eeSide #eeTermsList::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, .3) !important; }
+html body #eeSide #eeTermsList::-webkit-scrollbar-track { background: transparent !important; }
 .ee-terms-empty { padding: 16px 8px; text-align: center; font-size: 12px; color: var(--text-muted); }
 .ee-term-item { cursor: default; }
 .ee-term-item.active { border-color: rgba(115, 170, 255, .55); background: rgba(115, 170, 255, .1); }
