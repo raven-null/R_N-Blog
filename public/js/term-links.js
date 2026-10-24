@@ -1,5 +1,5 @@
 /**
- * 文内术语回链（v1.2.0）
+ * 文内术语回链（v1.3.0）
  * ------------------------------------------------------------------
  * 解决的问题：文章里某个词（比如「字符串」）第一次出现时讲过它的定义，
  * 几百字后再出现时读者已经忘了，又不想往回翻。
@@ -9,16 +9,17 @@
  *
  * 渲染规则：
  *   - 词的**第一次出现**所在的段落 = 定义锚点，给它挂一个 id；
- *   - 从**第二次出现**起，把词包成 <span class="term-link">，悬停出气泡、点击跳回锚点；
+ *   - 从**第二次出现**起，把词包成 <span class="term-link">，悬停出气泡；
  *   - 只扫文本节点，跳过代码块/行内代码/链接/图片/已有的 term-link/标题；
  *   - 英文词按词边界匹配（\bString\b）且忽略大小写，避免误伤 substring；
  *   - 每个词最多包 200 处，术语最多 30 个（服务端也限了）。
  *
- * 解释取值（def → quote → 锚点段落）与「能不能跳」是两件事（v1.2.0）：
- *   - 显示的文字：有自写解释就用它，其次用正文摘的语句，都没有就用锚点段落；
- *   - 能不能跳：**只看有没有 quote**。v1.2.0 起跳转目标是那句引用所在的段落，
- *     而不是锚点位置；只有自写解释（或只填了锚点）的词条不参与跳转。
- *     def 与 quote 可以同时存在 —— 前台显示 def，跳转仍按 quote 走。
+ * 「显示哪段文字」「点一下会怎样」是两件事：
+ *   - 显示：有自写解释就用它，其次用正文摘的语句，都没有就用锚点段落；
+ *   - 点击（v1.3.0 收紧）：**只有带 quote 的词才跳**，跳到那句引用所在的段落；
+ *     只有自写解释 / 只有锚点的词（`.term-link-info`）点了只把气泡打开，不跳转，
+ *     也不给 role=button / tabindex / 手型光标 —— 点了没反应比不能点更像坏掉。
+ *     def 与 quote 可以同时存在：气泡显示 def，点击按 quote 跳。
  *
  * 气泡（按需求）：**内容不截断**，显示上面取到的那段完整文字；限定气泡尺寸并允许内部滚动。
  *
@@ -26,7 +27,7 @@
  *     TermLinks.enhance(container, terms)      // 就地增强，可重复调用（分章文章逐章扫）
  *     TermLinks.clear()                         // 拆掉所有样式与气泡（换文章时用）
  *     TermLinks.anchorIdOf(word)                // 供文末术语表跳转用
- *     TermLinks.hasQuote(word)                  // 该词有没有「定义引用」（决定术语表是否可点）
+ *     TermLinks.hasQuote(word)                  // 该词有没有「定义引用」（决定可不可点）
  *     TermLinks.jumpToWord(word)                // 跳到引用语句所在段落（没有则退回锚点段落）
  */
 (function () {
@@ -168,8 +169,13 @@
         return null;
     }
 
-    /** 把第 n 处（>=1）出现包成 term-link；从后往前替换，避免索引漂移 */
-    function wrapOccurrences(hits, word) {
+    /**
+     * 把第 n 处（>=1）出现包成 term-link；从后往前替换，避免索引漂移。
+     * v1.3.0：只有带「定义引用」（terms[].quote）的词才做成可点跳转的按钮；
+     * 其余（只有自写解释 / 只有锚点）只当**看解释**的标记 —— 不可点、没有手型光标，
+     * 点一下是把气泡打开，而不是跳走。
+     */
+    function wrapOccurrences(hits, word, canJump) {
         for (var i = hits.length - 1; i >= 1; i--) {
             var h = hits[i];
             var node = h.node;
@@ -179,10 +185,15 @@
             var mid = text.slice(h.index, h.index + h.length);
             var after = text.slice(h.index + h.length);
             var span = document.createElement('span');
-            span.className = 'term-link';
+            span.className = canJump ? 'term-link' : 'term-link term-link-info';
             span.setAttribute('data-term', word);
-            span.setAttribute('role', 'button');
-            span.setAttribute('tabindex', '0');
+            if (canJump) {
+                span.setAttribute('role', 'button');
+                span.setAttribute('tabindex', '0');
+                span.setAttribute('title', '跳到这句定义引用的出处');
+            } else {
+                span.setAttribute('title', '查看解释');
+            }
             span.textContent = mid;
             var parent = node.parentNode;
             if (after) parent.insertBefore(document.createTextNode(after), node.nextSibling);
@@ -289,15 +300,22 @@
             if (!t || !t.closest) return;
             var span = t.closest('.term-link');
             if (!span || !root || !root.contains(span)) return;
-            var info = anchors[span.getAttribute('data-term')];
-            if (info) { e.preventDefault(); jumpTo(info.el); }
+            var word = span.getAttribute('data-term');
+            var info = anchors[word];
+            if (!info) return;
+            e.preventDefault();
+            // 只有「定义引用」在正文里才有位置可跳；没有引用就只把解释弹出来
+            if (info.quote) jumpTo(info.quoteEl || info.el);
+            else showBubble(span, word);
         }, true);
         document.addEventListener('keydown', function (e) {
             if (e.key !== 'Enter' && e.key !== ' ') return;
             var t = e.target;
             if (!t || !t.classList || !t.classList.contains('term-link')) return;
             var info = anchors[t.getAttribute('data-term')];
-            if (info) { e.preventDefault(); jumpTo(info.el); }
+            if (!info || !info.quote) return;   // 不可点的词条本来就没给 tabindex，这里兜底
+            e.preventDefault();
+            jumpTo(info.quoteEl || info.el);
         }, true);
     }
 
@@ -352,7 +370,7 @@
                     anchors[term.word] = { el: el, id: el.id, def: term.def, quote: term.quote, quoteEl: resolveQuoteEl(term.quote) };
                 }
             }
-            wrapOccurrences(hits, term.word);
+            wrapOccurrences(hits, term.word, !!term.quote);
             links += Math.max(0, hits.length - 1);
         });
         return { terms: terms.length, links: links };

@@ -1891,15 +1891,19 @@
         }
     </style>
     <style>
-        /* ===== 文内术语回链（v3.37.0）=====
-           词从第二次出现起加虚线下划线；悬停出气泡（内容不截断，尺寸限死 + 内部滚动），
-           点击跳回该词的定义处（首次出现所在的段落）并闪一下。 */
+        /* ===== 文内术语回链（v3.37.0，v3.46.2 改点击语义）=====
+           词从第二次出现起加虚线下划线；悬停出气泡（内容不截断，尺寸限死 + 内部滚动）。
+           点击行为看这个词有没有「定义引用」（terms[].quote）：
+             · 有 → 跳到那句引用所在的段落并闪一下；
+             · 没有（只有自写解释 / 只有锚点）→ 只把气泡打开，不跳转。 */
         .term-link {
             color: inherit;
             border-bottom: 1px dashed rgba(115,170,255,.7);
             cursor: pointer;
             transition: background .15s ease, border-bottom-color .15s ease;
         }
+        /* 没有「定义引用」的词条不跳转，也就不给手型光标（点了不会走） */
+        .term-link.term-link-info { cursor: help; }
         .term-link:hover { background: rgba(115,170,255,.12); border-bottom-color: #73aaff; }
         .term-link:focus-visible { outline: 2px solid rgba(115,170,255,.6); outline-offset: 2px; border-radius: 3px; }
         .term-flash { animation: termFlash 1.4s ease; }
@@ -2261,7 +2265,7 @@
     <script src="js/theme.js?v=3.13.6" defer></script>
     <script src="js/markdown-config.js?v=1.4.0" defer></script>
     <script src="js/markdown.js?v=3.14.2" defer></script>
-    <script src="js/term-links.js?v=1.2.0" defer></script>
+    <script src="js/term-links.js?v=1.3.0" defer></script>
     <script src="js/chat.js?v=3.17.1" defer></script>
     <script src="js/reader.js?v=3.13.7" defer></script>
     <script src="js/animations.js?v=3.14.0" defer></script>
