@@ -104,14 +104,35 @@ const ArticleApp = {
                 if (cached && !cached.data.chunked) this.applyBlobArticle(cached.data, filename);
 
                 try {
-                    const res = await fetch(`/api/admin?action=articles&id=${blobId}`);
+                    // 作者自己的浏览器里带着后台密钥：顺便发给后端，让它返回 no-store。
+                    // 公共请求那边是「CDN 5 秒 + SWR 120 秒」的短缓存，作者刚改完立刻回来看
+                    // 可能仍拿到边缘节点的旧副本；带上密钥后就绕过了（后台请求本来就是 no-store）。
+                    // 访客没有这个 key，照旧走 CDN 缓存，不影响首屏速度。
+                    let adminKey = '';
+                    try { adminKey = localStorage.getItem('admin_key') || ''; } catch (e) { }
+                    const res = await fetch(`/api/admin?action=articles&id=${blobId}`, {
+                        cache: 'no-store',
+                        headers: adminKey ? { 'X-Admin-Key': adminKey } : {}
+                    });
                     const data = await res.json();
                     if (data.status !== 'success' || !data.data) throw new Error('文章不存在');
                     const d = data.data;
+                    // 变更检测要覆盖「所有影响渲染的字段」，不能只看 content/title/updatedAt：
+                    // updatedAt 是按天存的（toISOString().slice(0,10)），同一天里只改术语 / 关联
+                    // 文章 / 关联画布 / 标签时这三个值一个都不变 → 会误判「没变」而跳过重渲染，
+                    // 于是作者明明加了术语，前台却一直显示缓存里的旧版本（实测踩到过）。
+                    const renderSig = (x) => JSON.stringify({
+                        t: x.title || '',
+                        u: x.updatedAt || '',
+                        tags: x.tags || [],
+                        terms: x.terms || [],
+                        relatedIds: x.relatedIds || [],
+                        canvasRefs: x.canvasRefs || [],
+                        type: x.type || ''
+                    });
                     const changed = !cached
                         || cached.data.content !== d.content
-                        || cached.data.title !== d.title
-                        || cached.data.updatedAt !== d.updatedAt;
+                        || renderSig(cached.data) !== renderSig(d);
                     if (!d.chunked) {
                         try { sessionStorage.setItem(cacheKey, JSON.stringify({ t: Date.now(), data: d })); } catch (e) { /* 超配额忽略 */ }
                     }
