@@ -534,6 +534,13 @@
             mode: 'wysiwyg',
             theme: 'dark',
             lang: 'zh_CN',
+            // 代码块高亮主题（v3.44.13）：Vditor 默认注入它自带的 github **浅色**主题
+            // （vendor/vditor/dist/js/highlight.js/styles/github.min.css），浅色令牌压在
+            // 深色代码块上几乎看不清。显式指定 github-dark 后，它会加载同目录的
+            // github-dark.min.css，令牌颜色才和深色底配套。
+            preview: {
+                hljs: { style: 'github-dark', lineNumber: false },
+            },
             placeholder: '正文内容……支持 Markdown，粘贴/拖拽图片会自动上传',
             // 顶部只留常用的：其余（删除线 / 行内代码 / 任务 / 缩进 / 分割线 /
             // 编辑模式 / 导出…）都进了右键菜单，见 /js/editor-menu.js。

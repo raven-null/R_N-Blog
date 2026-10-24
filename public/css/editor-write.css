@@ -358,9 +358,12 @@ html body .vditor-toolbar { position: relative !important; z-index: 3001 !import
 }
 /* 这条 * 规则要排除内嵌画布（.ep-canvas-card）整棵子树：
    白板 / 导图卡片是自成一套配色的组件，Excalidraw 的菜单、图标大量用 currentColor。
-   被 !important 一刷，白色菜单面板上就出现主题色的深褐文字、图标也一起变色。 */
+   被 !important 一刷，白色菜单面板上就出现主题色的深褐文字、图标也一起变色。
+   v3.44.13 还要排除代码块整棵子树：hljs 的令牌色是普通规则（没有 !important），
+   被这条更高的特异性一刷，全变成 --editor-text 一种颜色（深色主题下就是一片白字压白块），
+   连「编辑代码」按钮的颜色也会被吃掉。 */
 .ee-editor-card .vditor-ir *:not(.ep-canvas-card):not(.ep-canvas-card *),
-.ee-editor-card .vditor-wysiwyg *:not(.ep-canvas-card):not(.ep-canvas-card *),
+.ee-editor-card .vditor-wysiwyg *:not(.ep-canvas-card):not(.ep-canvas-card *):not(.vditor-wysiwyg__block[data-type="code-block"] *),
 .ee-editor-card .vditor-sv *:not(.ep-canvas-card):not(.ep-canvas-card *) { color: var(--editor-text, #fff) !important; }
 /* 卡片自身的基准色（画布始终是浅色底），避免它从编辑器继承主题色再往下传 */
 .ee-editor-card .vditor-ir .ep-canvas-card,
@@ -998,6 +1001,42 @@ html body .vditor-wysiwyg__block[data-type="code-block"] pre.vditor-wysiwyg__pre
     tab-size: 2;
     -moz-tab-size: 2;
     white-space: pre !important;
+}
+
+/* ===== 编辑区里的代码块：强制深色（v3.44.13）=====
+   Vditor 自带的 classic 主题是给浅色编辑器设计的：代码块的预览层是浅米色
+   `.vditor-wysiwyg__preview { background: var(--panel-…) }`，`code` 还带一层
+   `rgba(27,31,35,.05)`，hljs 令牌颜色也全是「深字浅底」那一套。
+   在深色写作页里，整块就变成刺眼的一片白 —— 实测 code 的计算背景是 rgb(255,255,255)。
+   这里统一压成和文章页/预览页一致的深色底 + 浅色字；配色沿用 github-dark 主题
+   （admin-edit.html 已加载 css/highlight-github-dark.min.css），令牌颜色才协调。 */
+html body .vditor-wysiwyg__block[data-type="code-block"] .vditor-wysiwyg__preview {
+    background-color: #0d1117 !important;
+    border: 1px solid rgba(255, 255, 255, .08);
+    border-radius: 8px;
+}
+/* 预览层内部不要再叠底色，否则又是白/灰块压在深色上 */
+html body .vditor-wysiwyg__block[data-type="code-block"] .vditor-wysiwyg__preview code,
+html body .vditor-wysiwyg__block[data-type="code-block"] .vditor-wysiwyg__preview code.hljs,
+html body .vditor-wysiwyg__block[data-type="code-block"] .vditor-wysiwyg__preview pre {
+    background: transparent !important;
+    background-color: transparent !important;
+    color: #c9d1d9 !important;
+}
+/* 源码态（点开编辑时露出的 <pre class="vditor-wysiwyg__pre">）同样深色，别一半白一半黑 */
+html body .vditor-wysiwyg__block[data-type="code-block"] pre.vditor-wysiwyg__pre {
+    background-color: #0d1117 !important;
+    color: #c9d1d9 !important;
+}
+html body .vditor-wysiwyg__block[data-type="code-block"] pre.vditor-wysiwyg__pre code {
+    background: transparent !important;
+    color: #c9d1d9 !important;
+}
+/* 「编辑代码」按钮压在深色块上要看得清 */
+html body .vditor-wysiwyg__block[data-type="code-block"] .ee-codeedit-btn {
+    color: #cfe2ff !important;
+    background: rgba(13, 17, 23, .82) !important;
+    border-color: rgba(115, 170, 255, .45) !important;
 }
 
 /* ===== 代码块编辑器（v3.42.0）=====

@@ -9,10 +9,14 @@
     <script src="/js/site-icon.js?v=1.0.0" defer></script>
 <link rel="stylesheet" href="js/vendor/vditor/dist/index.css">
 <script src="js/vendor/vditor/dist/index.min.js"></script>
+<!-- hljs 深色主题：编辑区代码块的预览层是用 hljs 上色的（Vditor 自带的是浅色配色），
+     不加载这份的话，深色代码块上的令牌颜色基本看不清。
+     顺序：必须排在 vditor/dist/index.css 之后，靠后面的加载顺序压过它的 hljs 规则。 -->
+<link rel="stylesheet" href="/css/highlight-github-dark.min.css?v=1.0.0">
 <!-- 写作页样式：原来整段内联在 <style> 里（34.6KB / 156 个 !important，
      Vditor 覆盖规则还被追加过三遍），现已抽成独立文件并合并去重。
      顺序有讲究：必须排在 vditor/dist/index.css 之后，靠 html body 前缀 + !important 压过组件样式。 -->
-<link rel="stylesheet" href="/css/editor-write.css?v=1.14.0">
+<link rel="stylesheet" href="/css/editor-write.css?v=1.16.0">
     <link rel="stylesheet" href="/css/scrollbar.css?v=1.0.1">
     <link rel="stylesheet" href="/css/responsive.css?v=1.0.0">
     <link rel="stylesheet" href="/css/mobile.css?v=1.0.0">
@@ -279,6 +283,6 @@
     <script src="js/editor-embed-admin.js?v=1.0.0"></script>
     <!-- 侧栏「AI」页签：写作问答助手（只读，不碰正文） -->
     <script src="js/write-ai.js?v=1.4.0"></script>
-    <script src="js/admin-edit.js?v=1.32.2"></script>
+    <script src="js/admin-edit.js?v=1.33.0"></script>
 </body>
 </html>
