@@ -600,6 +600,8 @@
                 stripVditorPopover();
                 // 右键菜单（剪贴板 / 格式 / 插入 / 段落操作），见 /js/editor-menu.js
                 if (window.EditorMenu) window.EditorMenu.attach(vditor);
+                // 标题级别：接管工具栏那个 headings 按钮，换成自己的一次成型的下拉（v3.47.1）
+                bindHeadingMenu();
                 // 大纲（正文结构导航），见 /js/editor-outline.js
                 if (window.EditorOutline) window.EditorOutline.attach(vditor);
                 // 代码块 IDE 手感（Tab 缩进 / Shift+Tab 反缩进 / Enter 自动缩进），见 /js/code-editor.js
@@ -2223,41 +2225,142 @@
         return false;
     }
 
-    // 标题不是「点一下就是开关」：点 headings 会先展开一个层级面板，得再点面板里的
-    // button[data-tag="h2"] 才真正应用。面板是异步插进 DOM 的，所以轮询几十毫秒
-    // （实测 1~2 轮就拿到，最多等 ~1.2s 就放弃，避免留下一个张着的面板）。
-    // 注意「more」那个面板也是 .vditor-hint，必须按可见性筛掉。
-    // 排查用：控制台执行 window.__eeDebug = true 后可看 window.__ehLog。
-    function ehLog(entry) {
-        if (!window.__eeDebug) return;
-        (window.__ehLog = window.__ehLog || []).push(entry);
+    // ===== 标题级别（v3.47.1）：一次点击直接换级 =====
+    // Vditor 自带的 headings 是「提示面板 + 切换」那一套：
+    //   · 点工具栏按钮本身就会先把当前标题降回段落（实测 H1/H2/H3 都这样）；
+    //   · 再点面板里的层级才生效 —— 于是「换级」永远要按两次；
+    //   · 从 H3 切到 H2 更糟：面板经常打不开，第一次点击只把标题变成了段落。
+    // 这里改成自己的下拉菜单，并且在**捕获阶段**接管那个按钮（stopPropagation
+    // 掐掉 Vditor 自己的监听），选中某一级就用 execCommand('formatBlock')
+    // 一步把块标签换掉 —— 同级的切换、降级（H3→H2）都是单次操作。
+    function currentEditableBlock() {
+        var sel = window.getSelection();
+        if (!sel || !sel.rangeCount) return null;
+        var node = sel.getRangeAt(0).startContainer;
+        var el = node && node.nodeType === 3 ? node.parentElement : node;
+        if (!el || !el.closest || !el.closest('#eeVditor')) return null;
+        return el.closest('h1, h2, h3, h4, h5, h6, p, li, blockquote');
     }
 
-    function findHintBtn(tag) {
-        var hints = document.querySelectorAll('#eeVditor .vditor-hint');
-        var seen = [];
-        for (var i = 0; i < hints.length; i++) {
-            var st = window.getComputedStyle(hints[i]);
-            var shown = st.display !== 'none' && st.visibility !== 'hidden';
-            var btn = hints[i].querySelector('button[data-tag="' + tag + '"]');
-            seen.push((shown ? 'visible' : 'hidden') + ':' + hints[i].querySelectorAll('button[data-tag]').length);
-            if (shown && btn) return btn;
+    /** 把光标所在的块换成指定标签（'h1'..'h6' / 'p'） */
+    function setBlockTag(tag) {
+        var block = currentEditableBlock();
+        if (!block) { toast('先把光标放到正文里，再选标题级别', 'error'); return false; }
+        if (block.tagName.toLowerCase() === tag) return true;    // 已经是这一级：不动它（不玩开关）
+        var ok = false;
+        try { ok = document.execCommand('formatBlock', false, tag); } catch (e) { ok = false; }
+        if (ok) {
+            window.eeMarkDirty();
+            scheduleInfo();
         }
-        ehLog({ phase: 'find', tag: tag, total: hints.length, seen: seen.join(' ') });
-        return null;
+        return ok;
     }
 
     function applyHeading(level) {
-        ehLog({ phase: 'start', level: level });
-        if (!toolbarBtn('headings')) return false;
-        var tries = 0;
-        (function attempt() {
-            var btn = findHintBtn('h' + level);
-            if (btn) { ehLog({ phase: 'hit', level: level, tries: tries }); btn.click(); return; }
-            if (++tries < 30) setTimeout(attempt, 40);
-            else ehLog({ phase: 'giveup', level: level });
-        })();
-        return true;
+        var lv = Math.min(6, Math.max(1, parseInt(level, 10) || 1));
+        return setBlockTag('h' + lv);
+    }
+
+    function clearHeading() {
+        return setBlockTag('p');
+    }
+
+    var headingMenu = null;
+
+    function ensureHeadingMenu() {
+        if (headingMenu) return headingMenu;
+        var menu = document.createElement('div');
+        menu.id = 'eeHeadingMenu';
+        menu.className = 'ee-heading-menu';
+        var rows = [['0', '正文', '正文段落']];
+        for (var i = 1; i <= 6; i++) rows.push([String(i), 'H' + i, i + ' 级标题']);
+        menu.innerHTML = rows.map(function (r) {
+            return '<button type="button" class="ee-heading-item" data-level="' + r[0] + '" title="' + r[2] + '">' +
+                r[1] + '</button>';
+        }).join('');
+        document.body.appendChild(menu);
+        menu.addEventListener('click', function (e) {
+            var b = e.target.closest ? e.target.closest('[data-level]') : null;
+            if (!b) return;
+            e.preventDefault();
+            e.stopPropagation();
+            var lv = parseInt(b.getAttribute('data-level'), 10) || 0;
+            hideHeadingMenu();
+            if (lv) applyHeading(lv); else clearHeading();
+        });
+        headingMenu = menu;
+        // 点别处 / Esc / 滚走都收起来
+        document.addEventListener('mousedown', function (e) {
+            if (!headingMenu || !headingMenu.classList.contains('open')) return;
+            if (headingMenu.contains(e.target)) return;
+            hideHeadingMenu();
+        }, true);
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') hideHeadingMenu();
+        }, true);
+        window.addEventListener('scroll', hideHeadingMenu, true);
+        window.addEventListener('resize', hideHeadingMenu);
+        return menu;
+    }
+
+    function hideHeadingMenu() {
+        if (headingMenu) headingMenu.classList.remove('open');
+    }
+
+    function toggleHeadingMenu(btn) {
+        var menu = ensureHeadingMenu();
+        if (menu.classList.contains('open')) { hideHeadingMenu(); return; }
+        // 标出当前所在级别
+        var block = currentEditableBlock();
+        var cur = block ? block.tagName.toLowerCase() : '';
+        var items = menu.querySelectorAll('[data-level]');
+        for (var i = 0; i < items.length; i++) {
+            var lv = items[i].getAttribute('data-level');
+            var isCur = lv === '0' ? (cur === 'p' || cur === '') : (cur === 'h' + lv);
+            items[i].classList.toggle('active', isCur);
+        }
+        var r = btn.getBoundingClientRect();
+        menu.style.left = '0px';
+        menu.style.top = '0px';
+        menu.classList.add('open');
+        var mw = menu.offsetWidth, mh = menu.offsetHeight;
+        var left = Math.min(Math.max(8, r.left), Math.max(8, window.innerWidth - mw - 8));
+        var top = r.bottom + 6;
+        if (top + mh > window.innerHeight - 8) top = Math.max(8, r.top - mh - 6);
+        menu.style.left = Math.round(left) + 'px';
+        menu.style.top = Math.round(top) + 'px';
+    }
+
+    /** Vditor 自带的标题提示面板（快捷键 ⌥⌘1~6 也可能打开它）——一并收掉 */
+    function hideNativeHints() {
+        var hs = document.querySelectorAll('#eeVditor .vditor-hint');
+        for (var i = 0; i < hs.length; i++) hs[i].style.display = 'none';
+    }
+
+    function bindHeadingMenu() {
+        // 捕获阶段接管：点到工具栏的 headings 按钮就弹自己的菜单，
+        // stopPropagation 掐掉 Vditor 绑在按钮上的「先降级 / 开面板」逻辑。
+        document.addEventListener('click', function (e) {
+            var t = e.target;
+            if (!t || !t.closest) return;
+            var btn = t.closest('#eeVditor .vditor-toolbar [data-type="headings"]');
+            if (btn) {
+                e.preventDefault();
+                e.stopPropagation();
+                toggleHeadingMenu(btn);
+                return;
+            }
+            // 兜底：万一原生面板被打开（快捷键），点它的层级也走同一套一步切换
+            var hintBtn = t.closest('#eeVditor .vditor-hint button[data-tag]');
+            if (hintBtn) {
+                var tag = hintBtn.getAttribute('data-tag') || '';
+                if (!/^h[1-6]$/.test(tag)) return;
+                e.preventDefault();
+                e.stopPropagation();
+                applyHeading(parseInt(tag.slice(1), 10));
+                hideNativeHints();
+            }
+        }, true);
     }
 
     function buildSelectionActions(selText) {

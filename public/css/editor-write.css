@@ -929,6 +929,45 @@ html body #eeSide *::-webkit-scrollbar { width: 0 !important; height: 0 !importa
 }
 .ee-term-op:hover { color: #fff; background: rgba(115, 170, 255, .16); border-color: rgba(115, 170, 255, .4); }
 
+/* ===== 标题级别菜单（v3.47.1）=====
+   Vditor 自带的 headings 提示面板会先把标题降级再让你选，换级得按两次；
+   这里换成自己的下拉：点工具栏 headings 弹出，选一级立刻生效。
+   菜单挂在 <body> 下并 fixed 定位，避免被侧栏 / 编辑区的 overflow 裁掉。 */
+.ee-heading-menu {
+    position: fixed;
+    z-index: 3400;
+    display: none;
+    min-width: 128px;
+    padding: 6px;
+    border-radius: 10px;
+    background: rgba(24, 25, 34, .98);
+    border: 1px solid rgba(255, 255, 255, .16);
+    box-shadow: 0 20px 50px -20px rgba(0, 0, 0, .9);
+    flex-direction: column;
+    gap: 2px;
+}
+
+.ee-heading-menu.open { display: flex; }
+
+.ee-heading-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    border: 0;
+    border-radius: 7px;
+    background: none;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 13px;
+    text-align: left;
+    cursor: pointer;
+    transition: background .14s ease, color .14s ease;
+}
+
+.ee-heading-item:hover { background: rgba(115, 170, 255, .16); color: #fff; }
+.ee-heading-item.active { background: rgba(115, 170, 255, .22); color: #fff; }
+
 /* ===== 编辑区术语高亮（v3.39.0，v3.46.0 改语义）=====
    用 CSS Custom Highlight API 给正文里的词打标记：不动 DOM、不改 Markdown 源码。
    两个分组：定义引用（terms[].quote 指向的那段正文）与术语出现（每一次出现）。 */
