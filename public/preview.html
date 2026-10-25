@@ -74,6 +74,13 @@
         font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:1em;
         background:rgba(255,255,255,.08);padding:.15em .4em;border-radius:5px;
     }
+    /* 标题里的行内代码跟随标题样式（v3.47.4）：否则同一个 h3，带反引号的会变成
+       等宽 + 底色片，看起来和普通 h3 是两种东西 */
+    .pv-body h1 code,.pv-body h2 code,.pv-body h3 code,
+    .pv-body h4 code,.pv-body h5 code,.pv-body h6 code{
+        font-family:inherit;font-size:1em;font-weight:inherit;color:inherit;
+        background:none;padding:0;border-radius:0;
+    }
     .pv-body pre{background:#0a0a0d;border:1px solid var(--border);border-radius:10px;padding:14px 16px;overflow:auto}
     .pv-body pre code{background:none;padding:0;font-size:13px;line-height:1.7}
     .pv-body table{width:100%;border-collapse:collapse;margin:1.2em 0;font-size:14px}

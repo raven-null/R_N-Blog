@@ -641,6 +641,25 @@
             color: var(--accent-dim);
         }
 
+        /* 标题里的行内代码跟随标题（v3.47.4）
+           同一个 h3，写成 `### \`xxx\`` 会变成灰色等宽 + 深色底片，写成 `### xxx`
+           才是白色粗体 —— 看起来就是「都是 3 级标题，样式完全不一样」。
+           标题是结构，样式交给级别决定。 */
+        .article-content h1 code,
+        .article-content h2 code,
+        .article-content h3 code,
+        .article-content h4 code,
+        .article-content h5 code,
+        .article-content h6 code {
+            font-family: inherit;
+            font-size: 1em;
+            font-weight: inherit;
+            color: inherit;
+            background: none;
+            padding: 0;
+            border-radius: 0;
+        }
+
         /* 文字高亮 */
         .article-content mark {
             background: linear-gradient(120deg, rgba(255, 210, 0, 0.2) 0%, rgba(255, 210, 0, 0.4) 100%);

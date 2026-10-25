@@ -324,6 +324,26 @@ html body #eeVditor .vditor-reset :not(pre) > code.hljs {
     font-size: 1em !important;
 }
 
+/* 标题里的行内代码完全跟随标题（v3.47.4）
+   同一个三级标题，写成 ### `xxx`（整行反引号）会变成等宽灰色 + 底色片，
+   写成 ### xxx 才是标题该有的样子 —— 作者看到的就是「都是 3 级标题，样式完全不一样」。
+   标题是结构，样式应当由级别决定：字号 / 字重 / 字族 / 颜色 / 底色一并跟随标题。 */
+html body #eeVditor .vditor-reset h1 code,
+html body #eeVditor .vditor-reset h2 code,
+html body #eeVditor .vditor-reset h3 code,
+html body #eeVditor .vditor-reset h4 code,
+html body #eeVditor .vditor-reset h5 code,
+html body #eeVditor .vditor-reset h6 code {
+    font-family: inherit !important;
+    font-size: 1em !important;
+    font-weight: inherit !important;
+    color: inherit !important;
+    background: none !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+}
+
 /* 层叠：正文要压过其它页面内容，但 .ee-main 不能盖过页面级弹层（提示 60 / 预览）。
    所以这里给 20，只保证「编辑器内部 > 页面其它内容」。 */
 html body .ee-main,
