@@ -344,6 +344,24 @@ html body #eeVditor .vditor-reset h6 code {
     box-shadow: none !important;
 }
 
+/* 列表嵌在标题里时不要跟着标题变大（v3.47.5）
+   某些插入路径会把 <ol>/<ul> 留在标题元素里面，于是 li 与列表序号继承了标题字号
+   —— 实测 <h2><ol><li> 的 li 与 ::marker 都是 24.8px，而正文只有 16px，
+   「1.」显得特别大、和正文完全脱钩。列表是块级内容，字号按正文档位走。 */
+html body #eeVditor .vditor-reset h1 ol, html body #eeVditor .vditor-reset h1 ul,
+html body #eeVditor .vditor-reset h2 ol, html body #eeVditor .vditor-reset h2 ul,
+html body #eeVditor .vditor-reset h3 ol, html body #eeVditor .vditor-reset h3 ul,
+html body #eeVditor .vditor-reset h4 ol, html body #eeVditor .vditor-reset h4 ul,
+html body #eeVditor .vditor-reset h5 ol, html body #eeVditor .vditor-reset h5 ul,
+html body #eeVditor .vditor-reset h6 ol, html body #eeVditor .vditor-reset h6 ul,
+html body #eeVditor .vditor-reset h1 li, html body #eeVditor .vditor-reset h2 li,
+html body #eeVditor .vditor-reset h3 li, html body #eeVditor .vditor-reset h4 li,
+html body #eeVditor .vditor-reset h5 li, html body #eeVditor .vditor-reset h6 li {
+    font-size: 1rem !important;
+    font-weight: 400 !important;
+    line-height: 1.8 !important;
+}
+
 /* 层叠：正文要压过其它页面内容，但 .ee-main 不能盖过页面级弹层（提示 60 / 预览）。
    所以这里给 20，只保证「编辑器内部 > 页面其它内容」。 */
 html body .ee-main,

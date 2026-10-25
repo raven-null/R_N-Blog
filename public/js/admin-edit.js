@@ -602,6 +602,8 @@
                 if (window.EditorMenu) window.EditorMenu.attach(vditor);
                 // 标题级别：接管工具栏那个 headings 按钮，换成自己的一次成型的下拉（v3.47.1）
                 bindHeadingMenu();
+                // Tab / Shift+Tab：列表缩进、普通位置插空格（v3.47.5）
+                bindEditorTab();
                 // 大纲（正文结构导航），见 /js/editor-outline.js
                 if (window.EditorOutline) window.EditorOutline.attach(vditor);
                 // 代码块 IDE 手感（Tab 缩进 / Shift+Tab 反缩进 / Enter 自动缩进），见 /js/code-editor.js
@@ -2392,6 +2394,54 @@
                 applyHeading(parseInt(tag.slice(1), 10));
                 hideNativeHints();
             }
+        }, true);
+    }
+
+    /**
+     * Tab / Shift+Tab（v3.47.5）
+     * 之前编辑器里按 Tab 什么也不会发生 —— 浏览器把焦点挪出了编辑区（实测焦点跑到
+     * IFRAME / 顶栏按钮上），写列表想缩进一级完全没法做。现在：
+     *   · 光标在列表项里：Tab = 缩进一级（Vditor 自己的 indent），Shift+Tab = 反缩进；
+     *   · 其它位置：Tab = 插入两个空格（与代码块 tab-size 2 一致），Shift+Tab = 删掉
+     *     行首最多两个空格。
+     * 捕获阶段拦：否则浏览器默认的「Tab 切换焦点」先发生。
+     */
+    function bindEditorTab() {
+        document.addEventListener('keydown', function (e) {
+            if (e.key !== 'Tab' || e.ctrlKey || e.metaKey || e.altKey) return;
+            var t = e.target;
+            if (!t || !t.closest || !t.closest('#eeVditor')) return;
+            var sel = window.getSelection();
+            if (!sel || !sel.rangeCount) return;
+            var node = sel.getRangeAt(0).startContainer;
+            var el = node && (node.nodeType === 3 ? node.parentElement : node);
+            if (!el || !el.closest) return;
+            e.preventDefault();
+
+            var li = el.closest('li');
+            if (li) {
+                // 列表项：交给 Vditor 的缩进 / 反缩进命令（它会正确建立嵌套列表）
+                var btn = document.querySelector('#eeVditor [data-type="' + (e.shiftKey ? 'outdent' : 'indent') + '"]') ||
+                    document.querySelector('[data-type="' + (e.shiftKey ? 'outdent' : 'indent') + '"]');
+                if (btn) { btn.click(); return; }
+            }
+
+            if (e.shiftKey) {
+                // 反缩进：删掉光标所在行行首的最多两个空格
+                var range = sel.getRangeAt(0);
+                var block = el.closest('p, blockquote, td, th, h1, h2, h3, h4, h5, h6');
+                var first = block ? block.firstChild : null;
+                if (first && first.nodeType === 3) {
+                    var txt = first.nodeValue || '';
+                    var strip = txt.slice(0, 2) === '  ' ? 2 : (txt.charAt(0) === ' ' ? 1 : 0);
+                    if (strip) {
+                        first.nodeValue = txt.slice(strip);
+                        window.eeMarkDirty();
+                    }
+                }
+                return;
+            }
+            try { document.execCommand('insertText', false, '  '); } catch (err) { /* 忽略 */ }
         }, true);
     }
 

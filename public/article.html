@@ -660,6 +660,22 @@
             border-radius: 0;
         }
 
+        /* 列表嵌在标题里时不要跟着标题变大（v3.47.5）：
+           实测 <h2><ol><li> 的 li 与序号是 24.8px，正文才 16px */
+        .article-content h1 ol, .article-content h1 ul,
+        .article-content h2 ol, .article-content h2 ul,
+        .article-content h3 ol, .article-content h3 ul,
+        .article-content h4 ol, .article-content h4 ul,
+        .article-content h5 ol, .article-content h5 ul,
+        .article-content h6 ol, .article-content h6 ul,
+        .article-content h1 li, .article-content h2 li,
+        .article-content h3 li, .article-content h4 li,
+        .article-content h5 li, .article-content h6 li {
+            font-size: 1em;
+            font-weight: 400;
+            line-height: 1.8;
+        }
+
         /* 文字高亮 */
         .article-content mark {
             background: linear-gradient(120deg, rgba(255, 210, 0, 0.2) 0%, rgba(255, 210, 0, 0.4) 100%);
