@@ -1,5 +1,5 @@
 /**
- * 写作页「术语」页签：搜索 + 列表 + 单条编辑（v1.2.0）
+ * 写作页「术语」页签：搜索 + 列表 + 单条编辑（v1.3.0）
  * ------------------------------------------------------------------
  * v3.45.0 把术语从「属性 → 更多设置」里搬出来单独成一页，因为要做两件属性区放不下的事：
  *
@@ -128,7 +128,15 @@
             paint();
             return;
         }
-        if (api.toast) api.toast(n > 0 ? '已标记为术语「' + word + '」' : '正文里没有找到「' + word + '」', n > 0 ? 'success' : 'error');
+        if (api.toast) {
+            var inHeadings = api.findInHeadings ? api.findInHeadings(word) : 0;
+            api.toast(n > 0
+                ? '已标记为术语「' + word + '」'
+                : (inHeadings > 0
+                    ? '「' + word + '」只出现在标题里（' + inHeadings + ' 次），术语回链在标题上不生效'
+                    : '正文里没有找到「' + word + '」'),
+            n > 0 ? 'success' : 'error');
+        }
     }
 
     function paint() {
@@ -151,10 +159,15 @@
             els.hint.textContent = '还没有术语。正文里选中一个词 → 右键「标记为术语」，或在上面的搜索框里输入再回车。';
         } else if (kw) {
             var exists = api.findInContent ? api.findInContent(keyword) : 0;
+            var inHeadings = api.findInHeadings ? api.findInHeadings(keyword) : 0;
             var already = terms.some(function (t) { return t.word === keyword; });
+            // 只在标题里出现的词：术语回链在标题上不生效（前台也跳过标题）。
+            // 直接说清楚，免得作者以为「标记打到标题上去了」。
+            var headOnly = !already && exists === 0 && inHeadings > 0;
             els.hint.innerHTML = '共 ' + terms.length + ' 条，匹配 ' + shown.length + ' 条' +
                 (!already && exists > 0 ? '　<span class="ee-terms-add">正文里有「' + esc(keyword) + '」×' + exists + '，<button type="button" class="ee-terms-link" data-add="' + esc(keyword) + '">标成术语</button></span>' : '') +
-                (!already && !exists ? '　<span class="ee-terms-dim">正文里没有「' + esc(keyword) + '」</span>' : '');
+                (headOnly ? '　<span class="ee-terms-dim">「' + esc(keyword) + '」只出现在标题里（' + inHeadings + ' 次）；术语只在正文段落里生效</span>' : '') +
+                (!already && !exists && !inHeadings ? '　<span class="ee-terms-dim">正文里没有「' + esc(keyword) + '」</span>' : '');
             var addBtn = els.hint.querySelector('[data-add]');
             if (addBtn) addBtn.addEventListener('click', function () {
                 var w = this.getAttribute('data-add');

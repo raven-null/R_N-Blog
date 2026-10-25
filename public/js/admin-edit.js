@@ -1659,7 +1659,9 @@
             var node = sel.getRangeAt(0).startContainer;
             var el = node && (node.nodeType === 1 ? node : node.parentElement);
             if (!el) return '';
-            var block = el.closest('p, li, blockquote, td, th, h1, h2, h3, h4, h5, h6');
+            // 锚点/定义只能是正文段落（p / li / 引用 / 表格单元）：标题不参与术语回链，
+            // 把标题设成「定义锚点」只会让术语表把标题当解释（v3.47.3）
+            var block = el.closest('p, li, blockquote, td, th');
             if (!block) return '';
             var text = String(block.textContent || '').replace(/\s+/g, ' ').trim();
             return text.slice(0, MAX_TERM_ANCHOR_CLIENT);
@@ -1743,7 +1745,11 @@
             // 注意：Vditor 的正文根本身就是 <pre class="vditor-reset">，
             // 这里**不能**把 pre 一概跳过（否则一个节点都扫不到，高亮永远为空）。
             // 真正的代码块在 WYSIWYG 里是 .vditor-wysiwyg__block[data-type="code-block"]，内含 <code>。
-            if (el.closest('code, a, kbd, samp, svg, .vditor-ir__marker, .vditor-wysiwyg__preview, .vditor-wysiwyg__block[data-type="code-block"], .vditor-wysiwyg__pre')) continue;
+            // 标题（h1~h6）也要跳（v3.47.3）：前台 term-links.js 的 SKIP_SELECTOR 同样跳过
+            // 标题 —— 标题里的词永远不会变成回链。编辑器如果把标题也标上，作者就会看到
+            // 「我明明在这一行标的术语，标记却打到了上面那个标题上」。跳过后「n 处」「定位」
+            // 「高亮」三处口径一致，都只算正文段落里的出现。
+            if (el.closest('code, a, kbd, samp, svg, h1, h2, h3, h4, h5, h6, .vditor-ir__marker, .vditor-wysiwyg__preview, .vditor-wysiwyg__block[data-type="code-block"], .vditor-wysiwyg__pre')) continue;
             out.push(n);
         }
         return out;
@@ -1935,7 +1941,7 @@
             re.lastIndex = 0;
             if (!re.test(nodes[i].nodeValue || '')) continue;
             var el = nodes[i].parentElement;
-            var block = el && el.closest('p, li, blockquote, td, th, h1, h2, h3, h4, h5, h6');
+            var block = el && el.closest('p, li, blockquote, td, th');
             var target = block || el;
             if (!target) continue;
             try { target.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
@@ -1946,8 +1952,34 @@
             setTimeout(function () { target.classList.remove('ee-term-flash'); }, 1400);
             return true;
         }
-        toast('正文里没找到「' + word + '」', 'error');
+        // 正文段落里没有：如果只是标题里有，说清楚，而不是让人以为「标记打错了地方」
+        var inHeading = countTermInHeadings(word);
+        toast(inHeading > 0
+            ? '这个词只出现在标题里（' + inHeading + ' 次），术语回链只在正文段落里生效'
+            : '正文里没找到「' + word + '」', 'error');
         return false;
+    }
+
+    /** 词在标题（h1~h6）里出现几次 —— 用来解释「为什么正文里算 0 处」 */
+    function countTermInHeadings(word) {
+        var host = document.querySelector('#eeVditor .vditor-wysiwyg') ||
+            document.querySelector('#eeVditor .vditor-ir');
+        if (!host) return 0;
+        var re = matcherOf(word);
+        if (!re) return 0;
+        var heads = host.querySelectorAll('h1, h2, h3, h4, h5, h6');
+        var n = 0;
+        for (var i = 0; i < heads.length; i++) {
+            var text = String(heads[i].textContent || '');
+            re.lastIndex = 0;
+            var m;
+            while ((m = re.exec(text))) {
+                n++;
+                if (m.index === re.lastIndex) re.lastIndex++;
+                if (n > 500) return n;
+            }
+        }
+        return n;
     }
 
     /**
@@ -2458,6 +2490,7 @@
                 removeTerm: function (w) { unmarkTerm(w); },
                 setTerm: setTermDefinition,
                 findInContent: countTermInContent,
+                findInHeadings: countTermInHeadings,   // 只出现在标题里时用来解释「为什么 0 处」
                 locate: locateTerm,
                 selectionText: editorSelectionText,
                 anchorToCaret: anchorTermToCaret,
