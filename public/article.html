@@ -634,7 +634,10 @@
             background: var(--bg-tertiary);
             padding: 2px 6px;
             border-radius: 4px;
-            font-size: 14px;
+            /* 行内代码跟正文同字号（v3.47.2）：写死 14px 时，整行被反引号包住的
+               段落会比相邻普通段落小一号。等宽字体和底色保留，仍看得出是代码。
+               代码块（pre > code）有自己的 14px，不受影响。 */
+            font-size: 1em;
             color: var(--accent-dim);
         }
 

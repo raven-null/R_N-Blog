@@ -70,7 +70,8 @@
         border-left:3px solid rgba(115,170,255,.5);background:rgba(115,170,255,.06);border-radius:0 8px 8px 0;
     }
     .pv-body code{
-        font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.9em;
+        /* 行内代码与正文同字号（v3.47.2）：整行用反引号包住时不该比相邻段落小 */
+        font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:1em;
         background:rgba(255,255,255,.08);padding:.15em .4em;border-radius:5px;
     }
     .pv-body pre{background:#0a0a0d;border:1px solid var(--border);border-radius:10px;padding:14px 16px;overflow:auto}

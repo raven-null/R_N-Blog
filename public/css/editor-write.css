@@ -314,6 +314,16 @@ html body .vditor-sv {
 html body .vditor-wysiwyg pre.vditor-reset,
 html body .vditor-ir pre.vditor-reset { padding-top: 10px !important; }
 
+/* 行内代码与正文同字号（v3.47.2）
+   Vditor 给行内代码用的是 .875em（16px 正文里就是 14px）。整行被反引号包住时，
+   这一行看起来就比相邻的普通段落小一号 —— 作者会以为「没加格式的那行反而更大」。
+   行内代码保留等宽字体和底色（该看得出是代码），只把字号拉回 1em；
+   代码块里的 <code>（pre > code）不受影响，仍按代码块自己的字号走。 */
+html body #eeVditor .vditor-reset :not(pre) > code,
+html body #eeVditor .vditor-reset :not(pre) > code.hljs {
+    font-size: 1em !important;
+}
+
 /* 层叠：正文要压过其它页面内容，但 .ee-main 不能盖过页面级弹层（提示 60 / 预览）。
    所以这里给 20，只保证「编辑器内部 > 页面其它内容」。 */
 html body .ee-main,
@@ -1199,6 +1209,15 @@ html body .vditor-wysiwyg__block[data-type="code-block"] .vditor-wysiwyg__previe
 html body .vditor-wysiwyg__block[data-type="code-block"] pre.vditor-wysiwyg__pre {
     background-color: #0d1117 !important;
     color: #c9d1d9 !important;
+}
+/* 代码块里的字号统一 13px（v3.47.2）
+   源码层前面已经定成 13px，预览层的 <code> 却还跟着 Vditor 的 .85em 走，
+   实测只有 11.05px —— 同一个代码块「编辑时一个大小、看的时候另一个大小」。 */
+html body .vditor-wysiwyg__block[data-type="code-block"] .vditor-wysiwyg__preview code,
+html body .vditor-wysiwyg__block[data-type="code-block"] .vditor-wysiwyg__preview code.hljs,
+html body .vditor-wysiwyg__block[data-type="code-block"] pre.vditor-wysiwyg__pre code {
+    font-size: 13px !important;
+    line-height: 1.65 !important;
 }
 html body .vditor-wysiwyg__block[data-type="code-block"] pre.vditor-wysiwyg__pre code {
     background: transparent !important;
