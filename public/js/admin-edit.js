@@ -586,6 +586,7 @@
             input: function () {
                 scheduleInfo();
                 scheduleTermDecorations();   // 术语高亮跟着内容走（防抖）
+                scheduleHighlightDecorations();   // 多色高亮跟着内容走（防抖）
                 window.eeMarkDirty();
             },
             after: function () {
@@ -610,6 +611,8 @@
                 if (window.CodeEditor) window.CodeEditor.attach(vditor);
                 // 正文渲染完成后才扫得到文本节点：补一次术语面板刷新（出现次数 + 编辑区高亮）
                 renderTermsPanel();
+                // 多色高亮：正文渲染完才能扫到 ==…== 的位置
+                scheduleHighlightDecorations();
             }
         });
         return vditor;
@@ -636,6 +639,7 @@
         ed.setValue(md);
         updateInfo();
         scheduleTermDecorations();   // 整篇换了内容，术语高亮要重算
+        scheduleHighlightDecorations();   // 同上：多色高亮也要重算
     }
     function getEditorContent() {
         var ed = initEditor();
@@ -1931,6 +1935,204 @@
         }, 450);
     }
 
+    // ===== 多色高亮（v3.48.0）=====
+    // 语法：==文字==（黄）与 =={red}文字==（其它颜色）。
+    // 阅读页由 markdown-config 渲染成 <mark class="hl hl-red">；编辑器里 Vditor 不认这个语法
+    // （试过 raw HTML，也只在正文里显示成 html-inline 小方块），所以这里用 CSS Custom Highlight
+    // API 按颜色上色 —— DOM 不动、Markdown 源码不动，和术语高亮是同一套办法。
+    // 标记符号本身压暗（ee-hl-marker），既有提示又不喧宾夺主。
+    var HL_COLORS = [
+        { key: 'yellow', name: '黄', bg: 'rgba(255, 210, 0, .38)' },
+        { key: 'orange', name: '橙', bg: 'rgba(255, 150, 60, .38)' },
+        { key: 'red', name: '红', bg: 'rgba(255, 90, 90, .38)' },
+        { key: 'green', name: '绿', bg: 'rgba(80, 210, 130, .34)' },
+        { key: 'blue', name: '蓝', bg: 'rgba(90, 160, 255, .38)' },
+        { key: 'purple', name: '紫', bg: 'rgba(180, 120, 255, .38)' },
+        { key: 'gray', name: '灰', bg: 'rgba(160, 170, 190, .34)' }
+    ];
+    var HL_KEYS = HL_COLORS.map(function (c) { return c.key; });
+    var HL_RE = /==(?:\{(yellow|orange|red|green|blue|purple|gray)\})?([^=\n]+?)==/g;
+    var hlDecorTimer = null;
+
+    function hlRangeOf(node, start, end) {
+        try {
+            if (end <= start) return null;
+            var r = document.createRange();
+            r.setStart(node, start);
+            r.setEnd(node, end);
+            return r;
+        } catch (e) { return null; }
+    }
+
+    /** 重算编辑区里的高亮装饰（每种颜色一组 + 标记一组） */
+    function refreshHighlightDecorations() {
+        if (!supportsHighlightApi()) return false;
+        var host = document.querySelector('#eeVditor .vditor-wysiwyg') ||
+            document.querySelector('#eeVditor .vditor-ir');
+        var clear = function () {
+            try {
+                CSS.highlights.delete('ee-hl-marker');
+                HL_KEYS.forEach(function (k) { CSS.highlights.delete('ee-hl-' + k); });
+            } catch (e) { /* 忽略 */ }
+        };
+        if (!host) { clear(); return false; }
+        var nodes = decorTextNodes(host);
+        var byColor = {};
+        var markers = [];
+        nodes.forEach(function (n) {
+            var text = n.nodeValue || '';
+            if (text.indexOf('==') < 0) return;
+            HL_RE.lastIndex = 0;
+            var m;
+            while ((m = HL_RE.exec(text))) {
+                var color = m[1] || 'yellow';
+                var whole = m[0];
+                var inner = m[2];
+                var innerStart = m.index + whole.indexOf(inner);
+                var innerEnd = innerStart + inner.length;
+                var rInner = hlRangeOf(n, innerStart, innerEnd);
+                if (rInner) (byColor[color] = byColor[color] || []).push(rInner);
+                var rOpen = hlRangeOf(n, m.index, innerStart);
+                var rClose = hlRangeOf(n, innerEnd, m.index + whole.length);
+                if (rOpen) markers.push(rOpen);
+                if (rClose) markers.push(rClose);
+            }
+        });
+        try {
+            clear();
+            if (markers.length) {
+                var hm = new Highlight();
+                markers.forEach(function (r) { hm.add(r); });
+                CSS.highlights.set('ee-hl-marker', hm);
+            }
+            HL_KEYS.forEach(function (k) {
+                var list = byColor[k];
+                if (!list || !list.length) return;
+                var h = new Highlight();
+                list.forEach(function (r) { h.add(r); });
+                CSS.highlights.set('ee-hl-' + k, h);
+            });
+        } catch (e) { return false; }
+        return true;
+    }
+
+    function scheduleHighlightDecorations() {
+        clearTimeout(hlDecorTimer);
+        hlDecorTimer = setTimeout(function () { refreshHighlightDecorations(); }, 300);
+    }
+
+    /** 给当前选区套一个颜色的高亮（color 为空 / 'yellow' 时用最短写法 ==文字==） */
+    function applyHighlight(color) {
+        var sel = window.getSelection();
+        var text = sel && sel.rangeCount ? String(sel.getRangeAt(0).toString() || '') : '';
+        text = text.replace(/\r?\n/g, ' ').trim();
+        if (!text) { toast('先选中要高亮的文字', 'error'); return false; }
+        if (/==/.test(text)) text = text.replace(/==(?:\{[a-z]+\})?/g, '');
+        var c = HL_KEYS.indexOf(color) >= 0 ? color : 'yellow';
+        var open = c === 'yellow' ? '==' : '=={' + c + '}';
+        try {
+            document.execCommand('insertText', false, open + text + '==');
+        } catch (e) { return false; }
+        window.eeMarkDirty();
+        scheduleInfo();
+        scheduleHighlightDecorations();
+        scheduleTermDecorations();
+        return true;
+    }
+
+    /** 去掉光标所在处的高亮标记 */
+    function clearHighlight() {
+        var sel = window.getSelection();
+        if (!sel || !sel.rangeCount) return false;
+        var node = sel.getRangeAt(0).startContainer;
+        var textNode = node && node.nodeType === 3 ? node : null;
+        if (!textNode) return false;
+        var text = textNode.nodeValue || '';
+        var caret = sel.getRangeAt(0).startOffset;
+        var re = /==(?:\{[a-z]+\})?/g;
+        var last = null, m;
+        while ((m = re.exec(text))) {
+            if (m.index <= caret) last = { index: m.index, raw: m[0] };
+            else break;
+        }
+        if (!last) { toast('光标不在高亮的文字里', 'error'); return false; }
+        var closeIdx = text.indexOf('==', caret);
+        if (closeIdx < 0) { toast('找不到高亮结尾', 'error'); return false; }
+        var next = text.slice(last.index, last.index + last.raw.length);
+        textNode.nodeValue = text.slice(0, last.index) + text.slice(last.index + next.length, closeIdx) + text.slice(closeIdx + 2);
+        window.eeMarkDirty();
+        scheduleInfo();
+        scheduleHighlightDecorations();
+        return true;
+    }
+
+    // 调色板（挂 body，body 下 fixed 定位，避免被侧栏/编辑区的 overflow 裁掉）
+    var hlMenu = null;
+    function ensureHlMenu() {
+        if (hlMenu) return hlMenu;
+        var menu = document.createElement('div');
+        menu.id = 'eeHlMenu';
+        menu.className = 'ee-hl-menu';
+        menu.innerHTML = HL_COLORS.map(function (c) {
+            return '<button type="button" class="ee-hl-swatch" data-color="' + c.key + '" title="' + c.name + '色高亮">' +
+                '<i style="background:' + c.bg + '"></i>' + c.name + '</button>';
+        }).join('') +
+            '<button type="button" class="ee-hl-swatch ee-hl-clear" data-clear="1" title="去掉高亮">清除</button>';
+        document.body.appendChild(menu);
+        // 按下就阻止默认行为：否则点色块会把编辑区选区弄丢，applyHighlight 就取不到文字
+        menu.addEventListener('mousedown', function (e) { e.preventDefault(); });
+        menu.addEventListener('click', function (e) {
+            var b = e.target.closest ? e.target.closest('button') : null;
+            if (!b) return;
+            e.preventDefault();
+            e.stopPropagation();
+            hideHlMenu();
+            if (b.getAttribute('data-clear')) clearHighlight();
+            else applyHighlight(b.getAttribute('data-color'));
+        });
+        document.addEventListener('mousedown', function (e) {
+            if (!hlMenu || !hlMenu.classList.contains('open')) return;
+            if (hlMenu.contains(e.target)) return;
+            hideHlMenu();
+        }, true);
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') hideHlMenu();
+        }, true);
+        window.addEventListener('scroll', hideHlMenu, true);
+        hlMenu = menu;
+        return menu;
+    }
+    function hideHlMenu() { if (hlMenu) hlMenu.classList.remove('open'); }
+    /**
+     * 打开调色板。anchor 可以是元素、DOMRect（选区工具条会给 rect），或空（用当前选区位置）。
+     */
+    function openHlMenu(anchor) {
+        var menu = ensureHlMenu();
+        if (menu.classList.contains('open')) { hideHlMenu(); return; }
+        var r = null;
+        if (anchor && typeof anchor.getBoundingClientRect === 'function') r = anchor.getBoundingClientRect();
+        else if (anchor && typeof anchor.left === 'number') r = anchor;
+        if (!r) {
+            var sel = window.getSelection();
+            r = (sel && sel.rangeCount) ? sel.getRangeAt(0).getBoundingClientRect() : { left: 40, top: 120, bottom: 140 };
+        }
+        menu.style.left = '0px'; menu.style.top = '0px';
+        menu.classList.add('open');
+        var mw = menu.offsetWidth, mh = menu.offsetHeight;
+        var left = Math.min(Math.max(8, r.left), Math.max(8, window.innerWidth - mw - 8));
+        var top = r.bottom + 8;
+        if (top + mh > window.innerHeight - 8) top = Math.max(8, r.top - mh - 8);
+        menu.style.left = Math.round(left) + 'px';
+        menu.style.top = Math.round(top) + 'px';
+    }
+    // 供右键菜单 / 选区工具条调用
+    window.eeHighlight = {
+        apply: applyHighlight,
+        clear: clearHighlight,
+        openMenu: openHlMenu,
+        colors: HL_COLORS.slice()
+    };
+
     /** 把某个词的出现位置滚到视野里并闪一下（面板「定位」用） */
     function locateTerm(word) {
         var host = document.querySelector('#eeVditor .vditor-wysiwyg') ||
@@ -2452,6 +2654,13 @@
             { id: 'italic', label: 'I', title: '斜体', strong: true, run: function () { toolbarBtn('italic'); } },
             { id: 'strike', label: 'S', title: '删除线', strong: true, run: function () { toolbarBtn('strike'); } },
             { id: 'inlineCode', label: '&lt;/&gt;', title: '行内代码', strong: true, run: function () { toolbarBtn('inline-code'); } },
+            {
+                id: 'highlight', label: '🖍', title: '高亮（可选颜色）', strong: true,
+                run: function (text, info) {
+                    // 用选区位置贴边弹出调色板；按下色块不会丢选区（见 ensureHlMenu）
+                    if (window.eeHighlight) window.eeHighlight.openMenu(info && info.rect ? info.rect : null);
+                }
+            },
             { sep: true },
             { id: 'h1', label: 'H1', title: '一级标题', run: function () { applyHeading(1); } },
             { id: 'h2', label: 'H2', title: '二级标题', run: function () { applyHeading(2); } },

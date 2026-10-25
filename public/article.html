@@ -685,6 +685,16 @@
             box-decoration-break: clone;
             -webkit-box-decoration-break: clone;
         }
+        /* 多色高亮（v3.48.0）：=={red}文字== 渲染成 <mark class="hl hl-red">。
+           写作页那套调色板与此一一对应，颜色值两处保持一致。 */
+        .article-content mark.hl { background: none; }
+        .article-content mark.hl-yellow { background: rgba(255, 210, 0, .38); }
+        .article-content mark.hl-orange { background: rgba(255, 150, 60, .38); }
+        .article-content mark.hl-red { background: rgba(255, 90, 90, .38); }
+        .article-content mark.hl-green { background: rgba(80, 210, 130, .34); }
+        .article-content mark.hl-blue { background: rgba(90, 160, 255, .38); }
+        .article-content mark.hl-purple { background: rgba(180, 120, 255, .38); }
+        .article-content mark.hl-gray { background: rgba(160, 170, 190, .34); }
 
         /* 代码块 */
         .article-content .code-block {
@@ -2312,7 +2322,7 @@
 
     <!-- JavaScript -->
     <script src="js/theme.js?v=3.13.6" defer></script>
-    <script src="js/markdown-config.js?v=1.4.0" defer></script>
+    <script src="js/markdown-config.js?v=1.5.0" defer></script>
     <script src="js/markdown.js?v=3.14.2" defer></script>
     <script src="js/term-links.js?v=1.3.1" defer></script>
     <script src="js/chat.js?v=3.17.1" defer></script>

@@ -71,20 +71,26 @@
 
         marked.setOptions({ breaks: true, gfm: true });
 
-        // 行内高亮扩展：==文字==
+        // 行内高亮扩展（v1.5.0：支持颜色）
+        //   ==文字==           → <mark class="hl hl-yellow">文字</mark>
+        //   =={red}文字==      → <mark class="hl hl-red">文字</mark>
+        // 颜色白名单外的写法（含 {xxx} 不是已知颜色）当作普通文字，不吞内容。
+        var HL_COLORS = ['yellow', 'orange', 'red', 'green', 'blue', 'purple', 'gray'];
         marked.use({
             extensions: [{
                 name: 'highlight',
                 level: 'inline',
                 start: function (src) { return src.indexOf('=='); },
                 tokenizer: function (src) {
-                    var match = src.match(/^==(.+?)==/);
-                    if (match) {
-                        return { type: 'highlight', raw: match[0], text: match[1] };
-                    }
+                    var match = src.match(/^==(?:\{(?:([a-z]+))\})?([\s\S]+?)==/);
+                    if (!match) return;
+                    var color = match[1] || 'yellow';
+                    if (HL_COLORS.indexOf(color) < 0) return;   // 未知颜色：按普通文字处理
+                    return { type: 'highlight', raw: match[0], text: match[2], color: color };
                 },
                 renderer: function (token) {
-                    return '<mark>' + token.text + '</mark>';
+                    var color = HL_COLORS.indexOf(token.color) >= 0 ? token.color : 'yellow';
+                    return '<mark class="hl hl-' + color + '">' + escapeHtml(String(token.text || '')) + '</mark>';
                 }
             }]
         });

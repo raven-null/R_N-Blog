@@ -977,6 +977,57 @@ html body #eeSide *::-webkit-scrollbar { width: 0 !important; height: 0 !importa
 }
 .ee-term-op:hover { color: #fff; background: rgba(115, 170, 255, .16); border-color: rgba(115, 170, 255, .4); }
 
+/* ===== 多色高亮（v3.48.0）=====
+   语法 ==文字== / =={red}文字==。Vditor 不认这个语法（raw HTML 也只会显示成
+   html-inline 小方块），所以编辑器用 CSS Custom Highlight API 按颜色上色；
+   颜色值与阅读页 mark.hl-* / 预览页保持一致。标记符号本身压暗。 */
+::highlight(ee-hl-marker) {
+    color: rgba(255, 255, 255, .26);
+}
+
+::highlight(ee-hl-yellow) { background-color: rgba(255, 210, 0, .38); }
+::highlight(ee-hl-orange) { background-color: rgba(255, 150, 60, .38); }
+::highlight(ee-hl-red) { background-color: rgba(255, 90, 90, .38); }
+::highlight(ee-hl-green) { background-color: rgba(80, 210, 130, .34); }
+::highlight(ee-hl-blue) { background-color: rgba(90, 160, 255, .38); }
+::highlight(ee-hl-purple) { background-color: rgba(180, 120, 255, .38); }
+::highlight(ee-hl-gray) { background-color: rgba(160, 170, 190, .34); }
+
+/* 调色板：挂在 <body> 下，fixed 定位，避开侧栏 / 编辑区的 overflow */
+.ee-hl-menu {
+    position: fixed;
+    z-index: 3400;
+    display: none;
+    padding: 7px;
+    border-radius: 10px;
+    background: rgba(24, 25, 34, .98);
+    border: 1px solid rgba(255, 255, 255, .16);
+    box-shadow: 0 20px 50px -20px rgba(0, 0, 0, .9);
+    grid-template-columns: repeat(4, auto);
+    gap: 6px;
+}
+
+.ee-hl-menu.open { display: grid; }
+
+.ee-hl-swatch {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 9px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, .12);
+    background: rgba(255, 255, 255, .04);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 12px;
+    cursor: pointer;
+    transition: border-color .15s ease, background .15s ease;
+}
+
+.ee-hl-swatch:hover { background: rgba(255, 255, 255, .1); border-color: rgba(115, 170, 255, .5); }
+.ee-hl-swatch i { display: inline-block; width: 14px; height: 14px; border-radius: 3px; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .25); }
+.ee-hl-swatch.ee-hl-clear { color: var(--text-muted); }
+
 /* ===== 标题级别菜单（v3.47.1）=====
    Vditor 自带的 headings 提示面板会先把标题降级再让你选，换级得按两次；
    这里换成自己的下拉：点工具栏 headings 弹出，选一级立刻生效。

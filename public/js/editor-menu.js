@@ -154,6 +154,15 @@
         return false;
     }
 
+    /** 套高亮（v3.48.0）：实现在 admin-edit.js 里（window.eeHighlight） */
+    function hl(color) {
+        if (window.eeHighlight && window.eeHighlight.apply) {
+            if (!window.eeHighlight.apply(color)) toast('先选中要高亮的文字', 'error');
+            return;
+        }
+        toast('高亮功能未加载，请刷新重试', 'error');
+    }
+
     /** 光标所在的最外层块（wysiwyg 的直接子元素） */
     function currentBlock(vd) {
         var root = editorEl();
@@ -557,6 +566,23 @@
                     item('斜体', 'Ctrl+I', function () { clickToolbar('italic'); }, !hasSel),
                     item('删除线', '', function () { clickToolbar('strike'); }, !hasSel),
                     item('行内代码', '', function () { clickToolbar('inline-code'); }, !hasSel)
+                ]),
+                // 高亮（v3.48.0）：七种颜色 + 清除。黄用短写 ==文字==，其它是 =={color}文字==
+                sub('高亮', [
+                    item('黄色', '', function () { hl('yellow'); }, !hasSel),
+                    item('橙色', '', function () { hl('orange'); }, !hasSel),
+                    item('红色', '', function () { hl('red'); }, !hasSel),
+                    item('绿色', '', function () { hl('green'); }, !hasSel),
+                    item('蓝色', '', function () { hl('blue'); }, !hasSel),
+                    item('紫色', '', function () { hl('purple'); }, !hasSel),
+                    item('灰色', '', function () { hl('gray'); }, !hasSel),
+                    item('更多颜色…', '', function () {
+                        if (window.eeHighlight) window.eeHighlight.openMenu(null);
+                        else toast('高亮功能未加载，请刷新重试', 'error');
+                    }, !hasSel),
+                    item('清除高亮', '', function () {
+                        if (window.eeHighlight) window.eeHighlight.clear();
+                    }, false)
                 ]),
                 // 链接：插入（Vditor 原生 / 站内文章 / 本文标题）+ 取消
                 sub('链接', [
