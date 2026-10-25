@@ -636,7 +636,9 @@
     function setEditorContent(md) {
         var ed = initEditor();
         if (!ed) return;
-        md = md || '';
+        // 高亮别名先洗一遍：手打的 ](h1:red) / ](HL:red) 统一成 ](hl:red)，
+        // 否则 Vditor 虽能解析成链接，我们的配色与阅读页都认不出来（v3.48.2）
+        md = normalizeHlAliases(md || '');
         if (!vditorReady) { pendingMd = md; return; }
         ed.setValue(md);
         updateInfo();
@@ -650,7 +652,7 @@
         // TypeError: Cannot read properties of undefined (reading 'currentMode')
         // ——页面刚打开就点保存、或本类型根本没用编辑器时都会踩到。等到 after 回调再取。
         if (!vditorReady) return pendingMd || '';
-        try { return ed.getValue() || ''; } catch (e) { return pendingMd || ''; }
+        try { return normalizeHlAliases(ed.getValue() || ''); } catch (e) { return pendingMd || ''; }
     }
 
     // ===== 渲染 =====
@@ -1954,7 +1956,15 @@
     ];
     var HL_KEYS = HL_COLORS.map(function (c) { return c.key; });
     var HL_RE = /==(?:\{(yellow|orange|red|green|blue|purple|gray)\})?([^=\n]+?)==/g;
+    // 字面文本形式的兜底（含手打错的 h1: / 大写 H1:、HL:）
+    var HL_LINK_RE = /\[([^\[\]\n]{1,200})\]\((?:hl|h1|HL|H1|Hl|hL):(yellow|orange|red|green|blue|purple|gray)\)/g;
     var hlDecorTimer = null;
+
+    /** 把 ](h1:…/HL:… 这些别名统一成 ](hl:…（加载与保存时各洗一遍） */
+    function normalizeHlAliases(md) {
+        return String(md == null ? '' : md)
+            .replace(/\]\((?:h1|H1|HL|Hl|hL):(yellow|orange|red|green|blue|purple|gray)\)/g, '](hl:$1)');
+    }
 
     function hlRangeOf(node, start, end) {
         try {
@@ -1981,24 +1991,28 @@
         var nodes = decorTextNodes(host);
         var byColor = {};
         var markers = [];
+        var pushRange = function (n, m, inner, color) {
+            var whole = m[0];
+            var innerStart = m.index + whole.indexOf(inner);
+            var innerEnd = innerStart + inner.length;
+            var rInner = hlRangeOf(n, innerStart, innerEnd);
+            if (rInner) (byColor[color] = byColor[color] || []).push(rInner);
+            var rOpen = hlRangeOf(n, m.index, innerStart);
+            var rClose = hlRangeOf(n, innerEnd, m.index + whole.length);
+            if (rOpen) markers.push(rOpen);
+            if (rClose) markers.push(rClose);
+        };
         nodes.forEach(function (n) {
             var text = n.nodeValue || '';
-            if (text.indexOf('==') < 0) return;
+            if (text.indexOf('==') < 0 && text.indexOf('](') < 0) return;
+            // 1) 旧写法 ==文字== / =={color}文字==
             HL_RE.lastIndex = 0;
             var m;
-            while ((m = HL_RE.exec(text))) {
-                var color = m[1] || 'yellow';
-                var whole = m[0];
-                var inner = m[2];
-                var innerStart = m.index + whole.indexOf(inner);
-                var innerEnd = innerStart + inner.length;
-                var rInner = hlRangeOf(n, innerStart, innerEnd);
-                if (rInner) (byColor[color] = byColor[color] || []).push(rInner);
-                var rOpen = hlRangeOf(n, m.index, innerStart);
-                var rClose = hlRangeOf(n, innerEnd, m.index + whole.length);
-                if (rOpen) markers.push(rOpen);
-                if (rClose) markers.push(rClose);
-            }
+            while ((m = HL_RE.exec(text))) pushRange(n, m, m[2], m[1] || 'yellow');
+            // 2) 兜底：还没被解析成真链接的字面文本 [文字](hl:color) / [文字](h1:color)
+            //    （手打时、或 Vditor 这一轮没 spin 成链接时，至少颜色也在）
+            HL_LINK_RE.lastIndex = 0;
+            while ((m = HL_LINK_RE.exec(text))) pushRange(n, m, m[1], m[2]);
         });
         try {
             clear();
@@ -2040,9 +2054,19 @@
         // 选区里带旧标记时先剥掉，避免套娃
         text = text.replace(/==(?:\{[a-z]+\})?/g, '');
         var c = HL_KEYS.indexOf(color) >= 0 ? color : 'yellow';
+        var md = '[' + text + '](hl:' + c + ')';
+        // 优先走 Vditor 自己的 insertValue（按 Markdown 插入，Lute 会把它解析成真链接）；
+        // 回退才是 execCommand('insertText')，那是纯文本插入，可能要等下一次 spin 才成链接。
+        var done = false;
         try {
-            document.execCommand('insertText', false, '[' + text + '](hl:' + c + ')');
-        } catch (e) { return false; }
+            if (vditor && vditorReady && typeof vditor.insertValue === 'function') {
+                vditor.insertValue(md);
+                done = true;
+            }
+        } catch (e) { done = false; }
+        if (!done) {
+            try { document.execCommand('insertText', false, md); } catch (e) { return false; }
+        }
         window.eeMarkDirty();
         scheduleInfo();
         scheduleHighlightDecorations();
@@ -2161,6 +2185,7 @@
         apply: applyHighlight,
         clear: clearHighlight,
         openMenu: openHlMenu,
+        refresh: refreshHighlightDecorations,
         colors: HL_COLORS.slice()
     };
 

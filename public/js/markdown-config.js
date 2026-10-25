@@ -122,8 +122,10 @@
             var inner = (token && token.tokens && this.parser && typeof this.parser.parseInline === 'function')
                 ? this.parser.parseInline(token.tokens)
                 : escapeHtml(String((token && token.text) || ''));
-            if (href.indexOf('hl:') === 0) {
-                var key = href.slice(3).trim().toLowerCase();
+            // hl: / h1: / HL: / H1: 都当高亮（手打容易把 l 写成 1）
+            var hl = href.match(/^(?:hl|h1|HL|H1|Hl|hL):\s*([a-z]*)\s*$/i);
+            if (hl) {
+                var key = String(hl[1] || '').toLowerCase();
                 if (HL_COLORS.indexOf(key) < 0) key = 'yellow';
                 return '<mark class="hl hl-' + key + '">' + inner + '</mark>';
             }
