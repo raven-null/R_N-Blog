@@ -993,6 +993,25 @@ html body #eeSide *::-webkit-scrollbar { width: 0 !important; height: 0 !importa
 ::highlight(ee-hl-purple) { background-color: rgba(180, 120, 255, .38); }
 ::highlight(ee-hl-gray) { background-color: rgba(160, 170, 190, .34); }
 
+/* 高亮的「链接形式」（v3.48.1）：写作页用 [文字](hl:red) 承载高亮 —— Vditor 会把链接标记
+   藏起来，于是编辑器里看到的就是带底色的文字，看不到任何源码。
+   颜色值与阅读页 mark.hl-* 完全一致。 */
+html body #eeVditor .vditor-reset a[href^="hl:"] {
+    text-decoration: none !important;
+    border-radius: 3px;
+    padding: 1px 2px;
+    cursor: text;
+    color: inherit !important;
+}
+
+html body #eeVditor .vditor-reset a[href="hl:yellow"] { background-color: rgba(255, 210, 0, .38) !important; }
+html body #eeVditor .vditor-reset a[href="hl:orange"] { background-color: rgba(255, 150, 60, .38) !important; }
+html body #eeVditor .vditor-reset a[href="hl:red"] { background-color: rgba(255, 90, 90, .38) !important; }
+html body #eeVditor .vditor-reset a[href="hl:green"] { background-color: rgba(80, 210, 130, .34) !important; }
+html body #eeVditor .vditor-reset a[href="hl:blue"] { background-color: rgba(90, 160, 255, .38) !important; }
+html body #eeVditor .vditor-reset a[href="hl:purple"] { background-color: rgba(180, 120, 255, .38) !important; }
+html body #eeVditor .vditor-reset a[href="hl:gray"] { background-color: rgba(160, 170, 190, .34) !important; }
+
 /* 调色板：挂在 <body> 下，fixed 定位，避开侧栏 / 编辑区的 overflow */
 .ee-hl-menu {
     position: fixed;

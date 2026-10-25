@@ -113,6 +113,24 @@
             return '<h' + depth + ' id="' + escapeHtml(id) + '">' + inner + '</h' + depth + '>';
         };
 
+        // 链接渲染（v1.6.0）
+        //   · href 以 hl: 开头 → 多色高亮（写作页用链接语法承载：Vditor WYSIWYG 会把链接标记
+        //     藏起来，所以编辑器里看到的是带底色的文字，而不是 =={red}…== 这种源码）
+        //   · 其它照常输出 <a>
+        renderer.link = function (token) {
+            var href = String((token && token.href) || '');
+            var inner = (token && token.tokens && this.parser && typeof this.parser.parseInline === 'function')
+                ? this.parser.parseInline(token.tokens)
+                : escapeHtml(String((token && token.text) || ''));
+            if (href.indexOf('hl:') === 0) {
+                var key = href.slice(3).trim().toLowerCase();
+                if (HL_COLORS.indexOf(key) < 0) key = 'yellow';
+                return '<mark class="hl hl-' + key + '">' + inner + '</mark>';
+            }
+            var title = token && token.title ? ' title="' + escapeHtml(token.title) + '"' : '';
+            return '<a href="' + escapeHtml(href) + '"' + title + '>' + inner + '</a>';
+        };
+
         // 图片：URL 重写 + figure 图注 + 懒加载 + 点击灯箱
         renderer.image = function (token) {
             var href = token.href;

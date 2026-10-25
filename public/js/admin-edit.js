@@ -605,6 +605,8 @@
                 bindHeadingMenu();
                 // Tab / Shift+Tab：列表缩进、普通位置插空格（v3.47.5）
                 bindEditorTab();
+                // 高亮链接（hl:）不要被 Ctrl+点击 真的导航走（v3.48.1）
+                bindHighlightLinks();
                 // 大纲（正文结构导航），见 /js/editor-outline.js
                 if (window.EditorOutline) window.EditorOutline.attach(vditor);
                 // 代码块 IDE 手感（Tab 缩进 / Shift+Tab 反缩进 / Enter 自动缩进），见 /js/code-editor.js
@@ -2021,17 +2023,25 @@
         hlDecorTimer = setTimeout(function () { refreshHighlightDecorations(); }, 300);
     }
 
-    /** 给当前选区套一个颜色的高亮（color 为空 / 'yellow' 时用最短写法 ==文字==） */
+    /**
+     * 给当前选区套一个颜色的高亮（v3.48.1）
+     *
+     * 编辑器里改用**链接语法**承载：`[文字](hl:red)`。原因：Vditor 的 WYSIWYG 会把链接标记
+     * 藏起来（实测 `[红字](hl:red)` 渲染成 `<a href="hl:red">红字</a>`，innerText 里只剩
+     * 「红字」），而 `=={red}…==` 这种自造语法它不认、只能在正文里原样显示 —— 那样就做不到
+     * 「在编写页看到高亮后的样子，而不是代码」。阅读页那边由 markdown-config 把 hl: 链接
+     * 渲染成 `<mark class="hl hl-red">`，存下来的 Markdown 仍然是一行可读文本。
+     */
     function applyHighlight(color) {
         var sel = window.getSelection();
         var text = sel && sel.rangeCount ? String(sel.getRangeAt(0).toString() || '') : '';
         text = text.replace(/\r?\n/g, ' ').trim();
         if (!text) { toast('先选中要高亮的文字', 'error'); return false; }
-        if (/==/.test(text)) text = text.replace(/==(?:\{[a-z]+\})?/g, '');
+        // 选区里带旧标记时先剥掉，避免套娃
+        text = text.replace(/==(?:\{[a-z]+\})?/g, '');
         var c = HL_KEYS.indexOf(color) >= 0 ? color : 'yellow';
-        var open = c === 'yellow' ? '==' : '=={' + c + '}';
         try {
-            document.execCommand('insertText', false, open + text + '==');
+            document.execCommand('insertText', false, '[' + text + '](hl:' + c + ')');
         } catch (e) { return false; }
         window.eeMarkDirty();
         scheduleInfo();
@@ -2040,13 +2050,35 @@
         return true;
     }
 
-    /** 去掉光标所在处的高亮标记 */
+    /** 去掉光标所在处的高亮（hl: 链接形式 或 旧的 ==…== 标记） */
     function clearHighlight() {
         var sel = window.getSelection();
         if (!sel || !sel.rangeCount) return false;
         var node = sel.getRangeAt(0).startContainer;
+        var el = node && (node.nodeType === 3 ? node.parentElement : node);
+        // 1) hl: 链接：用 unlink 去掉链接外壳（文字保留）
+        var link = el && el.closest ? el.closest('#eeVditor a[href^="hl:"]') : null;
+        if (link) {
+            var r = document.createRange();
+            r.selectNodeContents(link);
+            sel.removeAllRanges();
+            sel.addRange(r);
+            var okUnlink = false;
+            try { okUnlink = document.execCommand('unlink'); } catch (e) { okUnlink = false; }
+            if (!okUnlink) {
+                // 退路：直接把链接换成纯文字
+                var parent = link.parentNode;
+                if (!parent) return false;
+                parent.replaceChild(document.createTextNode(link.textContent || ''), link);
+                if (parent.normalize) parent.normalize();
+            }
+            window.eeMarkDirty();
+            scheduleInfo();
+            return true;
+        }
+        // 2) 旧形式：光标在 ==…== / =={c}…== 之间
         var textNode = node && node.nodeType === 3 ? node : null;
-        if (!textNode) return false;
+        if (!textNode) { toast('光标不在高亮的文字里', 'error'); return false; }
         var text = textNode.nodeValue || '';
         var caret = sel.getRangeAt(0).startOffset;
         var re = /==(?:\{[a-z]+\})?/g;
@@ -2058,8 +2090,7 @@
         if (!last) { toast('光标不在高亮的文字里', 'error'); return false; }
         var closeIdx = text.indexOf('==', caret);
         if (closeIdx < 0) { toast('找不到高亮结尾', 'error'); return false; }
-        var next = text.slice(last.index, last.index + last.raw.length);
-        textNode.nodeValue = text.slice(0, last.index) + text.slice(last.index + next.length, closeIdx) + text.slice(closeIdx + 2);
+        textNode.nodeValue = text.slice(0, last.index) + text.slice(last.index + last.raw.length, closeIdx) + text.slice(closeIdx + 2);
         window.eeMarkDirty();
         scheduleInfo();
         scheduleHighlightDecorations();
@@ -2132,6 +2163,23 @@
         openMenu: openHlMenu,
         colors: HL_COLORS.slice()
     };
+
+    /**
+     * 高亮链接（[文字](hl:red)）在编辑器里只是「带底色的文字」：
+     * 普通点击照常放光标，但 Ctrl/Cmd+点击、中键不能真的去导航到 hl:xxx。
+     */
+    function bindHighlightLinks() {
+        var block = function (e) {
+            var a = e.target && e.target.closest ? e.target.closest('#eeVditor .vditor-reset a[href^="hl:"]') : null;
+            if (!a) return;
+            if (e.type === 'auxclick' || e.ctrlKey || e.metaKey || e.shiftKey) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+        };
+        document.addEventListener('click', block, true);
+        document.addEventListener('auxclick', block, true);
+    }
 
     /** 把某个词的出现位置滚到视野里并闪一下（面板「定位」用） */
     function locateTerm(word) {
