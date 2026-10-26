@@ -1,5 +1,5 @@
 /**
- * 文内术语回链（v1.3.2）
+ * 文内术语回链（v1.3.3）
  * ------------------------------------------------------------------
  * 解决的问题：文章里某个词（比如「字符串」）第一次出现时讲过它的定义，
  * 几百字后再出现时读者已经忘了，又不想往回翻。
@@ -186,13 +186,20 @@
     }
 
     /**
-     * 把第 n 处（>=1）出现包成 term-link；从后往前替换，避免索引漂移。
+     * 把出现位置包成 term-link；从后往前替换，避免索引漂移。
+     *
      * v1.3.0：只有带「定义引用」（terms[].quote）的词才做成可点跳转的按钮；
      * 其余（只有自写解释 / 只有锚点）只当**看解释**的标记 —— 不可点、没有手型光标，
      * 点一下是把气泡打开，而不是跳走。
+     *
+     * v1.3.3：`fromFirst` 为真时**第一次出现也包**。什么时候要包：词条有作者明确给出的
+     * 解释（自写 def 或正文引用的 quote）。原来的「第一次出现不打标记」是为了「首次出现
+     * 那段本身就是定义」，可作者一旦明确写了/摘了解释，第一次出现就也该能悬停看解释 ——
+     * 否则只出现一次的词条在前台完全没有反应（实测踩到：定义了术语，前台什么也不显示）。
      */
-    function wrapOccurrences(hits, word, canJump) {
-        for (var i = hits.length - 1; i >= 1; i--) {
+    function wrapOccurrences(hits, word, canJump, fromFirst) {
+        var last = fromFirst ? 0 : 1;
+        for (var i = hits.length - 1; i >= last; i--) {
             var h = hits[i];
             var node = h.node;
             if (!node || !node.parentNode) continue;
@@ -385,8 +392,11 @@
                     anchors[term.word] = { el: el, id: el.id, def: term.def, quote: term.quote, quoteEl: resolveQuoteEl(term.quote) };
                 }
             }
-            wrapOccurrences(hits, term.word, !!term.quote);
-            links += Math.max(0, hits.length - 1);
+            // 有作者明确给出的解释（自写 def 或正文引用 quote）时，第一次出现也包成回链；
+            // 只有锚点（解释就用锚点那段）时保持老规矩：首次出现那段就是定义，不包。
+            var explained = !!(term.def || term.quote);
+            wrapOccurrences(hits, term.word, !!term.quote, explained);
+            links += Math.max(0, hits.length - (explained ? 0 : 1));
         });
         return { terms: terms.length, links: links };
     };
