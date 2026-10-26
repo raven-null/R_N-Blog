@@ -16,7 +16,7 @@ const BlogApp = {
     filteredPosts: [],
     // 当前选中的标签
     currentTag: null,
-    currentType: null, // 内容形态筛选：null | 'board'（白板）| 'card'（随记）
+    currentType: null, // 内容形态筛选：null | 'board'（白板）| 'mindmap'（导图）| 'graph'（节点图）| 'article'（文章）
     // 当前视图（博客 / 图库 / 仪表盘）
     currentView: 'blog',
     // 图库图片清单缓存
@@ -136,12 +136,7 @@ const BlogApp = {
                     wordCount: a.wordCount || 0,
                     type: a.type || 'article',
                     content: '', // 列表不加载正文
-                }))
-                .map(p => {
-                    // 卡片笔记固定标签兜底（存量数据无「随记」时补上，保证导航分类一致）
-                    if (p.type === 'card' && !(p.tags || []).includes('随记')) p.tags = ['随记'].concat(p.tags || []);
-                    return p;
-                });
+                }));
         } catch { return []; }
     },
 
@@ -280,9 +275,6 @@ const BlogApp = {
 
     // 渲染单个文章卡片
     renderPostCard(post) {
-        // 卡片笔记：胶囊形态融入瀑布（无封面，点击浮层展开全文，不跳转）
-        if (post.type === 'card') return this.renderNotePillCard(post);
-
         const gradientColors = this.getGradientColors(post.tags || []);
         const dateFormatted = this.formatDate(post.date);
         const avatarImg = this.getAuthorAvatar(post.author);
@@ -359,89 +351,6 @@ const BlogApp = {
             </div>`;
     },
 
-    // 卡片笔记：融入瀑布的简约卡（无封面；标题上、标签中下、时间右下；点击与普通文章一致进阅读页）
-    renderNotePillCard(post) {
-        const dateFormatted = this.formatDate(post.date);
-        const id = this.escAttr(post.id || '');
-        return `
-            <div class="card note-plain-card" onclick="BlogApp.openNotePill('${id}')">
-                <div class="card-body">
-                    <div class="card-title">${this.esc(post.title || '')}</div>
-                    <div class="note-card-foot">
-                        <div class="card-tag">
-                            ${(post.tags || []).map(tag => '<span>' + this.esc(tag) + '</span>').join('') || '<span>随手记</span>'}
-                        </div>
-                        <span class="card-date note-date">${dateFormatted}</span>
-                    </div>
-                </div>
-            </div>`;
-    },
-
-    // 打开卡片笔记弹窗（点击拉取全文，不跳转）
-    async openNotePill(id) {
-        const mask = document.getElementById('noteViewerMask');
-        const viewer = document.getElementById('noteViewer');
-        if (!mask || !viewer || !id) return;
-        mask.classList.add('show');
-        viewer.innerHTML = '<div class="nv-loading"><span class="loading-spinner"></span><span>加载中…</span></div>';
-        this._bindNoteViewerKeys();
-        try {
-            const r = await fetch('/api/admin?action=articles&id=' + encodeURIComponent(id), { cache: 'no-store' });
-            const d = await r.json();
-            if (!d || d.status !== 'success' || !d.data) throw new Error('加载失败');
-            const c = d.data;
-            const esc = this.esc.bind(this);
-            const cardTags = (c.tags || []).slice();
-            if (!cardTags.includes('随记')) cardTags.unshift('随记');
-            viewer.innerHTML =
-                '<div class="nv-head"><span class="nv-title">' + esc(c.title || '卡片笔记') + '</span>' +
-                '<button class="nv-close" id="nvClose" title="关闭"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>' +
-                '<div class="nv-body">' + this.miniMarkdown(c.content || '') + '</div>' +
-                '<div class="nv-foot">' +
-                cardTags.map(t => '<span class="t">' + esc(t) + '</span>').join('') +
-                '<span class="nv-date">' + esc(String(c.date || '').slice(0, 10)) + '</span>' +
-                '<button class="nv-copy" id="nvCopy">复制内容</button></div>';
-            document.getElementById('nvClose').addEventListener('click', () => this.closeNotePill());
-            const copyBtn = document.getElementById('nvCopy');
-            if (copyBtn) copyBtn.addEventListener('click', () => {
-                try {
-                    navigator.clipboard.writeText(c.content || '');
-                    copyBtn.textContent = '已复制';
-                    setTimeout(() => { copyBtn.textContent = '复制内容'; }, 1600);
-                } catch (e) { /* ignore */ }
-            });
-        } catch (e) {
-            viewer.innerHTML = '<div class="nv-head"><span class="nv-title">加载失败</span>' +
-                '<button class="nv-close" id="nvClose">关闭</button></div>' +
-                '<div class="nv-err">内容加载失败，请重试</div>';
-            document.getElementById('nvClose').addEventListener('click', () => this.closeNotePill());
-        }
-    },
-
-    closeNotePill() {
-        const mask = document.getElementById('noteViewerMask');
-        if (mask) mask.classList.remove('show');
-    },
-
-    // 弹窗 Esc 关闭（只绑定一次）
-    _bindNoteViewerKeys() {
-        if (this._nvKeyBound) return;
-        this._nvKeyBound = true;
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') this.closeNotePill();
-        });
-    },
-
-    // 卡片笔记的轻量 Markdown 渲染
-    miniMarkdown(s) {
-        const esc = this.esc.bind(this);
-        return esc(s)
-            .replace(/`([^`]+)`/g, '<code>$1</code>')
-            .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-            .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
-            .replace(/\n/g, '<br>');
-    },
-
     // hover 预取：鼠标悬停文章/白板卡片时后台预取目标页，点击后几乎瞬时打开（不阻塞主线程）
     bindPagePrefetch() {
         if (this._pfBound) return;
@@ -466,7 +375,7 @@ const BlogApp = {
         this.applyFilter();
     },
 
-    // 按内容形态筛选（白板 / 随记 / 导图 / 节点图 / 文章）
+    // 按内容形态筛选（白板 / 导图 / 节点图 / 文章）
     filterByType(type) {
         this.currentType = type || null;
         if (!this.currentType) this.currentTag = null; // 形态传 null 时同样回到全部
@@ -478,11 +387,10 @@ const BlogApp = {
     applyFilter() {
         let list = [...this.posts];
         if (this.currentType === 'board') list = list.filter(post => post.type === 'whiteboard');
-        else if (this.currentType === 'card') list = list.filter(post => post.type === 'card');
-        // 普通文章：既非白板也非随记（后端 type 缺省即 article，这里一并兼容）
+        // 普通文章：既非白板也非画布类（后端 type 缺省即 article，这里一并兼容）
         else if (this.currentType === 'mindmap') list = list.filter(post => post.type === 'mindmap');
         else if (this.currentType === 'graph') list = list.filter(post => post.type === 'graph');
-        else if (this.currentType === 'article') list = list.filter(post => post.type !== 'whiteboard' && post.type !== 'card' && post.type !== 'mindmap' && post.type !== 'graph');
+        else if (this.currentType === 'article') list = list.filter(post => post.type !== 'whiteboard' && post.type !== 'mindmap' && post.type !== 'graph');
         if (this.currentTag) list = list.filter(post => (post.tags || []).includes(this.currentTag));
 
         this.filteredPosts = list;
@@ -1312,7 +1220,7 @@ const BlogApp = {
         const urlParams = new URLSearchParams(window.location.search);
         const type = urlParams.get('type');
         const tag = urlParams.get('tag');
-        if (type === 'board' || type === 'card' || type === 'article' || type === 'mindmap' || type === 'graph') { this.filterByType(type); return; }
+        if (type === 'board' || type === 'article' || type === 'mindmap' || type === 'graph') { this.filterByType(type); return; }
         if (tag) this.filterByTag(tag);
     },
 

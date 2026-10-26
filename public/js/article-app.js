@@ -880,7 +880,6 @@ const ArticleApp = {
                 const push = p => {
                     if (!p || !p.id || seen.has(p.id)) return;
                     if ((p.status || 'published') !== 'published') return;  // 草稿 / 下架不露出
-                    if ((p.type || 'article') === 'card') return;          // 随记没有详情页
                     seen.add(p.id);
                     merged.push(p);
                 };

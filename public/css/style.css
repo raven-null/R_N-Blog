@@ -1678,7 +1678,7 @@ body.view-gallery-active .gallery-tag-btn {
         margin-bottom: 32px;
     }
 
-    /* 窄屏原本直接 display:none，导致「全部 / 文章 / 白板 / 随记 / 导图」五个
+    /* 窄屏原本直接 display:none，导致「全部 / 文章 / 白板 / 导图 / 节点图」五个
        形态筛选入口在手机上完全消失——而标签面板走的是另一条互斥路径，替代不了。
        .nav-links 本身已具备 overflow-x: auto + 隐藏滚动条，这里改成横向滚动即可。 */
     .nav-links {

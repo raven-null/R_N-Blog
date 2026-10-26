@@ -1,6 +1,6 @@
 /**
  * 独立编辑页脚本（admin-edit.html）
- * 用途：对已发布/草稿的文章、随记、白板、导图进行再次编辑，不再占用后台「写文章」页
+ * 用途：对已发布/草稿的文章、白板、导图、节点图进行再次编辑，不再占用后台「写文章」页
  *
  * ---- 版本历史（近期）----
  * v1.10.0：侧栏新增「本文内嵌画布」清单（显示画布名称，点击定位到正文块）
@@ -89,11 +89,11 @@
     function typeLabel(t) {
         var cm = canvasMeta(t);
         if (cm) return cm.label;
-        return t === 'card' ? '随记' : '文章';
+        return '文章';
     }
     /** 把任意输入收敛到已知的内容形态之一 */
     function normalizeType(t) {
-        return (canvasMeta(t) || t === 'card') ? t : 'article';
+        return canvasMeta(t) ? t : 'article';
     }
     /** 画布 id：沿用全站约定 wb- / mm- / gg- + 8 位 base36 随机段（与后端 CANVAS_ID_RE 一致） */
     function newCanvasId(t) {
@@ -930,22 +930,17 @@
         $('eeStatusSel').value = doc.status || (isNew ? 'draft' : 'published');
         window.eeRenderCover();
         renderMeta();
-        if (docType === 'card') $('eeViewBtn').textContent = '首页查看';
-        // 随记没有封面图；摘要只有文章有（白板保留封面图）
-        if (docType === 'card') {
-            var coverCard = $('eeCoverCard');
-            if (coverCard) coverCard.style.display = 'none';
-        }
+        // 摘要只有文章有（白板 / 导图 / 节点图保留封面图）
         if (docType !== 'article') {
             var excerptCard = $('eeExcerptCard');
             if (excerptCard) excerptCard.style.display = 'none';
         }
-        // 关联画布：从记录里读出关联列表（白板 / 导图形态与随记不显示这块面板，见 renderRelatedPanel）
+        // 关联画布：从记录里读出关联列表（画布类形态不显示这块面板，见 renderRelatedPanel）
         relatedCanvases = (Array.isArray(doc.canvasRefs) ? doc.canvasRefs : []).filter(function (r) {
             return r && (r.kind === 'board' || r.kind === 'map') && r.id;
         }).map(function (r) { return { kind: r.kind, id: String(r.id) }; });
         renderRelatedPanel(true);
-        // 关联文章（v3.36.0）：单向列表，随记没有详情页所以不显示面板
+        // 关联文章（v3.36.0）：单向列表，画布类形态不显示这块面板
         relatedPosts = (Array.isArray(doc.relatedIds) ? doc.relatedIds : []).map(String);
         wireRelatedPostsSearch();
         renderRelatedPostsPanel(true);
@@ -1116,7 +1111,7 @@
         var content = await assembleContent();
 
         // ===== 内容形态 =====
-        // v1.21.0：形态只由作者当初选的那一种决定（文章 / 随记 / 白板 / 导图），
+        // v1.21.0：形态只由作者当初选的那一种决定（文章 / 白板 / 导图 / 节点图），
         // 不再从正文里「推断」—— 正文已经不内嵌画布了，推断的依据没有了。
         var finalType = docType;
 
@@ -1131,7 +1126,7 @@
             title: title,
             tags: tags,
             excerpt: finalType === 'article' ? $('eeExcerpt').value.trim() : '',
-            image: finalType === 'card' ? '' : $('eeImage').value.trim(),
+            image: $('eeImage').value.trim(),
             status: $('eeStatusSel').value,
             type: finalType,
             boardId: finalType === 'whiteboard' ? boardId : '',
@@ -1219,7 +1214,7 @@
             if (doc && r.data) {
                 doc.status = body.status;
                 doc.title = body.title;
-                // 后端可能追加固定标签（如随记的「随记」），以返回值为准回填
+                // 后端可能修正标签，以返回值为准回填
                 doc.tags = Array.isArray(r.data.tags) ? r.data.tags : body.tags;
                 doc.excerpt = body.excerpt;
                 doc.image = body.image;
@@ -1350,8 +1345,6 @@
     };
     window.eeOpenFront = function () {
         if (!doc || !doc.id) { toast('先保存一次再查看前台效果', 'error'); return; }
-        // 随记（card）没有独立详情页，前台查看走首页（随记区在那里展示）
-        if (docType === 'card') { window.open('/', '_blank'); return; }
         var name = encodeURIComponent(doc.filename || ((doc.id || docId) + '.md'));
         window.open('/article.html?post=' + name + '&blob=' + encodeURIComponent(doc.id || docId), '_blank');
     };
@@ -1447,7 +1440,7 @@
     function renderRelatedPanel(forceNames) {
         var card = $('eeRelatedCard');
         if (!card) return;
-        // 关联只对「文章」有意义：白板 / 导图形态本身就是一整块画布，随记是短内容
+        // 关联只对「文章」有意义：画布类形态本身就是一整块画布
         if (docType !== 'article') { card.style.display = 'none'; return; }
         card.style.display = '';
         paintRelatedList();
@@ -1517,7 +1510,7 @@
     var relatedPosts = [];        // string[]，我关联的文章 id
     var articleIndexCache = null; // [{id,title,date,type,filename}]
 
-    function canLinkPosts() { return docType !== 'card'; }
+    function canLinkPosts() { return true; }
 
     /** 拉一次文章索引（列出可关联的目标）。只保留有详情页的形态 */
     function loadArticleIndex(force) {
@@ -1527,8 +1520,8 @@
             articleIndexCache = list
                 .filter(function (a) {
                     var t = a.type || 'article';
-                    // 除了随记，其余形态都有前台详情页（含白板 / 导图 / 节点图）
-                    return t !== 'card';
+                    // 所有形态都有前台详情页
+                    return true;
                 })
                 .map(function (a) {
                     return {
@@ -2308,7 +2301,6 @@
      * v3.45.0 起面板 UI 全在 term-editor.js 里（搜索、列表、单条编辑），这里只负责数据与高亮。
      */
     function renderTermsPanel() {
-        if (docType === 'card') { clearTermDecorations(); if (window.TermEditor) window.TermEditor.refresh(); return; }
         if (!terms.length) {
             clearTermDecorations();
             if (window.TermEditor) window.TermEditor.refresh();

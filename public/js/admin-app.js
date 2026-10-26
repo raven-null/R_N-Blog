@@ -13,14 +13,6 @@
         let tagPickerOpen=false;
 
         // ===== 标签选择器（后台各处统一：chips + 下拉建议 + 回车确认）=====
-        let wmTagPicker=null;    // 写随记弹窗
-        function initWmTagPicker(){
-            if(wmTagPicker||!window.TagPicker)return wmTagPicker;
-            const host=document.getElementById('wmNoteTagsPicker');
-            if(!host)return null;
-            wmTagPicker=window.TagPicker.create(host,{placeholder:'添加标签，回车确认…',suggestions:articleTagNames});
-            return wmTagPicker;
-        }
         let selectedImageKeys=new Set();
         let batchMode=false;
         let batchSide=''; // 'left' 或 'right'
@@ -252,7 +244,6 @@
                 label: '白板', short: '白', cover: ['hsl(210 34% 27%)', 'hsl(226 24% 18%)'],
                 canvas: { field: 'boardId', page: '/excalidraw.html', cleanup: '关联的白板数据（场景与全部历史快照）' }
             },
-            card: { label: '随记', short: '记', cover: ['hsl(38 32% 26%)', 'hsl(24 22% 18%)'], canvas: null },
             mindmap: {
                 label: '导图', short: '图', cover: ['hsl(168 30% 25%)', 'hsl(182 24% 17%)'],
                 canvas: { field: 'mapId', page: '/mindmap.html', cleanup: '关联的思维导图（含全部历史快照与节点图片）' }
@@ -280,7 +271,7 @@
             const dot='<span class="ac-status '+(isPub?'pub':'draft')+'"></span>';
             const id=escJs(a.id);
             let cover;
-            if(a.image&&type!=='card'){
+            if(a.image){
                 cover='<div class="ac-cover" style="background-image:url('+escAttr(a.image)+')">'+badge+dot+'</div>';
             }else{
                 const m=artMeta(type);
@@ -594,8 +585,8 @@
             };
         }catch(e){}
         async function deleteArticle(id,title,type){
-            // 提示按内容形态给：画布类会连带删除画布数据，文章 / 随记没有关联数据。
-            // 以前这里写死 type==='whiteboard'，导图删除时既不提示会清理导图数据，随记又容易误以为有。
+            // 提示按内容形态给：画布类会连带删除画布数据，文章没有关联数据。
+            // 以前这里写死 type==='whiteboard'，导图删除时既不提示会清理导图数据。
             const canvasMeta=artMeta(type).canvas;
             const tip=canvasMeta?'删除后不可恢复，'+canvasMeta.cleanup+'会一并删除！':'删除后不可恢复！';
             const confirmed=await showConfirm(`确定删除「${title}」？${tip}`,'删除文章','删除');
@@ -609,7 +600,7 @@
                 notifyArticlesChanged();
             }else showToast(r.message||'删除失败','error');
         }
-        // 编辑已有文章/随记/白板 → 直接跳独立编辑页（不再跳转写文章页）
+        // 编辑已有文章 / 白板 / 导图 / 节点图 → 直接跳独立编辑页（不再跳转写文章页）
         function editArticle(id){location.href='/admin-edit.html?id='+encodeURIComponent(id)}
 
         function importAndEdit(f){
@@ -642,7 +633,7 @@
         }
 
 
-        // ===== 形态切换（文章/随记/白板）：顶部 tab + 右侧操作组 + 视图动画 =====
+        // ===== 形态切换（文章 / 白板）：顶部 tab + 右侧操作组 + 视图动画 =====
         let writeMode='article';
 
         // 白板 bundle 懒加载（切到白板形态才加载 8MB）
@@ -945,45 +936,6 @@
             showToast((status==='draft'?'导图已存为草稿':'导图已发布')+'，已新建一块空白导图可继续编辑；要改刚发布的那块请到「文章管理」打开','success');
         }
 
-        // 随记快速记录
-        async function wmNoteSave(){
-            const content=document.getElementById('wmNoteContent').value;
-            if(!String(content||'').trim()){showToast('写点什么再保存','error');return}
-            const title=(document.getElementById('wmNoteTitle').value||'').trim();
-            const wmP=initWmTagPicker();
-            const tags=wmP?wmP.getTags():[];
-            const finalTitle=title||String(content).replace(/\n/g,' ').trim().slice(0,20);
-            const r=await apiFetch('action=articles',{method:'POST',body:JSON.stringify({title:finalTitle,content:String(content),status:'published',type:'card',tags})});
-            if(r.status==='success'){
-                showToast('随记已发布','success');
-                document.getElementById('wmNoteTitle').value='';
-                document.getElementById('wmNoteContent').value='';
-                if(wmP)wmP.setTags([],true);
-                loadRecentNotes();
-                notifyArticlesChanged();
-            }else showToast(r.message||'保存失败','error');
-        }
-        async function loadRecentNotes(){
-            const box=document.getElementById('wmRecentNotes');
-            if(!box)return;
-            const r=await apiFetch('action=articles&filter=card&withContent=1');
-            const list=((r.data||[])).filter(function(a){return a.status==='published'}).slice(0,5);
-            if(!list.length){box.innerHTML='<div class="wm-hint">还没有随记，上面记一条吧</div>';return}
-            box.innerHTML='<div class="wm-hint" style="margin-bottom:4px">最近随记：</div>'+list.map(function(a){
-                return '<div class="wm-recent-item">'+
-                    '<span class="txt" onclick="editArticle(\''+escJs(a.id)+'\')" title="在新页面编辑这条随记">'+esc(String(a.title||'').slice(0,40))+'</span>'+
-                    '<span class="date">'+esc(String(a.date||'').slice(0,10))+'</span>'+
-                    '<button class="btn btn-ghost btn-sm" onclick="wmNoteDelete(\''+escJs(a.id)+'\')">删除</button></div>';
-            }).join('');
-        }
-        async function wmNoteDelete(id){
-            const ok=await showConfirm('删除这条随记？','删除随记','删除');
-            if(!ok)return;
-            const r=await apiFetch('action=articles&id='+encodeURIComponent(id),{method:'DELETE'});
-            if(r.status==='success'){showToast('已删除','success');loadRecentNotes();await loadArticles();notifyArticlesChanged()}
-            else showToast(r.message||'删除失败','error');
-        }
-
         let lastSaved={id:'',filename:''},lastFpUrl='';
         function buildFrontUrl(ref){
             const name=encodeURIComponent(ref.filename||((ref.id||'')+'.md'));
@@ -1021,7 +973,7 @@
         }
 
 
-        // ===== 发布弹窗（文章 / 随记 / 白板共用，按形态显隐字段） =====
+        // ===== 发布弹窗（文章 / 白板共用，按形态显隐字段） =====
         function defaultBoardName(){
             const d=new Date();
             const p=function(n){return String(n).padStart(2,'0')};
@@ -1030,25 +982,18 @@
         function openPublishModal(){
             const mode=writeMode||'article';
             const t=document.getElementById('publishModalTitle');
-            if(t)t.textContent=({article:'发布文章',note:'发布随记',board:'发布白板'})[mode]||'发布';
+            if(t)t.textContent=({article:'发布文章',board:'发布白板'})[mode]||'发布';
             const isArticle=mode==='article';
             // 字段显隐每次强制重置：先清掉任何残留的 inline display，再按当前形态设置
-            // 文章与白板都显示封面；只有随记没有封面
+            // 文章与白板都显示封面
             const ex=document.getElementById('publishExcerptField');
             const cv=document.getElementById('publishCoverField');
             const bn=document.getElementById('publishBoardNameField');
             const ek=document.getElementById('publishEditKeyField');
             [ex,cv,bn,ek].forEach(function(el){if(el)el.style.removeProperty('display')});
             if(ex&&!isArticle)ex.style.display='none';
-            if(cv&&mode==='note')cv.style.display='none';
             if(bn&&mode!=='board'&&mode!=='mindmap')bn.style.display='none';
             if(ek&&mode!=='board'&&mode!=='mindmap')ek.style.display='none';
-            if(mode==='note'){
-                // 随记表单里已填的标签作为弹窗初值
-                const wmP=initWmTagPicker();
-                const raw=wmP?wmP.getTags():[];
-                if(raw.length&&!selectedArticleTags.length){selectedArticleTags=raw;renderTagPickerChips()}
-            }
             if(mode==='board'){
                 const el=document.getElementById('edBoardName');
                 if(el){el.value=currentBoardName||defaultBoardName();el.placeholder='给这块白板起个名字（同时作为文章标题）';}
@@ -1069,7 +1014,7 @@
         }
         /**
          * 发布弹窗的确认按钮，按当前形态分派。
-         * 文章 / 随记那两条「用后台内嵌编辑器提交正文」的分支已随「写文章」页下线
+         * 文章那条「用后台内嵌编辑器提交正文」的分支已随「写文章」页下线
          * （正文只存在独立编辑页里），所以这里只剩白板与导图两条真实路径；
          * 其余形态给一句明确提示，不再调用已删除的保存函数。
          */
@@ -2194,7 +2139,7 @@
         // ===== 创建内容：先弹形态选择，再跳到独立编写页 =====
         // 写文章已从后台拆成独立页面 /admin-edit.html（新建模式 ?new=1&type=…），
         // 后台只负责「选形态 → 跳过去」，不再内嵌编辑器。
-        const CREATE_TYPES=['article','card','whiteboard','mindmap','graph'];
+        const CREATE_TYPES=['article','whiteboard','mindmap','graph'];
         function openCreatePicker(){
             const box=document.getElementById('createPicker');
             if(!box){pickCreateType('article');return}

@@ -114,17 +114,16 @@ let articleId = ""
   check("删除后节点图数据已被一并清理", after.data?.code === "not_found", after.data?.code)
 }
 
-/* 6. 随记不受影响（用户要求：删除随记不能带画布逻辑） */
+/* 6. 随记（card）形态已从代码中移除：提交 card 会被回落成 article */
 {
   const r = await call(adminHandler, A, "POST", "?action=articles", {
-    title: "一条随记",
+    title: "不该再出现的随记",
     content: "随手记一句",
-    status: "published",
+    status: "draft",
     type: "card",
   })
+  check("POST type=card 被拒（回落成 article）", r.status === 200 && r.data?.data?.type === "article", r.data?.data?.type)
   const cid = r.data?.data?.id
-  check("POST 随记 → success", r.status === 200 && r.data.status === "success", r.data)
-  check("随记没有 graphId 字段", r.data?.data?.graphId === undefined, r.data?.data?.graphId)
   if (cid) await call(adminHandler, A, "DELETE", `?action=articles&id=${cid}`)
 }
 

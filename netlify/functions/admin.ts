@@ -95,7 +95,7 @@ interface ArticleMeta {
   image: string
   wordCount: number
   status: "published" | "draft"
-  type?: "article" | "whiteboard" | "card" | "mindmap" | "graph" // 内容形态（缺省 article）
+  type?: "article" | "whiteboard" | "mindmap" | "graph" // 内容形态（缺省 article）
   chunked?: boolean // 长文章已分章存储（主记录不存全文）
   chunkCount?: number // 分章数量
   boardId?: string // type=whiteboard 时关联的 Excalidraw 笔记 id
@@ -543,8 +543,8 @@ export default async (req: Request) => {
       const index = await getArticleIndex(store)
 
       // 列表过滤与内容附带（首页胶囊 / 灵感页等前台场景）
-      //   ?filter=card   仅返回指定 type
-      //   ?withContent=1 附带全文 content（逐条读取，卡片类数量小成本可控）
+      //   ?filter=<type> 仅返回指定形态（article / whiteboard / mindmap / graph）
+      //   ?withContent=1 附带全文 content（逐条读取，数量小时成本可控）
       const typeFilter = url.searchParams.get("filter")
       let list = typeFilter ? index.filter(a => a.type === typeFilter) : index
       if (url.searchParams.get("withContent") === "1") {
@@ -593,8 +593,8 @@ export default async (req: Request) => {
       const articleId = id || randomUUID().slice(0, 8)
       const now = new Date().toISOString().slice(0, 10)
 
-      // 内容形态：article（默认）/ whiteboard（纯白板）/ card（卡片笔记）/ mindmap（导图）/ graph（节点图）
-      const validTypes = ["article", "whiteboard", "card", "mindmap", "graph"]
+      // 内容形态：article（默认）/ whiteboard（纯白板）/ mindmap（导图）/ graph（节点图）
+      const validTypes = ["article", "whiteboard", "mindmap", "graph"]
       const type = validTypes.includes(body.type) ? body.type : "article"
       const boardId = type === "whiteboard" && typeof body.boardId === "string"
         ? body.boardId.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 64)
@@ -606,11 +606,11 @@ export default async (req: Request) => {
         ? body.graphId.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 64)
         : ""
 
-      // 标签完全按传入内容保存，不再自动附加「随记」等固定标签
+      // 标签完全按传入内容保存，不自动附加任何固定标签
       const tagsArr = Array.isArray(tags) ? tags : (tags || "").split(",").map((t: string) => t.trim()).filter(Boolean)
 
       // 提取摘要（有内容时自动提取，否则用传入的 excerpt）
-      const noExcerpt = type === "card" || type === "whiteboard" || type === "mindmap" || type === "graph" // 随记、白板、导图、节点图没有摘要
+      const noExcerpt = type === "whiteboard" || type === "mindmap" || type === "graph" // 画布类内容没有摘要
       const autoExcerpt = (!noExcerpt && content)
         ? content.replace(/#+\s+/g, "").replace(/\*\*(.*?)\*\*/g, "$1").replace(/\*(.*?)\*/g, "$1").replace(/\[([^\]]+)\]\([^)]+\)/g, "$1").replace(/!\[([^\]]*)\]\([^)]+\)/g, "").replace(/`([^`]+)`/g, "$1").replace(/\n/g, " ").trim().slice(0, 150)
         : ""
@@ -821,7 +821,7 @@ export default async (req: Request) => {
       if (!raw) return json(404, { status: "error", message: "文章不存在" }, req)
       const article = JSON.parse(raw)
 
-      // 标签完全按传入内容保存（不再强制附加「随记」）
+      // 标签完全按传入内容保存（不强制附加任何固定标签）
       let nextTags: string[] | null = null
       if (tags !== undefined) {
         const clean = tags.map((t: unknown) => String(t).trim()).filter(Boolean)
@@ -885,7 +885,7 @@ export default async (req: Request) => {
     const changed: Array<{ id: string; title: string; blocks: number; before: number; after: number }> = []
 
     for (const meta of index) {
-      if ((meta.type || "article") !== "article") continue   // 白板 / 导图 / 随记不参与
+      if ((meta.type || "article") !== "article") continue   // 白板 / 导图 / 节点图不参与
       let content = ""
       try { content = await readArticleContent(store, meta.id) } catch { content = "" }
       if (!content) continue

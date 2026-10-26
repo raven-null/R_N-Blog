@@ -544,76 +544,9 @@ button:active,
     }
 }
 
-/* 文章内容形态徽标（白板 / 卡片）：不单独做样式，统一走 style.css 的 .card-tag span，
-   使卡片上的「白板 / 卡片」与普通标签外观完全一致 */
+/* 文章内容形态徽标（白板 / 导图 / 节点图）：不单独做样式，统一走 style.css 的 .card-tag span，
+   使卡片上的形态标签与普通标签外观完全一致 */
 
-/* ===== 卡片笔记：瀑布流卡片（标题大号居中 / 标签左下 / 时间右下；点击弹窗） ===== */
-.note-plain-card { min-height: 0; display: flex; margin-bottom: 10px; }
-.note-plain-card .card-body {
-    width: 100%; box-sizing: border-box;
-    display: flex; flex-direction: column;
-    padding: 15px 18px 10px;
-}
-.note-plain-card .card-title {
-    text-align: center; font-size: 15px; line-height: 1.5;
-    margin: 0 0 9px; padding: 0;
-}
-.note-plain-card .note-card-foot {
-    display: flex; align-items: center; justify-content: space-between; gap: 12px;
-    margin-top: auto;
-}
-.note-plain-card .card-tag { margin: 0; }
-.note-plain-card .note-date { flex: none; }
-
-/* ===== 卡片笔记弹窗（液态玻璃） ===== */
-.note-viewer-mask {
-    position: fixed; inset: 0; z-index: 200;
-    display: flex; align-items: center; justify-content: center; padding: 20px;
-    background: rgba(5, 5, 9, 0.55);
-    backdrop-filter: blur(12px) saturate(150%); -webkit-backdrop-filter: blur(12px) saturate(150%);
-    opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
-}
-.note-viewer-mask.show { opacity: 1; pointer-events: auto; }
-.note-viewer {
-    width: min(560px, 94vw); max-height: 82vh; overflow-y: auto;
-    padding: 26px 30px; border-radius: 26px;
-    transform: scale(0.94) translateY(12px); transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
-    background: linear-gradient(145deg, rgba(34, 34, 42, 0.97), rgba(20, 20, 26, 0.95));
-    backdrop-filter: blur(32px) saturate(190%); -webkit-backdrop-filter: blur(32px) saturate(190%);
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    box-shadow: 0 40px 110px -24px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.12);
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
-}
-.note-viewer-mask.show .note-viewer { transform: none; }
-.note-viewer .nv-loading {
-    display: flex; align-items: center; justify-content: center; gap: 10px;
-    padding: 60px 0; color: rgba(255, 255, 255, 0.5); font-size: 13px;
-}
-.note-viewer .nv-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
-.note-viewer .nv-title { font-size: 18px; font-weight: 700; color: #fff; }
-.note-viewer .nv-close {
-    cursor: pointer; color: rgba(255, 255, 255, 0.5); background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 999px; padding: 5px 10px;
-    display: inline-flex; align-items: center; transition: color 0.2s, border-color 0.2s;
-}
-.note-viewer .nv-close:hover { color: #fff; border-color: rgba(255, 255, 255, 0.3); }
-.note-viewer .nv-body { font-size: 15px; line-height: 2; color: #eceef4; white-space: pre-wrap; word-break: break-word; }
-.note-viewer .nv-body code { background: rgba(255, 255, 255, 0.12); padding: 1px 7px; border-radius: 7px; font-size: 13px; }
-.note-viewer .nv-body a { color: #8ab4ff; }
-.note-viewer .nv-foot {
-    display: flex; align-items: center; gap: 8px; margin-top: 22px; padding-top: 16px;
-    border-top: 1px solid rgba(255, 255, 255, 0.09); flex-wrap: wrap; font-size: 12px; color: rgba(255, 255, 255, 0.5);
-}
-.note-viewer .nv-foot .t { padding: 2px 11px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, 0.16); color: #bcd0ff; }
-.note-viewer .nv-foot .nv-date { margin-right: auto; }
-.note-viewer .nv-copy {
-    cursor: pointer; color: rgba(255, 255, 255, 0.65); background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 999px; padding: 4px 14px; font-size: 12px; font-family: inherit;
-    transition: color 0.2s, border-color 0.2s;
-}
-.note-viewer .nv-copy:hover { color: #fff; border-color: rgba(255, 255, 255, 0.32); }
-.note-viewer .nv-err { padding: 40px 0; text-align: center; color: rgba(255, 255, 255, 0.5); }
-@media (prefers-reduced-motion: reduce) { .note-viewer { transition: none; } }
 /* ===== 卡片按压反馈（苹果式） ===== */
 .card:active { transform: scale(0.985); }
 
