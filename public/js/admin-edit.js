@@ -1307,6 +1307,17 @@
         } catch (err) { /* 忽略 */ }
     });
 
+    // 节点图画布里是手动保存：有未保存改动时，在右侧「保存」按钮上点一个橙点提醒
+    window.addEventListener('message', function (e) {
+        if (e.origin !== location.origin) return;
+        var d = e.data || {};
+        if (d.type !== 'graph-dirty') return;
+        var btn = $('eeSaveBtn');
+        if (!btn) return;
+        btn.classList.toggle('ee-dirty', !!d.dirty);
+        btn.title = d.dirty ? '节点图有未保存的改动，点这里写回服务器' : '';
+    });
+
     // ===== 状态 / 删除 / 前台 =====
     /**
      * 发布：不再弹窗。

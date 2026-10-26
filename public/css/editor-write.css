@@ -104,6 +104,15 @@ body {
 /* 提交中：三个动作按钮一起禁用，避免重复 POST */
 .ee-btn[disabled] { opacity: .45; cursor: not-allowed; transform: none; }
 .ee-btn[disabled]:hover { background: rgba(255, 255, 255, .08); color: var(--text-secondary); }
+/* 画布有未保存改动（节点图手动保存）：在保存按钮右上角点一颗橙点 */
+.ee-btn.ee-dirty { position: relative; }
+.ee-btn.ee-dirty::after {
+    content: "";
+    position: absolute; top: -2px; right: 2px;
+    width: 7px; height: 7px; border-radius: 50%;
+    background: #ff9f0a;
+    box-shadow: 0 0 0 2px rgba(255, 159, 10, .25);
+}
 
 /* 顶栏两个入口只在窄屏出现：宽屏有侧栏页签、折叠把手和整页快捷键，顶栏保持干净 */
 .ee-more { display: none; position: relative; }
