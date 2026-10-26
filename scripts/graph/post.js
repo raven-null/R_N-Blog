@@ -73,41 +73,46 @@
     if (key === DOC_KEY || key === SEQ_KEY) return null;
     return rawLsGetJson(key);
   };
-  // 写入：存档键转服务端；设置类键（语言、键位、自定义色）仍走本地。
+  // 写入：存档键只**暂存并标记未保存**，不自动上传。
+  // 保存是手动的（左侧保存按钮 / Ctrl+S）—— 自动保存会在每次拖动后产生一串历史快照，
+  // 用户明确要求「只有点保存才保存」。设置类键（语言、键位、自定义色）仍走本地。
   App._lsSet = function (key, value) {
     if (key === SEQ_KEY) return true; // 时序图本期不存，静默丢弃
     if (key !== DOC_KEY) return rawLsSet(key, value);
     if (!isEdit) return true; // 只读态不产生任何写入
     if (!st.loaded) return true; // 数据还没装进来，先把写入丢掉，防止空画布覆盖线上
-    queueSave(value);
-    return true; // 乐观返回：真正结果由 toast 反馈
+    stageSave(value);
+    return true; // 乐观返回：Weave 的 saveCanvas 据此认为"存住了"，真正结果由保存按钮反馈
   };
 
-  /* ══════════ 2. 保存 ══════════ */
+  /* ══════════ 2. 保存（手动触发） ══════════ */
 
-  function queueSave(jsonText) {
+  /** 把待保存内容暂存起来，并把保存按钮标成「未保存」 */
+  function stageSave(jsonText) {
     try {
       st.pending = JSON.parse(jsonText);
     } catch (e) {
       return; // 解析不了就别传上去
     }
     st.dirty = true;
-    clearTimeout(st.timer);
-    st.timer = setTimeout(function () {
-      flush(false);
-    }, 800);
+    updateSaveBtn();
   }
 
+  /**
+   * 真正发请求保存。返回 Promise<boolean>：true = 已存 / 无需保存，false = 失败。
+   * 宿主（后台编辑页）的「保存」按钮依赖这个返回值决定要不要继续存文章记录。
+   */
   function flush(force) {
-    if (!st.dirty || st.saving || !st.pending) return;
+    if (!st.dirty || st.saving || !st.pending) return Promise.resolve(true);
     st.dirty = false;
     var body = { data: st.pending, baseRev: st.baseRev };
     if (st.meta && st.meta.hasKey && st.editKey) body.editKey = st.editKey;
     if (force) body.force = 1;
     st.saving = true;
     setStatus("保存中…");
+    updateSaveBtn();
 
-    fetch("/api/graph?id=" + encodeURIComponent(noteId), {
+    return fetch("/api/graph?id=" + encodeURIComponent(noteId), {
       method: "PUT",
       headers: Object.assign({ "Content-Type": "application/json" }, adminHeaders()),
       body: JSON.stringify(body),
@@ -126,8 +131,7 @@
           st.baseRev = Number(r.d.latestRev) || st.baseRev;
           st.dirty = true;
           toast("检测到他人更新，正在以当前内容覆盖…", "warning");
-          flush(true);
-          return;
+          return flush(true);
         }
         if (r.status !== 200 || r.d.status !== "success") {
           st.dirty = true;
@@ -138,14 +142,17 @@
           }
           toast(msg, "error");
           setStatus("保存失败：" + msg);
+          updateSaveBtn();
           post({ type: "graph-save", ok: false, message: msg, id: noteId });
-          return;
+          return false;
         }
         st.baseRev = Number(r.d.rev) || st.baseRev;
         var t = new Date().toLocaleTimeString();
         setStatus("已保存 rev " + st.baseRev + " · " + t);
         toast("已保存 rev " + st.baseRev, "success");
+        updateSaveBtn();
         post({ type: "graph-save", ok: true, rev: st.baseRev, id: noteId });
+        return true;
       })
       .catch(function (err) {
         st.saving = false;
@@ -153,9 +160,99 @@
         var msg = "网络错误：" + ((err && err.message) || err);
         toast(msg, "error");
         setStatus("保存失败：" + msg);
+        updateSaveBtn();
         post({ type: "graph-save", ok: false, message: msg, id: noteId });
+        return false;
       });
   }
+
+  /* ══════════ 1.5 保存按钮（左侧悬浮，手动保存的唯一入口） ══════════ */
+
+  function mountSaveBar() {
+    if (!isEdit) return; // 只读态没有保存这回事
+    var bar = document.createElement("div");
+    bar.id = "gg-savebar";
+    bar.style.cssText =
+      "position:fixed;left:18px;top:50%;transform:translateY(-50%);z-index:9998;" +
+      "display:flex;flex-direction:column;align-items:center;gap:8px;";
+
+    var btn = document.createElement("button");
+    btn.id = "ggSaveBtn";
+    btn.type = "button";
+    btn.title = "保存到服务器（Ctrl+S）";
+    btn.textContent = "保存";
+    btn.style.cssText =
+      "cursor:pointer;padding:14px 9px;border-radius:12px;font-family:inherit;" +
+      "font-size:13px;font-weight:600;letter-spacing:2px;writing-mode:vertical-rl;" +
+      "text-orientation:upright;line-height:1;color:rgba(255,255,255,.55);" +
+      "background:rgba(28,28,34,.9);border:1px solid rgba(255,255,255,.12);" +
+      "backdrop-filter:blur(18px) saturate(160%);-webkit-backdrop-filter:blur(18px) saturate(160%);" +
+      "box-shadow:0 12px 30px -12px rgba(0,0,0,.75), inset 0 1px 0 rgba(255,255,255,.08);" +
+      "transition:background .18s ease,color .18s ease,transform .12s ease;";
+    btn.addEventListener("click", function () {
+      if (!st.loaded) {
+        toast("还在加载，稍等一下", "info");
+        return;
+      }
+      if (!st.dirty) {
+        toast("没有需要保存的改动", "info");
+        return;
+      }
+      flush(false);
+    });
+    btn.addEventListener("mouseenter", function () {
+      if (st.dirty && !st.saving) btn.style.transform = "translateY(-1px)";
+    });
+    btn.addEventListener("mouseleave", function () {
+      btn.style.transform = "";
+    });
+
+    bar.appendChild(btn);
+    (document.body || document.documentElement).appendChild(bar);
+    st.saveBtn = btn;
+    updateSaveBtn();
+  }
+
+  /** 按「保存中 / 有未保存改动 / 已保存」三态刷新按钮外观 */
+  function updateSaveBtn() {
+    var btn = st.saveBtn;
+    if (!btn) return;
+    if (st.saving) {
+      btn.textContent = "保存中";
+      btn.style.background = "rgba(28,28,34,.9)";
+      btn.style.color = "rgba(255,255,255,.45)";
+      btn.style.borderColor = "rgba(255,255,255,.12)";
+      btn.style.cursor = "progress";
+      return;
+    }
+    btn.style.cursor = "pointer";
+    if (st.dirty) {
+      // 有未保存改动：按钮变主题色，一眼能看出来还没存
+      btn.textContent = "保存";
+      btn.style.background = "rgba(255,159,10,.94)";
+      btn.style.color = "#16161a";
+      btn.style.borderColor = "transparent";
+      btn.style.boxShadow = "0 12px 30px -10px rgba(255,159,10,.5), inset 0 1px 0 rgba(255,255,255,.25)";
+    } else {
+      btn.textContent = "已保存";
+      btn.style.background = "rgba(28,28,34,.9)";
+      btn.style.color = "rgba(255,255,255,.42)";
+      btn.style.borderColor = "rgba(255,255,255,.1)";
+      btn.style.boxShadow = "0 12px 30px -12px rgba(0,0,0,.75), inset 0 1px 0 rgba(255,255,255,.06)";
+    }
+  }
+
+  // Ctrl/Cmd + S 等同点保存按钮
+  document.addEventListener(
+    "keydown",
+    function (e) {
+      if (!(e.ctrlKey || e.metaKey)) return;
+      if (e.key !== "s" && e.key !== "S") return;
+      e.preventDefault();
+      if (st.loaded && st.dirty) flush(false);
+    },
+    true,
+  );
 
   /* ══════════ 3. 只读态 ══════════ */
 
@@ -217,11 +314,13 @@
           toast(m, "error");
         }
         st.loaded = true;
+        updateSaveBtn();
         post({ type: "graph-ready", id: noteId, ok: !!(d && d.status === "success") });
       })
       .catch(function (err) {
         // 加载失败：允许编辑（否则用户连重试的机会都没有），但提示明确
         st.loaded = true;
+        updateSaveBtn();
         var msg = "加载失败：" + ((err && err.message) || err);
         setStatus(msg);
         toast(msg, "error");
@@ -285,22 +384,26 @@
 
   /* ══════════ 7. 收尾钩子 ══════════ */
 
-  // 离开页面时把最后一次改动发出去（keepalive 让请求在卸载后仍能完成）。
-  // Weave 自己也挂了 beforeunload 调 saveCanvas → _lsSet → queueSave，
-  // 这里排在它之后执行，正好把它刚标脏的内容 flush 掉。
-  window.addEventListener("beforeunload", function () {
-    if (st.dirty && st.loaded && isEdit) flush(true);
+  // 手动保存模式下不在离开时偷偷发请求：改为拦住并提示，存不存由用户自己决定。
+  // Weave 自己挂的 beforeunload 只会调 saveCanvas → _lsSet → stageSave（标脏），不会上传。
+  window.addEventListener("beforeunload", function (e) {
+    if (!isEdit || !st.loaded || !st.dirty) return;
+    e.preventDefault();
+    e.returnValue = "";
+    return "";
   });
 
   // 供宿主页面（admin-edit 等）判断是否有未保存改动
   window.__graphDirty = function () {
     return !!(st.dirty || st.saving);
   };
+  // 宿主用它触发保存，并据返回值决定要不要继续存文章记录
   window.__graphSave = function () {
-    flush(true);
+    return flush(false);
   };
 
   /* ══════════ 启动 ══════════ */
 
+  mountSaveBar();
   load();
 })();

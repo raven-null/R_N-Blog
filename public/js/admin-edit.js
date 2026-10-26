@@ -1183,6 +1183,16 @@
             // 画布类（白板 / 导图 / 节点图）没有正文，只要标题就行
             if (!canvasMeta(body.type) && !body.content) { toast('请填写正文内容', 'error'); return false; }
 
+            // 节点图：画布内的保存是手动的，这里让后台的「保存 / 发布」把它一并带上。
+            // 画布与文章是两套存储，画布没存上就存文章，会出现「文章在、内容丢」。
+            if (body.type === 'graph' && window.EEEmbed && typeof window.EEEmbed.saveGraph === 'function') {
+                var graphOk = await window.EEEmbed.saveGraph();
+                if (graphOk === false) {
+                    toast('节点图保存未完成，已中止（避免文章存了、画布没存）', 'error');
+                    return false;
+                }
+            }
+
             // 以前这里要先把正文里内嵌的画布落盘（画布与正文两套存储，画布失败就得阻断）。
             // v1.21.0 起正文不再内嵌画布，关联只是一条 id 记录，不存在「画布没存上」的情况，
             // 所以这段 flush 一并删掉了。
