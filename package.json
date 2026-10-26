@@ -12,6 +12,9 @@
     "build": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
     "build:excalidraw": "node scripts/build-excalidraw.mjs",
+    "build:graph": "node scripts/build-graph.mjs",
+    "test:graph": "node node_modules/esbuild/bin/esbuild scripts/graph/selftest.ts --bundle --format=esm --platform=node --target=node20 --packages=external --outfile=.local-data/graph-selftest/selftest.mjs && node .local-data/graph-selftest/selftest.mjs",
+    "test:graph-e2e": "node node_modules/esbuild/bin/esbuild scripts/graph/e2e-article.ts --bundle --format=esm --platform=node --target=node20 --packages=external --outfile=.local-data/graph-selftest/e2e.mjs && node .local-data/graph-selftest/e2e.mjs",
     "scrape": "tsx scripts/scrape-local.ts"
   },
   "dependencies": {

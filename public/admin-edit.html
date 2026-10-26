@@ -238,6 +238,17 @@
             </div>
             <div class="ee-board-host" id="eeMindmapHost"><div class="ee-hint">正在加载导图…</div></div>
         </section>
+
+        <!-- 节点图（内嵌 /graph.html，与导图并列的独立画布形态） -->
+        <section class="ee-board" id="eeGraph" style="display:none">
+            <div class="ee-mm-bar" id="eeGraphBar" style="display:none">
+                <span class="ee-mm-bar-label">这篇文章还没绑定节点图</span>
+                <select id="eeGraphPick"><option value="">— 选择一张已有节点图 —</option></select>
+                <button type="button" class="ee-btn" id="eeGraphNew">新建节点图</button>
+                <button type="button" class="ee-btn primary" id="eeGraphBind">绑定并保存</button>
+            </div>
+            <div class="ee-board-host" id="eeGraphHost"><div class="ee-hint">正在加载节点图…</div></div>
+        </section>
     </main>
 
     <!-- 插入链接面板（v3.38.0）：右键「插入站内链接」/「链接到本文标题」打开。

@@ -288,8 +288,11 @@ const BlogApp = {
         const avatarImg = this.getAuthorAvatar(post.author);
         const authorName = this.getAuthorName(post.author);
 
-        // 卡片右下角形态文字：白板文章显示「交互白板」，普通博客文章显示「博客文章」
-        const readingLabel = post.type === 'whiteboard' ? '交互白板' : (post.type === 'mindmap' ? '思维导图' : '博客文章');
+        // 卡片右下角形态文字：白板「交互白板」、导图「思维导图」、节点图「节点图」、其余「博客文章」
+        const readingLabel = post.type === 'whiteboard' ? '交互白板'
+            : post.type === 'mindmap' ? '思维导图'
+            : post.type === 'graph' ? '节点图'
+            : '博客文章';
 
         return `
             <div class="card" data-href="article.html?post=${this.escAttr(post.filename)}&blob=${this.escAttr(post.id || '')}" onclick="BlogApp.openPost('${this.escAttr(post.filename)}', '${this.escAttr(post.id || '')}')">
@@ -463,7 +466,7 @@ const BlogApp = {
         this.applyFilter();
     },
 
-    // 按内容形态筛选（白板 / 随记 / 文章）
+    // 按内容形态筛选（白板 / 随记 / 导图 / 节点图 / 文章）
     filterByType(type) {
         this.currentType = type || null;
         if (!this.currentType) this.currentTag = null; // 形态传 null 时同样回到全部
@@ -478,7 +481,8 @@ const BlogApp = {
         else if (this.currentType === 'card') list = list.filter(post => post.type === 'card');
         // 普通文章：既非白板也非随记（后端 type 缺省即 article，这里一并兼容）
         else if (this.currentType === 'mindmap') list = list.filter(post => post.type === 'mindmap');
-        else if (this.currentType === 'article') list = list.filter(post => post.type !== 'whiteboard' && post.type !== 'card' && post.type !== 'mindmap');
+        else if (this.currentType === 'graph') list = list.filter(post => post.type === 'graph');
+        else if (this.currentType === 'article') list = list.filter(post => post.type !== 'whiteboard' && post.type !== 'card' && post.type !== 'mindmap' && post.type !== 'graph');
         if (this.currentTag) list = list.filter(post => (post.tags || []).includes(this.currentTag));
 
         this.filteredPosts = list;
@@ -1308,7 +1312,7 @@ const BlogApp = {
         const urlParams = new URLSearchParams(window.location.search);
         const type = urlParams.get('type');
         const tag = urlParams.get('tag');
-        if (type === 'board' || type === 'card' || type === 'article' || type === 'mindmap') { this.filterByType(type); return; }
+        if (type === 'board' || type === 'card' || type === 'article' || type === 'mindmap' || type === 'graph') { this.filterByType(type); return; }
         if (tag) this.filterByTag(tag);
     },
 

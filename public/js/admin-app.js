@@ -243,15 +243,27 @@
             if(i)i.value='';
             filterArticles();
         }
-        function artTypeLabel(t){if(t==='whiteboard')return '白板';if(t==='card')return '随记';if(t==='mindmap')return '导图';return ''}
-        // 四种形态各自的封面色块（没设封面图时用），顺带当类型标识
-        const ART_COVER={
-            article:['hsl(222 26% 25%)','hsl(230 20% 17%)'],
-            whiteboard:['hsl(210 34% 27%)','hsl(226 24% 18%)'],
-            card:['hsl(38 32% 26%)','hsl(24 22% 18%)'],
-            mindmap:['hsl(168 30% 25%)','hsl(182 24% 17%)']
+        /* 内容形态元数据：标签 / 封面渐变 / 缩略字 / 关联画布 / 删除时的清理提示，全部从这里取。
+           新增一种形态（比如节点图）只需在这里加一行，不要再在别处写 type==='xxx' 的硬编码判断。
+           之前那些散在各处的判断就是漏的来源——导图删除一直没提示「会连带清理导图数据」。 */
+        const ART_META = {
+            article: { label: '', short: '文', cover: ['hsl(222 26% 25%)', 'hsl(230 20% 17%)'], canvas: null },
+            whiteboard: {
+                label: '白板', short: '白', cover: ['hsl(210 34% 27%)', 'hsl(226 24% 18%)'],
+                canvas: { field: 'boardId', page: '/excalidraw.html', cleanup: '关联的白板数据（场景与全部历史快照）' }
+            },
+            card: { label: '随记', short: '记', cover: ['hsl(38 32% 26%)', 'hsl(24 22% 18%)'], canvas: null },
+            mindmap: {
+                label: '导图', short: '图', cover: ['hsl(168 30% 25%)', 'hsl(182 24% 17%)'],
+                canvas: { field: 'mapId', page: '/mindmap.html', cleanup: '关联的思维导图（含全部历史快照与节点图片）' }
+            },
+            graph: {
+                label: '节点图', short: '网', cover: ['hsl(265 30% 27%)', 'hsl(275 24% 18%)'],
+                canvas: { field: 'graphId', page: '/graph.html', cleanup: '关联的节点图（含全部历史快照与图片节点）' }
+            }
         };
-        const ART_PH={article:'文',whiteboard:'白',card:'记',mindmap:'图'};
+        function artMeta(t) { return ART_META[t] || ART_META.article }
+        function artTypeLabel(t) { return artMeta(t).label }
         /** 单独打开正文里内嵌的那块画布（不改文章，只改画布） */
         function artOpenCanvas(id,kind,e){
             if(e){e.stopPropagation();e.preventDefault()}
@@ -271,15 +283,16 @@
             if(a.image&&type!=='card'){
                 cover='<div class="ac-cover" style="background-image:url('+escAttr(a.image)+')">'+badge+dot+'</div>';
             }else{
-                const c=ART_COVER[type]||ART_COVER.article;
-                cover='<div class="ac-cover noimg" style="background:linear-gradient(135deg,'+c[0]+','+c[1]+')"><span class="ac-ph">'+(ART_PH[type]||'文')+'</span>'+badge+dot+'</div>';
+                const m=artMeta(type);
+                cover='<div class="ac-cover noimg" style="background:linear-gradient(135deg,'+m.cover[0]+','+m.cover[1]+')"><span class="ac-ph">'+m.short+'</span>'+badge+dot+'</div>';
             }
-            // 元信息：字数只对文章有意义——白板 / 随记 / 导图不是「写字」写出来的；
-            // 画布类改成显示画布 id（能对着画布管理那边认出来是哪一块）
+            // 元信息：字数只对文章有意义——画布类（白板 / 导图 / 节点图）不是「写字」写出来的，
+            // 改成显示画布 id，好对着画布管理那边认出是哪一块
             const bits=[];
             if(type==='article')bits.push('<span>'+(a.wordCount||0)+' 字</span>');
-            if(type==='whiteboard'||type==='mindmap'){
-                const cid=a.boardId||a.mapId||'';
+            const cvMeta=artMeta(type).canvas;
+            if(cvMeta){
+                const cid=a[cvMeta.field]||'';
                 if(cid)bits.push('<span class="ac-cid" title="画布 ID">'+esc(cid)+'</span>');
             }
             bits.push('<span>'+esc(a.date||'')+'</span>');
@@ -581,13 +594,17 @@
             };
         }catch(e){}
         async function deleteArticle(id,title,type){
-            const isBoard=type==='whiteboard';
-            const tip=isBoard?'删除后不可恢复，关联的白板数据（场景与全部历史快照）会一并删除！':'删除后不可恢复！';
+            // 提示按内容形态给：画布类会连带删除画布数据，文章 / 随记没有关联数据。
+            // 以前这里写死 type==='whiteboard'，导图删除时既不提示会清理导图数据，随记又容易误以为有。
+            const canvasMeta=artMeta(type).canvas;
+            const tip=canvasMeta?'删除后不可恢复，'+canvasMeta.cleanup+'会一并删除！':'删除后不可恢复！';
             const confirmed=await showConfirm(`确定删除「${title}」？${tip}`,'删除文章','删除');
             if(!confirmed)return;
             const r=await apiFetch(`action=articles&id=${id}`,{method:'DELETE'});
             if(r.status==='success'){
-                showToast(r.removedBoard?`已删除（同时清理白板 ${r.removedBoard} 个数据项）`:isBoard?'已删除（该白板已不存在）':'已删除','success');
+                // 后端目前只回传白板的清理条数（removedBoard），其余形态只报删除结果
+                const cleaned=type==='whiteboard'?r.removedBoard:0;
+                showToast(cleaned?`已删除（同时清理白板 ${cleaned} 个数据项）`:'已删除','success');
                 await loadArticles(); // await 以便失败可被下面的 catch 感知，而不是静默丢失
                 notifyArticlesChanged();
             }else showToast(r.message||'删除失败','error');
@@ -2177,7 +2194,7 @@
         // ===== 创建内容：先弹形态选择，再跳到独立编写页 =====
         // 写文章已从后台拆成独立页面 /admin-edit.html（新建模式 ?new=1&type=…），
         // 后台只负责「选形态 → 跳过去」，不再内嵌编辑器。
-        const CREATE_TYPES=['article','card','whiteboard','mindmap'];
+        const CREATE_TYPES=['article','card','whiteboard','mindmap','graph'];
         function openCreatePicker(){
             const box=document.getElementById('createPicker');
             if(!box){pickCreateType('article');return}

@@ -68,18 +68,39 @@
     function notifyChanged() {
         try { var bc = new BroadcastChannel('blog-articles'); bc.postMessage({ type: 'articles-changed' }); bc.close(); } catch (e) { }
     }
+    /* 画布类形态的接入信息：白板 / 导图 / 节点图三者结构相同（独立页面 + 独立 store + iframe 内嵌），
+       差别只在页面、接口、字段名和 DOM 宿主。新增画布形态时在这里加一行即可，
+       不要再往各处塞 docType === 'xxx' 的判断——散落的判断早晚会漏（导图删除提示就是这么漏的）。 */
+    var CANVAS_META = {
+        whiteboard: {
+            label: '白板', page: '/excalidraw.html', api: '/api/excalidraw', idField: 'boardId',
+            prefix: 'wb-', dirtyFn: '__excalidrawDirty', saveFn: '__excalidrawSave', hostId: 'eeBoardHost'
+        },
+        mindmap: {
+            label: '导图', page: '/mindmap.html', api: '/api/mindmap', idField: 'mapId',
+            prefix: 'mm-', dirtyFn: '__mindmapDirty', saveFn: '__mindmapSave', hostId: 'eeMindmapHost'
+        },
+        graph: {
+            label: '节点图', page: '/graph.html', api: '/api/graph', idField: 'graphId',
+            prefix: 'gg-', dirtyFn: '__graphDirty', saveFn: '__graphSave', hostId: 'eeGraphHost'
+        }
+    };
+    function canvasMeta(t) { return CANVAS_META[t] || null; }
     function typeLabel(t) {
-        return t === 'whiteboard' ? '白板' : (t === 'mindmap' ? '导图' : (t === 'card' ? '随记' : '文章'));
+        var cm = canvasMeta(t);
+        if (cm) return cm.label;
+        return t === 'card' ? '随记' : '文章';
     }
-    /** 把任意输入收敛到四种内容形态之一 */
+    /** 把任意输入收敛到已知的内容形态之一 */
     function normalizeType(t) {
-        return (t === 'whiteboard' || t === 'mindmap' || t === 'card') ? t : 'article';
+        return (canvasMeta(t) || t === 'card') ? t : 'article';
     }
-    /** 画布 id：沿用全站约定 wb- / mm- + 8 位 base36 随机段（与后端 CANVAS_ID_RE 一致） */
+    /** 画布 id：沿用全站约定 wb- / mm- / gg- + 8 位 base36 随机段（与后端 CANVAS_ID_RE 一致） */
     function newCanvasId(t) {
-        return (t === 'mindmap' ? 'mm-' : 'wb-') + Math.random().toString(36).slice(2, 10);
+        var cm = canvasMeta(t);
+        return (cm ? cm.prefix : 'wb-') + Math.random().toString(36).slice(2, 10);
     }
-    function isCanvasType() { return docType === 'whiteboard' || docType === 'mindmap'; }
+    function isCanvasType() { return !!canvasMeta(docType); }
 
     // ===== 标签选择器 =====
     var tagPicker = null;
@@ -822,10 +843,10 @@
         if (!EE.adminKey()) { location.replace('/admin.html'); return; }
         docType = normalizeType(newTypeParam);
         var id = '';
-        var bId = '';
-        var mId = '';
-        if (docType === 'whiteboard') { bId = newCanvasId('whiteboard'); id = bId; }
-        else if (docType === 'mindmap') { mId = newCanvasId('mindmap'); id = mId; }
+        // 画布类：先把画布 id 定下来（画布有独立 store，id 先定才能打开就画、画完即存）
+        var cm = canvasMeta(docType);
+        var canvasIds = { boardId: '', mapId: '', graphId: '' };
+        if (cm) { canvasIds[cm.idField] = newCanvasId(docType); id = canvasIds[cm.idField]; }
         doc = {
             id: id,                 // 空串表示「还没落库」：由服务端在首次保存时生成
             filename: '',
@@ -837,8 +858,9 @@
             content: '',
             status: 'draft',
             type: docType,
-            boardId: bId,
-            mapId: mId
+            boardId: canvasIds.boardId,
+            mapId: canvasIds.mapId,
+            graphId: canvasIds.graphId
         };
         // 从后台「导入 .md」跳过来：内容暂存在 sessionStorage（整篇塞 URL 会超长）
         if (params.get('import') === '1') {
@@ -867,14 +889,14 @@
      */
     function watchNewCanvasSave() {
         if (!isNew || !isCanvasType()) return;
-        var isBoard = docType === 'whiteboard';
+        var cm = canvasMeta(docType);
         var sawDirty = false;
         var timer = setInterval(function () {
             if (savedOnce || !isNew) { clearInterval(timer); return; }
-            var frame = document.querySelector(isBoard ? '#eeBoardHost iframe' : '#eeMindmapHost iframe');
+            var frame = document.querySelector('#' + cm.hostId + ' iframe');
             var d;
             try {
-                var fn = frame && frame.contentWindow && frame.contentWindow[isBoard ? '__excalidrawDirty' : '__mindmapDirty'];
+                var fn = frame && frame.contentWindow && frame.contentWindow[cm.dirtyFn];
                 if (typeof fn !== 'function') return;
                 d = fn();
             } catch (e) { return; } // 还没挂载好 / 拿不到：下一轮再看
@@ -932,7 +954,7 @@
             .filter(function (t) { return t && t.word; })
             .map(termFromRecord);
         renderTermsPanel();
-        if (docType === 'mindmap') $('eeViewBtn').textContent = '前台查看';
+        if (canvasMeta(docType)) $('eeViewBtn').textContent = '前台查看';
         // 新建：还没有记录可删、也还没法从前台打开。
         // 反过来，打开一篇已存在的内容时必须把这两项显出来 —— 原来只有「新建时隐藏」、
         // 没有「已有文档时显示」，导致从列表点进一篇文章后 ⋯ 菜单里只剩「快捷键」，
@@ -946,23 +968,28 @@
             if ($('eeDeleteBtn')) $('eeDeleteBtn').style.display = '';
             if ($('eeViewBtn')) $('eeViewBtn').style.display = '';
         }
-        if (docType === 'whiteboard') {
-            $('eeEditorCol').style.display = 'none'; // 白板不用富文本编辑器，画布直接占左侧编辑位
+        if (canvasMeta(docType)) {
+            // 画布类（白板 / 导图 / 节点图）：不用富文本编辑器，画布直接占左侧编辑位。
+            // 三者各有自己的面板容器与挂载函数，按形态择一显示。
+            $('eeEditorCol').style.display = 'none';
             $('eeSide').style.display = 'flex';      // 右侧功能区（状态/标签/封面/信息）始终保持
-            if ($('eeMindmap')) $('eeMindmap').style.display = 'none';
-            $('eeBoard').style.display = 'flex';
-            window.EEEmbed.mountBoard();
-            window.eeLoadBoardAdmin();
-        } else if (docType === 'mindmap') {
-            $('eeEditorCol').style.display = 'none'; // 导图同样用整块画布区
-            $('eeSide').style.display = 'flex';
-            if ($('eeBoard')) $('eeBoard').style.display = 'none';
-            $('eeMindmap').style.display = 'flex';
-            window.EEEmbed.mountMindmap();
-            window.EEEmbed.refreshMapKeyCard();
+            if ($('eeBoard')) $('eeBoard').style.display = docType === 'whiteboard' ? 'flex' : 'none';
+            if ($('eeMindmap')) $('eeMindmap').style.display = docType === 'mindmap' ? 'flex' : 'none';
+            if ($('eeGraph')) $('eeGraph').style.display = docType === 'graph' ? 'flex' : 'none';
+            if (docType === 'whiteboard') {
+                window.EEEmbed.mountBoard();
+                window.eeLoadBoardAdmin();
+            } else if (docType === 'mindmap') {
+                window.EEEmbed.mountMindmap();
+                window.EEEmbed.refreshMapKeyCard();
+            } else {
+                window.EEEmbed.mountGraph();
+                window.EEEmbed.refreshGraphKeyCard();
+            }
         } else {
             if ($('eeBoard')) $('eeBoard').style.display = 'none';
             if ($('eeMindmap')) $('eeMindmap').style.display = 'none';
+            if ($('eeGraph')) $('eeGraph').style.display = 'none';
             $('eeEditorCol').style.display = 'flex';
             $('eeSide').style.display = 'flex';
 
@@ -1097,6 +1124,7 @@
         // boardId / mapId 只对「白板 / 导图形态」的内容有意义（那类内容本身就是一整块画布）。
         var boardId = (doc && doc.boardId) || '';
         var mapId = (doc && doc.mapId) || '';
+        var graphId = (doc && doc.graphId) || '';
 
         var body = {
             id: doc ? doc.id : docId,
@@ -1122,6 +1150,7 @@
             terms: terms.map(termForSave)
         };
         if (finalType === 'mindmap' && mapId) body.mapId = mapId;
+        if (finalType === 'graph' && graphId) body.graphId = graphId;
         return body;
     }
 
@@ -1156,7 +1185,8 @@
             }
 
             if (!body.title) { toast('请填写标题', 'error'); return false; }
-            if (body.type !== 'whiteboard' && body.type !== 'mindmap' && !body.content) { toast('请填写正文内容', 'error'); return false; }
+            // 画布类（白板 / 导图 / 节点图）没有正文，只要标题就行
+            if (!canvasMeta(body.type) && !body.content) { toast('请填写正文内容', 'error'); return false; }
 
             // 以前这里要先把正文里内嵌的画布落盘（画布与正文两套存储，画布失败就得阻断）。
             // v1.21.0 起正文不再内嵌画布，关联只是一条 id 记录，不存在「画布没存上」的情况，
@@ -1497,7 +1527,8 @@
             articleIndexCache = list
                 .filter(function (a) {
                     var t = a.type || 'article';
-                    return t === 'article' || t === 'whiteboard' || t === 'mindmap';   // 随记没有详情页
+                    // 除了随记，其余形态都有前台详情页（含白板 / 导图 / 节点图）
+                    return t !== 'card';
                 })
                 .map(function (a) {
                     return {

@@ -329,13 +329,128 @@
         mapMetaSet({ editKey: '' }, '导图口令已清除');
     };
 
+    // ===== 节点图（与导图同一套流程，接口换成 /api/graph）=====
+    // 刻意独立成一段，不把导图那套参数化：两者的页面、数据字段、口令卡片都不同，
+    // 揉在一起改一个容易碰坏另一个。
+    function graphId() { var d = doc(); return (d && d.graphId) || ''; }
+    function ggApi(query, opts) {
+        opts = opts || {};
+        return window.EE.request('/api/graph?' + query, {
+            method: opts.method, body: opts.body, headers: adminHeaders(), retry: opts.retry
+        });
+    }
+
+    E.mountGraph = function () {
+        var host = $('eeGraphHost');
+        if (!host) return;
+        var gid = graphId();
+        if (!gid) {
+            // 没绑定：给出「选一张已有的 / 新建一张」的入口
+            var bar = $('eeGraphBar');
+            if (bar) bar.style.display = 'flex';
+            host.innerHTML = '<div class="ee-hint">这篇文章还没绑定节点图。选一张已有的，或用「新建节点图」——' +
+                '绑定后这里会直接显示可编辑的节点图。</div>';
+            void fillGraphPicker();
+            return;
+        }
+        var bar2 = $('eeGraphBar');
+        if (bar2) bar2.style.display = 'none';
+        // from=admin：节点图页据此收起来自宿主的外壳动作
+        host.innerHTML = '<iframe class="ee-frame" title="节点图编辑器" src="/graph.html?id=' +
+            encodeURIComponent(gid) + '&edit=1&from=admin"></iframe>';
+    };
+
+    function fillGraphPicker() {
+        var sel = $('eeGraphPick');
+        if (!sel || sel.dataset.loaded === '1') return Promise.resolve();
+        return ggApi('action=list', { retry: 1 }).then(function (d) {
+            if (!d || d.status !== 'success') return;
+            var items = d.items || [];
+            sel.innerHTML = '<option value="">— 选择一张已有节点图 —</option>' +
+                items.map(function (it) {
+                    return '<option value="' + window.EE.esc(it.id) + '">' +
+                        window.EE.esc(it.title || '未命名节点图') +
+                        '（' + window.EE.esc(it.id) + (it.hasKey ? '·有口令' : '') + '）</option>';
+                }).join('');
+            sel.dataset.loaded = '1';
+        });
+    }
+
+    /** 把 doc.graphId 换成新值，并刷新节点图区 */
+    function bindGraph(newId) {
+        var d = doc();
+        if (!d) return;
+        d.graphId = newId;
+        if (newId && d.type !== 'graph') {
+            d.type = 'graph';
+            if (ctx && ctx.setType) ctx.setType('graph');
+        }
+        E.mountGraph();
+    }
+
+    function wireGraphBind() {
+        var sel = $('eeGraphPick');
+        var btn = $('eeGraphBind');
+        var nw = $('eeGraphNew');
+        if (btn && !btn.dataset.wired) {
+            btn.dataset.wired = '1';
+            btn.addEventListener('click', function () {
+                var v = sel ? sel.value : '';
+                if (!v) { toast('先选一张节点图', 'error'); return; }
+                bindGraph(v);
+            });
+        }
+        if (nw && !nw.dataset.wired) {
+            nw.dataset.wired = '1';
+            nw.addEventListener('click', function () {
+                // 新建：给一个不会撞车的 id，节点图保存时会自动创建
+                var nid = 'gg-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7);
+                bindGraph(nid);
+            });
+        }
+    }
+
+    /** 节点图口令卡片：编辑页目前没有这张卡片，有就刷新、没有就跳过（不报错） */
+    E.refreshGraphKeyCard = async function () {
+        var card = $('eeGraphKeyCard');
+        if (!card) return;
+        var gid = graphId();
+        if (docType() !== 'graph' || !gid) { card.style.display = 'none'; return; }
+        card.style.display = '';
+        var d = await ggApi('id=' + encodeURIComponent(gid) + '&metaOnly=1', { retry: 1 });
+        var hasKey = !!(d && d.status === 'success' && d.meta && d.meta.hasKey);
+        var t = $('eeGraphKey');
+        if (t) t.textContent = (d && d.status === 'success') ? (hasKey ? '已设置' : '未设置') : '读取失败';
+        var clr = $('eeGraphKeyClear');
+        if (clr) clr.style.display = hasKey ? '' : 'none';
+    };
+
+    /** 让 iframe 里的节点图落盘；没有未落盘改动就不发保存（避免每次产生新版本） */
+    E.saveGraph = function () {
+        var frame = document.querySelector('#eeGraphHost iframe.ee-frame');
+        var saver = null, dirtyFn = null;
+        try {
+            saver = frame && frame.contentWindow && frame.contentWindow.__graphSave;
+            dirtyFn = frame && frame.contentWindow && frame.contentWindow.__graphDirty;
+        } catch (e) { saver = null; dirtyFn = null; }
+        if (typeof saver !== 'function') return Promise.resolve(true);
+        try {
+            if (typeof dirtyFn === 'function' && !dirtyFn()) return Promise.resolve(true);
+        } catch (e) { /* 忽略 */ }
+        return Promise.resolve(saver()).then(function (ok) { return !!ok; }, function () { return false; });
+    };
+    window.eeSaveGraph = function () { return E.saveGraph(); };
+
     // ===== 对外 =====
     E.init = function (c) {
         ctx = c || {};
         wireMindmapBind();
+        wireGraphBind();
     };
     E.fillMindmapPicker = fillMindmapPicker;
     E.bindMindmap = bindMindmap;
+    E.fillGraphPicker = fillGraphPicker;
+    E.bindGraph = bindGraph;
 
     window.EEEmbed = E;
 })();

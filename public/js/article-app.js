@@ -468,6 +468,10 @@ const ArticleApp = {
                 if (!this.currentPost) return;
 
                 // 纯白板文章（type=whiteboard）：整页交互白板，无目录侧栏，跳过 Markdown 管线
+                if (this.currentPost.type === 'graph') {
+                    this.renderGraph();
+                    return;
+                }
                 if (this.currentPost.type === 'mindmap') {
                     this.renderMindmap();
                     return;
@@ -660,6 +664,35 @@ const ArticleApp = {
                         </div>
                     ` : ''}
                 `;
+            },
+
+            // 节点图文章：整页沉浸式舞台，节点图页用 iframe 承载。
+            // 缩放/平移/连线/导出全部由 /graph.html 自己负责，这里只做外壳与缺失提示。
+            // 不做留言抽屉：节点图是纯画布工具，不做博客内容体系里的互动形态。
+            renderGraph() {
+                const graphId = String(this.currentPost.graphId || '').trim();
+                const content = document.getElementById('article-content');
+                document.body.classList.add('board-mode', 'no-toc');
+                if (!content) return;
+
+                if (!graphId || !/^[A-Za-z0-9_-]{1,64}$/.test(graphId)) {
+                    content.innerHTML =
+                        '<div class="graph-stage"><div class="gg-missing">' +
+                        '<div class="t">节点图未绑定</div>' +
+                        '<div class="s">这篇还没有关联节点图，请在后台编辑页创建后再发布。</div></div></div>';
+                    return;
+                }
+
+                const header = document.getElementById('article-header');
+                if (header) header.innerHTML = '';
+
+                content.innerHTML =
+                    '<div class="graph-stage" id="graphStage" data-graph="' + graphId + '">' +
+                    '<iframe class="graph-frame" id="graphFrame" title="节点图" ' +
+                    'src="/graph.html?id=' + encodeURIComponent(graphId) + '"></iframe>' +
+                    '</div>';
+
+                try { document.title = (this.currentPost.title || '节点图') + ' - 节点图'; } catch (e) { /* 忽略 */ }
             },
 
             // 思维导图文章：整页沉浸式舞台，导图页用 iframe 承载（缩放/折叠/大纲由导图页自己负责）
@@ -1383,9 +1416,9 @@ const ArticleApp = {
                 const section = document.getElementById('comment-section');
                 if (!section) return;
                 this.postId = postId;
-                // 导图 / 白板文章：正文是整页画布，留言在那两页自己的抽屉里，这里整块不参与
+                // 导图 / 白板 / 节点图文章：正文是整页画布，留言在那几页自己的抽屉里（节点图目前没有留言），这里整块不参与
                 const t = this.currentPost && this.currentPost.type;
-                if (t === 'mindmap' || t === 'whiteboard') {
+                if (t === 'mindmap' || t === 'whiteboard' || t === 'graph') {
                     section.style.display = 'none';
                     section.setAttribute('data-canvas-skip', '1');
                     section.removeAttribute('data-reveal');

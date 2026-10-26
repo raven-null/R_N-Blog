@@ -110,6 +110,7 @@
         .cp-card[data-ct="card"] .ci{background:rgba(255,159,10,.16);color:#ffb020}
         .cp-card[data-ct="whiteboard"] .ci{background:rgba(115,170,255,.16);color:#73aaff}
         .cp-card[data-ct="mindmap"] .ci{background:rgba(80,220,180,.16);color:#50dcb4}
+        .cp-card[data-ct="graph"] .ci{background:rgba(166,132,255,.16);color:#a884ff}
         @media(max-width:520px){.cp-box{padding:18px 16px 18px}.cp-grid{gap:10px}.cp-card{padding:13px 12px}}
         .page-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
         .page-bar h2{font-size:18px;font-weight:600}
@@ -914,6 +915,7 @@
                                 <button class="art-chip" data-type="whiteboard" onclick="setArtType('whiteboard')">白板</button>
                                 <button class="art-chip" data-type="card" onclick="setArtType('card')">随记</button>
                                 <button class="art-chip" data-type="mindmap" onclick="setArtType('mindmap')">导图</button>
+                                <button class="art-chip" data-type="graph" onclick="setArtType('graph')">节点图</button>
                             </div>
                             <div class="art-search">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
@@ -1384,6 +1386,11 @@
                     <span class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="2.6"/><circle cx="18" cy="6" r="2.6"/><circle cx="18" cy="18" r="2.6"/><path d="M7.4 10.8l8.3-3.6M7.4 13.2l8.3 3.6"/></svg></span>
                     <b>思维导图</b>
                     <i>先搭结构再写正文，也能作为文章里的讲解工具嵌入。</i>
+                </button>
+                <button class="cp-card" data-ct="graph" onclick="pickCreateType('graph')">
+                    <span class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="6.4" height="5" rx="1.4"/><rect x="14.6" y="3" width="6.4" height="5" rx="1.4"/><rect x="14.6" y="16" width="6.4" height="5" rx="1.4"/><path d="M9.4 7.5h3.2a2 2 0 0 1 2 2v6.5"/><path d="M9.4 7.5H12"/></svg></span>
+                    <b>节点图</b>
+                    <i>自由摆放的节点与连线，适合画关系网、知识图谱与逻辑拆解。</i>
                 </button>
             </div>
         </div>

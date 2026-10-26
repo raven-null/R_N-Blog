@@ -95,11 +95,12 @@ interface ArticleMeta {
   image: string
   wordCount: number
   status: "published" | "draft"
-  type?: "article" | "whiteboard" | "card" | "mindmap" // 内容形态（缺省 article）
+  type?: "article" | "whiteboard" | "card" | "mindmap" | "graph" // 内容形态（缺省 article）
   chunked?: boolean // 长文章已分章存储（主记录不存全文）
   chunkCount?: number // 分章数量
   boardId?: string // type=whiteboard 时关联的 Excalidraw 笔记 id
   mapId?: string // type=mindmap 时关联的思维导图 id
+  graphId?: string // type=graph 时关联的节点图 id
   /** 正文里内嵌的画布（```embed board:xxx / map:yyy）；后台卡片据此直接跳去单独修改那块画布。
    *  空数组 = 已扫描过、没有内嵌画布；缺字段 = 还没扫过（由 action=sync-canvas-refs 补）。 */
   canvasRefs?: CanvasRef[]
@@ -592,8 +593,8 @@ export default async (req: Request) => {
       const articleId = id || randomUUID().slice(0, 8)
       const now = new Date().toISOString().slice(0, 10)
 
-      // 内容形态：article（默认）/ whiteboard（纯白板）/ card（卡片笔记，预留）
-      const validTypes = ["article", "whiteboard", "card", "mindmap"]
+      // 内容形态：article（默认）/ whiteboard（纯白板）/ card（卡片笔记）/ mindmap（导图）/ graph（节点图）
+      const validTypes = ["article", "whiteboard", "card", "mindmap", "graph"]
       const type = validTypes.includes(body.type) ? body.type : "article"
       const boardId = type === "whiteboard" && typeof body.boardId === "string"
         ? body.boardId.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 64)
@@ -601,12 +602,15 @@ export default async (req: Request) => {
       const mapId = type === "mindmap" && typeof body.mapId === "string"
         ? body.mapId.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 64)
         : ""
+      const graphId = type === "graph" && typeof body.graphId === "string"
+        ? body.graphId.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 64)
+        : ""
 
       // 标签完全按传入内容保存，不再自动附加「随记」等固定标签
       const tagsArr = Array.isArray(tags) ? tags : (tags || "").split(",").map((t: string) => t.trim()).filter(Boolean)
 
       // 提取摘要（有内容时自动提取，否则用传入的 excerpt）
-      const noExcerpt = type === "card" || type === "whiteboard" || type === "mindmap" // 随记、白板、导图没有摘要
+      const noExcerpt = type === "card" || type === "whiteboard" || type === "mindmap" || type === "graph" // 随记、白板、导图、节点图没有摘要
       const autoExcerpt = (!noExcerpt && content)
         ? content.replace(/#+\s+/g, "").replace(/\*\*(.*?)\*\*/g, "$1").replace(/\*(.*?)\*/g, "$1").replace(/\[([^\]]+)\]\([^)]+\)/g, "$1").replace(/!\[([^\]]*)\]\([^)]+\)/g, "").replace(/`([^`]+)`/g, "$1").replace(/\n/g, " ").trim().slice(0, 150)
         : ""
@@ -638,6 +642,7 @@ export default async (req: Request) => {
         type,
         boardId,
         mapId,
+        graphId,
         canvasRefs,
         relatedIds,
         terms,
@@ -706,6 +711,8 @@ export default async (req: Request) => {
         // 此前漏写导致 admin-app.js 的导图去重（a.mapId === currentMapId）永远匹配不到，
         // 结果是每次「发布」都新建一篇文章而不是更新同一篇。
         mapId: mapId || undefined,
+        // 节点图关联 id 同样要进索引：前台列表按它懒加载画布、后台按它做去重。
+        graphId: graphId || undefined,
         // 关联画布（白板 / 导图）：后台卡片据此给出「直接去改这块白板」的链接，
         // 前台文章页据此在文末渲染「相关画布」区。客户端显式提交，老客户端仍从正文兜底。
         canvasRefs,
@@ -778,6 +785,21 @@ export default async (req: Request) => {
             try { await fileStore.delete(item.key) } catch { /* ignore */ }
           }
         } catch { /* 图片清理失败不阻断删文章 */ }
+      }
+
+      // 节点图文章：同步删除关联节点图（data + meta + 全部历史快照 + 图片节点用的文件通道）。
+      // 注意节点图的图片存在自己的 graphs store 里，不借用白板空间，所以整棵 notes/<id>/ 一起清即可。
+      const graphId = record && (record as any).type === "graph" && typeof (record as any).graphId === "string"
+        ? String((record as any).graphId)
+        : ""
+      if (graphId) {
+        try {
+          const graphStore = getBlobStore("graphs", "strong")
+          const list = await graphStore.list({ prefix: `notes/${graphId}/` })
+          for (const item of list.blobs) {
+            try { await graphStore.delete(item.key) } catch { /* ignore */ }
+          }
+        } catch { /* 节点图清理失败不阻断删文章 */ }
       }
 
       const index = await getArticleIndex(store)
