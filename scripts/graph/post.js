@@ -43,6 +43,22 @@
 
   /* ══════════ 1. 存储接管 ══════════ */
 
+  /**
+   * 后台登录后 localStorage 里有 admin_key（与 mindmap / excalidraw 同一套约定）。
+   * 本页是后台编辑页的同源 iframe，能直接读到它；不带这个头，服务端会把我们当匿名访客，
+   * 新建节点图时直接回「仅管理员可创建新节点图」，已存在的图也只能在「公开可编辑且无口令」时才写得动。
+   */
+  function adminHeaders() {
+    var h = {};
+    try {
+      var k = localStorage.getItem("admin_key") || "";
+      if (k) h["X-Admin-Key"] = k;
+    } catch (e) {
+      /* 隐私模式读不到就算了 */
+    }
+    return h;
+  }
+
   var rawLsGet = App._lsGet.bind(App);
   var rawLsGetJson = App._lsGetJson.bind(App);
   var rawLsSet = App._lsSet.bind(App);
@@ -93,7 +109,7 @@
 
     fetch("/api/graph?id=" + encodeURIComponent(noteId), {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: Object.assign({ "Content-Type": "application/json" }, adminHeaders()),
       body: JSON.stringify(body),
       // 离开页面时的那次保存要能发出去
       keepalive: !!force,
@@ -116,6 +132,10 @@
         if (r.status !== 200 || r.d.status !== "success") {
           st.dirty = true;
           var msg = (r.d && r.d.message) || "保存失败（" + r.status + "）";
+          // 权限问题给出可操作的提示：这是后台登录态才该出现的分支
+          if (r.status === 401 || r.status === 403) {
+            msg += "　（后台登录可能已过期，回到后台重新登录后再保存）";
+          }
           toast(msg, "error");
           setStatus("保存失败：" + msg);
           post({ type: "graph-save", ok: false, message: msg, id: noteId });
@@ -170,7 +190,7 @@
 
   function load() {
     setStatus("加载中…");
-    fetch("/api/graph?id=" + encodeURIComponent(noteId), { cache: "no-store" })
+    fetch("/api/graph?id=" + encodeURIComponent(noteId), { cache: "no-store", headers: adminHeaders() })
       .then(function (res) {
         return res.json();
       })
