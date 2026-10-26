@@ -1,5 +1,5 @@
 /**
- * 文章页主脚本（由 article.html 内联脚本抽出，便于独立缓存与排查）
+ * 文章页主脚本（由 article.html 内联脚本抽出，便于独立缓存与排查）· v2.2.1
  * 改动后请同步 bump article.html 里的 ?v= 版本号
  */
         // 文章详情页应用
@@ -574,7 +574,12 @@ const ArticleApp = {
                 const terms = (this.currentPost && Array.isArray(this.currentPost.terms)) ? this.currentPost.terms : [];
                 const rows = terms
                     .map(t => {
-                        const word = String(t.word || '');
+                        // 词条文字要清洗掉零宽空格等不可见字符（v2.2.1）：Vditor 用它们做占位，
+                        // 作者选词时容易一起选进来，不清洗的话 definitionOf 会查不到
+                        const word = String(t.word || '')
+                            .replace(/[\u200b-\u200f\u2060\ufeff\u00ad]/g, '')
+                            .replace(/\s+/g, ' ')
+                            .trim();
                         return {
                             word,
                             def: window.TermLinks.definitionOf(word),

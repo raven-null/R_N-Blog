@@ -1,5 +1,5 @@
 /**
- * 文内术语回链（v1.3.1）
+ * 文内术语回链（v1.3.2）
  * ------------------------------------------------------------------
  * 解决的问题：文章里某个词（比如「字符串」）第一次出现时讲过它的定义，
  * 几百字后再出现时读者已经忘了，又不想往回翻。
@@ -56,6 +56,19 @@
     }
 
     /**
+     * 词条文字清洗（v1.3.2）：去掉零宽空格等不可见字符。
+     * Vditor 用零宽空格做占位，作者选词时很容易连它一起选进来，词条存成
+     * "\u200b\u200b面向对象" 之后，前台扫正文永远匹配不到 —— 表现就是
+     * 「术语定义了，但正文没有回链、出现次数 0、悬停也没有解释」。
+     */
+    function cleanWord(s) {
+        return String(s == null ? '' : s)
+            .replace(/[\u200b-\u200f\u2060\ufeff\u00ad]/g, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
+    /**
      * 解析某个词的「解释」：等级 def（作者自写）> quote（正文里摘的语句）> 锚点段落。
      * 只填了 anchor 的老数据行为完全不变（v3.45.0）。
      * @returns {{kind:'def'|'quote'|'anchor'|'none', text:string}}
@@ -81,7 +94,10 @@
     }
 
     /** 该节点是否在「不该加回链」的区域里 */
-    var SKIP_SELECTOR = 'pre, code, a, img, kbd, samp, svg, textarea, .term-link, h1, h2, h3, h4, h5, h6, .code-block, .img-figure';
+    // v1.3.2：行内代码（<code>）不再跳过 —— 作者常把整段话包进反引号当强调，
+    // 那样术语会永远匹配不到（实测「术语定义了但正文没有回链、悬停也没有解释」）。
+    // 代码块（pre / .code-block）仍然跳过，避免把高亮拆碎。
+    var SKIP_SELECTOR = 'pre, a, img, kbd, samp, svg, textarea, .term-link, h1, h2, h3, h4, h5, h6, .code-block, .img-figure';
     function shouldSkip(node) {
         var el = node.parentElement;
         if (!el) return true;
@@ -334,12 +350,12 @@
         // 词条只在第一次调用时设置；后续分章追加沿用（避免重复 normalize）
         if (Array.isArray(list) && list.length) {
             terms = list.filter(function (t) { return t && t.word; }).map(function (t) {
-                var o = { word: String(t.word), anchor: String(t.anchor || 'first') };
+                var o = { word: cleanWord(t.word), anchor: String(t.anchor || 'first') };
                 // v3.45.0：解释可以自写（def）或从正文摘（quote），有就带着
                 if (t.def) o.def = String(t.def);
-                if (t.quote) o.quote = String(t.quote);
+                if (t.quote) o.quote = cleanWord(t.quote);
                 return o;
-            });
+            }).filter(function (t) { return !!t.word; });
         }
         if (!terms.length) return { terms: 0, links: 0 };
         bindDelegation();

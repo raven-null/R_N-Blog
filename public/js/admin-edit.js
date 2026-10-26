@@ -1651,14 +1651,24 @@
 
     /** 记录 → 内存形态（老数据只有 word/anchor，def/quote 让它们保持 undefined） */
     function termFromRecord(t) {
-        var o = { word: String(t.word), anchor: String(t.anchor || 'first') };
+        var o = { word: normalizeWord(t.word), anchor: String(t.anchor || 'first') };
         if (t.def) o.def = String(t.def);
         if (t.quote) o.quote = String(t.quote);
         return o;
     }
 
+    /**
+     * 词条规范化（v3.48.3）：除了压掉换行/制表符，还要**去掉不可见字符**。
+     * Vditor 会在正文里插零宽空格做占位，作者选词时很容易连它一起选进来，词条于是存成
+     * "\u200b\u200b面向对象" —— 前台扫正文永远匹配不到，表现就是「术语定义了，但正文没有
+     * 标记、出现次数 0、悬停也没有解释」。
+     */
     function normalizeWord(w) {
-        return String(w || '').replace(/[\r\n\t]+/g, ' ').trim().slice(0, MAX_TERM_WORD_CLIENT);
+        return String(w || '')
+            .replace(/[\u200b-\u200f\u2060\ufeff\u00ad]/g, '')
+            .replace(/[\r\n\t\s]+/g, ' ')
+            .trim()
+            .slice(0, MAX_TERM_WORD_CLIENT);
     }
 
     /** 当前编辑器光标所在段落的「指纹」（去空白后的前 48 字） */
@@ -1759,7 +1769,10 @@
             // 标题 —— 标题里的词永远不会变成回链。编辑器如果把标题也标上，作者就会看到
             // 「我明明在这一行标的术语，标记却打到了上面那个标题上」。跳过后「n 处」「定位」
             // 「高亮」三处口径一致，都只算正文段落里的出现。
-            if (el.closest('code, a, kbd, samp, svg, h1, h2, h3, h4, h5, h6, .vditor-ir__marker, .vditor-wysiwyg__preview, .vditor-wysiwyg__block[data-type="code-block"], .vditor-wysiwyg__pre')) continue;
+            //
+            // 行内代码（<code>）不再跳过（v3.48.3）：作者常把整段话包进反引号当强调，
+            // 那样术语就永远匹配不到。代码块（下面那几个 vditor-wysiwyg__* 层）仍然跳过。
+            if (el.closest('a, kbd, samp, svg, h1, h2, h3, h4, h5, h6, .vditor-ir__marker, .vditor-wysiwyg__preview, .vditor-wysiwyg__block[data-type="code-block"], .vditor-wysiwyg__pre')) continue;
             out.push(n);
         }
         return out;

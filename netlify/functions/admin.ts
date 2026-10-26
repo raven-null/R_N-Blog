@@ -175,24 +175,34 @@ const MAX_TERM_ANCHOR = 48
 const MAX_TERM_DEF = 300     // 自己写的解释
 const MAX_TERM_QUOTE = 240   // 从正文里摘的「解释语句」
 
+/**
+ * 去掉不可见字符：零宽空格 U+200B、零宽连接 U+200C/D、BOM U+FEFF、词连接 U+2060、软连字符 U+00AD。
+ * 为什么需要（v3.48.3）：Vditor 会在正文里插零宽空格做占位，作者选词时很容易连它一起选进来，
+ * 词条于是存成 "\u200b\u200b面向对象" —— 前台扫正文永远匹配不到，表现就是
+ * 「术语定义了，但正文没有标记、出现次数 0、悬停也没有解释」。
+ */
+function stripInvisibleChars(s: string): string {
+  return String(s == null ? "" : s).replace(/[\u200b-\u200f\u2060\ufeff\u00ad]/g, "")
+}
+
 function normalizeTerms(raw: unknown): TermRef[] {
   if (!Array.isArray(raw)) return []
   const out: TermRef[] = []
   const seen = new Set<string>()
   for (const item of raw) {
     const o = (item && typeof item === "object") ? item as any : {}
-    const word = String(o.word || "").replace(/[\r\n\t]+/g, " ").trim().slice(0, MAX_TERM_WORD)
+    const word = stripInvisibleChars(String(o.word || "")).replace(/[\r\n\t\s]+/g, " ").trim().slice(0, MAX_TERM_WORD)
     if (!word) continue
     if (seen.has(word)) continue
     seen.add(word)
-    const rawAnchor = String(o.anchor || "").replace(/[\r\n\t]+/g, " ").trim()
+    const rawAnchor = stripInvisibleChars(String(o.anchor || "")).replace(/[\r\n\t\s]+/g, " ").trim()
     const anchor = (!rawAnchor || rawAnchor === "first")
       ? "first"
       : rawAnchor.slice(0, MAX_TERM_ANCHOR)
     // 定义可以是「自己写的解释」或「从正文摘的语句」，两种都存；前台按 def → quote →
     // 锚点所在段落 的顺序取第一个非空的，所以老数据（只有一个 anchor）行为完全不变。
-    const def = String(o.def || "").replace(/\r\n?/g, "\n").trim().slice(0, MAX_TERM_DEF)
-    const quote = String(o.quote || "").replace(/\s+/g, " ").trim().slice(0, MAX_TERM_QUOTE)
+    const def = stripInvisibleChars(String(o.def || "")).replace(/\r\n?/g, "\n").trim().slice(0, MAX_TERM_DEF)
+    const quote = stripInvisibleChars(String(o.quote || "")).replace(/\s+/g, " ").trim().slice(0, MAX_TERM_QUOTE)
     const term: TermRef = { word, anchor }
     if (def) term.def = def
     if (quote) term.quote = quote
