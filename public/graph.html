@@ -1842,9 +1842,54 @@ const PRESET_COLORS=[{id:'blue',hex:'#3b82f6',start:'#3b82f6',end:'#2563eb'},{id
   }
 
   // 双击节点：
-  //   代码节点 → 进代码编辑器（并且不允许被上游的双击清空/内联改标题打扰）
-  //   图片节点 → 什么都不做（换图的入口是那个 ×，不是双击）
+  //   代码节点 → 弹出代码编辑框（就是新建代码节点时那个框）
+  //   图片节点 → 什么都不做（换图入口统一到 × 上）
   //   文本节点 → 保持上游的内联改标题
+  //
+  // 注意：上游的双击判定**不是靠 dblclick 事件**，而是自己用 mousedown 记时
+  // （App._dblClickTarget：250ms 内、位移 ≤ 容差）。所以监听 dblclick 已经太晚 ——
+  // 上游早在第二次 mousedown 里就把内联编辑框打开了。这里用同样的规则在
+  // capture 阶段抢先拦住第二次 mousedown。
+  var lastNodeDown = { time: 0, x: 0, y: 0, id: "" };
+  var DBL_MS = 320;
+  var DBL_PX = 6;
+
+  document.addEventListener(
+    "mousedown",
+    function (e) {
+      if (!isEdit || e.button !== 0) return;
+      var el = e.target && e.target.closest ? e.target.closest(".node") : null;
+      if (!el) {
+        lastNodeDown = { time: 0, x: 0, y: 0, id: "" };
+        return;
+      }
+      var node = findNode(el.dataset.nodeId);
+      if (!node) return;
+      var kind = kindOf(node);
+      if (kind === "text") return; // 文本节点：让上游照常进内联编辑
+
+      var now = Date.now();
+      var isDbl =
+        lastNodeDown.id === node.id &&
+        now - lastNodeDown.time < DBL_MS &&
+        Math.abs(e.clientX - lastNodeDown.x) <= DBL_PX &&
+        Math.abs(e.clientY - lastNodeDown.y) <= DBL_PX;
+
+      if (!isDbl) {
+        lastNodeDown = { time: now, x: e.clientX, y: e.clientY, id: node.id };
+        return;
+      }
+      // 第二次按下：吃掉这个事件，上游就收不到双击了
+      lastNodeDown = { time: 0, x: 0, y: 0, id: "" };
+      e.preventDefault();
+      e.stopPropagation();
+      if (kind === "code") openCodeEditor(node.id);
+      // 图片节点：有意什么都不做
+    },
+    true,
+  );
+
+  // 兜底：万一浏览器仍派发了 dblclick（触控 / 某些输入法），别让它落到上游
   document.addEventListener(
     "dblclick",
     function (e) {
@@ -1852,13 +1897,9 @@ const PRESET_COLORS=[{id:'blue',hex:'#3b82f6',start:'#3b82f6',end:'#2563eb'},{id
       var el = e.target && e.target.closest ? e.target.closest(".node") : null;
       if (!el) return;
       var node = findNode(el.dataset.nodeId);
-      if (!node) return;
-      var kind = kindOf(node);
-      if (kind === "text") return; // 文本节点保持上游行为
+      if (!node || kindOf(node) === "text") return;
       e.preventDefault();
       e.stopPropagation();
-      if (kind === "code") openCodeEditor(node.id);
-      // 图片节点：有意什么都不做
     },
     true,
   );
