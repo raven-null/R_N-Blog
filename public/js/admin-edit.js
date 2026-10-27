@@ -1405,16 +1405,8 @@
         } catch (err) { /* 忽略 */ }
     });
 
-    // 节点图画布里是手动保存：有未保存改动时，在右侧「保存」按钮上点一个橙点提醒
-    window.addEventListener('message', function (e) {
-        if (e.origin !== location.origin) return;
-        var d = e.data || {};
-        if (d.type !== 'graph-dirty') return;
-        var btn = $('eeSaveBtn');
-        if (!btn) return;
-        btn.classList.toggle('ee-dirty', !!d.dirty);
-        btn.title = d.dirty ? '节点图有未保存的改动，点这里写回服务器' : '';
-    });
+    // 节点图画布会通过 postMessage 报告自己的未保存状态（graph-dirty），
+    // 这里不做任何视觉标记 —— 保存按钮上那个橙点已经去掉了，界面保持干净。
 
     // ===== 状态 / 删除 / 前台 =====
     /**
