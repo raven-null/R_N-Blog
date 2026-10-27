@@ -91,11 +91,85 @@ const banner = `
  * ══════════════════════════════════════════════════════════════════ */
 `
 
+/* ── 2.5 先删掉 Weave 的品牌痕迹，再做注入 ──
+   顺序很重要：注入位置依赖当时算出来的索引，若先注入再删元素，
+   索引就会错位（踩过一次）。这里先把上游 HTML 清理干净，再重新算索引往里插补丁。 */
+
+/** 从 startIdx 处的 <div 开始，按 <div / </div> 配对找到该元素结束位置（返回结束后的索引） */
+function divElementEnd(src, startIdx) {
+  const re = /<div\b|<\/div>/g
+  re.lastIndex = startIdx
+  let depth = 0
+  let m
+  while ((m = re.exec(src))) {
+    if (m[0] === "</div>") {
+      depth--
+      if (depth === 0) return m.index + m[0].length
+    } else {
+      depth++
+    }
+  }
+  return -1
+}
+
+/** 整段摘掉一个以 marker 开头的 <div> 元素 */
+function cutDivByMarker(src, marker, label) {
+  const i = src.indexOf(marker)
+  if (i < 0) fail(`找不到要删除的${label}（${marker}），上游结构可能已变`)
+  const j = divElementEnd(src, i)
+  if (j < 0) fail(`删除${label}时标签没有配平，已中止`)
+  // 连同该元素所在行的前导空白一起去掉，避免留下空行
+  let start = i
+  while (start > 0 && (src[start - 1] === " " || src[start - 1] === "\t")) start--
+  return { src: src.slice(0, start) + src.slice(j), removed: src.slice(i, j) }
+}
+
+// 2.5a 顶栏「Σ Weave」徽标（含它的 Σ 彩蛋点击区）
+{
+  const r = cutDivByMarker(html, '<div class="header-brand"', "顶栏品牌区")
+  html = r.src
+  console.log("已删除：顶栏「Σ Weave」徽标")
+}
+
+// 2.5b 设置弹窗里的「软件详情」页签（连同它前面的空白与换行）
+{
+  const btn =
+    '<button class="settings-nav-item" data-settings-tab="about" data-i18n="set.aboutTitle">软件详情</button>'
+  if (!html.includes(btn)) fail("找不到设置里的「软件详情」页签，上游结构可能已变")
+  html = html.replace(new RegExp("\\s*" + btn.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"), "")
+  console.log("已删除：设置里的「软件详情」页签")
+}
+
+// 2.5c 该页签的面板本体（Weave 名称 / 版本号 / 项目地址 / 开发者主页）
+{
+  const r = cutDivByMarker(html, '<div class="settings-panel" data-settings-panel="about"', "「软件详情」面板")
+  html = r.src
+  console.log("已删除：「软件详情」面板")
+}
+
+// 2.5d 点击绑定表里对应两行也要摘掉。
+//   上游那段是 `for (const id of Object.keys(BIND_CLICKS)) document.getElementById(id).addEventListener(...)`，
+//   **没有空值保护** —— DOM 删了但表里还留着，初始化会抛 null.addEventListener，
+//   整个画布直接起不来。这两个元素已经不存在，绑定项必须一起删。
+{
+  const pair = "brandSigma:'startEasterEgg',aboutSigma:'spinAboutSigma',"
+  if (!html.includes(pair)) fail("找不到 BIND_CLICKS 里的品牌绑定项，上游结构可能已变")
+  html = html.replace(pair, "")
+  console.log("已删除：BIND_CLICKS 里的品牌点击绑定")
+}
+
+/* ── 3. 注入补丁（索引在删除之后重新计算） ── */
+const openTag2 = html.match(/<script[^>]*>/i)
+if (!openTag2) fail("找不到 <script> 起始标签")
+const injOpen = html.indexOf(openTag2[0]) + openTag2[0].length
+const injClose = html.lastIndexOf("</script>")
+if (injClose < injOpen) fail("</script> 出现在 <script> 之前，结构不符合预期")
+
 const patchA = banner + "\n" + pre + "\n"
 const patchB = "\n" + post + "\n"
 
-html = html.slice(0, closeIdx) + patchB + html.slice(closeIdx)
-html = html.slice(0, openIdx) + patchA + html.slice(openIdx)
+html = html.slice(0, injClose) + patchB + html.slice(injClose)
+html = html.slice(0, injOpen) + patchA + html.slice(injOpen)
 
 /* ── 4. 产物自检 ──
    注入完不能就这么交付：语法错误和"上游改了方法名"这两类问题，
@@ -106,7 +180,7 @@ html = html.slice(0, openIdx) + patchA + html.slice(openIdx)
   const iPre = html.indexOf("启动前补丁")
   const iPost = html.indexOf("节点图 · 宿主补丁")
   const iClose = html.lastIndexOf("</script>")
-  if (iPre < openIdx || iPost < iPre || iClose < iPost) fail("注入位置不正确（pre / post / </script> 顺序错乱）")
+  if (iPre < injOpen || iPost < iPre || iClose < iPost) fail("注入位置不正确（pre / post / </script> 顺序错乱）")
 }
 
 // 4b. 脚本语法（用 vm 编译，不执行）
@@ -126,6 +200,15 @@ html = html.slice(0, openIdx) + patchA + html.slice(openIdx)
   const REQUIRED = ["_prepareSerializedData", "_commitSerialized", "_lsSet", "_lsGetJson", "_lsGet", "showToast", "renderCanvas"]
   const missing = REQUIRED.filter(k => !html.includes(k))
   if (missing.length) fail("上游缺少依赖方法：" + missing.join(" / ") + "（Weave 升级后可能改名，需同步调整 scripts/graph/post.js）")
+}
+
+// 4d. 品牌痕迹必须已经不在了（DOM 与点击绑定两处）
+//     注：startEasterEgg / BIND_KEYS 里仍会出现这两个 id，但它们都有 `if (!el) return/continue`
+//     的空值保护，元素不存在时是安全的 no-op，不必强删。
+{
+  const LEFTOVER = ['id="brandSigma"', 'id="aboutSigma"', "data-settings-tab=\"about\"", "data-settings-panel=\"about\"", "brandSigma:'startEasterEgg'"]
+  const left = LEFTOVER.filter(k => html.includes(k))
+  if (left.length) fail("产物里仍残留品牌相关元素：" + left.join(" / "))
 }
 
 writeFileSync(OUT, html, "utf-8")
