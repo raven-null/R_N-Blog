@@ -799,6 +799,7 @@ const BlogApp = {
         });
     },
 
+    // 根据当前分类渲染图库（分批渲染：首屏 60 张，滚动接近底部时自动追加）
     renderGalleryByTag() {
         const grid = document.getElementById('galleryGrid');
         if (!grid) return;
@@ -814,11 +815,31 @@ const BlogApp = {
         }
         // window.__galleryImages 设为当前筛选结果（灯箱在筛选结果内导航）
         window.__galleryImages = filtered;
+        this.galleryFiltered = filtered;
+        this.galleryRenderIdx = 0;
+        grid.innerHTML = '';
         if (!filtered.length) {
             grid.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:40px;">该分类暂无图片</p>';
             return;
         }
-        grid.innerHTML = filtered.map((img, i) => {
+        this.renderGalleryBatch();
+        this.bindGalleryInfiniteScroll();
+    },
+
+    // 图库网格分批渲染参数
+    galleryBatchSize: 60,
+    galleryRenderIdx: 0,
+    galleryFiltered: null,
+
+    // 渲染下一批（默认 60 张）：首屏只请求少量缩略图，滚动到底部附近再继续
+    renderGalleryBatch() {
+        const grid = document.getElementById('galleryGrid');
+        const filtered = this.galleryFiltered || [];
+        if (!grid || this.galleryRenderIdx >= filtered.length) return;
+        const start = this.galleryRenderIdx;
+        const end = Math.min(start + this.galleryBatchSize, filtered.length);
+        const html = filtered.slice(start, end).map((img, k) => {
+            const i = start + k; // 全局索引（灯箱在完整筛选结果里导航）
             // 成人向且未解锁：显示锁定占位卡片（不加载任何图片内容）
             const locked = this.isR18Image(img) && !(img.url || '').includes('token=');
             if (locked) {
@@ -828,11 +849,26 @@ const BlogApp = {
                 </figure>`;
             }
             return `<figure class="gallery-item">
-                <img src="${img.thumb || img.url}" alt="图片 ${i + 1}" loading="lazy"
+                <img src="${img.thumb || img.url}" alt="图片 ${i + 1}" loading="lazy" decoding="async"
                      onclick="openGalleryLightbox('${img.url}', ${i})">
             </figure>`;
         }).join('');
+        grid.insertAdjacentHTML('beforeend', html);
+        this.galleryRenderIdx = end;
         this.syncGalleryRatios(grid);
+    },
+
+    // 滚动接近底部时继续加载下一批（仅图库视图生效）
+    bindGalleryInfiniteScroll() {
+        if (this.__galleryScrollBound) return;
+        this.__galleryScrollBound = true;
+        window.addEventListener('scroll', () => {
+            if (this.currentView !== 'gallery') return;
+            const filtered = this.galleryFiltered || [];
+            if (this.galleryRenderIdx >= filtered.length) return;
+            const doc = document.documentElement;
+            if (window.innerHeight + window.scrollY >= doc.scrollHeight - 1200) this.renderGalleryBatch();
+        }, { passive: true });
     },
 
     // 切换图库分类面板
