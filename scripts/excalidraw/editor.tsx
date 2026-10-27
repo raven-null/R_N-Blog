@@ -980,9 +980,10 @@ function NoteApp({
         )
       )}
 
-      {/* 底部居中胶囊：默认渲染，内嵌场景由 CSS（body.exc-no-capsule / .exc-from-admin）收起 */}
-      {showCapsule && (
-        <div className={"mm-capsule" + (editMode ? " is-edit" : "")} ref={capRef}>
+      {/* 底部居中胶囊：默认渲染，内嵌场景由 CSS（body.exc-no-capsule / .exc-from-admin）收起。
+          编辑态不渲染（保存走 Ctrl/⌘ + S 或宿主后台按钮，避免底部压住工具条） */}
+      {showCapsule && !editMode && (
+        <div className="mm-capsule" ref={capRef}>
           {/* 返回：嵌入时请宿主回上一级，独立打开自己回上一级（history.back，不重载首页） */}
           <button className="mm-cap-btn bb-view-only cap-back" title="返回上一页" onClick={() => { if (embedded) tell("back"); else goBack() }}>
             <Ic p={ICONS.home} />
@@ -1009,31 +1010,8 @@ function NoteApp({
             <Ic p={ICONS.alert} />
             <span>信息</span>
           </button>
-          {/* 编辑态：只留「保存」和「完成」 */}
-          <button
-            className="mm-cap-btn bb-edit-only cap-save"
-            title="保存到服务器（Ctrl / ⌘ + S）"
-            disabled={saving}
-            onClick={() => save(false)}
-          >
-            <Ic p={ICONS.save} />
-            <span>{saving ? "保存中" : "保存"}</span>
-          </button>
-          <button className="mm-cap-btn bb-edit-only" title="保存并退出编辑" onClick={finishEdit}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
-            <span>完成</span>
-          </button>
-          {/* 口令入口：仅设了口令且非管理员时显形 */}
-          {meta?.hasKey && !isAdmin && (
-            <button
-              className="mm-cap-btn bb-edit-only cap-key show"
-              title="输入编辑口令"
-              onClick={toggleKeyBar}
-            >
-              <Ic p={ICONS.lock} />
-              <span>口令</span>
-            </button>
-          )}
+          {/* 编辑态的「保存 / 完成 / 口令」按钮已随编辑态胶囊一并移除：
+              保存走 Ctrl / ⌘ + S（宿主后台也通过 __excalidrawSave 调用），口令浮条进编辑态自动滑出 */}
           {/* 导出菜单 */}
           <div className={"mm-cap-menu" + (capMenuOpen ? " open" : "")}>
             <button className="mm-cap-item bb-view-only" title="导出为 PNG 图片" onClick={() => { setCapMenuOpen(false); exportPng() }}>
