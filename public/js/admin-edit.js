@@ -2183,7 +2183,38 @@
         if (fixed) {
             try { window.eeMarkDirty(); scheduleInfo(); } catch (e) { /* 忽略 */ }
         }
+        fixed += dropDuplicatedHighlights(host);
         return fixed;
+    }
+
+    /**
+     * 清掉「高亮链接后面紧跟一份同样文字」的残留（v3.48.8）
+     *
+     * 来历：早期套高亮走 vditor.insertValue()，它插在光标处**不会**替换选区，
+     * 于是选中的文字留在原地、Markdown 又插了一份 → 正文里出现两份同样的文字。
+     * 这里只处理「`<a href="hl:…">X</a>` 后面紧挨着的纯文本恰好也是 X」这一种结构，
+     * 别的重复一律不动。
+     */
+    function dropDuplicatedHighlights(host) {
+        var dropped = 0;
+        var links = host.querySelectorAll('a[href^="hl:"]');
+        for (var i = 0; i < links.length; i++) {
+            var a = links[i];
+            var word = a.textContent || '';
+            if (!word) continue;
+            var next = a.nextSibling;
+            if (!next || next.nodeType !== 3) continue;            // 只认紧挨着的文本节点
+            var t = next.nodeValue || '';
+            if (t.indexOf(word) !== 0) continue;                   // 后面必须同字开头
+            var rest = t.slice(word.length);
+            if (rest) next.nodeValue = rest;
+            else if (next.parentNode) next.parentNode.removeChild(next);
+            dropped++;
+        }
+        if (dropped) {
+            try { window.eeMarkDirty(); scheduleInfo(); } catch (e) { /* 忽略 */ }
+        }
+        return dropped;
     }
 
     /** 重算编辑区里的高亮装饰（每种颜色一组 + 标记一组） */
@@ -2264,17 +2295,26 @@
         text = text.replace(/==(?:\{[a-z]+\})?/g, '');
         var c = HL_KEYS.indexOf(color) >= 0 ? color : 'yellow';
         var md = '[' + text + '](hl:' + c + ')';
-        // 优先走 Vditor 自己的 insertValue（按 Markdown 插入，Lute 会把它解析成真链接）；
-        // 回退才是 execCommand('insertText')，那是纯文本插入，可能要等下一次 spin 才成链接。
-        var done = false;
+        // 关键：必须**替换选区**，而且要直接插入一个真的 <a> 元素。
+        //   · vditor.insertValue() 是「插到光标处」，不替换选区 → 原文还在、又插一份（出现两份文字）
+        //   · 只插 "[文字](hl:色)" 这种**文本**时，Vditor 要等下一轮 spin 才解析成链接，
+        //     中间那段字面状态很容易被它自己的重渲染改回去（作者就看到源码）
+        // 所以用 execCommand('insertHTML') 直接把 <a href="hl:色">文字</a> 写进去：
+        // 浏览器原生替换选区，Lute 从 DOM 反推出来的 Markdown 也正好是 [文字](hl:色)。
+        var esc = String(text)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+        var inserted = false;
         try {
-            if (vditor && vditorReady && typeof vditor.insertValue === 'function') {
-                vditor.insertValue(md);
-                done = true;
-            }
-        } catch (e) { done = false; }
-        if (!done) {
-            try { document.execCommand('insertText', false, md); } catch (e) { return false; }
+            inserted = document.execCommand('insertHTML', false,
+                '<a href="hl:' + c + '">' + esc + '</a>');
+        } catch (e) { inserted = false; }
+        if (!inserted) {
+            // 退路：先删选区再插 Markdown 文本（字面源码交给 repair 兜底）
+            try {
+                if (sel && sel.rangeCount && !sel.isCollapsed) document.execCommand('delete');
+                document.execCommand('insertText', false, md);
+            } catch (e2) { return false; }
         }
         window.eeMarkDirty();
         scheduleInfo();
@@ -2289,22 +2329,22 @@
         if (!sel || !sel.rangeCount) return false;
         var node = sel.getRangeAt(0).startContainer;
         var el = node && (node.nodeType === 3 ? node.parentElement : node);
-        // 1) hl: 链接：用 unlink 去掉链接外壳（文字保留）
+        // 1) hl: 链接：直接把链接外壳换成纯文字（不依赖 execCommand('unlink')，
+        //    它在列表项 / 跨节点选区里会失效，v3.48.8 起改成确定性的 DOM 替换）
         var link = el && el.closest ? el.closest('#eeVditor a[href^="hl:"]') : null;
         if (link) {
-            var r = document.createRange();
-            r.selectNodeContents(link);
-            sel.removeAllRanges();
-            sel.addRange(r);
-            var okUnlink = false;
-            try { okUnlink = document.execCommand('unlink'); } catch (e) { okUnlink = false; }
-            if (!okUnlink) {
-                // 退路：直接把链接换成纯文字
-                var parent = link.parentNode;
-                if (!parent) return false;
-                parent.replaceChild(document.createTextNode(link.textContent || ''), link);
-                if (parent.normalize) parent.normalize();
-            }
+            var parent = link.parentNode;
+            if (!parent) return false;
+            var textNode = document.createTextNode(link.textContent || '');
+            parent.replaceChild(textNode, link);
+            if (parent.normalize) parent.normalize();
+            try {
+                var rr = document.createRange();
+                rr.setStart(textNode, Math.min(1, (textNode.nodeValue || '').length));
+                rr.collapse(true);
+                sel.removeAllRanges();
+                sel.addRange(rr);
+            } catch (e) { /* 光标放不回去也不影响结果 */ }
             window.eeMarkDirty();
             scheduleInfo();
             return true;
