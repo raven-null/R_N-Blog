@@ -1225,16 +1225,27 @@ const PRESET_COLORS=[{id:'blue',hex:'#3b82f6',start:'#3b82f6',end:'#2563eb'},{id
 
   (function injectCss() {
     var css = [
-      /* 图片 / 代码节点：body 不再做行内居中与裁切，整块交给内容 */
-      ".gg-node-image .node-body,.gg-node-code .node-body{padding:0;display:block;overflow:hidden;align-items:stretch}",
-      ".gg-node-image .node-val,.gg-node-code .node-val{height:100%;max-height:none;padding-right:0;overflow:hidden;display:block;text-align:left}",
+      /* 图片 / 代码节点：body 不再做行内居中与裁切，整块交给内容。
+         背景必须钉死成深色 —— 上游的 body 颜色跟随节点配色与选中态变浅，
+         浅底配浅字等于看不见（图片占位提示与代码正文都吃过这个亏）。 */
+      ".gg-node-image .node-body,.gg-node-code .node-body{padding:0;display:block;overflow:hidden;",
+      "align-items:stretch;background:#111116!important}",
+      ".gg-node-image .node-val,.gg-node-code .node-val{height:100%;max-height:none;padding-right:0;",
+      "overflow:hidden;display:block;text-align:left;background:transparent!important}",
       ".gg-img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}",
+      /* 代码：高对比正文 + 自动换行（长行不被切掉，节点小也能读全） */
       ".gg-code{margin:0;padding:10px 12px;height:100%;box-sizing:border-box;overflow:auto;",
-      "font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11.5px;line-height:1.6;",
-      "white-space:pre;color:#d9e2f2;scrollbar-width:thin}",
+      "font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;line-height:1.65;",
+      "white-space:pre-wrap;word-break:break-word;color:#eaf0fb;scrollbar-width:thin;",
+      "scrollbar-color:rgba(255,255,255,.18) transparent}",
       ".gg-code code{font:inherit;color:inherit;background:none;padding:0}",
+      /* 轻量语法着色：注释 / 字符串 / 数字 / 关键字 */
+      ".gg-cm{color:#6f7b8a;font-style:italic}",
+      ".gg-str{color:#e5c07b}",
+      ".gg-num{color:#d19a66}",
+      ".gg-kw{color:#7aa2f7}",
       ".gg-ph{display:flex;align-items:center;justify-content:center;height:100%;width:100%;",
-      "color:rgba(255,255,255,.42);font-size:12px;background:rgba(255,255,255,.03)}",
+      "color:rgba(255,255,255,.62);font-size:12px;background:transparent}",
       /* 类型选择弹窗 */
       ".gg-kp{position:fixed;z-index:2147483200;display:flex;flex-direction:column;gap:4px;padding:8px;",
       "min-width:240px;border-radius:14px;background:rgba(24,24,30,.97);border:1px solid rgba(255,255,255,.14);",
@@ -1374,7 +1385,49 @@ const PRESET_COLORS=[{id:'blue',hex:'#3b82f6',start:'#3b82f6',end:'#2563eb'},{id
       val.innerHTML = '<div class="gg-ph">双击编辑代码</div>';
       return;
     }
-    val.innerHTML = '<pre class="gg-code"><code>' + esc(code) + "</code></pre>";
+    val.innerHTML = '<pre class="gg-code"><code>' + highlight(code) + "</code></pre>";
+  }
+
+  /* 轻量语法着色（不引第三方库）：
+     先把注释与字符串换成占位符（避免它们里面的关键字/数字被二次着色），
+     再给数字与关键字上色，最后还原占位符。输入已做 HTML 转义，标签不会被吃。 */
+  var KEYWORDS =
+    /\b(package|import|public|private|protected|static|final|abstract|class|interface|enum|extends|implements|new|return|if|else|for|while|do|switch|case|default|break|continue|try|catch|finally|throw|throws|void|int|long|double|float|boolean|char|byte|short|true|false|null|this|super|function|const|let|var|def|fn|struct|async|await|export|from|type|end)\b/g;
+
+  function highlight(code) {
+    var out = esc(code);
+    var store = [];
+    // 占位符必须**不含数字**：后面数字与关键字着色是按正则扫全文的，
+    // 占位符里只要有数字就会被当成数字再包一层 span，把标记撕碎（踩过）。
+    // 用 Unicode 私有区的两个字符表示，'\uE000' + n 个 '\uE001' + '\uE000'。
+    function stash(html) {
+      store.push(html);
+      return "\uE000" + new Array(store.length).join("\uE001") + "\uE000";
+    }
+    // 1) 注释
+    out = out.replace(/\/\/[^\n]*/g, function (m) {
+      return stash('<span class="gg-cm">' + m + "</span>");
+    });
+    out = out.replace(/\/\*[\s\S]*?\*\//g, function (m) {
+      return stash('<span class="gg-cm">' + m + "</span>");
+    });
+    // 2) 字符串
+    out = out.replace(/"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'/g, function (m) {
+      return stash('<span class="gg-str">' + m + "</span>");
+    });
+    // 3) 数字（同样走占位符：直接插 <span class="gg-num"> 的话，
+    //    标签里的 class 会被下一步的关键字正则再包一层，结构就碎了）
+    out = out.replace(/\b\d+(?:\.\d+)?\b/g, function (m) {
+      return stash('<span class="gg-num">' + m + "</span>");
+    });
+    // 4) 关键字
+    out = out.replace(KEYWORDS, function (m) {
+      return '<span class="gg-kw">' + m + "</span>";
+    });
+    // 5) 还原
+    return out.replace(/\uE000(\uE001*)\uE000/g, function (_, bars) {
+      return store[bars.length] || "";
+    });
   }
 
   /* ── 覆盖节点外观：上游先画，再按类型补内容 ── */
@@ -1676,6 +1729,7 @@ const PRESET_COLORS=[{id:'blue',hex:'#3b82f6',start:'#3b82f6',end:'#2563eb'},{id
     create: createTypedNode,
     pickImage: pickImageForNode,
     editCode: openCodeEditor,
+    highlight: highlight, // 供冒烟测试
   };
 })();
 
