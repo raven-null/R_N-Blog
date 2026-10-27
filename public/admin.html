@@ -776,7 +776,6 @@
             <button class="mobile-tab" data-tab="comments" onclick="switchTab('comments')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span>评论</span></button>
             <!-- 中间：创建内容（移动端唯一入口，点开弹出形态选择） -->
             <button class="mobile-tab mobile-tab-add" onclick="openCreatePicker()" title="创建内容（文章 / 白板 / 导图 / 节点图）"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg><span>创建</span></button>
-            <button class="mobile-tab" data-tab="images" onclick="switchTab('images')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><span>图片</span></button>
             <button class="mobile-tab" data-tab="tags" onclick="switchTab('tags')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg><span>标签</span></button>
             <button class="mobile-tab" data-tab="settings" onclick="switchTab('settings')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span>设置</span></button>
         </nav>
@@ -787,7 +786,6 @@
                     <div class="sidebar-item active" onclick="switchTab('articles')" data-tab="articles"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span>文章管理</span></div>
                     <div class="sidebar-item" onclick="openCreatePicker()" data-tab="create"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><span>创建内容</span></div>
                     <div class="sidebar-item" onclick="switchTab('comments')" data-tab="comments"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span>评论管理</span></div>
-                    <div class="sidebar-item" onclick="switchTab('images')" data-tab="images"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><span>图片管理</span></div>
                     <div class="sidebar-item" onclick="switchTab('tags')" data-tab="tags"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg><span>标签管理</span></div>
                     <div class="sidebar-item" onclick="switchTab('settings')" data-tab="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span>博客设置</span></div>
                 </div>
@@ -968,58 +966,6 @@
                     </div>
                 </div>
 
-                <!-- 图片管理 -->
-                <div id="tab-images" style="display:none">
-                    <div class="page-bar"><h2>图片管理</h2></div>
-                    <div class="imgm-top">
-                        <label class="imgm-upload">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                            上传图片（自动转 WebP，限 10MB，上传后归入未分类）
-                            <input type="file" id="imageUpload" accept="image/*" multiple onchange="uploadImages(this.files)">
-                        </label>
-                        <button class="btn btn-ghost" onclick="showUploadLog()" id="uploadLogBtn" title="查看上传记录">
-                            上传记录<span id="uploadFailCount" style="margin-left:4px;color:var(--danger)"></span>
-                        </button>
-                    </div>
-                    <div class="classify-workspace">
-                        <div class="classify-left">
-                            <div class="classify-panel" id="classifyLeft">
-                                <div class="classify-header"><h3>未分类 <span class="count" id="unclassifiedCount">0</span></h3>
-                                    <div style="display:flex;gap:6px;align-items:center">
-                                        <span style="font-size:11px;color:var(--text-muted)">拖拽上传/移入</span>
-                                        <button class="btn btn-ghost btn-sm" onclick="toggleBatchMode('left')" id="btnBatchModeLeft">批量操作</button>
-                                        <div id="batchActionsLeft" style="display:none">
-                                            <button class="btn btn-ghost btn-sm" onclick="toggleSelectAll('left')">全选</button>
-                                            <button class="btn btn-ghost btn-sm" onclick="batchMoveToTag()" disabled>移至分类</button>
-                                            <button class="btn btn-ghost btn-sm" onclick="batchDeleteImages()" disabled>删除</button>
-                                            <button class="btn btn-ghost btn-sm" onclick="toggleBatchMode('left')">取消</button>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="classify-body"><div class="classify-grid" id="unclassifiedGrid"></div></div>
-                            </div>
-                        </div>
-                        <div class="classify-right">
-                            <div class="classify-panel" id="classifyRight">
-                                <div class="classify-header">
-                                    <div class="tag-sel" id="classifyTagSel"></div>
-                                    <div style="display:flex;gap:6px;margin-left:auto;align-items:center">
-                                        <label class="btn btn-ghost btn-sm" style="cursor:pointer">上传到此分类<input type="file" accept="image/*" multiple style="display:none" onchange="uploadImages(this.files, classifyTag);this.value=''"></label>
-                                        <button class="btn btn-ghost btn-sm" onclick="toggleBatchMode('right')" id="btnBatchMode">批量操作</button>
-                                        <div id="batchActions" style="display:none;gap:6px">
-                                            <button class="btn btn-ghost btn-sm" onclick="toggleSelectAll('right')" id="btnSelectAll">全选</button>
-                                            <button class="btn btn-ghost btn-sm" onclick="batchClearTags()" id="btnBatchClear" disabled>清除标签</button>
-                                            <button class="btn btn-ghost btn-sm" onclick="batchDeleteImages()" disabled>删除</button>
-                                            <button class="btn btn-ghost btn-sm" onclick="toggleBatchMode('right')">取消</button>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="classify-body"><div class="classify-grid" id="classifiedGrid"></div></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- 标签管理 -->
                 <div id="tab-tags" style="display:none">
                     <div class="page-bar"><h2>标签管理</h2><div class="page-bar-actions"><button class="btn btn-ghost" onclick="loadTags()">刷新</button></div></div>
@@ -1028,19 +974,11 @@
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                             文章标签
                         </button>
-                        <button class="tags-nav-btn" onclick="switchTagsView('image')" data-tview="image">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                            图片标签
-                        </button>
                     </div>
                     <div class="tags-add"><input type="text" id="newTagInput" placeholder="输入新标签名称，回车添加" onkeydown="if(event.key==='Enter')addNewTag()"><button class="btn btn-primary" onclick="addNewTag()">添加标签</button></div>
                     <div id="tagsViewArticle">
                         <div class="tags-info">文章标签来自文章管理中保存的文章，删除标签会从所有文章中移除。</div>
                         <div class="tags-grid" id="articleTagsGrid"></div>
-                    </div>
-                    <div id="tagsViewImage" style="display:none">
-                        <div class="tags-info">图片标签来自图片管理中分类的图片，删除标签会从所有图片中移除。</div>
-                        <div class="tags-grid" id="imageTagsGrid"></div>
                     </div>
                 </div>
 
@@ -1076,7 +1014,6 @@
                                     <div class="settings-avatar-preview" id="settingsFaviconPreview" style="border-radius:var(--radius-sm)"><img id="settingsFaviconImg" alt="" style="display:none;border-radius:var(--radius-sm)"><span>未设置</span></div>
                                     <input type="hidden" id="setFavicon" value="">
                                     <label class="btn btn-ghost btn-sm" style="cursor:pointer">上传<input type="file" accept="image/*" style="display:none" onchange="uploadFaviconImage(this.files[0])"></label>
-                                    <button class="btn btn-ghost btn-sm" onclick="pickFaviconFromGallery()">从图库选</button>
                                     <button class="btn btn-ghost btn-sm" onclick="clearFaviconImage()">移除</button>
                                 </div>
                             </div>
@@ -1095,7 +1032,6 @@
                                     <div class="settings-avatar-preview" id="settingsAvatarPreview"><img id="settingsAvatarImg" alt="" style="display:none"><span>未设置</span></div>
                                     <input type="hidden" id="setAvatar" value="">
                                     <label class="btn btn-ghost btn-sm" style="cursor:pointer">上传<input type="file" accept="image/*" style="display:none" onchange="uploadAvatarImage(this.files[0])"></label>
-                                    <button class="btn btn-ghost btn-sm" onclick="pickAvatarFromGallery()">从图库选</button>
                                     <button class="btn btn-ghost btn-sm" onclick="clearAvatarImage()" id="clearAvatarBtn">移除</button>
                                 </div>
                             </div>
@@ -1443,7 +1379,6 @@
                         </div>
                         <div class="publish-cover-actions">
                             <label class="btn btn-ghost btn-sm" style="cursor:pointer">上传封面<input type="file" accept="image/*" style="display:none" onchange="setCoverImage(this.files[0])"></label>
-                            <button class="btn btn-ghost btn-sm" onclick="pickCoverFromGallery()">从图库选封面</button>
                             <button class="btn btn-ghost btn-sm" onclick="clearCoverImage()" id="coverClearBtn" style="display:none">移除</button>
                             <input type="hidden" id="edImage" value="">
                         </div>
@@ -1483,7 +1418,7 @@
     </div>
 
         <script src="js/tag-picker.js?v=1.1.2"></script>
-        <script src="js/admin-app.js?v=1.19.0"></script>
+        <script src="js/admin-app.js?v=1.20.0"></script>
 
     <!-- 前台预览抽屉（iframe 内嵌，零跳出） -->
     <style>

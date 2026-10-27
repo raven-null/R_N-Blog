@@ -7,7 +7,9 @@ const BlogApp = {
     config: {
         postsDirectory: 'posts',
         // 后端 API 地址（同源）
-        apiBase: ''
+        apiBase: '',
+        // 图库数据源：独立的 r-gallery 站点（博客不再自己存图）
+        galleryBase: 'https://r-gallery.netlify.app'
     },
 
     // 所有文章
@@ -579,7 +581,7 @@ const BlogApp = {
         }
     },
 
-    // 渲染图库（从 Blobs API 加载图库图片，瀑布流布局）
+    // 渲染图库（从 r-gallery 拉取图片，瀑布流布局）
     async renderGallery() {
         const grid = document.getElementById('galleryGrid');
         if (!grid || grid.dataset.rendered) return;
@@ -621,35 +623,63 @@ const BlogApp = {
         return u;
     },
 
-    // 加载图库图片（从 Blobs API 获取所有图片）
-    // R18 图片：元数据公开（用于「R18」分类下渲染锁定占位卡片），图片内容（缩略图/原图）均需密钥；
-    // 已有密钥（后台登录 / 本次会话验证过）时 URL 附加参数直接加载，否则点击时弹窗验证
+    // 加载图库图片：数据源为 r-gallery 站点（博客自己不再存图）
+    // - 观光模式：?safe=1，服务端已剔除 R16/R18；
+    // - 管理员：带图库密码（gallery_key 或后台 admin_key）拉全量，图片 URL 也带 token 才能取字节。
     async loadGalleryImages() {
         if (this.galleryImages) return this.galleryImages;
-        try {
-            // 带时间戳绕过 CDN/浏览器缓存：图片标签变更后前台立即可见（否则列表接口 max-age=300 会拿旧数据）
-            const res = await fetch('/api/admin?action=images&_=' + Date.now());
-            const data = await res.json();
-            if (data.status === 'success' && Array.isArray(data.data)) {
-                const vk = this.galleryViewKey();
-                this.galleryImages = data.data.map(img => {
-                    let url = this.normalizeImageUrl(img.url);
-                    let thumb = img.thumb ? this.normalizeImageUrl(img.thumb) : '';
-                    // 已有密钥：R18 图片 URL 附加密钥参数（<img> 无法带 header）
-                    if (vk && this.isR18Image(img)) {
-                        const q = 'adminKey=' + encodeURIComponent(vk);
-                        url = url + (url.includes('?') ? '&' : '?') + q;
-                        if (thumb) thumb = thumb + (thumb.includes('?') ? '&' : '?') + q;
-                    }
-                    return { key: img.key, url, thumb, tags: img.tags || [] };
-                });
-            } else {
-                this.galleryImages = [];
+        const base = this.config.galleryBase;
+        const token = this.galleryViewKey();
+        let list = [];
+        let unlocked = false;
+        if (token) {
+            try {
+                list = await this.fetchGalleryPages(base, { token });
+                unlocked = true;
+            } catch (e) {
+                list = [];
+                unlocked = false;
             }
-        } catch {
-            this.galleryImages = [];
         }
+        if (!unlocked) {
+            try {
+                list = await this.fetchGalleryPages(base, { safe: true });
+            } catch (e) {
+                list = [];
+            }
+        }
+        const q = unlocked ? '?token=' + encodeURIComponent(token) : '';
+        this.galleryImages = list.map(p => ({
+            id: p.id,
+            title: p.title || '',
+            rating: p.rating || 'general',
+            tags: p.tags || [],
+            categories: p.categories || [],
+            url: base + '/api/photos/' + encodeURIComponent(p.id) + '/raw' + q,
+            thumb: base + '/api/photos/' + encodeURIComponent(p.id) + '/thumb' + q,
+        }));
         return this.galleryImages;
+    },
+
+    // 分页拉取 r-gallery 的照片列表（limit 上限 500，按 cursor 循环取完）
+    async fetchGalleryPages(base, opts) {
+        const out = [];
+        let cursor = '';
+        for (let round = 0; round < 20; round++) {
+            const params = new URLSearchParams();
+            params.set('limit', '500');
+            if (opts.safe) params.set('safe', '1');
+            else params.set('token', opts.token);
+            if (cursor) params.set('cursor', cursor);
+            const res = await fetch(base + '/api/photos?' + params.toString());
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const data = await res.json();
+            const photos = Array.isArray(data.photos) ? data.photos : [];
+            out.push(...photos);
+            cursor = data.cursor || '';
+            if (!cursor || !photos.length) break;
+        }
+        return out;
     },
 
     // 读取本地管理员密钥（后台登录后写入 localStorage；前台验证通过后存 sessionStorage）
@@ -666,49 +696,50 @@ const BlogApp = {
         } catch (e) { return ''; }
     },
 
-    // 判断图片是否归类为 R18（大小写不敏感）
+    // 判断图片是否成人向（R16 / R18）——只有管理员身份可见
     isR18Image(img) {
-        return !!(img && (img.tags || []).some(t => String(t).toLowerCase() === 'r18'));
+        return !!(img && (img.rating === 'r18' || img.rating === 'r16'));
     },
 
-    // 给图库中所有 R18 图片的 URL 附加密钥参数（验证通过后调用）
+    // 给图库中所有成人向图片的 URL 附加图库密码（验证通过后调用）
     applyR18Keys(key) {
-        const q = 'adminKey=' + encodeURIComponent(key);
+        const q = 'token=' + encodeURIComponent(key);
         (this.galleryImages || []).forEach(img => {
             if (!this.isR18Image(img)) return;
-            if (img.url && !img.url.includes('adminKey=')) img.url += (img.url.includes('?') ? '&' : '?') + q;
-            if (img.thumb && !img.thumb.includes('adminKey=')) img.thumb += (img.thumb.includes('?') ? '&' : '?') + q;
+            if (img.url && !img.url.includes('token=')) img.url += (img.url.includes('?') ? '&' : '?') + q;
+            if (img.thumb && !img.thumb.includes('token=')) img.thumb += (img.thumb.includes('?') ? '&' : '?') + q;
         });
     },
 
-    // 点击 R18 图片时的密钥验证弹窗：输入管理员密钥，验证通过后本会话内可直接查看
+    // 点击 R16/R18 图片时的密码验证：输入图库访问密码，验证通过后本会话可直接查看
     async requestR18Key() {
-        // 已有密钥（后台登录 或 本会话验证过）→ 直接附加并放行
         const existing = this.galleryViewKey();
         if (existing) {
             this.applyR18Keys(existing);
             return true;
         }
-        const key = window.prompt('该图片为 R18 内容，请输入管理员密钥后查看：');
+        const key = window.prompt('R16 / R18 内容仅管理员可见，请输入图库访问密码：');
         if (!key || !key.trim()) return false;
-        // 用密钥请求一张 R18 原图验证（X-Admin-Key 头）
-        const target = (this.galleryImages || []).find(img => this.isR18Image(img));
-        if (!target) return false;
         try {
-            const res = await fetch(target.url, { headers: { 'X-Admin-Key': key.trim() } });
+            const res = await fetch(this.config.galleryBase + '/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token: key.trim() }),
+            });
             if (!res.ok) {
-                alert('密钥错误，无法查看 R18 图片');
+                alert('密码错误，无法查看 R16 / R18 图片');
                 return false;
             }
-        } catch {
+        } catch (e) {
             alert('验证失败，请重试');
             return false;
         }
-        // 验证通过：存入 localStorage gallery_key（后台退出时会一并清除，实现权限联动失效）
         localStorage.setItem('gallery_key', key.trim());
-        this.applyR18Keys(key.trim());
-        // 刷新网格，使后续点击的图片 URL 已带密钥
-        this.renderGalleryByTag();
+        // 解锁后重新拉全量（此时列表里才包含 R16/R18）
+        this.galleryImages = null;
+        const grid = document.getElementById('galleryGrid');
+        if (grid) grid.dataset.rendered = '';
+        await this.renderGallery();
         return true;
     },
 
@@ -752,16 +783,19 @@ const BlogApp = {
         });
     },
 
-    // 根据当前分类渲染图库
     renderGalleryByTag() {
         const grid = document.getElementById('galleryGrid');
         if (!grid) return;
-        // 始终基于完整图库数据（this.galleryImages）筛选
         const allImages = (this.galleryImages && this.galleryImages.length) ? this.galleryImages : [];
-        // 「全部」视图不显示 R18；R18 仅在对应分类标签下可见（未验证时显示锁定占位卡片）
-        const filtered = this.galleryTag === 'all'
-            ? allImages.filter(img => !this.isR18Image(img))
-            : allImages.filter(img => (img.tags || []).includes(this.galleryTag));
+        // 「全部」视图不显示成人向；R16/R18 仅在对应档位下可见（未解锁时显示锁定占位卡片）
+        let filtered;
+        if (this.galleryTag === 'all') {
+            filtered = allImages.filter(img => !this.isR18Image(img));
+        } else if (this.galleryTag === 'r18' || this.galleryTag === 'r16') {
+            filtered = allImages.filter(img => img.rating === this.galleryTag);
+        } else {
+            filtered = allImages.filter(img => (img.tags || []).includes(this.galleryTag));
+        }
         // window.__galleryImages 设为当前筛选结果（灯箱在筛选结果内导航）
         window.__galleryImages = filtered;
         if (!filtered.length) {
@@ -769,11 +803,12 @@ const BlogApp = {
             return;
         }
         grid.innerHTML = filtered.map((img, i) => {
-            // R18 且未验证密钥：显示锁定占位卡片（不加载任何图片内容）
-            if (this.isR18Image(img) && !(img.url || '').includes('adminKey=')) {
-                return `<figure class="gallery-item gallery-item-locked" title="R18 内容，点击输入管理员密钥查看"
+            // 成人向且未解锁：显示锁定占位卡片（不加载任何图片内容）
+            const locked = this.isR18Image(img) && !(img.url || '').includes('token=');
+            if (locked) {
+                return `<figure class="gallery-item gallery-item-locked" title="${img.rating === 'r16' ? 'R16' : 'R18'} 内容，点击输入图库密码查看"
                      onclick="openGalleryLightbox('${img.url}', ${i})">
-                    <div class="gallery-lock-badge">R18</div>
+                    <div class="gallery-lock-badge">${img.rating === 'r16' ? 'R16' : 'R18'}</div>
                 </figure>`;
             }
             return `<figure class="gallery-item">
@@ -792,20 +827,22 @@ const BlogApp = {
     },
 
     // 加载并渲染图库分类标签
+    // 加载并渲染图库分类标签（来自 r-gallery 的标签 + 成人向档位）
     async renderGalleryTags() {
         const list = document.getElementById('galleryTagFloatList');
         if (!list) return;
         try {
-            // 从完整图库数据提取所有标签（后端分类）；
-            // 注意不能用 window.__galleryImages（「全部」视图已过滤 R18，会导致管理员看不到 R18 分类）
-            const allTags = new Set();
             const images = this.galleryImages || [];
-            images.forEach(img => (img.tags || []).forEach(t => allTags.add(t)));
-            const tags = [...allTags];
-            list.innerHTML = `
-                <button class="gallery-tag-item active" data-tag="all" onclick="BlogApp.setGalleryTag('all')">全部</button>
-                ${tags.map(t => `<button class="gallery-tag-item" data-tag="${t}" onclick="BlogApp.setGalleryTag('${t}')">${t}</button>`).join('')}
-            `;
+            const tagCount = new Map();
+            images.forEach(img => (img.tags || []).forEach(t => tagCount.set(t, (tagCount.get(t) || 0) + 1)));
+            const tags = [...tagCount.keys()].sort((a, b) => tagCount.get(b) - tagCount.get(a));
+            const btn = (tag, label) => `<button class="gallery-tag-item${this.galleryTag === tag ? ' active' : ''}" data-tag="${tag}" onclick="BlogApp.setGalleryTag('${tag}')">${label}</button>`;
+            let html = btn('all', '全部');
+            // 成人向档位只有管理员（能拿到 R16/R18）才显示
+            if (images.some(img => img.rating === 'r18')) html += btn('r18', 'R18');
+            if (images.some(img => img.rating === 'r16')) html += btn('r16', 'R16');
+            html += tags.map(t => btn(t, t)).join('');
+            list.innerHTML = html;
         } catch (e) {
             list.innerHTML = '<button class="gallery-tag-item active" data-tag="all" onclick="BlogApp.setGalleryTag(\'all\')">全部</button>';
         }

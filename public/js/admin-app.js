@@ -1495,6 +1495,7 @@
 
         function renderTagSel(){
             const sel=document.getElementById('classifyTagSel');
+            if(!sel)return; // 图片管理（图库）已移除
             if(!imageTagNames.length){sel.innerHTML='<span style="color:var(--text-muted);font-size:12px">暂无图片标签，请先在标签管理中添加</span>';return}
             sel.innerHTML=imageTagNames.map(t=>`<button class="${classifyTag===t.name?'active':''}" onclick="selectTag('${escJs(t.name)}')">${esc(t.name)}<span style="font-size:10px;opacity:.7;margin-left:4px">(${t.count})</span></button>`).join('');
         }
@@ -1502,6 +1503,7 @@
         function selectTag(tag){classifyTag=tag;renderTagSel();renderPanels()}
 
         function renderPanels(){
+            if(!document.getElementById('unclassifiedCount'))return; // 图片管理（图库）已移除
             // 未分类：没有任何标签的图片
             const untagged=allImageData.filter(i=>{
                 const tags=i.tags||[];
