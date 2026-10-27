@@ -18,6 +18,7 @@
  */
 import { json, badRequest, noContent, corsHeaders } from "./_shared/cors"
 import { getBlobStore } from "./_shared/blob"
+import { resolveModelApiUrl, resolveTemperature } from "./_shared/models"
 
 const SETTINGS_STORE = "blog-settings"
 const SETTINGS_KEY = "site"
@@ -34,6 +35,7 @@ const UPSTREAM_TIMEOUT_MS = 60000
 
 interface AiSettings {
   enabled: boolean
+  provider: string
   apiUrl: string
   apiKey: string
   model: string
@@ -58,13 +60,27 @@ async function loadAiSettings(): Promise<AiSettings> {
   const key = envKey || (typeof stored.apiKey === "string" ? stored.apiKey : "")
   const num = (v: any, d: number) => (Number.isFinite(Number(v)) && Number(v) > 0 ? Number(v) : d)
 
+  const provider = typeof stored.provider === "string" && stored.provider ? stored.provider : "zhipu"
+  const model = typeof stored.model === "string" && stored.model ? stored.model : DEFAULT_MODEL
+  const customUrl = typeof stored.apiUrl === "string" ? stored.apiUrl : ""
+  // 接口地址必须跟「provider + model」配套解析：
+  // 后台可能只选了模型没填地址（比如 mimo-tp 的 MiMo），
+  // 直接回退到智谱默认地址就会拿小米的 key 去打智谱，必然 401。
+  const apiUrl = resolveModelApiUrl(provider, model, customUrl) || customUrl || DEFAULT_API_URL
+  const temperature = resolveTemperature(
+    provider,
+    model,
+    Number.isFinite(Number(stored.temperature)) ? Number(stored.temperature) : DEFAULT_TEMPERATURE,
+  )
+
   return {
     enabled: stored.enabled !== false,
-    apiUrl: typeof stored.apiUrl === "string" && stored.apiUrl ? stored.apiUrl : DEFAULT_API_URL,
+    provider,
+    apiUrl,
     apiKey: key,
-    model: typeof stored.model === "string" && stored.model ? stored.model : DEFAULT_MODEL,
+    model,
     maxTokens: num(stored.maxTokens, DEFAULT_MAX_TOKENS),
-    temperature: Number.isFinite(Number(stored.temperature)) ? Number(stored.temperature) : DEFAULT_TEMPERATURE,
+    temperature,
   }
 }
 
@@ -125,14 +141,40 @@ export default async (req: Request) => {
     })
   } catch (err: any) {
     clearTimeout(timer)
-    const reason = err?.name === "AbortError" ? "上游超时" : err?.message || String(err)
-    return json(502, { status: "error", message: `连接 AI 接口失败：${reason}` }, req)
+    const reason = err?.name === "AbortError" ? `上游超时（${UPSTREAM_TIMEOUT_MS / 1000}s）` : err?.message || String(err)
+    return json(
+      400,
+      { status: "error", message: `连接 AI 接口失败：${reason}`, apiUrl: cfg.apiUrl, model: cfg.model },
+      req,
+    )
   }
   clearTimeout(timer)
 
   if (!upstream.ok) {
     const text = await upstream.text().catch(() => "")
-    return json(502, { status: "error", message: `接口返回 ${upstream.status}：${text.slice(0, 200)}` }, req)
+    // 尽量从上游的 JSON 里抠出人话，抠不出就用原文
+    let detail = text.slice(0, 300)
+    try {
+      const j = JSON.parse(text)
+      const msg = (j && j.error && (j.error.message || j.error.code)) || (j && j.message)
+      if (msg) detail = String(msg)
+    } catch {
+      /* 不是 JSON 就保留原文 */
+    }
+    // 状态码刻意用 4xx：Cloudflare 会把源站的 5xx 换成它自己的错误页，
+    // 那样前端只能看到「502 Bad gateway」，完全看不到真正原因（这次排查就栽在这上面）。
+    const mapped = upstream.status === 401 || upstream.status === 403 ? 401 : upstream.status === 429 ? 429 : 400
+    return json(
+      mapped,
+      {
+        status: "error",
+        message: `上游接口返回 ${upstream.status}：${detail}`,
+        upstreamStatus: upstream.status,
+        apiUrl: cfg.apiUrl,
+        model: cfg.model,
+      },
+      req,
+    )
   }
 
   // 上游有时忽略 stream 参数直接返回整段 JSON，这里原样透传，前端按 content-type 处理
