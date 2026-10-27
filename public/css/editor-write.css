@@ -849,13 +849,20 @@ html body #eeSide *::-webkit-scrollbar { width: 0 !important; height: 0 !importa
     min-height: 0;
     overflow-y: auto;
     overscroll-behavior: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
+    /* 不能用 flex 列排：条目多到装不下时，flex 子项会被「压扁成一条条」——
+       高度只剩文字行高、内边距被吃掉，几十条挤在一起互相重叠，就是「糊成一团」。
+       普通块级流 + 列表自己滚，条目高度永远是它们该有的高度。 */
+    display: block;
     padding: 2px 0;
 }
-.eo-item {
+/* 上面那条压扁的教训在这里再兜一层：任何情况下都不许压缩条目高度 */
+.eo-item,
+.eo-empty {
     display: block;
+    flex: none;
+    box-sizing: border-box;
+}
+.eo-item {
     width: 100%;
     text-align: left;
     border: 0;
@@ -872,6 +879,16 @@ html body #eeSide *::-webkit-scrollbar { width: 0 !important; height: 0 !importa
     text-overflow: ellipsis;
     transition: background .14s ease, color .14s ease;
 }
+/* 目录这一列要能看出「还能往下滚」：全局把侧栏滚动条藏了（见上方 #eeSide 那条），
+   这里按更高特异性把细滚动条放回来，只作用于目录列表本身。 */
+html body #eeSide .eo-list { scrollbar-width: thin !important; -ms-overflow-style: auto !important; }
+html body #eeSide .eo-list::-webkit-scrollbar { width: 6px !important; display: block !important; }
+html body #eeSide .eo-list::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, .18) !important;
+    border-radius: 99px !important;
+}
+html body #eeSide .eo-list::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, .32) !important; }
+html body #eeSide .eo-list::-webkit-scrollbar-track { background: transparent !important; }
 .eo-item:hover { background: rgba(255, 255, 255, .07); color: #fff; }
 .eo-item.active { background: rgba(115, 170, 255, .18); color: #fff; font-weight: 600; }
 /* 层级靠缩进区分（只到 h4）：一眼能看出「这一段属于上面那一节」 */

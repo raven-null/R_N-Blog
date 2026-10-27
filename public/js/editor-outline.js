@@ -23,7 +23,8 @@
     var activeIdx = -1;
     var sig = '';              // 上一次渲染的结构签名：没变就只改高亮，不重建 DOM
     var scrollBound = false;   // 滚动监听只绑一次（attach 可能被调用多次）
-    var suppressUntil = 0;     // 主动跳转期间别让滚动同步把高亮改回去
+    var pinIdx = -1;           // 点目录后钉住的条目：用户自己滚之前，高亮停在它上面
+    var pinUntil = 0;          // 钉住的最长时间（兜底，防止高亮永远卡住）
 
     function $(id) { return document.getElementById(id); }
 
@@ -108,9 +109,26 @@
     function paintActive() {
         var list = $(LIST_ID);
         if (!list) return;
+        var first = list.firstElementChild;
+        if (first && first.classList.contains('eo-empty')) return;
         Array.prototype.forEach.call(list.querySelectorAll('.eo-item'), function (b, i) {
             b.classList.toggle('active', i === activeIdx);
         });
+        revealActive(list);
+    }
+
+    /**
+     * 当前章节那一条要留在列表可视区里。
+     * 长文（几十个标题）时列表自己滚，不跟一下的话高亮跑到视口外，等于没有指示。
+     * 只在「已经看不见」时才挪，不抢用户手动翻列表的滚动。
+     */
+    function revealActive(list) {
+        var item = list && list.children[activeIdx];
+        if (!item || !item.getBoundingClientRect) return;
+        var lr = list.getBoundingClientRect();
+        var ir = item.getBoundingClientRect();
+        if (ir.top < lr.top) list.scrollTop -= (lr.top - ir.top) + 4;
+        else if (ir.bottom > lr.bottom) list.scrollTop += (ir.bottom - lr.bottom) + 4;
     }
 
     function refresh() {
@@ -123,6 +141,7 @@
         if (next !== sig) {
             sig = next;
             if (activeIdx >= hs.length) activeIdx = hs.length - 1;
+            if (pinIdx >= hs.length) unpin();      // 钉住的那条被删了，别让高亮停在空位
             list.innerHTML = '';
             if (!hs.length) {
                 list.innerHTML = '<div class="eo-empty">正文还没有标题</div>';
@@ -149,7 +168,7 @@
         var el = headings()[idx];
         if (!el) return;
         activeIdx = idx;
-        suppressUntil = Date.now() + 600;
+        pinTo(idx);                       // 跳完先钉在这里，别被平滑滚动带跑
         var host = scrollHost();
         try {
             if (host) {
@@ -164,16 +183,18 @@
         }
         flash(el);
         paintActive();
-        // 目录比侧栏高时，跳到的那一条也随之滚进视野（只滚目录，不动正文）
-        var item = $(LIST_ID) && $(LIST_ID).children[idx];
-        if (item && item.scrollIntoView) {
-            try { item.scrollIntoView({ block: 'nearest' }); } catch (e3) { /* 忽略 */ }
-        }
+        // 目录比侧栏高时，跳到的那一条也随之滚进列表视野（只滚目录，不动正文）
+        revealActive($(LIST_ID));
     }
 
-    /** 滚动正文时同步高亮：可见区里最后一个「顶边已经越过上沿」的标题就是当前章节 */
+    /** 滚动正文时同步高亮：可见区里最后一个「顶边已经越过上沿」的标题就是当前章节。
+     *
+     * 但用户刚点过目录时不能跟：跳到最后一节后，最后一节顶不到屏幕最上面，
+     * 「顶部那一节」是三十几节，高亮会立刻从刚点的 45 跳回 36 —— 看着像点错了。
+     * 所以点目录之后高亮「钉住」在被点的那条，直到用户自己滚 / 点 / 打字才解除。
+     */
     function markActive() {
-        if (Date.now() < suppressUntil) return;
+        if (isPinned()) return;
         var hs = headings();
         if (!hs.length) return;
         var host = scrollHost();
@@ -186,6 +207,14 @@
             activeIdx = idx;
             paintActive();
         }
+    }
+
+    function pinTo(idx) { pinIdx = idx; pinUntil = Date.now() + 8000; }
+    function unpin() { pinIdx = -1; }
+    function isPinned() {
+        if (pinIdx < 0) return false;
+        if (Date.now() > pinUntil) { pinIdx = -1; return false; }   // 兜底：别让高亮永远卡住
+        return true;
     }
 
     var timer = null;
@@ -212,6 +241,17 @@
         return true;
     }
 
+    /** 用户自己动了正文（滚轮 / 触摸 / 拖动滚动条 / 按键 / 打字）→ 解除钉住，高亮重新跟随 */
+    function bindUserScroll() {
+        var wrap = document.getElementById('eeVditor');
+        if (!wrap || wrap.__eoUnpinBound) return;
+        wrap.__eoUnpinBound = true;
+        ['wheel', 'touchstart', 'touchmove', 'mousedown', 'keydown'].forEach(function (ev) {
+            wrap.addEventListener(ev, function () { unpin(); scheduleActive(); }, { passive: true });
+        });
+        wrap.addEventListener('input', unpin);
+    }
+
     /**
      * 编辑器就绪后接入。
      * 只做「监听 + 首次渲染」两件事：页签的显隐与切换归 admin-edit.js。
@@ -224,6 +264,7 @@
         setTimeout(refresh, 1400);
         setTimeout(bindScroll, 350);
         setTimeout(bindScroll, 1400);
+        bindUserScroll();
 
         // input 事件会冒泡，绑在容器上比绑编辑区更稳（编辑区可能晚一步才建出来）
         var wrap = document.getElementById('eeVditor');
@@ -242,6 +283,7 @@
         refresh();
         setTimeout(refresh, 120);
         setTimeout(bindScroll, 60);
+        bindUserScroll();
     }
 
     window.EditorOutline = {
