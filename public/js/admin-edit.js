@@ -205,6 +205,37 @@
         },
         true,
     );
+
+    /* ===== 浏览器「后退」也走同一个胶囊 =====
+       页面内的链接能拦，后退按钮本来不行 —— 但 History API 可以：
+       先压一条守卫记录，用户按后退时把它顶回来，问完再决定退不退。
+       刷新与关闭标签页没有这种机会（页面当场销毁），只能靠本地草稿兜底。 */
+    (function guardBrowserBack() {
+        var leavingByPill = false;
+        try {
+            history.pushState({ eeBackGuard: 1 }, '', location.href);
+        } catch (e) {
+            return; // 某些环境不让改历史，直接放弃守卫
+        }
+        window.addEventListener('popstate', function () {
+            if (leavingByPill) {
+                leavingByPill = false;
+                return;
+            }
+            if (!hasUnsavedChanges()) return; // 干净就真的后退
+            // 把这条历史顶回去，抵掉用户这次后退
+            try {
+                history.pushState({ eeBackGuard: 1 }, '', location.href);
+            } catch (e) {
+                /* 忽略 */
+            }
+            showLeavePill(function () {
+                leavingByPill = true;
+                try { saveDraftNow(); } catch (err) { /* 忽略 */ }
+                history.back();
+            });
+        });
+    })();
     document.addEventListener('keydown', function (e) {
         if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
             e.preventDefault();
