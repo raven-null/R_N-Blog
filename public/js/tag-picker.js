@@ -43,12 +43,14 @@
             '.tag-picker-input input{flex:1;min-width:80px;border:none;background:transparent;' +
             'color:#ffffff !important;caret-color:#ffffff;font-size:12.5px;outline:none;font-family:inherit}',
             '.tag-picker-input input::placeholder{color:rgba(255,255,255,0.55)}',
-            // 下拉面板（v1.1.0）：原来是 --glass-bg 那种几乎是透明的玻璃底 + backdrop-filter，
-            // 压在写作页的浅色/模糊背景上就变成一片惨白，条目文字还是 rgba(255,255,255,.7)，
-            // 结果是「颜色太淡了，看不清」。改成不透明深底 + 更亮的字。
+            // 下拉面板（v1.1.2）：要「灰色毛玻璃」，但不能再回到最初那种几乎全透明
+            // （--glass-bg 只有 4%~9% 白，压在浅背景上就是一片惨白，字看不清）。
+            // 做法：深灰底 + 90% 不透明 + blur(18px)，毛玻璃质感保留，文字对比度也够。
             '.tag-picker-dropdown{display:none;position:absolute;top:100%;left:0;right:0;' +
-            'background:#15161d;' +
-            'border:1px solid rgba(255,255,255,.18);' +
+            'background:rgba(42, 44, 53, .90);' +
+            'backdrop-filter:blur(18px) saturate(150%);' +
+            '-webkit-backdrop-filter:blur(18px) saturate(150%);' +
+            'border:1px solid rgba(255,255,255,.16);' +
             'border-radius:var(--radius-sm,10px);margin-top:6px;max-height:220px;overflow-y:auto;z-index:50;' +
             'box-shadow:0 18px 48px -10px rgba(0,0,0,.85);animation:tpSlide .25s ease}',
             '@keyframes tpSlide{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}',
