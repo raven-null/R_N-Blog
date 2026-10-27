@@ -29,17 +29,20 @@
             'background:rgba(255,255,255,0.08);' +
             'border:1px solid rgba(255,255,255,.18);' +
             'border-radius:var(--radius-sm,10px);min-height:36px;cursor:text;align-items:center;transition:all .25s ease}',
-            '.tag-picker-input:focus-within{border-color:var(--accent);box-shadow:0 0 0 2px rgba(79,195,247,0.15)}',
+            '.tag-picker-input:focus-within{border-color:rgba(115,170,255,.55);box-shadow:0 0 0 2px rgba(115,170,255,0.18)}',
+            // 文字颜色全部钉死成浅色（v1.1.1）：这两处原来吃的是 var(--accent) / var(--text)，
+            // 在有些页面/主题下 --text 是深色，输入框里的字就变成黑的、压在深底上看不见。
             '.tag-picker-input .tp-chip{display:flex;align-items:center;gap:4px;padding:3px 10px;' +
-            'background:linear-gradient(135deg,rgba(79,195,247,0.2),rgba(79,195,247,0.1));color:var(--accent);' +
-            'border-radius:16px;font-size:11px;border:1px solid rgba(79,195,247,0.2);transition:all .2s ease}',
-            '.tag-picker-input .tp-chip:hover{background:rgba(79,195,247,0.25)}',
-            '.tag-picker-input .tp-chip button{background:none;border:none;color:var(--accent);cursor:pointer;' +
-            'font-size:13px;padding:0;line-height:1;opacity:.7;transition:all .2s ease}',
+            'background:linear-gradient(135deg,rgba(115,170,255,0.24),rgba(115,170,255,0.12));' +
+            'color:#cfe2ff !important;' +
+            'border-radius:16px;font-size:11px;border:1px solid rgba(115,170,255,0.35);transition:background .2s ease}',
+            '.tag-picker-input .tp-chip:hover{background:rgba(115,170,255,0.32)}',
+            '.tag-picker-input .tp-chip button{background:none;border:none;color:#cfe2ff !important;cursor:pointer;' +
+            'font-size:13px;padding:0;line-height:1;opacity:.75;transition:all .2s ease}',
             '.tag-picker-input .tp-chip button:hover{opacity:1;transform:scale(1.2)}',
             '.tag-picker-input input{flex:1;min-width:80px;border:none;background:transparent;' +
-            'color:var(--text,#fff);font-size:12px;outline:none;font-family:inherit}',
-            '.tag-picker-input input::placeholder{color:rgba(255,255,255,0.4)}',
+            'color:#ffffff !important;caret-color:#ffffff;font-size:12.5px;outline:none;font-family:inherit}',
+            '.tag-picker-input input::placeholder{color:rgba(255,255,255,0.55)}',
             // 下拉面板（v1.1.0）：原来是 --glass-bg 那种几乎是透明的玻璃底 + backdrop-filter，
             // 压在写作页的浅色/模糊背景上就变成一片惨白，条目文字还是 rgba(255,255,255,.7)，
             // 结果是「颜色太淡了，看不清」。改成不透明深底 + 更亮的字。
