@@ -133,11 +133,78 @@
         $('eeSaved').style.color = '#ffb020';
         scheduleDraftSave();
     };
-    window.addEventListener('beforeunload', function (e) {
-        if (!dirty) return;
-        e.preventDefault();
-        e.returnValue = '';
+    // 不再用浏览器原生的「是否离开网站」框 —— 那个框的样式、位置、文案都由浏览器决定，
+    // 网页改不了。这里只把草稿落一份，避免意外关闭丢内容，然后把「要不要退出」交给
+    // 页面内自己的胶囊弹窗（点「返回后台」时触发，见下面的 showLeavePill）。
+    window.addEventListener('beforeunload', function () {
+        if (dirty) {
+            try { saveDraftNow(); } catch (e) { /* 忽略 */ }
+        }
     });
+
+    /* ===== 未保存就想退出：页面中心的胶囊问一句 =====
+       原生 beforeunload 框改不了样式、也只在关标签时出现；
+       真正需要问的是「点返回后台要不要先保存」，这里自己弹胶囊。 */
+
+    /** 当前是否有未保存改动：正文脏，或者节点图画布脏 */
+    function hasUnsavedChanges() {
+        if (dirty) return true;
+        try {
+            var f = document.querySelector('#eeGraphHost iframe');
+            var fn = f && f.contentWindow && f.contentWindow.__graphDirty;
+            if (typeof fn === 'function' && fn()) return true;
+        } catch (e) { /* 未挂载 / 跨域忽略 */ }
+        return false;
+    }
+
+    var leavePillEl = null;
+    function showLeavePill(onLeave) {
+        if (leavePillEl) return;
+        leavePillEl = document.createElement('div');
+        leavePillEl.id = 'eeLeavePill';
+        leavePillEl.style.cssText =
+            'position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:2147483300;' +
+            'display:flex;align-items:center;gap:12px;padding:12px 18px;border-radius:999px;' +
+            'background:rgba(24,24,30,.97);border:1px solid rgba(255,255,255,.16);' +
+            'box-shadow:0 24px 60px -20px rgba(0,0,0,.85);backdrop-filter:blur(18px) saturate(160%);' +
+            'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:13px;color:#e8e8ea;';
+        leavePillEl.innerHTML =
+            '<span style="opacity:.85">有未保存的改动，确定退出吗？</span>' +
+            '<button type="button" data-leave="1" style="padding:6px 16px;border-radius:999px;border:0;cursor:pointer;' +
+            'background:#ff9f0a;color:#16161a;font-weight:600;font-family:inherit;font-size:12.5px">退出</button>' +
+            '<button type="button" data-leave="0" style="padding:6px 14px;border-radius:999px;cursor:pointer;' +
+            'background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);color:#e8e8ea;' +
+            'font-family:inherit;font-size:12.5px">留下</button>';
+        document.body.appendChild(leavePillEl);
+
+        leavePillEl.addEventListener('click', function (e) {
+            var b = e.target && e.target.closest ? e.target.closest('[data-leave]') : null;
+            if (!b) return;
+            var leave = b.getAttribute('data-leave') === '1';
+            leavePillEl.remove();
+            leavePillEl = null;
+            if (leave) {
+                try { saveDraftNow(); } catch (err) { /* 忽略 */ }
+                onLeave();
+            }
+        });
+    }
+
+    // 「返回后台」：有未保存改动就先问一句，干净就直接走
+    document.addEventListener(
+        'click',
+        function (e) {
+            var a = e.target && e.target.closest ? e.target.closest('a.ee-back') : null;
+            if (!a) return;
+            if (!hasUnsavedChanges()) return;
+            e.preventDefault();
+            e.stopPropagation();
+            showLeavePill(function () {
+                location.href = a.getAttribute('href') || '/admin.html';
+            });
+        },
+        true,
+    );
     document.addEventListener('keydown', function (e) {
         if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
             e.preventDefault();
@@ -2034,6 +2101,60 @@
         } catch (e) { return null; }
     }
 
+    /**
+     * 把「字面残留」的 [文字](hl:色) 修成真正的链接（v3.48.7）
+     *
+     * 为什么会残留：编辑器里高亮用链接语法承载（`[文字](hl:red)`），Vditor 会把链接标记藏起来；
+     * 但手打、或某次输入后 Lute 没把它 spin 成链接时，正文里就会留着
+     * `[文字](h1:yellow)` 这种源码 —— 作者看到的就是「代码还在、而且一半有色一半没色」。
+     * 这里直接把文本节点切成「前 + <a href="hl:色">文字</a> + 后」：
+     * 链接是 Lute 认识的元素，下一轮渲染会照旧保持，源码也就彻底看不见了。
+     */
+    function repairLiteralHighlights() {
+        var host = document.querySelector('#eeVditor .vditor-wysiwyg') ||
+            document.querySelector('#eeVditor .vditor-ir');
+        if (!host) return 0;
+        var texts = [];
+        var walker = document.createTreeWalker(host, NodeFilter.SHOW_TEXT, null);
+        var n;
+        while ((n = walker.nextNode())) {
+            var t = n.nodeValue || '';
+            if (t.indexOf('](') < 0) continue;
+            var p = n.parentElement;
+            if (!p) continue;
+            // 代码块 / 已有的链接里不动
+            if (p.closest('a, .vditor-wysiwyg__block[data-type="code-block"], .vditor-wysiwyg__pre, .vditor-wysiwyg__preview')) continue;
+            texts.push(n);
+        }
+        var fixed = 0;
+        texts.forEach(function (node) {
+            var text = node.nodeValue || '';
+            HL_LINK_RE.lastIndex = 0;
+            var m;
+            var frag = null;
+            var last = 0;
+            while ((m = HL_LINK_RE.exec(text))) {
+                if (!frag) frag = document.createDocumentFragment();
+                if (m.index > last) frag.appendChild(document.createTextNode(text.slice(last, m.index)));
+                var a = document.createElement('a');
+                a.setAttribute('href', 'hl:' + m[2]);
+                a.textContent = m[1];
+                frag.appendChild(a);
+                last = m.index + m[0].length;
+                fixed++;
+            }
+            if (!frag) return;
+            if (last < text.length) frag.appendChild(document.createTextNode(text.slice(last)));
+            var parent = node.parentNode;
+            if (!parent) return;
+            parent.replaceChild(frag, node);
+        });
+        if (fixed) {
+            try { window.eeMarkDirty(); scheduleInfo(); } catch (e) { /* 忽略 */ }
+        }
+        return fixed;
+    }
+
     /** 重算编辑区里的高亮装饰（每种颜色一组 + 标记一组） */
     function refreshHighlightDecorations() {
         if (!supportsHighlightApi()) return false;
@@ -2046,6 +2167,8 @@
             } catch (e) { /* 忽略 */ }
         };
         if (!host) { clear(); return false; }
+        // 先把字面残留的 [文字](hl:色) 修成真链接，再算装饰
+        repairLiteralHighlights();
         var nodes = decorTextNodes(host);
         var byColor = {};
         var markers = [];
@@ -2062,15 +2185,12 @@
         };
         nodes.forEach(function (n) {
             var text = n.nodeValue || '';
-            if (text.indexOf('==') < 0 && text.indexOf('](') < 0) return;
-            // 1) 旧写法 ==文字== / =={color}文字==
+            if (text.indexOf('==') < 0) return;
+            // 只处理旧写法 ==文字== / =={color}文字==；链接形式由上面的修复 + CSS 负责，
+            // 不再给字面文本上色（那样会出现「一半有色一半是源码」的怪样子）
             HL_RE.lastIndex = 0;
             var m;
             while ((m = HL_RE.exec(text))) pushRange(n, m, m[2], m[1] || 'yellow');
-            // 2) 兜底：还没被解析成真链接的字面文本 [文字](hl:color) / [文字](h1:color)
-            //    （手打时、或 Vditor 这一轮没 spin 成链接时，至少颜色也在）
-            HL_LINK_RE.lastIndex = 0;
-            while ((m = HL_LINK_RE.exec(text))) pushRange(n, m, m[1], m[2]);
         });
         try {
             clear();

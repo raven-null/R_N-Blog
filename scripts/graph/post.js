@@ -102,6 +102,7 @@
     else st.graphDoc = parsed;
     st.dirty = true;
     updateSaveBtn();
+    scheduleDraft(); // 顺手在本地留一份草稿
   }
 
   /**
@@ -168,6 +169,7 @@
         setStatus("已保存 rev " + st.baseRev + " · " + t);
         toast("已保存 rev " + st.baseRev, "success");
         updateSaveBtn();
+        clearDraft(); // 已经落库，本地草稿可以扔了
         post({ type: "graph-save", ok: true, rev: st.baseRev, id: noteId });
         return true;
       })
@@ -278,6 +280,8 @@
         }
         st.loaded = true;
         updateSaveBtn();
+        // 上次没保存就退出的内容：用胶囊在页面中心问一句要不要恢复
+        if (isEdit) showDraftPillIfAny();
         post({ type: "graph-ready", id: noteId, ok: !!(d && d.status === "success") });
       })
       .catch(function (err) {
@@ -345,16 +349,129 @@
     }
   }
 
-  /* ══════════ 7. 收尾钩子 ══════════ */
+  /* ══════════ 7. 本地草稿兜底（不再弹浏览器原生「是否离开网站」） ══════════
+     浏览器原生 beforeunload 提示的样式、位置、文案统统由浏览器决定，网页改不了。
+     与其弹一个自己控制不了、也谈不上好看的框，不如换个更实用的做法：
+       1. 一旦有未保存改动，就在本地自动存一份草稿（只存引用，几十 KB）
+       2. 下次打开同一张图，发现草稿就用页面内的胶囊问一句「恢复上次的改动吗」
+     这样关标签/切页面都不丢内容，也不用那个原生框。
+     Weave 自己挂的 beforeunload 只会调 saveCanvas → _lsSet → stageSave（标脏），不会上传，
+     所以在它之后再存一次草稿就能拿到最新内容。 */
 
-  // 手动保存模式下不在离开时偷偷发请求：改为拦住并提示，存不存由用户自己决定。
-  // Weave 自己挂的 beforeunload 只会调 saveCanvas → _lsSet → stageSave（标脏），不会上传。
-  window.addEventListener("beforeunload", function (e) {
+  var DRAFT_PREFIX = "gg_draft_";
+  var draftTimer = 0;
+
+  function draftKey() {
+    return DRAFT_PREFIX + noteId;
+  }
+
+  function writeDraft() {
     if (!isEdit || !st.loaded || !st.dirty) return;
-    e.preventDefault();
-    e.returnValue = "";
-    return "";
+    try {
+      localStorage.setItem(draftKey(), JSON.stringify({ ts: Date.now(), data: buildPayload() }));
+    } catch (e) {
+      /* 配额满 / 隐私模式：忽略，不影响主流程 */
+    }
+  }
+
+  function clearDraft() {
+    try {
+      localStorage.removeItem(draftKey());
+    } catch (e) {
+      /* 忽略 */
+    }
+  }
+
+  function readDraft() {
+    try {
+      var raw = localStorage.getItem(draftKey());
+      if (!raw) return null;
+      var d = JSON.parse(raw);
+      return d && d.data ? d : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /** 有改动就把草稿写本地（300ms 防抖，避免拖动时狂写） */
+  function scheduleDraft() {
+    clearTimeout(draftTimer);
+    draftTimer = setTimeout(writeDraft, 300);
+  }
+
+  window.addEventListener("beforeunload", function () {
+    // 只写草稿，不拦、不弹任何框
+    if (isEdit && st.loaded && st.dirty) writeDraft();
   });
+  window.addEventListener("pagehide", function () {
+    if (isEdit && st.loaded && st.dirty) writeDraft();
+  });
+
+  /* ── 恢复提示：页面中间的胶囊 ── */
+  function showDraftPill(draft, onRestore, onDiscard) {
+    var wrap = document.createElement("div");
+    wrap.id = "gg-draft-pill";
+    wrap.style.cssText =
+      "position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:2147483300;" +
+      "display:flex;align-items:center;gap:12px;padding:12px 18px;border-radius:999px;" +
+      "background:rgba(24,24,30,.97);border:1px solid rgba(255,255,255,.16);" +
+      "box-shadow:0 24px 60px -20px rgba(0,0,0,.85);backdrop-filter:blur(18px) saturate(160%);" +
+      "font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:13px;color:#e8e8ea;";
+    var when = "";
+    try {
+      when = new Date(draft.ts).toLocaleString("zh-CN", { hour12: false });
+    } catch (e) {
+      when = "";
+    }
+    wrap.innerHTML =
+      '<span style="opacity:.85">上次有未保存的改动' + (when ? "（" + esc(when) + "）" : "") + "</span>" +
+      '<button type="button" data-act="restore" style="padding:6px 16px;border-radius:999px;border:0;cursor:pointer;' +
+      'background:#ff9f0a;color:#16161a;font-weight:600;font-family:inherit;font-size:12.5px">恢复</button>' +
+      '<button type="button" data-act="discard" style="padding:6px 14px;border-radius:999px;cursor:pointer;' +
+      'background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);color:#e8e8ea;' +
+      'font-family:inherit;font-size:12.5px">忽略</button>';
+    document.body.appendChild(wrap);
+
+    wrap.addEventListener("click", function (e) {
+      var btn = e.target && e.target.closest ? e.target.closest("[data-act]") : null;
+      if (!btn) return;
+      var act = btn.getAttribute("data-act");
+      wrap.remove();
+      if (act === "restore") onRestore();
+      else onDiscard();
+    });
+  }
+
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+
+  /** 发现草稿就弹恢复提示：恢复 → 装进画布并标脏；忽略 → 删掉草稿 */
+  function showDraftPillIfAny() {
+    var draft = readDraft();
+    if (!draft) return;
+    showDraftPill(
+      draft,
+      function () {
+        var g = Object.assign({}, draft.data);
+        var seq = g.sequence || null;
+        delete g.sequence;
+        var prep = App._prepareSerializedData(g);
+        if (prep) App._commitSerialized(prep, { emptyToOrigin: false });
+        st.graphDoc = g;
+        st.seqDoc = seq;
+        primeSequenceSlot(seq);
+        st.dirty = true;
+        updateSaveBtn();
+        toast("已恢复上次改动，记得点保存", "info");
+      },
+      function () {
+        clearDraft();
+      },
+    );
+  }
+
+  /* ══════════ 8. 对外接口 ══════════ */
 
   // 供宿主页面（admin-edit 等）判断是否有未保存改动
   window.__graphDirty = function () {
