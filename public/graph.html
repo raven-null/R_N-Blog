@@ -1612,10 +1612,13 @@ const PRESET_COLORS=[{id:'blue',hex:'#3b82f6',start:'#3b82f6',end:'#2563eb'},{id
     if (typeof App._bindResizeHandles === "function") App._bindResizeHandles(nodeEl, node.id);
   }
 
-  /** 左上角「放大到合适大小」按钮 */
+  /** 左上角「放大到合适大小」按钮（再点一次恢复原样） */
   function ensureFitButton(nodeEl, node) {
     if (!nodeEl) return;
-    if (nodeEl._ggFitBtn) return;
+    if (nodeEl._ggFitBtn) {
+      updateFitBtn(nodeEl, node);
+      return;
+    }
     var b = document.createElement("div");
     b.className = "gg-fit-btn";
     b.setAttribute("role", "button");
@@ -1628,10 +1631,13 @@ const PRESET_COLORS=[{id:'blue',hex:'#3b82f6',start:'#3b82f6',end:'#2563eb'},{id
     b.addEventListener("click", function (e) {
       e.stopPropagation();
       e.preventDefault();
-      autoFitNode(node.id);
+      // 找最新的节点对象（渲染后旧引用可能已过期）
+      var cur = findNode(node.id) || node;
+      toggleFit(nodeEl, cur);
     });
     nodeEl.appendChild(b);
     nodeEl._ggFitBtn = b;
+    updateFitBtn(nodeEl, node);
   }
 
   /** 图片节点的 × ：换一张图。没选新图就什么都不做，原图保留。 */
@@ -1650,13 +1656,55 @@ const PRESET_COLORS=[{id:'blue',hex:'#3b82f6',start:'#3b82f6',end:'#2563eb'},{id
   /* ══════════ 2.5 放大到适合内容的大小 ══════════ */
 
   /** 把节点尺寸吸附到格并重绘。高度给一个上限，避免几千字把节点撑成一条长龙。 */
-  function applyNodeSize(node, w, h) {
+  function applyNodeSize(node, w, h, done) {
     var nw = Math.max(180, Math.round(w / GRID) * GRID);
     var nh = Math.min(1600, Math.max(80, Math.round(h / GRID) * GRID));
     node.w = nw;
     node.h = nh;
     App.saveCanvasSnapshot();
     App.renderCanvas();
+    if (typeof done === "function") done(nw, nh);
+  }
+
+  /* 「放大到适合大小」是可逆的：
+     nodeId → { w, h, fitW, fitH } —— 原始尺寸 + 放大后的尺寸。
+     再点一次时，如果当前尺寸仍是放大后的样子，就还原成原始尺寸；
+     如果中途被手动拖过，则以当前尺寸为新的原始尺寸再放大（不会跳回到很早以前）。 */
+  var fitMemory = {};
+
+  function updateFitBtn(nodeEl, node) {
+    var b = nodeEl && nodeEl._ggFitBtn;
+    if (!b || !node) return;
+    var mem = fitMemory[node.id];
+    var fitted = !!(mem && node.w === mem.fitW && node.h === mem.fitH);
+    b.title = fitted ? "恢复原来的大小" : "放大到适合内容的大小";
+    b.textContent = fitted ? "⤡" : "⤢";
+    b.style.background = fitted ? "rgba(255,159,10,.92)" : "";
+    b.style.color = fitted ? "#16161a" : "";
+  }
+
+  function toggleFit(nodeEl, node) {
+    var mem = fitMemory[node.id];
+    var fitted = !!(mem && node.w === mem.fitW && node.h === mem.fitH);
+    if (fitted) {
+      // 第二次点：还原
+      delete fitMemory[node.id];
+      applyNodeSize(node, mem.w, mem.h, function () {
+        updateFitBtn(nodeEl, node);
+      });
+      updateFitBtn(nodeEl, node);
+      return;
+    }
+    // 记住当前尺寸（若中途拖过，就以当前为准），再放大
+    var prev = { w: node.w, h: node.h, fitW: 0, fitH: 0 };
+    fitMemory[node.id] = prev;
+    autoFitNode(node.id, function (w, h) {
+      if (fitMemory[node.id] === prev) {
+        prev.fitW = w;
+        prev.fitH = h;
+      }
+      updateFitBtn(nodeEl, node);
+    });
   }
 
   /**
@@ -1681,7 +1729,7 @@ const PRESET_COLORS=[{id:'blue',hex:'#3b82f6',start:'#3b82f6',end:'#2563eb'},{id
     return { h: h, w: w };
   }
 
-  function autoFitNode(nodeId) {
+  function autoFitNode(nodeId, done) {
     var node = findNode(nodeId);
     if (!node) return;
     var kind = kindOf(node);
@@ -1698,7 +1746,7 @@ const PRESET_COLORS=[{id:'blue',hex:'#3b82f6',start:'#3b82f6',end:'#2563eb'},{id
       img.onload = function () {
         if (!img.width) return;
         // 宽度取 480（够看清），高度按比例 + 34px 标题栏
-        applyNodeSize(node, 480, (480 * img.height) / img.width + 34);
+        applyNodeSize(node, 480, (480 * img.height) / img.width + 34, done);
       };
       img.src = url;
       return;
@@ -1717,7 +1765,7 @@ const PRESET_COLORS=[{id:'blue',hex:'#3b82f6',start:'#3b82f6',end:'#2563eb'},{id
       wantW = Math.max(wantW, labelW);
       // 代码节点：宽度适度跟一下最长行，但最多 960，别把节点拉成一条长带
       if (kind === "code") wantW = Math.min(960, Math.max(wantW, measured.w + 30));
-      applyNodeSize(node, wantW, wantH);
+      applyNodeSize(node, wantW, wantH, done);
       return;
     }
 
@@ -1729,7 +1777,7 @@ const PRESET_COLORS=[{id:'blue',hex:'#3b82f6',start:'#3b82f6',end:'#2563eb'},{id
       for (var i = 0; i < lines.length; i++) longest = Math.max(longest, lines[i].length);
       var w = Math.min(960, Math.max(360, longest * 7.4 + 32));
       var h = Math.min(1200, Math.max(160, lines.length * 20 + 56));
-      applyNodeSize(node, w, h);
+      applyNodeSize(node, w, h, done);
       return;
     }
 
@@ -1737,7 +1785,7 @@ const PRESET_COLORS=[{id:'blue',hex:'#3b82f6',start:'#3b82f6',end:'#2563eb'},{id
     var label = String(node.label || "");
     var w2 = Math.min(560, Math.max(200, Math.max(label.length * 15, desc.length * 7) + 40));
     var h2 = Math.min(900, Math.max(80, 60 + Math.ceil(desc.length / 24) * 20));
-    applyNodeSize(node, w2, h2);
+    applyNodeSize(node, w2, h2, done);
   }
 
   /* ══════════ 3. 新建节点（带类型 + 自动连线） ══════════ */
