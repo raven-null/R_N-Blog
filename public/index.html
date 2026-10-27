@@ -264,7 +264,7 @@
 
     <!-- Scripts -->
     <script src="js/theme.js?v=3.13.6" defer></script>
-    <script src="js/app.js?v=3.38.1" defer></script>
+    <script src="js/app.js?v=3.39.0" defer></script>
     <script src="js/animations.js?v=3.14.0" defer></script>
 
     <script>
@@ -337,7 +337,9 @@
             const it = window.__galleryImages[i];
             return (it && typeof it === 'object') ? it : { url: it, thumb: '' };
         }
-        // 显示图片：原图已就绪直接用原图，否则先显示缩略图（已缓存，秒显），原图就绪后自动替换
+        // 显示图片：原图已就绪直接用原图；否则先显示缩略图占位，原图加载完立刻替换。
+        // 注意：不能只挂 onload —— 缓存命中时 Image 在监听器挂上之前就已 complete，
+        // 会导致灯箱一直停在 480px 缩略图上，放大后非常模糊。
         function showGalleryImage(swap, item, targetIdx) {
             const full = (item && (item.url || item)) || '';
             const thumb = (item && item.thumb) || '';
@@ -351,11 +353,15 @@
             } else {
                 swap(full);
             }
-            if (full) {
-                preloadGalleryImage(full);
-                const im = __galleryPreload.get(full);
-                if (im) im.onload = () => swap(full);
+            preloadGalleryImage(full);
+            const im = __galleryPreload.get(full);
+            if (!im) return;
+            const applyFull = () => { if (im.naturalWidth > 0) swap(full); };
+            if (im.complete) {
+                applyFull();
+                return;
             }
+            im.addEventListener('load', applyFull, { once: true });
         }
 
         function openGalleryLightbox(src, index) {

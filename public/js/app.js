@@ -843,14 +843,41 @@ const BlogApp = {
     },
 
     // 加载并渲染图库分类标签
-    // 加载并渲染图库分类标签（来自 r-gallery 的标签 + 成人向档位）
+    // 「主标签」判定：图库标签配置里，挂在分组下、且名字与分组名不同的标签（角色名等）属于细分标签，分类面板不展示
+    gallerySubTags: null,
+    async loadGallerySubTags() {
+        if (this.gallerySubTags) return this.gallerySubTags;
+        const set = new Set();
+        try {
+            const res = await fetch(this.config.galleryBase + '/api/tags');
+            if (res.ok) {
+                const cfg = await res.json();
+                const groupName = new Map((cfg.groups || []).map((g) => [String(g.id), String(g.name || '')]));
+                const norm = (v) => String(v || '').replace(/[：:·、\s_\-]/g, '');
+                (cfg.tags || []).forEach((t) => {
+                    if (!t || !t.group) return;
+                    const gname = groupName.get(String(t.group)) || '';
+                    if (norm(t.name) !== norm(gname)) set.add(String(t.name));
+                });
+            }
+        } catch (e) { /* 拿不到配置就退化为全部标签 */ }
+        this.gallerySubTags = set;
+        return set;
+    },
+
+    // 加载并渲染图库分类标签（只显示主标签：来自 r-gallery 的标签 + 成人向档位）
     async renderGalleryTags() {
         const list = document.getElementById('galleryTagFloatList');
         if (!list) return;
         try {
             const images = this.galleryImages || [];
+            // 只显示主标签：挂在图库标签分组下的细分标签（角色名等）不显示
+            const subTags = await this.loadGallerySubTags();
             const tagCount = new Map();
-            images.forEach(img => (img.tags || []).forEach(t => tagCount.set(t, (tagCount.get(t) || 0) + 1)));
+            images.forEach(img => (img.tags || []).forEach(t => {
+                if (subTags.has(t)) return;
+                tagCount.set(t, (tagCount.get(t) || 0) + 1);
+            }));
             const tags = [...tagCount.keys()].sort((a, b) => tagCount.get(b) - tagCount.get(a));
             const btn = (tag, label) => `<button class="gallery-tag-item${this.galleryTag === tag ? ' active' : ''}" data-tag="${tag}" onclick="BlogApp.setGalleryTag('${tag}')">${label}</button>`;
             let html = btn('all', '全部');
