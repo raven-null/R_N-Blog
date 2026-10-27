@@ -442,7 +442,11 @@
         main.classList.toggle('side-collapsed', collapsed);
         var btn = $('eeSideToggle');
         if (btn) {
-            btn.innerHTML = collapsed ? '展开 <span class="chev">‹</span>' : '折叠 <span class="chev">›</span>';
+            // 文字包一层 .lbl：窄屏（侧栏只有 190~220px）下 CSS 会把它藏掉只留箭头，
+            // 好让「属性 / 目录 / 术语 / AI」四个页签放得下
+            btn.innerHTML = collapsed
+                ? '<span class="lbl">展开</span> <span class="chev">‹</span>'
+                : '<span class="lbl">折叠</span> <span class="chev">›</span>';
             btn.title = (collapsed ? '展开' : '折叠') + '侧栏（Ctrl+.）';
         }
         var handle = $('eeSideOpen');
@@ -458,38 +462,49 @@
         setTimeout(fitEditor, 320);
     }
 
-    // ===== 侧栏三个页签：属性 / 术语 / AI（v3.44.0 起，v3.45.0 加术语；同一列只有一个可见）=====
+    // ===== 侧栏页签：属性 / 目录 / 术语 / AI（v3.44.0 起；v3.45.0 加术语；v3.49.0 加目录；同一列只有一个可见）=====
     var SIDE_MODE_KEY = 'ee_side_mode';
-    var SIDE_MODES = ['props', 'terms', 'ai'];
+    var SIDE_MODES = ['props', 'outline', 'terms', 'ai'];
+    /* 只有「文章」形态才有的页签：目录要有正文结构，术语要有正文可标。
+       白板 / 导图 / 节点图里这两个页签不是灰掉，而是根本不出现（灰着只会让人反复点）。 */
+    var SIDE_ARTICLE_ONLY = { outline: 1, terms: 1 };
+    function sideAllowed(mode) { return docType === 'article' || !SIDE_ARTICLE_ONLY[mode]; }
     function sideMode() {
         try {
             var m = localStorage.getItem(SIDE_MODE_KEY);
+            // 上次停在「目录」，这次打开的是白板 —— 必须退回属性，否则会切到一个不存在的页签
+            if (!sideAllowed(m)) m = 'props';
             return SIDE_MODES.indexOf(m) >= 0 ? m : 'props';
         } catch (e) { return 'props'; }
     }
-    /** 只做 DOM 同步（不抢焦点）：页签高亮 + 三个面板的显隐 + 折叠把手上的当前页签 */
+    /** 只做 DOM 同步（不抢焦点）：页签高亮 + 面板的显隐 + 折叠把手上的当前页签 + 文章专属页签的可用性 */
     function applySideMode() {
         var mode = sideMode();
         var main = document.querySelector('.ee-main');
         if (main) main.setAttribute('data-side-mode', mode);
-        var tabs = { props: $('eeTabProps'), terms: $('eeTabTerms'), ai: $('eeTabAi') };
+        var tabs = { props: $('eeTabProps'), outline: $('eeTabOutline'), terms: $('eeTabTerms'), ai: $('eeTabAi') };
         Object.keys(tabs).forEach(function (k) {
             var t = tabs[k];
             if (!t) return;
-            t.classList.toggle('active', k === mode);
-            t.setAttribute('aria-selected', k === mode ? 'true' : 'false');
-            t.tabIndex = k === mode ? 0 : -1;
+            var ok = sideAllowed(k);
+            t.hidden = !ok;                    // 文章专属页签：非文章形态直接不出现
+            var on = ok && k === mode;
+            t.classList.toggle('active', on);
+            t.setAttribute('aria-selected', on ? 'true' : 'false');
+            t.tabIndex = on ? 0 : -1;
         });
-        // 折叠后的边缘把手也分「属性 / 术语 / AI」三个入口，标一下当前停在哪个
-        var handleBtns = { props: $('eeSideOpenProps'), terms: $('eeSideOpenTerms'), ai: $('eeSideOpenAi') };
+        // 折叠后的边缘把手也分页签，标一下当前停在哪个
+        var handleBtns = { props: $('eeSideOpenProps'), outline: $('eeSideOpenOutline'), terms: $('eeSideOpenTerms'), ai: $('eeSideOpenAi') };
         Object.keys(handleBtns).forEach(function (k) {
             var b = handleBtns[k];
-            if (b) b.classList.toggle('active', k === mode);
+            if (!b) return;
+            b.hidden = !sideAllowed(k);
+            b.classList.toggle('active', sideAllowed(k) && k === mode);
         });
-        var panels = { props: $('eeSideProps'), terms: $('eeSideTerms'), ai: $('eeSideAi') };
+        var panels = { props: $('eeSideProps'), outline: $('eeSideOutline'), terms: $('eeSideTerms'), ai: $('eeSideAi') };
         Object.keys(panels).forEach(function (k) {
             var p = panels[k];
-            if (p) p.hidden = k !== mode;
+            if (p) p.hidden = !(sideAllowed(k) && k === mode);
         });
     }
     /**
@@ -498,6 +513,7 @@
      */
     window.eeSideMode = function (mode) {
         mode = SIDE_MODES.indexOf(mode) >= 0 ? mode : 'props';
+        if (!sideAllowed(mode)) mode = 'props';   // 非文章形态没有目录 / 术语
         try { localStorage.setItem(SIDE_MODE_KEY, mode); } catch (e) { /* 隐私模式，忽略 */ }
         if (isNarrow()) {
             var side = $('eeSide');
@@ -509,16 +525,18 @@
         applySideMode();
         if (mode === 'ai' && window.WriteAi && window.WriteAi.onShow) window.WriteAi.onShow();
         if (mode === 'terms' && window.TermEditor && window.TermEditor.onShow) window.TermEditor.onShow();
+        if (mode === 'outline' && window.EditorOutline && window.EditorOutline.onShow) window.EditorOutline.onShow();
     };
     /** 顶栏「AI」按钮：一键到 AI 页签 */
     window.eeOpenAi = function () { window.eeSideMode('ai'); };
-    /** 一键到术语页签（右键菜单「编辑解释」也走这里） */
+    /** 一键到术语页签（右键菜单「编辑解释」也走这里）；非文章形态没有术语，直接忽略 */
     window.eeOpenTerms = function (word) {
+        if (!sideAllowed('terms')) return;
         window.eeSideMode('terms');
         if (word && window.TermEditor && window.TermEditor.edit) window.TermEditor.edit(word);
     };
     /**
-     * 折叠后右侧把手上的两个入口（属性 / AI）：展开侧栏并切到对应页签。
+     * 折叠后右侧把手上的入口（属性 / 目录 / 术语 / AI）：展开侧栏并切到对应页签。
      * 桌面端折叠态要先取消折叠；窄屏则保证抽屉是开的。
      */
     window.eeOpenSide = function (mode) {
@@ -1018,6 +1036,8 @@
     /** 把 doc 渲染到页面上（编辑已有 / 新建 共用） */
     async function applyDoc() {
         document.title = (isNew ? '新建' : '编辑') + typeLabel(docType) + ' · ' + (doc.title || doc.id || '未命名');
+        // 侧栏页签先对齐形态：目录 / 术语只属于文章，切到白板 / 导图 / 节点图时必须立刻消失
+        applySideMode();
         // 顶栏不再显示内容 id（作者不需要看到这串字符；要复制地址栏里就有）
         $('eeTitle').value = doc.title || '';
         initTagPickers();
@@ -3030,6 +3050,8 @@
                 notify: notifyChanged,
                 setType: function (t) {
                     docType = normalizeType(t);
+                    // 形态变了，侧栏页签的可用性跟着变（白板 / 导图 / 节点图没有目录与术语）
+                    applySideMode();
                     if (window.EEEmbed) window.EEEmbed.refreshMapKeyCard();
                 }
             });

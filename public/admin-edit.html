@@ -16,7 +16,7 @@
 <!-- 写作页样式：原来整段内联在 <style> 里（34.6KB / 156 个 !important，
      Vditor 覆盖规则还被追加过三遍），现已抽成独立文件并合并去重。
      顺序有讲究：必须排在 vditor/dist/index.css 之后，靠 html body 前缀 + !important 压过组件样式。 -->
-<link rel="stylesheet" href="/css/editor-write.css?v=1.27.0">
+<link rel="stylesheet" href="/css/editor-write.css?v=1.28.0">
     <link rel="stylesheet" href="/css/scrollbar.css?v=1.0.1">
     <link rel="stylesheet" href="/css/responsive.css?v=1.0.0">
     <link rel="stylesheet" href="/css/mobile.css?v=1.0.0">
@@ -67,20 +67,25 @@
         </section>
 
         <aside class="ee-side" id="eeSide">
-            <!-- 「属性 / 术语 / AI」是同一列的三个页签，永远只显示一个（侧栏只有一个位置）。
+            <!-- 「属性 / 目录 / 术语 / AI」是同一列的四个页签，永远只显示一个（侧栏只有一个位置）。
                  v3.44.0：外层 .ee-side-inner 让折叠动画期间内容宽度不变，不会一边收窄一边重排。
-                 v3.45.0：术语从「属性 → 更多设置」里搬出来，单独一个页签，方便搜索与逐条编辑解释。 -->
+                 v3.45.0：术语从「属性 → 更多设置」里搬出来，单独一个页签，方便搜索与逐条编辑解释。
+                 v3.49.0：目录从编辑区左上角的浮动按钮搬进来当页签（浮层会盖正文）。
+                 目录与术语只属于「文章」形态：白板 / 导图 / 节点图没有正文，这两个页签
+                 由 admin-edit.js 的 sideAllowed() 直接隐藏，不是灰掉。 -->
             <div class="ee-side-inner">
                 <div class="ee-side-head">
                     <div class="ee-side-tabs" role="tablist" aria-label="侧栏内容">
                         <button type="button" class="ee-side-tab active" id="eeTabProps" role="tab"
                                 aria-selected="true" aria-controls="eeSideProps" onclick="eeSideMode('props')">属性</button>
+                        <button type="button" class="ee-side-tab" id="eeTabOutline" role="tab"
+                                aria-selected="false" aria-controls="eeSideOutline" onclick="eeSideMode('outline')" title="文章目录（按标题层级跳转）">目录</button>
                         <button type="button" class="ee-side-tab" id="eeTabTerms" role="tab"
                                 aria-selected="false" aria-controls="eeSideTerms" onclick="eeSideMode('terms')">术语</button>
                         <button type="button" class="ee-side-tab" id="eeTabAi" role="tab"
                                 aria-selected="false" aria-controls="eeSideAi" onclick="eeSideMode('ai')">AI</button>
                     </div>
-                    <button type="button" class="ee-side-toggle" id="eeSideToggle" onclick="eeToggleSide()" title="折叠侧栏（Ctrl+.）">折叠 <span class="chev">›</span></button>
+                    <button type="button" class="ee-side-toggle" id="eeSideToggle" onclick="eeToggleSide()" title="折叠侧栏（Ctrl+.）"><span class="lbl">折叠</span> <span class="chev">›</span></button>
                 </div>
                 <div class="ee-side-props" id="eeSideProps" role="tabpanel" aria-labelledby="eeTabProps">
             <!-- 标题：四种形态共用这一处（原来它在编辑区上方，白板/导图形态下那整列是隐藏的，
@@ -201,6 +206,9 @@
                 </div>
             </details>
                 </div>
+                <!-- 目录（v3.49.0）：由 editor-outline.js 填内容（读编辑器 DOM 里的 h1~h4）。
+                     只属于文章形态；点一条就滚到对应标题并闪一下，正文滚动时高亮当前章节。 -->
+                <div class="ee-side-outline" id="eeSideOutline" role="tabpanel" aria-labelledby="eeTabOutline" hidden></div>
                 <!-- 术语（v3.45.0）：由 term-editor.js 填内容。
                      搜索 + 列表 + 单条编辑（写解释 / 用正文选中语句当解释 / 改锚点）。 -->
                 <div class="ee-side-terms" id="eeSideTerms" role="tabpanel" aria-labelledby="eeTabTerms" hidden></div>
@@ -213,10 +221,12 @@
         <!-- 窄屏抽屉的遮罩（桌面端 display:none，由 CSS 控制） -->
         <div class="ee-side-mask" id="eeSideMask"></div>
 
-        <!-- 侧栏折叠后的边缘展开把手：属性 / 术语 / AI 三个入口 -->
+        <!-- 侧栏折叠后的边缘展开把手：属性 / 目录 / 术语 / AI 四个入口（后两个只在文章形态出现） -->
         <div class="ee-side-open" id="eeSideOpen" aria-hidden="true">
             <button type="button" class="ee-side-open-btn" id="eeSideOpenProps"
                     onclick="eeOpenSide('props')" title="展开属性栏（Ctrl+.）">‹ 属性</button>
+            <button type="button" class="ee-side-open-btn" id="eeSideOpenOutline"
+                    onclick="eeOpenSide('outline')" title="展开文章目录">‹ 目录</button>
             <button type="button" class="ee-side-open-btn" id="eeSideOpenTerms"
                     onclick="eeOpenSide('terms')" title="展开术语面板">‹ 术语</button>
             <button type="button" class="ee-side-open-btn" id="eeSideOpenAi"
@@ -285,7 +295,7 @@
 <script src="js/editor-menu.js?v=1.7.0"></script>
 <script src="js/selection-toolbar.js?v=1.1.0"></script>
 <script src="js/code-editor.js?v=2.0.0"></script>
-<script src="js/editor-outline.js?v=1.0.0"></script>
+<script src="js/editor-outline.js?v=2.0.0"></script>
 <script src="js/tag-picker.js?v=1.1.2"></script>
     <!-- 基础设施（提示 / 请求兜底 / 自绘确认框 / 净字数 / 本地草稿 / 快捷键面板 / 旧内嵌块迁移） -->
     <script src="js/editor-kit.js?v=1.1.1"></script>
@@ -295,6 +305,6 @@
     <script src="js/term-editor.js?v=1.3.0"></script>
     <!-- 侧栏「AI」页签：写作问答助手（只读，不碰正文） -->
     <script src="js/write-ai.js?v=1.4.0"></script>
-    <script src="js/admin-edit.js?v=1.49.0"></script>
+    <script src="js/admin-edit.js?v=1.49.1"></script>
 </body>
 </html>

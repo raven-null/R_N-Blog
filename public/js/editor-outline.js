@@ -1,62 +1,31 @@
 /**
- * 编辑器大纲（v1.0.0）
+ * 侧栏「目录」页签（v2.0.0）
  *
- * 为什么要有它：写长文时看不到结构，想跳到某一段只能靠滚动找。
+ * 为什么改到侧栏：v1.x 是「编辑区左上角浮动按钮 + 浮层面板」，面板直接盖住正文，
+ * 而且「点开 → 点标题 → 自己收起」这套交互写长文时要反复做，每跳一次视线就被打断一次。
+ * v2.0.0 起它就是右侧栏的第四个页签，和「属性 / 术语 / AI」并列：常驻、可折叠、不挡正文，
+ * 侧栏折叠后还能从右侧把手「‹ 目录」直接展开。
  *
  * 数据直接取自编辑器 DOM（读 h1~h4），不解析 Markdown —— 编辑器里的标题和
  * 正文里的标题天然一一对应，少一次「Markdown ↔ DOM 对不上」的机会。
  *
- * 形态：编辑区左上角一个浮动小按钮，点开在左侧浮出面板。刻意不放进右侧属性栏：
- * 属性栏本来就长，而且侧栏可以折叠（折叠后大纲就没了），大纲应该始终够得着。
+ * 归属：目录只有「文章」形态才有意义（白板 / 导图 / 节点图没有正文，
+ * 谈不上结构）。显隐由 admin-edit.js 的 sideAllowed() 统一控制，本文件只负责
+ * 把目录画进 #eeSideOutline，不自作主张显示或隐藏页签。
  */
 (function () {
     'use strict';
 
-    var BTN_ID = 'eoBtn';
-    var PANEL_ID = 'eoPanel';
-    var STYLE_ID = 'eo-style';
+    var HOST_ID = 'eeSideOutline';
+    var LIST_ID = 'eoList';
     var LEVELS = 'h1,h2,h3,h4';
 
-    function $(id) { return document.getElementById(id); }
-
-    function injectStyle() {
-        if ($(STYLE_ID)) return;
-        var s = document.createElement('style');
-        s.id = STYLE_ID;
-        s.textContent = [
-            '.ee-editor-card{position:relative}',
-            '#' + BTN_ID + '{position:absolute;left:8px;top:8px;z-index:6;display:none;align-items:center;gap:6px;',
-            '  padding:5px 10px;border-radius:8px;cursor:pointer;font-family:inherit;font-size:12px;',
-            '  background:rgba(20,21,30,.86);border:1px solid rgba(255,255,255,.14);color:#cfd3df;',
-            '  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);transition:color .15s,border-color .15s,opacity .15s;',
-            '  opacity:.72}',
-            '#' + BTN_ID + '.show{display:inline-flex}',
-            '#' + BTN_ID + ':hover,#' + BTN_ID + '.active{opacity:1;color:#fff;border-color:rgba(115,170,255,.55)}',
-            '#' + BTN_ID + ' svg{width:14px;height:14px;flex:none}',
-            '#' + PANEL_ID + '{position:absolute;left:8px;top:44px;z-index:5;width:min(258px,52%);',
-            '  max-height:calc(100% - 60px);overflow-y:auto;display:none;padding:8px;border-radius:12px;',
-            '  background:rgba(20,21,30,.95);border:1px solid rgba(255,255,255,.14);',
-            '  box-shadow:0 20px 50px -16px rgba(0,0,0,.85);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);',
-            '  font-family:-apple-system,"Segoe UI","PingFang SC",sans-serif}',
-            '#' + PANEL_ID + '.open{display:block}',
-            '#' + PANEL_ID + ' .o-item{display:block;width:100%;text-align:left;border:0;background:transparent;',
-            '  color:#cfd3df;cursor:pointer;padding:5px 8px;border-radius:7px;font-family:inherit;',
-            '  font-size:12.5px;line-height:1.5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
-            '#' + PANEL_ID + ' .o-item:hover{background:rgba(115,170,255,.18);color:#fff}',
-            '#' + PANEL_ID + ' .o-item.active{background:rgba(115,170,255,.24);color:#fff;font-weight:600}',
-            '#' + PANEL_ID + ' .o-lv2{padding-left:20px;font-size:12px}',
-            '#' + PANEL_ID + ' .o-lv3{padding-left:34px;font-size:12px}',
-            '#' + PANEL_ID + ' .o-lv4{padding-left:48px;font-size:12px}',
-            '#' + PANEL_ID + ' .o-empty{padding:14px 10px;text-align:center;color:rgba(255,255,255,.5);font-size:12px;line-height:1.7}',
-            /* 跳过去之后闪一下，避免「滚过去了但不知道看哪」 */
-            '.ee-outline-flash{animation:eoFlash 1.1s ease}',
-            '@keyframes eoFlash{0%,100%{box-shadow:none}25%,75%{box-shadow:0 0 0 3px rgba(115,170,255,.55)}}'
-        ].join('\n');
-        document.head.appendChild(s);
-    }
-
-    var vditorRef = null;
     var activeIdx = -1;
+    var sig = '';              // 上一次渲染的结构签名：没变就只改高亮，不重建 DOM
+    var scrollBound = false;   // 滚动监听只绑一次（attach 可能被调用多次）
+    var suppressUntil = 0;     // 主动跳转期间别让滚动同步把高亮改回去
+
+    function $(id) { return document.getElementById(id); }
 
     /**
      * 真正的编辑区元素。
@@ -90,120 +59,195 @@
         return t || '(无标题)';
     }
 
-    function refresh() {
-        var btn = $(BTN_ID);
-        var panel = $(PANEL_ID);
-        if (!btn || !panel) return;
-        var hs = headings();
-        btn.classList.toggle('show', hs.length > 0);
-        if (!hs.length) {
-            panel.classList.remove('open');
-            btn.classList.remove('active');
-            panel.innerHTML = '<div class="o-empty">正文里还没有标题。<br>用顶部工具栏的「标题」按钮加几个吧。</div>';
-            return;
+    /**
+     * 编辑器真正的滚动容器：从编辑区往外找第一个「内容比自身高、overflow-y 可滚」的祖先。
+     * 不写死 .vditor-wysiwyg：Vditor 不同模式下滚动容器换过好几层，写死等于赌版本。
+     */
+    function scrollHost() {
+        var node = editorRoot();
+        while (node && node.nodeType === 1 && node !== document.body) {
+            var oy = '';
+            try { oy = getComputedStyle(node).overflowY; } catch (e) { oy = ''; }
+            if ((oy === 'auto' || oy === 'scroll') && node.scrollHeight > node.clientHeight + 2) return node;
+            node = node.parentElement;
         }
-        panel.innerHTML = '';
-        hs.forEach(function (el, i) {
-            var lv = parseInt(String(el.tagName).slice(1), 10) || 1;
-            var b = document.createElement('button');
-            b.type = 'button';
-            b.className = 'o-item' + (lv > 1 ? ' o-lv' + Math.min(lv, 4) : '') + (i === activeIdx ? ' active' : '');
-            b.textContent = label(el);
-            b.title = label(el);
-            b.setAttribute('data-idx', String(i));
-            b.addEventListener('click', function (e) {
-                e.preventDefault();
-                jumpTo(i);
-            });
-            panel.appendChild(b);
+        return null;
+    }
+
+    /** 侧栏里的列表容器；页签面板在静态 HTML 里，通常第一次就能拿到 */
+    function ensureList() {
+        var host = $(HOST_ID);
+        if (!host) return null;
+        var list = $(LIST_ID);
+        if (!list) {
+            host.innerHTML = '<div class="eo-list" id="' + LIST_ID + '" role="list"></div>';
+            list = $(LIST_ID);
+        }
+        return list || null;
+    }
+
+    function makeItem(el, i) {
+        var lv = Math.min(parseInt(String(el.tagName).slice(1), 10) || 1, 4);
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'eo-item' + (lv > 1 ? ' eo-lv' + lv : '');
+        b.textContent = label(el);
+        b.title = label(el);
+        b.setAttribute('data-idx', String(i));
+        // 不抢焦点：鼠标点目录不该把光标从正文里拔出来
+        b.addEventListener('mousedown', function (e) { e.preventDefault(); });
+        b.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            jumpTo(i);
+        });
+        return b;
+    }
+
+    /** 只切高亮，不动 DOM（滚动同步每秒可能触发十几次，重建列表会让鼠标悬停被反复打断） */
+    function paintActive() {
+        var list = $(LIST_ID);
+        if (!list) return;
+        Array.prototype.forEach.call(list.querySelectorAll('.eo-item'), function (b, i) {
+            b.classList.toggle('active', i === activeIdx);
         });
     }
 
-    function jumpTo(idx) {
+    function refresh() {
+        var list = ensureList();
+        if (!list) return;
         var hs = headings();
-        var el = hs[idx];
-        if (!el) return;
-        activeIdx = idx;
-        try { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) { el.scrollIntoView(); }
+        var next = hs.map(function (el) {
+            return (parseInt(String(el.tagName).slice(1), 10) || 1) + '\u0001' + label(el);
+        }).join('\u0002');
+        if (next !== sig) {
+            sig = next;
+            if (activeIdx >= hs.length) activeIdx = hs.length - 1;
+            list.innerHTML = '';
+            if (!hs.length) {
+                list.innerHTML = '<div class="eo-empty">正文还没有标题</div>';
+            } else {
+                hs.forEach(function (el, i) { list.appendChild(makeItem(el, i)); });
+            }
+        }
+        paintActive();
+    }
+
+    function flash(el) {
         el.classList.remove('ee-outline-flash');
-        void el.offsetWidth;                  // 强制重排，让动画能重复播放
+        void el.offsetWidth;                      // 强制重排，让动画能重复播放
         el.classList.add('ee-outline-flash');
         setTimeout(function () { el.classList.remove('ee-outline-flash'); }, 1200);
-        refresh();
-        // 跳完就收起来：面板盖着正文，留着反而挡视线
-        close();
     }
 
-    function open() {
-        var panel = $(PANEL_ID), btn = $(BTN_ID);
-        if (!panel || !btn) return;
-        refresh();
-        panel.classList.add('open');
-        btn.classList.add('active');
-    }
-    function close() {
-        var panel = $(PANEL_ID), btn = $(BTN_ID);
-        if (panel) panel.classList.remove('open');
-        if (btn) btn.classList.remove('active');
-    }
-    function toggle() {
-        var panel = $(PANEL_ID);
-        if (panel && panel.classList.contains('open')) close(); else open();
+    /**
+     * 跳到第 idx 个标题。
+     * 优先滚真正的滚动容器并留 12px 顶部余量 —— 直接 scrollIntoView 会把标题顶到
+     * 编辑器可视区最上沿，贴着工具栏看不清是哪一个。
+     */
+    function jumpTo(idx) {
+        var el = headings()[idx];
+        if (!el) return;
+        activeIdx = idx;
+        suppressUntil = Date.now() + 600;
+        var host = scrollHost();
+        try {
+            if (host) {
+                var top = el.getBoundingClientRect().top - host.getBoundingClientRect().top + host.scrollTop - 12;
+                if (host.scrollTo) host.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+                else host.scrollTop = Math.max(0, top);
+            } else {
+                el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        } catch (e) {
+            try { el.scrollIntoView(); } catch (e2) { /* 老浏览器，忽略 */ }
+        }
+        flash(el);
+        paintActive();
+        // 目录比侧栏高时，跳到的那一条也随之滚进视野（只滚目录，不动正文）
+        var item = $(LIST_ID) && $(LIST_ID).children[idx];
+        if (item && item.scrollIntoView) {
+            try { item.scrollIntoView({ block: 'nearest' }); } catch (e3) { /* 忽略 */ }
+        }
     }
 
-    function build() {
-        var host = document.querySelector('.ee-editor-card');
-        if (!host) return false;
-        injectStyle();
-        if (!$(BTN_ID)) {
-            var btn = document.createElement('button');
-            btn.type = 'button';
-            btn.id = BTN_ID;
-            btn.title = '大纲（文档结构）';
-            btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
-                'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
-                '<path d="M8 6h13M8 12h13M8 18h13"></path><path d="M3 6h.01M3 12h.01M3 18h.01"></path></svg><span>大纲</span>';
-            btn.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); toggle(); });
-            host.appendChild(btn);
+    /** 滚动正文时同步高亮：可见区里最后一个「顶边已经越过上沿」的标题就是当前章节 */
+    function markActive() {
+        if (Date.now() < suppressUntil) return;
+        var hs = headings();
+        if (!hs.length) return;
+        var host = scrollHost();
+        var base = host ? host.getBoundingClientRect().top : 0;
+        var idx = 0;
+        for (var i = 0; i < hs.length; i++) {
+            if (hs[i].getBoundingClientRect().top - base <= 24) idx = i;
         }
-        if (!$(PANEL_ID)) {
-            var panel = document.createElement('div');
-            panel.id = PANEL_ID;
-            host.appendChild(panel);
+        if (idx !== activeIdx) {
+            activeIdx = idx;
+            paintActive();
         }
-        return true;
     }
 
     var timer = null;
     function scheduleRefresh() {
         clearTimeout(timer);
-        timer = setTimeout(refresh, 500);      // 打字时别每敲一下就重建列表
+        timer = setTimeout(refresh, 400);   // 打字时别每敲一下就重建列表
     }
 
+    var rafPending = false;
+    function scheduleActive() {
+        if (rafPending) return;
+        rafPending = true;
+        var run = function () { rafPending = false; markActive(); };
+        if (window.requestAnimationFrame) window.requestAnimationFrame(run);
+        else setTimeout(run, 40);
+    }
+
+    function bindScroll() {
+        if (scrollBound) return false;
+        var target = scrollHost() || document.querySelector('#eeVditor');
+        if (!target) return false;
+        target.addEventListener('scroll', scheduleActive, { passive: true });
+        scrollBound = true;
+        return true;
+    }
+
+    /**
+     * 编辑器就绪后接入。
+     * 只做「监听 + 首次渲染」两件事：页签的显隐与切换归 admin-edit.js。
+     */
     function attach(vd) {
-        vditorRef = vd;
-        if (!build()) return;
         refresh();
         // setValue 是异步渲染的：attach 发生在 after 回调里，此刻正文可能还没落进 DOM，
         // 标题自然是空的。补两次刷新（一次等首次渲染，一次兜慢机器）。
         setTimeout(refresh, 350);
         setTimeout(refresh, 1400);
+        setTimeout(bindScroll, 350);
+        setTimeout(bindScroll, 1400);
 
-        var root = editorRoot();
-        if (root) root.addEventListener('input', scheduleRefresh);
-        // 点面板以外的地方收起来
-        document.addEventListener('mousedown', function (e) {
-            var panel = $(PANEL_ID), btn = $(BTN_ID);
-            if (!panel || !panel.classList.contains('open')) return;
-            if (panel.contains(e.target) || (btn && btn.contains(e.target))) return;
-            close();
-        }, true);
-        document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape') close();
-        });
-        var card = document.querySelector('.ee-editor-card');
-        if (card) card.addEventListener('scroll', close, true);
+        // input 事件会冒泡，绑在容器上比绑编辑区更稳（编辑区可能晚一步才建出来）
+        var wrap = document.getElementById('eeVditor');
+        if (wrap) {
+            wrap.addEventListener('input', scheduleRefresh);
+            wrap.addEventListener('keyup', scheduleRefresh);
+        } else {
+            var root = editorRoot();
+            if (root) root.addEventListener('input', scheduleRefresh);
+        }
+        bindScroll();
     }
 
-    window.EditorOutline = { attach: attach, refresh: refresh, scheduleRefresh: scheduleRefresh };
+    /** 页签切到「目录」时调用：这时候才需要最新的结构，顺便把滚动监听补上 */
+    function onShow() {
+        refresh();
+        setTimeout(refresh, 120);
+        setTimeout(bindScroll, 60);
+    }
+
+    window.EditorOutline = {
+        attach: attach,
+        refresh: refresh,
+        scheduleRefresh: scheduleRefresh,
+        onShow: onShow
+    };
 })();

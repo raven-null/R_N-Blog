@@ -534,8 +534,9 @@ html body .vditor-toolbar { position: relative !important; z-index: 3001 !import
     flex-direction: column;
     gap: 10px;
 }
-/* 两个页签面板：卡片原来是 .ee-side 的直接子元素，现在多了一层容器，间距要自己带 */
+/* 页签面板：卡片原来是 .ee-side 的直接子元素，现在多了一层容器，间距要自己带 */
 .ee-side-props,
+.ee-side-outline,
 .ee-side-terms,
 .ee-side-ai {
     display: flex;
@@ -544,8 +545,13 @@ html body .vditor-toolbar { position: relative !important; z-index: 3001 !import
 }
 /* 显式写出来：上面给了 display:flex，UA 的 [hidden]{display:none} 就压不住了 */
 .ee-side-props[hidden],
+.ee-side-outline[hidden],
 .ee-side-terms[hidden],
 .ee-side-ai[hidden] { display: none !important; }
+/* v3.49.0：目录 / 术语只属于「文章」形态，非文章形态下页签和折叠把手整块消失。
+   页签是 <button>、把手是 inline-flex，UA 的 [hidden] 都会被作者样式压掉，所以这里要 !important。 */
+.ee-side-tab[hidden],
+.ee-side-open-btn[hidden] { display: none !important; }
 /* 系统开了「减少动态效果」就不做过渡 */
 @media (prefers-reduced-motion: reduce) {
     .ee-side { transition: none; }
@@ -569,6 +575,14 @@ html body #eeSide *::-webkit-scrollbar { width: 0 !important; height: 0 !importa
     justify-content: space-between;
     gap: 8px;
     background: var(--bg);
+}
+/* 页签有四个（属性 / 目录 / 术语 / AI），而窄屏侧栏只有 190~220px 宽。
+   这里不做换行也不做横向滚动，改成「页签内边距收一点 + 折叠按钮只留箭头」，
+   四个页签就正好挤得下（实测 220px 侧栏下 160 + 8 + 36 + 4 = 208px）。 */
+@media (max-width: 900px) {
+    .ee-side-tab { padding: 4px 8px; }
+    .ee-side-toggle { padding: 4px 9px; }
+    .ee-side-toggle .lbl { display: none; }
 }
 /* 「属性 / AI」页签：同一列的两个模式，永远只有一个可见 */
 .ee-side-tabs {
@@ -820,6 +834,63 @@ html body #eeSide *::-webkit-scrollbar { width: 0 !important; height: 0 !importa
 .ee-main[data-side-mode="terms"] .ee-side-inner { flex: 1 1 auto; min-height: 0; }
 .ee-main[data-side-mode="terms"] .ee-side-terms { flex: 1 1 auto; min-height: 0; }
 .ee-main[data-side-mode="terms"] .ee-terms-list { overscroll-behavior: auto; }
+
+/* ===== 侧栏「目录」页签：文章大纲（v3.49.0）=====
+   从编辑区左上角的浮动面板搬进侧栏：浮层盖正文，而且「点开 → 点标题 → 自己收起」
+   写长文时每跳一次视线就被打断一次。放侧栏里就是常驻的一份结构，不占正文。
+   只有「文章」形态有这个页签（显隐在 admin-edit.js 的 sideAllowed()）。 */
+.ee-side-outline { gap: 2px; }
+/* 目录模式整条侧栏不滚，只让列表自己滚 —— 否则标题一多侧栏被拉成一长条 */
+.ee-main[data-side-mode="outline"] .ee-side { overflow: hidden; }
+.ee-main[data-side-mode="outline"] .ee-side-inner { flex: 1 1 auto; min-height: 0; }
+.ee-main[data-side-mode="outline"] .ee-side-outline { flex: 1 1 auto; min-height: 0; }
+.eo-list {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    padding: 2px 0;
+}
+.eo-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    border: 0;
+    background: transparent;
+    font-family: inherit;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--text-secondary);
+    padding: 5px 8px;
+    border-radius: 7px;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: background .14s ease, color .14s ease;
+}
+.eo-item:hover { background: rgba(255, 255, 255, .07); color: #fff; }
+.eo-item.active { background: rgba(115, 170, 255, .18); color: #fff; font-weight: 600; }
+/* 层级靠缩进区分（只到 h4）：一眼能看出「这一段属于上面那一节」 */
+.eo-item.eo-lv2 { padding-left: 20px; font-size: 12px; }
+.eo-item.eo-lv3 { padding-left: 32px; font-size: 12px; }
+.eo-item.eo-lv4 { padding-left: 44px; font-size: 12px; }
+.eo-empty {
+    padding: 16px 10px;
+    text-align: center;
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--text-muted);
+}
+/* 跳过去之后闪一下，避免「滚过去了但不知道看哪」 */
+.ee-outline-flash { animation: eeOutlineFlash 1.1s ease; }
+@keyframes eeOutlineFlash {
+    0%, 100% { box-shadow: none; }
+    25%, 75% { box-shadow: 0 0 0 3px rgba(115, 170, 255, .55); }
+}
 
 /* 顶栏「AI」按钮：常驻（侧栏折叠时也能一键打开），和「属性」按钮区分开一点 */
 .ee-ai-btn { color: #cfe2ff; border-color: rgba(115, 170, 255, .4); background: rgba(115, 170, 255, .12); }
