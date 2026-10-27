@@ -45,6 +45,22 @@
       ".gg-kw{color:#7aa2f7}",
       ".gg-ph{display:flex;align-items:center;justify-content:center;height:100%;width:100%;",
       "color:rgba(255,255,255,.62);font-size:12px;background:transparent}",
+      /* 边中点手柄：上游只给了四角，这里补上上下左右四条边（data-dir 用 n/s/e/w，
+         _bindResizeHandles 是按 dir 里的方向字符算的，单边天然支持） */
+      ".node .rsz-handle.n{left:50%;top:-5px;margin-left:-5px;cursor:ns-resize}",
+      ".node .rsz-handle.s{left:50%;bottom:-5px;margin-left:-5px;cursor:ns-resize}",
+      ".node .rsz-handle.e{right:-5px;top:50%;margin-top:-5px;cursor:ew-resize}",
+      ".node .rsz-handle.w{left:-5px;top:50%;margin-top:-5px;cursor:ew-resize}",
+      /* 代码节点的 × 没用（它清的是 desc，代码节点不靠 desc）→ 去掉 */
+      ".gg-node-code .node-clear{display:none!important}",
+      /* 左上角「放大到合适大小」按钮：默认半透明，悬停节点时亮起来 */
+      ".gg-fit-btn{position:absolute;left:-11px;top:-11px;z-index:6;width:22px;height:22px;",
+      "display:flex;align-items:center;justify-content:center;border-radius:6px;cursor:pointer;",
+      "font-size:12px;line-height:1;color:rgba(255,255,255,.75);background:rgba(28,28,34,.92);",
+      "border:1px solid rgba(255,255,255,.16);box-shadow:0 4px 12px -4px rgba(0,0,0,.7);",
+      "opacity:0;transition:opacity .15s ease,background .15s ease}",
+      ".node:hover .gg-fit-btn{opacity:1}",
+      ".gg-fit-btn:hover{background:rgba(255,159,10,.92);color:#16161a}",
       /* 类型选择弹窗 */
       ".gg-kp{position:fixed;z-index:2147483200;display:flex;flex-direction:column;gap:4px;padding:8px;",
       "min-width:240px;border-radius:14px;background:rgba(24,24,30,.97);border:1px solid rgba(255,255,255,.14);",
@@ -253,7 +269,115 @@
     }
     if (kind === "image") drawImageBody(nodeEl, node);
     else if (kind === "code") drawCodeBody(nodeEl, node);
+    // 每条节点都要的两件外挂：边中点缩放手柄 + 左上角自适应按钮
+    ensureEdgeHandles(nodeEl, node);
+    ensureFitButton(nodeEl, node);
+    // 图片节点的 × 语义不同：不是清空描述，而是换一张图（取消则保留原图）
+    if (kind === "image") bindImageClear(nodeEl, node);
   };
+
+  /** 补四条边中点手柄（上游只给了四角）。_bindResizeHandles 按 data-dir 解析方向，单边天然支持。 */
+  function ensureEdgeHandles(nodeEl, node) {
+    if (!nodeEl || !nodeEl.querySelector) return;
+    if (nodeEl.querySelector(".rsz-handle.e")) return; // 已经补过
+    var dirs = ["n", "s", "e", "w"];
+    for (var i = 0; i < dirs.length; i++) {
+      var h = document.createElement("div");
+      h.className = "rsz-handle " + dirs[i];
+      h.dataset.dir = dirs[i];
+      nodeEl.appendChild(h);
+    }
+    if (typeof App._bindResizeHandles === "function") App._bindResizeHandles(nodeEl, node.id);
+  }
+
+  /** 左上角「放大到合适大小」按钮 */
+  function ensureFitButton(nodeEl, node) {
+    if (!nodeEl) return;
+    if (nodeEl._ggFitBtn) return;
+    var b = document.createElement("div");
+    b.className = "gg-fit-btn";
+    b.setAttribute("role", "button");
+    b.title = "放大到适合内容的大小";
+    b.textContent = "⤢";
+    b.addEventListener("mousedown", function (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    });
+    b.addEventListener("click", function (e) {
+      e.stopPropagation();
+      e.preventDefault();
+      autoFitNode(node.id);
+    });
+    nodeEl.appendChild(b);
+    nodeEl._ggFitBtn = b;
+  }
+
+  /** 图片节点的 × ：换一张图。没选新图就什么都不做，原图保留。 */
+  function bindImageClear(nodeEl, node) {
+    if (!nodeEl || !nodeEl._clear) return;
+    nodeEl._clear.title = "换一张图";
+    // 上游在 _bindNodeEvents 里用 onmousedown 绑了「清空 desc」，这里整个替换掉
+    nodeEl._clear.onmousedown = function (e) {
+      e.stopPropagation();
+      e.preventDefault();
+      if (App.readOnly) return;
+      pickImageForNode(node.id); // 取消选择就不会走到上传，原图不动
+    };
+  }
+
+  /* ══════════ 2.5 放大到适合内容的大小 ══════════ */
+
+  /** 把节点尺寸吸附到格并重绘 */
+  function applyNodeSize(node, w, h) {
+    var nw = Math.max(180, Math.round(w / GRID) * GRID);
+    var nh = Math.max(80, Math.round(h / GRID) * GRID);
+    node.w = nw;
+    node.h = nh;
+    App.saveCanvasSnapshot();
+    App.renderCanvas();
+  }
+
+  function autoFitNode(nodeId) {
+    var node = findNode(nodeId);
+    if (!node) return;
+    var kind = kindOf(node);
+
+    if (kind === "image") {
+      var fid = node.data && node.data.fid;
+      var url = fid ? imgCache[fid] : "";
+      if (!url) {
+        toast("这张图还没加载好，稍后再试", "info");
+        return;
+      }
+      var img = new Image();
+      img.onload = function () {
+        if (!img.width) return;
+        // 宽度取 480（够看清），高度按比例 + 34px 标题栏
+        applyNodeSize(node, 480, (480 * img.height) / img.width + 34);
+      };
+      img.src = url;
+      return;
+    }
+
+    if (kind === "code") {
+      var code = String((node.data && node.data.code) || "");
+      var lines = code.split("\n");
+      // 每行约 7.2px（12px 等宽字），高度按行数算；都夹在合理区间
+      var longest = 0;
+      for (var i = 0; i < lines.length; i++) longest = Math.max(longest, lines[i].length);
+      var w = Math.min(960, Math.max(360, longest * 7.4 + 32));
+      var h = Math.min(960, Math.max(160, lines.length * 20 + 56));
+      applyNodeSize(node, w, h);
+      return;
+    }
+
+    // 文本节点：按标题与描述长度估一估
+    var label = String(node.label || "");
+    var desc = String(node.desc || "");
+    var w2 = Math.min(560, Math.max(180, Math.max(label.length * 15, desc.length * 7) + 40));
+    var h2 = Math.min(400, Math.max(80, 80 + (desc.length > 60 ? 40 : 0)));
+    applyNodeSize(node, w2, h2);
+  }
 
   /* ══════════ 3. 新建节点（带类型 + 自动连线） ══════════ */
 
@@ -389,9 +513,10 @@
     input.accept = "image/*";
     input.addEventListener("change", function () {
       var f = input.files && input.files[0];
+      // 只有真的选了文件才换图；取消 / 关闭选择框 → 什么都不做，原图保留
       if (f) uploadImageForNode(nodeId, f);
     });
-    input.click();
+    if (typeof input.click === "function") input.click();
   }
 
   /** 按图片宽高比调节点高度（宽度不动），高度吸附到格；拿不到尺寸就保持原样 */
@@ -515,7 +640,10 @@
     });
   }
 
-  // 双击节点：图片节点重新选图，代码节点进编辑器（拦住上游的内联改标题）
+  // 双击节点：
+  //   代码节点 → 进代码编辑器（并且不允许被上游的双击清空/内联改标题打扰）
+  //   图片节点 → 什么都不做（换图的入口是那个 ×，不是双击）
+  //   文本节点 → 保持上游的内联改标题
   document.addEventListener(
     "dblclick",
     function (e) {
@@ -528,11 +656,29 @@
       if (kind === "text") return; // 文本节点保持上游行为
       e.preventDefault();
       e.stopPropagation();
-      if (kind === "image") pickImageForNode(node.id);
-      else if (kind === "code") openCodeEditor(node.id);
+      if (kind === "code") openCodeEditor(node.id);
+      // 图片节点：有意什么都不做
     },
     true,
   );
+
+  /* ══════════ 9. 双击空白处：同样是新建节点，但先选出类型 ══════════ */
+
+  // 上游双击空白会直接建一个默认文本节点（_addNodeAt）。
+  // 这里拦下来，改成先弹类型选择 —— 选完才建，取消就什么也不建。
+  if (typeof App._onCanvasDblClick === "function") {
+    var rawCanvasDblClick = App._onCanvasDblClick.bind(App);
+    App._onCanvasDblClick = function (e) {
+      if (!isEdit || App.readOnly) return rawCanvasDblClick(e);
+      var t = e && e.target;
+      // 节点 / 坐标 HUD / 选区层上的双击不归这里管
+      if (t && t.closest && (t.closest(".node") || t.closest(".coord") || t.closest(".sel-overlay"))) {
+        return rawCanvasDblClick(e);
+      }
+      var wp = App.getWorldPos(e.clientX, e.clientY);
+      openKindPicker(e.clientX, e.clientY, wp.x, wp.y, null, null);
+    };
+  }
 
   /* ══════════ 7. 对外 ══════════ */
 

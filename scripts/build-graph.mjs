@@ -217,6 +217,9 @@ html = html.slice(0, injOpen) + patchA + html.slice(injOpen)
     "getWorldPos",
     "saveCanvasSnapshot",
     "_syncNodeRegionMembership",
+    "_onCanvasDblClick",
+    "_bindResizeHandles",
+    "_resizeNodeTo",
   ]
   const missing = REQUIRED.filter(k => !html.includes(k))
   if (missing.length) fail("上游缺少依赖方法：" + missing.join(" / ") + "（Weave 升级后可能改名，需同步调整 scripts/graph/*.js）")
