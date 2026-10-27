@@ -28,6 +28,7 @@ const UPSTREAM = join(root, ".local-data/weave/APPs/Weave.min.html")
 const UPSTREAM_FULL = join(root, ".local-data/weave/APPs/Weave.html")
 const PRE = join(root, "scripts/graph/pre.js")
 const POST = join(root, "scripts/graph/post.js")
+const NODE_KIT = join(root, "scripts/graph/node-kit.js")
 const OUT = join(root, "public/graph.html")
 
 /** 产物版本：注入内容变更时递增（仅用于构建日志与产物注释） */
@@ -51,6 +52,7 @@ if (!existsSync(UPSTREAM)) {
 let html = readFileSync(UPSTREAM, "utf-8")
 const pre = readFileSync(PRE, "utf-8")
 const post = readFileSync(POST, "utf-8")
+const nodeKit = readFileSync(NODE_KIT, "utf-8")
 
 /* ── 2. 注入点校验 ──
    min 版只有一对 <script></script>。数量不是 1 就说明上游结构变了，
@@ -166,7 +168,8 @@ const injClose = html.lastIndexOf("</script>")
 if (injClose < injOpen) fail("</script> 出现在 <script> 之前，结构不符合预期")
 
 const patchA = banner + "\n" + pre + "\n"
-const patchB = "\n" + post + "\n"
+// 启动后的补丁：先接管存储（post），再装节点类型与拉线新建（node-kit）
+const patchB = "\n" + post + "\n" + nodeKit + "\n"
 
 html = html.slice(0, injClose) + patchB + html.slice(injClose)
 html = html.slice(0, injOpen) + patchA + html.slice(injOpen)
@@ -195,11 +198,28 @@ html = html.slice(0, injOpen) + patchA + html.slice(injOpen)
 }
 
 // 4c. 依赖方法存在性 —— 上游升级后若重命名这些方法，这里必须失败，
-//     而不是让页面跑到一半悄悄失效（见 post.js 顶部的覆盖点清单）。
+//     而不是让页面跑到一半悄悄失效（见 post.js / node-kit.js 顶部的覆盖点清单）。
 {
-  const REQUIRED = ["_prepareSerializedData", "_commitSerialized", "_lsSet", "_lsGetJson", "_lsGet", "showToast", "renderCanvas"]
+  const REQUIRED = [
+    "_prepareSerializedData",
+    "_commitSerialized",
+    "_lsSet",
+    "_lsGetJson",
+    "_lsGet",
+    "showToast",
+    "renderCanvas",
+    // node-kit 用到的
+    "_updateNodeAppearance",
+    "startSocketDrag",
+    "_createConnection",
+    "_genId",
+    "_snap",
+    "getWorldPos",
+    "saveCanvasSnapshot",
+    "_syncNodeRegionMembership",
+  ]
   const missing = REQUIRED.filter(k => !html.includes(k))
-  if (missing.length) fail("上游缺少依赖方法：" + missing.join(" / ") + "（Weave 升级后可能改名，需同步调整 scripts/graph/post.js）")
+  if (missing.length) fail("上游缺少依赖方法：" + missing.join(" / ") + "（Weave 升级后可能改名，需同步调整 scripts/graph/*.js）")
 }
 
 // 4d. 品牌痕迹必须已经不在了（DOM 与点击绑定两处）
