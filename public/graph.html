@@ -1385,7 +1385,20 @@ const PRESET_COLORS=[{id:'blue',hex:'#3b82f6',start:'#3b82f6',end:'#2563eb'},{id
       val.innerHTML = '<div class="gg-ph">双击编辑代码</div>';
       return;
     }
-    val.innerHTML = '<pre class="gg-code"><code>' + highlight(code) + "</code></pre>";
+    // 用 createElement 而不是 innerHTML，好把滚轮监听挂到 pre 上
+    var pre = document.createElement("pre");
+    pre.className = "gg-code";
+    var codeEl = document.createElement("code");
+    codeEl.innerHTML = highlight(code);
+    pre.appendChild(codeEl);
+    // 悬停在代码上滚动就滚代码，不缩放画布。
+    // 画布的滚轮是 container.onwheel（冒泡阶段），这里 stop 住即可；
+    // 内容没超出时不拦，滚轮照常缩放画布。
+    pre.onwheel = function (e) {
+      if (pre.scrollHeight > pre.clientHeight + 1) e.stopPropagation();
+    };
+    val.innerHTML = "";
+    val.appendChild(pre);
   }
 
   /* 轻量语法着色（不引第三方库）：
