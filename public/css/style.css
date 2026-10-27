@@ -1500,6 +1500,28 @@ body.view-gallery-active .gallery-tag-btn {
     color: var(--accent);
 }
 
+/* 图库主分类：颜色圆点 + 张数 */
+.gallery-tag-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.gallery-tag-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex: none;
+    box-shadow: 0 0 6px rgba(0, 0, 0, 0.35);
+}
+
+.gallery-tag-count {
+    margin-left: auto;
+    font-size: 11px;
+    opacity: 0.6;
+    font-variant-numeric: tabular-nums;
+}
+
 /* ===== LOADING STATE ===== */
 .loading {
     text-align: center;

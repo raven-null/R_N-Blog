@@ -648,15 +648,18 @@ const BlogApp = {
                 list = [];
             }
         }
-        const q = unlocked ? '?token=' + encodeURIComponent(token) : '';
+        const tokenQ = unlocked ? 'token=' + encodeURIComponent(token) : '';
+        const rawQ = tokenQ ? '?' + tokenQ : '';
+        // 缩略图带 v=2：r-gallery 把缩略图从 480px 提到 960px，换 URL 才能绕过 CDN 的旧图缓存
+        const thumbQ = tokenQ ? '?' + tokenQ + '&v=2' : '?v=2';
         this.galleryImages = list.map(p => ({
             id: p.id,
             title: p.title || '',
             rating: p.rating || 'general',
             tags: p.tags || [],
             categories: p.categories || [],
-            url: base + '/api/photos/' + encodeURIComponent(p.id) + '/raw' + q,
-            thumb: base + '/api/photos/' + encodeURIComponent(p.id) + '/thumb' + q,
+            url: base + '/api/photos/' + encodeURIComponent(p.id) + '/raw' + rawQ,
+            thumb: base + '/api/photos/' + encodeURIComponent(p.id) + '/thumb' + thumbQ,
         }));
         return this.galleryImages;
     },
@@ -775,8 +778,11 @@ const BlogApp = {
         if (btn) {
             if (this.galleryTag === 'all') {
                 btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>';
+            } else if (this.galleryTag === 'r18' || this.galleryTag === 'r16') {
+                btn.textContent = this.galleryTag.toUpperCase();
             } else {
-                btn.textContent = this.galleryTag.charAt(0);
+                // 主分类名通常 3-4 个字，按钮上显示前 2 个字
+                btn.textContent = this.galleryTag.slice(0, 2);
             }
         }
         const panel = document.getElementById('galleryTagFloatPanel');
@@ -811,7 +817,8 @@ const BlogApp = {
         } else if (this.galleryTag === 'r18' || this.galleryTag === 'r16') {
             filtered = allImages.filter(img => img.rating === this.galleryTag);
         } else {
-            filtered = allImages.filter(img => (img.tags || []).includes(this.galleryTag));
+            // 分类面板显示的是 r-gallery 的「主分类」，按 categories 匹配
+            filtered = allImages.filter(img => (img.categories || []).includes(this.galleryTag));
         }
         // window.__galleryImages 设为当前筛选结果（灯箱在筛选结果内导航）
         window.__galleryImages = filtered;
@@ -878,51 +885,41 @@ const BlogApp = {
         panel.classList.toggle('show');
     },
 
-    // 加载并渲染图库分类标签
-    // 「主标签」判定：图库标签配置里，挂在分组下、且名字与分组名不同的标签（角色名等）属于细分标签，分类面板不展示
-    gallerySubTags: null,
-    async loadGallerySubTags() {
-        if (this.gallerySubTags) return this.gallerySubTags;
-        const set = new Set();
+    // 图库标签/主分类配置（来自 r-gallery 的 /api/tags），分类面板直接用它的「主分类」
+    galleryConfig: null,
+    async loadGalleryConfig() {
+        if (this.galleryConfig) return this.galleryConfig;
+        let cfg = { categories: [], groups: [], tags: [] };
         try {
             const res = await fetch(this.config.galleryBase + '/api/tags');
-            if (res.ok) {
-                const cfg = await res.json();
-                const groupName = new Map((cfg.groups || []).map((g) => [String(g.id), String(g.name || '')]));
-                const norm = (v) => String(v || '').replace(/[：:·、\s_\-]/g, '');
-                (cfg.tags || []).forEach((t) => {
-                    if (!t || !t.group) return;
-                    const gname = groupName.get(String(t.group)) || '';
-                    if (norm(t.name) !== norm(gname)) set.add(String(t.name));
-                });
-            }
-        } catch (e) { /* 拿不到配置就退化为全部标签 */ }
-        this.gallerySubTags = set;
-        return set;
+            if (res.ok) cfg = await res.json();
+        } catch (e) { /* 拿不到配置就用空分类 */ }
+        this.galleryConfig = cfg;
+        return cfg;
     },
 
-    // 加载并渲染图库分类标签（只显示主标签：来自 r-gallery 的标签 + 成人向档位）
+    // 加载并渲染图库分类面板：显示 r-gallery 的「主分类」（颜色圆点 + 张数），与图库站点一致
     async renderGalleryTags() {
         const list = document.getElementById('galleryTagFloatList');
         if (!list) return;
         try {
             const images = this.galleryImages || [];
-            // 只显示主标签：挂在图库标签分组下的细分标签（角色名等）不显示
-            const subTags = await this.loadGallerySubTags();
-            const tagCount = new Map();
-            images.forEach(img => (img.tags || []).forEach(t => {
-                if (subTags.has(t)) return;
-                tagCount.set(t, (tagCount.get(t) || 0) + 1);
-            }));
-            const tags = [...tagCount.keys()].sort((a, b) => tagCount.get(b) - tagCount.get(a));
-            const btn = (tag, label) => `<button class="gallery-tag-item${this.galleryTag === tag ? ' active' : ''}" data-tag="${tag}" onclick="BlogApp.setGalleryTag('${tag}')">${label}</button>`;
+            const cfg = await this.loadGalleryConfig();
+            const cats = (cfg.categories || []).slice().sort((a, b) => (Number(a.sort) || 0) - (Number(b.sort) || 0));
+            const countOf = (name) => images.filter(img => (img.categories || []).includes(name)).length;
+            const btn = (tag, label, color, count) => {
+                const dot = color ? `<span class="gallery-tag-dot" style="background:${color}"></span>` : '';
+                const num = (count === undefined) ? '' : `<span class="gallery-tag-count">${count}</span>`;
+                return `<button class="gallery-tag-item${this.galleryTag === tag ? ' active' : ''}" data-tag="${tag}" onclick="BlogApp.setGalleryTag('${tag}')">${dot}${label}${num}</button>`;
+            };
             let html = btn('all', '全部');
             // 成人向档位只有管理员（能拿到 R16/R18）才显示
-            if (images.some(img => img.rating === 'r18')) html += btn('r18', 'R18');
-            if (images.some(img => img.rating === 'r16')) html += btn('r16', 'R16');
+            if (images.some(img => img.rating === 'r18')) html += btn('r18', 'R18', '', images.filter(img => img.rating === 'r18').length);
+            if (images.some(img => img.rating === 'r16')) html += btn('r16', 'R16', '', images.filter(img => img.rating === 'r16').length);
             // 管理员身份（后台已登录）但凭据还不能解锁成人图时，给一个入口去输入图库密码
             if (!images.some(img => this.isR18Image(img)) && this.getAdminKey()) html += btn('r18', 'R16/R18');
-            html += tags.map(t => btn(t, t)).join('');
+            // 主分类（与 r-gallery 站点同一套：二次元-女 / 插画-风景 / 表情包 …）
+            html += cats.map(c => btn(c.name, c.name, c.color, countOf(c.name))).join('');
             list.innerHTML = html;
         } catch (e) {
             list.innerHTML = '<button class="gallery-tag-item active" data-tag="all" onclick="BlogApp.setGalleryTag(\'all\')">全部</button>';
