@@ -1369,6 +1369,10 @@ const PRESET_COLORS=[{id:'blue',hex:'#3b82f6',start:'#3b82f6',end:'#2563eb'},{id
       ".node .rsz-handle.s{left:50%;bottom:-5px;margin-left:-5px;cursor:ns-resize}",
       ".node .rsz-handle.e{right:-5px;top:50%;margin-top:-5px;cursor:ew-resize}",
       ".node .rsz-handle.w{left:-5px;top:50%;margin-top:-5px;cursor:ew-resize}",
+      /* 手柄不必先进「调整节点大小」模式：悬停节点就显出来，随手能拖 */
+      ".node:hover .rsz-handle{display:block}",
+      ".node .rsz-handle{opacity:.9;transition:opacity .12s ease,transform .12s ease}",
+      ".node .rsz-handle:hover{opacity:1;transform:scale(1.18)}",
       /* 代码节点的 × 没用（它清的是 desc，代码节点不靠 desc）→ 去掉 */
       ".gg-node-code .node-clear{display:none!important}",
       /* 左上角「放大到合适大小」按钮：默认半透明，悬停节点时亮起来 */
@@ -1645,20 +1649,43 @@ const PRESET_COLORS=[{id:'blue',hex:'#3b82f6',start:'#3b82f6',end:'#2563eb'},{id
 
   /* ══════════ 2.5 放大到适合内容的大小 ══════════ */
 
-  /** 把节点尺寸吸附到格并重绘 */
+  /** 把节点尺寸吸附到格并重绘。高度给一个上限，避免几千字把节点撑成一条长龙。 */
   function applyNodeSize(node, w, h) {
     var nw = Math.max(180, Math.round(w / GRID) * GRID);
-    var nh = Math.max(80, Math.round(h / GRID) * GRID);
+    var nh = Math.min(1600, Math.max(80, Math.round(h / GRID) * GRID));
     node.w = nw;
     node.h = nh;
     App.saveCanvasSnapshot();
     App.renderCanvas();
   }
 
+  /**
+   * 量出节点内容"全部显示"需要多大。
+   * 关键在于上游用 --clamp（按高度算出的行数）把 .node-val 截断成省略号，
+   * 所以必须先临时解除这个限制，才能量到真实内容高度。
+   */
+  function measureContent(nodeEl) {
+    var val = nodeEl && nodeEl._val;
+    if (!val || !val.scrollHeight) return null;
+    var prevClamp = val.style.getPropertyValue("--clamp");
+    var prevMax = val.style.maxHeight;
+    // 解除截断，量完整内容
+    val.style.setProperty("--clamp", "99999");
+    val.style.maxHeight = "none";
+    var h = val.scrollHeight;
+    var w = val.scrollWidth;
+    // 还原（后面 applyNodeSize 会按新高度重新算 --clamp）
+    if (prevClamp) val.style.setProperty("--clamp", prevClamp);
+    else val.style.removeProperty("--clamp");
+    val.style.maxHeight = prevMax || "";
+    return { h: h, w: w };
+  }
+
   function autoFitNode(nodeId) {
     var node = findNode(nodeId);
     if (!node) return;
     var kind = kindOf(node);
+    var el = App._nodeElMap && App._nodeElMap.get ? App._nodeElMap.get(nodeId) : null;
 
     if (kind === "image") {
       var fid = node.data && node.data.fid;
@@ -1677,23 +1704,39 @@ const PRESET_COLORS=[{id:'blue',hex:'#3b82f6',start:'#3b82f6',end:'#2563eb'},{id
       return;
     }
 
+    // 文本 / 代码：以"能装下全部内容"为准 —— 宽度基本不动（只保证不小于最小值），
+    // 高度按实测内容来，所以长文字是往下长，不是一味变宽。
+    var measured = measureContent(el);
+    if (measured) {
+      // 34 = 标题栏；26 = body 上下 padding 与行距余量
+      var wantH = 34 + measured.h + 26;
+      var minW = kind === "code" ? 360 : 200;
+      var wantW = Math.max(node.w || minW, minW);
+      // 标题（header 单行）也要装得下，否则被省略号截掉
+      var labelW = String(node.label || "").length * 15 + 44;
+      wantW = Math.max(wantW, labelW);
+      // 代码节点：宽度适度跟一下最长行，但最多 960，别把节点拉成一条长带
+      if (kind === "code") wantW = Math.min(960, Math.max(wantW, measured.w + 30));
+      applyNodeSize(node, wantW, wantH);
+      return;
+    }
+
+    // 没有可用 DOM（还没渲染）时退回按内容估算
     if (kind === "code") {
       var code = String((node.data && node.data.code) || "");
       var lines = code.split("\n");
-      // 每行约 7.2px（12px 等宽字），高度按行数算；都夹在合理区间
       var longest = 0;
       for (var i = 0; i < lines.length; i++) longest = Math.max(longest, lines[i].length);
       var w = Math.min(960, Math.max(360, longest * 7.4 + 32));
-      var h = Math.min(960, Math.max(160, lines.length * 20 + 56));
+      var h = Math.min(1200, Math.max(160, lines.length * 20 + 56));
       applyNodeSize(node, w, h);
       return;
     }
 
-    // 文本节点：按标题与描述长度估一估
-    var label = String(node.label || "");
     var desc = String(node.desc || "");
-    var w2 = Math.min(560, Math.max(180, Math.max(label.length * 15, desc.length * 7) + 40));
-    var h2 = Math.min(400, Math.max(80, 80 + (desc.length > 60 ? 40 : 0)));
+    var label = String(node.label || "");
+    var w2 = Math.min(560, Math.max(200, Math.max(label.length * 15, desc.length * 7) + 40));
+    var h2 = Math.min(900, Math.max(80, 60 + Math.ceil(desc.length / 24) * 20));
     applyNodeSize(node, w2, h2);
   }
 
