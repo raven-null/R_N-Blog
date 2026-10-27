@@ -37,7 +37,8 @@
     baseRev: 0,
     meta: null,
     editKey: "",
-    pending: null,
+    graphDoc: null, // 节点图存档（flow_data）
+    seqDoc: null, // 时序图存档（flow_data_seq）
     timer: 0
   };
 
@@ -74,28 +75,44 @@
     return rawLsGetJson(key);
   };
   // 写入：存档键只**暂存并标记未保存**，不自动上传。
-  // 保存是手动的（左侧保存按钮 / Ctrl+S）—— 自动保存会在每次拖动后产生一串历史快照，
-  // 用户明确要求「只有点保存才保存」。设置类键（语言、键位、自定义色）仍走本地。
+  // 保存是手动的（后台右侧侧边栏的「保存」按钮）—— 自动保存会在每次拖动后产生一串历史快照。
+  // 设置类键（语言、键位、自定义色）仍走本地。
+  //
+  // 两种画布模式各持一份文档：flow_data = 节点图，flow_data_seq = 时序图。
+  // 分别暂存，保存时合并成一份提交（服务端只认一个 data 对象）。
   App._lsSet = function (key, value) {
-    if (key === SEQ_KEY) return true; // 时序图本期不存，静默丢弃
-    if (key !== DOC_KEY) return rawLsSet(key, value);
+    if (key !== DOC_KEY && key !== SEQ_KEY) return rawLsSet(key, value);
     if (!isEdit) return true; // 只读态不产生任何写入
     if (!st.loaded) return true; // 数据还没装进来，先把写入丢掉，防止空画布覆盖线上
-    stageSave(value);
+    stageSave(key, value);
     return true; // 乐观返回：Weave 的 saveCanvas 据此认为"存住了"，真正结果由保存按钮反馈
   };
 
   /* ══════════ 2. 保存（手动触发） ══════════ */
 
-  /** 把待保存内容暂存起来，并把保存按钮标成「未保存」 */
-  function stageSave(jsonText) {
+  /** 按模式暂存待保存内容，并标记未保存 */
+  function stageSave(key, jsonText) {
+    var parsed;
     try {
-      st.pending = JSON.parse(jsonText);
+      parsed = JSON.parse(jsonText);
     } catch (e) {
       return; // 解析不了就别传上去
     }
+    if (key === SEQ_KEY) st.seqDoc = parsed;
+    else st.graphDoc = parsed;
     st.dirty = true;
     updateSaveBtn();
+  }
+
+  /**
+   * 组装提交体：节点图放在顶层（与老数据同一位置，向后兼容），时序图放进 sequence 字段。
+   * 两份都带上，避免"只改了时序图"时把节点图覆盖成空。
+   */
+  function buildPayload() {
+    var base = st.graphDoc ? JSON.parse(JSON.stringify(st.graphDoc)) : { nodes: [], connections: [], regions: [] };
+    if (st.seqDoc) base.sequence = st.seqDoc;
+    else if (st.seqDoc === null && base.sequence) delete base.sequence;
+    return base;
   }
 
   /**
@@ -103,9 +120,9 @@
    * 宿主（后台编辑页）的「保存」按钮依赖这个返回值决定要不要继续存文章记录。
    */
   function flush(force) {
-    if (!st.dirty || st.saving || !st.pending) return Promise.resolve(true);
+    if (!st.dirty || st.saving) return Promise.resolve(true);
     st.dirty = false;
-    var body = { data: st.pending, baseRev: st.baseRev };
+    var body = { data: buildPayload(), baseRev: st.baseRev };
     if (st.meta && st.meta.hasKey && st.editKey) body.editKey = st.editKey;
     if (force) body.force = 1;
     st.saving = true;
@@ -193,22 +210,34 @@
     document.documentElement.setAttribute("data-graph-mode", "edit");
   }
 
-  // 时序图本期不开放：藏掉模式切换按钮，避免用户切到一个存不下来的文档
-  hideUnsupported();
-
-  function hideUnsupported() {
-    // 顶栏模式按钮（节点图 / 时序图 切换）。按文案兜底匹配，找不到就算了，
-    // 不影响主流程——上面的 _lsSet 已经把时序存档丢弃了。
-    var btns = document.querySelectorAll(".header button, .header .btn, .header [role=button]");
-    for (var i = 0; i < btns.length; i++) {
-      var t = (btns[i].textContent || "").trim();
-      if (t === "节点图" || t === "时序图" || /sequence/i.test(btns[i].id || "")) {
-        btns[i].style.display = "none";
-      }
-    }
-  }
+  // 时序图已启用：顶栏的模式切换按钮（节点图 / 时序图）保持原样。
+  // 两份文档各存一份 —— 节点图在 data 顶层，时序图在 data.sequence，保存时一起提交。
 
   /* ══════════ 4. 装入服务端数据 ══════════ */
+
+  /* ══════════ 4. 装入服务端数据（节点图 + 时序图两份） ══════════ */
+
+  /**
+   * 把时序图存档预先装进模式槽，不切换、不渲染。
+   * 复刻 Weave 自己 _loadStoredDoc() 的落槽逻辑：用户点顶栏切模式时，
+   * _setMode 直接从槽里取，因此这里只需把 state / historyIndex / viewport 摆好。
+   */
+  function primeSequenceSlot(seqDoc) {
+    if (!seqDoc) return false;
+    var prep = App._prepareSerializedData(seqDoc);
+    if (!prep) return false;
+    if (typeof App._ensureModeStore === "function") App._ensureModeStore();
+    if (!App._modeStore || !App._modeStore.sequence) return false;
+    App._modeStore.sequence.state = {
+      nodes: prep.candidate.nodes,
+      connections: prep.candidate.connections,
+      regions: prep.candidate.regions,
+      history: [],
+    };
+    App._modeStore.sequence.historyIndex = -1;
+    App._modeStore.sequence.viewport = prep.viewport;
+    return true;
+  }
 
   function load() {
     setStatus("加载中…");
@@ -220,9 +249,17 @@
         st.meta = (d && d.meta) || null;
         st.baseRev = (st.meta && Number(st.meta.rev)) || 0;
         if (d && d.status === "success" && d.data) {
+          var data = d.data;
+          // 时序图放在 sequence 字段里；节点图仍在顶层（老数据没有这个字段 → 时序图为空）
+          var seqDoc = data.sequence && typeof data.sequence === "object" ? data.sequence : null;
+          // 暂存两份，保存时整份提交，避免"只改了时序图"把节点图覆盖成空
+          st.graphDoc = Object.assign({}, data);
+          delete st.graphDoc.sequence;
+          st.seqDoc = seqDoc;
+
           // 与"导入"走同一条装入路径：先校验 + 格→像素换算，再提交渲染。
           // 不走 _loadFromData，因为它会拒绝只读态。
-          var prepared = App._prepareSerializedData(d.data);
+          var prepared = App._prepareSerializedData(st.graphDoc);
           if (prepared) {
             App._commitSerialized(prepared, { emptyToOrigin: false });
             setStatus("已加载 rev " + st.baseRev);
@@ -230,6 +267,7 @@
             setStatus("存档格式不认识，已按空画布打开");
             toast("存档格式无法识别，请检查数据", "error");
           }
+          primeSequenceSlot(seqDoc);
         } else if (d && d.code === "not_found") {
           // 新图：空画布开张
           setStatus(isEdit ? "新建节点图" : "这张节点图还没有内容");
