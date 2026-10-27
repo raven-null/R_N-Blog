@@ -166,24 +166,16 @@
       });
   }
 
-  /* ══════════ 1.5 保存状态（不占画布界面） ══════════
+  /* ══════════ 1.5 保存状态（画布上不显示任何常驻提示） ══════════
      保存按钮不在画布里：后台编辑页右侧侧边栏本来就有「预览 / 发布 / 保存」，
      那里才是唯一入口（admin-edit.js 的 doSave 会调用 EEEmbed.saveGraph()）。
-     画布这边只负责：把「有没有未保存的改动」说清楚 ——
-       1. 顶部状态条常驻一行提示
-       2. 通知父页面，在保存按钮上做标记
+     画布这边只在真正保存时给一句短提示；「有未保存改动」不显示横幅，
+     那个状态用后台保存按钮右上角的橙点表示（通过 postMessage 告知父页面）。
   */
 
   function updateSaveBtn() {
     if (!isEdit) return;
-    if (st.saving) {
-      setStatus("保存中…", true);
-    } else if (st.dirty && st.loaded) {
-      setStatus("● 有未保存的改动 —— 点右侧「保存」写回服务器", true);
-    } else if (st.loaded) {
-      setStatus("已同步" + (st.baseRev ? " rev " + st.baseRev : ""));
-    }
-    // 让后台的保存按钮也知道（admin-edit.js 收到后加标记）
+    if (st.saving) setStatus("保存中…");
     post({ type: "graph-dirty", dirty: !!(st.dirty || st.saving), id: noteId });
   }
 
