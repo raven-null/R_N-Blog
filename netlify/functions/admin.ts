@@ -1450,8 +1450,10 @@ export default async (req: Request) => {
       // 否则写作页会把「密钥不存在」和「密钥被脱敏」都显示成「还没填」，作者会以为白填了。
       const writeMerged = mergeAiWrite(storedAi.write)
       const writeHasKey = !!writeMerged.apiKey
-      const hasKey = !!(req.headers.get("x-admin-key") || "")
-      if (!hasKey || !(await checkAuth(req))) writeMerged.apiKey = ""
+      // 这个 GET 是公开的（前台 chat.js / 首页都在读），任何密钥都不能吐给未认证请求。
+      // 前台 AI 走 /api/ai 由服务端代调，写作助手走 action=ai-write，两边都不需要把密钥发下来。
+      const isAdminReq = !!(req.headers.get("x-admin-key") || "") && (await checkAuth(req))
+      if (!isAdminReq) writeMerged.apiKey = ""
       // 合并默认值，确保关键字段有值
       const merged = {
         ...DEFAULT_SETTINGS,
@@ -1465,7 +1467,10 @@ export default async (req: Request) => {
           ...storedAi,
           provider: storedAi.provider || aiDefaults.provider,
           apiUrl: storedAi.apiUrl || aiDefaults.apiUrl,
-          apiKey: storedAi.apiKey || aiDefaults.apiKey,
+          // 密钥只发给管理员：前台访客走 /api/ai 由服务端代调，不需要也不该拿到它。
+          // hasAiKey 只说明「配了没」，不含密钥本身，好让后台区分「没配」与「被脱敏」。
+          apiKey: isAdminReq ? storedAi.apiKey || aiDefaults.apiKey : "",
+          hasAiKey: !!(storedAi.apiKey || aiDefaults.apiKey),
           model: storedAi.model || aiDefaults.model,
           systemPrompt: storedAi.systemPrompt || aiDefaults.systemPrompt,
           maxTokens: Number(storedAi.maxTokens) > 0 ? Number(storedAi.maxTokens) : aiDefaults.maxTokens,

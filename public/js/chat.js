@@ -61,6 +61,8 @@ const AIChat = {
     },
 
     // 从博客设置加载 AI 配置（后台「博客设置 → AI 助手」填写）
+    // 注意：这里只取「开关 / 模型 / 人设 / 采样参数」，密钥不取也不用 ——
+    // 请求统一走 /api/ai 由服务端带上密钥（前端拿不到，也不会被 CORS 拦）。
     async loadConfig() {
         try {
             const res = await fetch('/api/admin?action=settings');
@@ -68,15 +70,8 @@ const AIChat = {
             if (data.status === 'success' && data.data && data.data.ai) {
                 const ai = data.data.ai;
                 if (ai.enabled !== undefined) this.config.enabled = ai.enabled;
-                if (ai.apiUrl) this.config.apiUrl = ai.apiUrl;
-                if (ai.apiKey) this.config.apiKey = ai.apiKey;
                 if (ai.model) this.config.model = ai.model;
                 if (ai.systemPrompt) this.systemPrompt = ai.systemPrompt;
-                if (ai.maxTokens > 0) this.config.maxTokens = Number(ai.maxTokens);
-                if (ai.temperature !== undefined && ai.temperature !== null && ai.temperature !== '') {
-                    const t = Number(ai.temperature);
-                    if (!Number.isNaN(t)) this.config.temperature = t;
-                }
             }
         } catch (e) {
             console.warn('[AIChat] 配置加载失败，使用默认配置:', e);
@@ -621,27 +616,38 @@ const AIChat = {
     async streamAI(onDelta, signal) {
         const messages = this.buildMessages();
 
-        const response = await this.fetchWithRetry(this.config.apiUrl, {
+        // 走本站后端代理 /api/ai，不直连上游：
+        //   1. 浏览器直连 open.bigmodel.cn 会被 CORS 拦（对方不返 Access-Control-Allow-Origin）
+        //   2. API Key 不能放在前端 —— 代理里由服务端带上
+        // model 只是"想用哪个"，服务端会以后台设置为准（不认未配置的模型）
+        const response = await this.fetchWithRetry('/api/ai', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${this.config.apiKey}`
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                model: this.config.model,
                 messages,
-                max_tokens: this.config.maxTokens,
-                temperature: this.config.temperature,
-                stream: true
+                model: this.config.model
             }),
             signal
         });
 
         if (!response.ok) {
             const error = await response.json().catch(() => ({}));
-            const e = new Error(error.error?.message || `HTTP ${response.status}`);
+            const e = new Error(error.message || (error.error && error.error.message) || `HTTP ${response.status}`);
             e.status = response.status;
             throw e;
+        }
+
+        // 上游没按流式返回（部分接口忽略 stream）→ 一次性取全文
+        const ctype = (response.headers.get('content-type') || '').toLowerCase();
+        if (!ctype.includes('text/event-stream')) {
+            const data = await response.json().catch(() => null);
+            const text = data && data.choices && data.choices[0] &&
+                ((data.choices[0].message && data.choices[0].message.content) ||
+                    (data.choices[0].delta && data.choices[0].delta.content));
+            if (text) onDelta(text);
+            return;
         }
 
         const reader = response.body.getReader();
