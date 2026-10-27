@@ -715,8 +715,18 @@ const BlogApp = {
     async requestR18Key() {
         const existing = this.galleryViewKey();
         if (existing) {
-            this.applyR18Keys(existing);
-            return true;
+            // 已有凭据（后台登录的 admin_key 或本会话验证过的 gallery_key）：先验证，再决定是否弹窗
+            try {
+                const res = await fetch(this.config.galleryBase + '/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token: existing }),
+                });
+                if (res.ok) {
+                    this.applyR18Keys(existing);
+                    return true;
+                }
+            } catch (e) { /* 网络失败时回退到弹窗 */ }
         }
         const key = window.prompt('R16 / R18 内容仅管理员可见，请输入图库访问密码：');
         if (!key || !key.trim()) return false;
@@ -748,7 +758,13 @@ const BlogApp = {
 
     // 图库分类切换
     setGalleryTag(tag) {
-        this.galleryTag = tag || 'all';
+        const next = tag || 'all';
+        // 成人档且当前列表里没有成人图（观光身份）：先验证图库密码，通过后重新加载
+        if ((next === 'r18' || next === 'r16') && !(this.galleryImages || []).some(img => this.isR18Image(img))) {
+            this.requestR18Key().then((ok) => { if (ok) this.setGalleryTag(next); });
+            return;
+        }
+        this.galleryTag = next;
         this.renderGalleryByTag();
         // 更新分类按钮状态
         document.querySelectorAll('.gallery-tag-item').forEach(el => {
@@ -841,6 +857,8 @@ const BlogApp = {
             // 成人向档位只有管理员（能拿到 R16/R18）才显示
             if (images.some(img => img.rating === 'r18')) html += btn('r18', 'R18');
             if (images.some(img => img.rating === 'r16')) html += btn('r16', 'R16');
+            // 管理员身份（后台已登录）但凭据还不能解锁成人图时，给一个入口去输入图库密码
+            if (!images.some(img => this.isR18Image(img)) && this.getAdminKey()) html += btn('r18', 'R16/R18');
             html += tags.map(t => btn(t, t)).join('');
             list.innerHTML = html;
         } catch (e) {
