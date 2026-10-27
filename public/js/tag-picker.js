@@ -24,9 +24,10 @@
         if (document.getElementById(STYLE_ID)) return;
         var css = [
             '.tag-picker-wrap{position:relative}',
+            // 输入框本体也给个实底（原来是 6% 白，浅背景上边界看不清）
             '.tag-picker-input{display:flex;flex-wrap:wrap;gap:4px;padding:8px 12px;' +
-            'background:rgba(255,255,255,0.06);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);' +
-            'border:1px solid var(--glass-border,var(--border,rgba(255,255,255,.14)));' +
+            'background:rgba(255,255,255,0.08);' +
+            'border:1px solid rgba(255,255,255,.18);' +
             'border-radius:var(--radius-sm,10px);min-height:36px;cursor:text;align-items:center;transition:all .25s ease}',
             '.tag-picker-input:focus-within{border-color:var(--accent);box-shadow:0 0 0 2px rgba(79,195,247,0.15)}',
             '.tag-picker-input .tp-chip{display:flex;align-items:center;gap:4px;padding:3px 10px;' +
@@ -39,18 +40,20 @@
             '.tag-picker-input input{flex:1;min-width:80px;border:none;background:transparent;' +
             'color:var(--text,#fff);font-size:12px;outline:none;font-family:inherit}',
             '.tag-picker-input input::placeholder{color:rgba(255,255,255,0.4)}',
+            // 下拉面板（v1.1.0）：原来是 --glass-bg 那种几乎是透明的玻璃底 + backdrop-filter，
+            // 压在写作页的浅色/模糊背景上就变成一片惨白，条目文字还是 rgba(255,255,255,.7)，
+            // 结果是「颜色太淡了，看不清」。改成不透明深底 + 更亮的字。
             '.tag-picker-dropdown{display:none;position:absolute;top:100%;left:0;right:0;' +
-            'background:var(--glass-bg,var(--bg-card,#15161c));backdrop-filter:blur(24px) saturate(170%);' +
-            '-webkit-backdrop-filter:blur(24px) saturate(170%);' +
-            'border:1px solid var(--glass-border,var(--border,rgba(255,255,255,.14)));' +
-            'border-radius:var(--radius-sm,10px);margin-top:6px;max-height:180px;overflow-y:auto;z-index:50;' +
-            'box-shadow:0 16px 48px -8px rgba(0,0,0,0.6);animation:tpSlide .25s ease}',
+            'background:#15161d;' +
+            'border:1px solid rgba(255,255,255,.18);' +
+            'border-radius:var(--radius-sm,10px);margin-top:6px;max-height:220px;overflow-y:auto;z-index:50;' +
+            'box-shadow:0 18px 48px -10px rgba(0,0,0,.85);animation:tpSlide .25s ease}',
             '@keyframes tpSlide{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}',
             '.tag-picker-dropdown.open{display:block}',
-            '.tag-picker-dropdown .tp-item{padding:8px 14px;font-size:12px;color:rgba(255,255,255,0.7);cursor:pointer;transition:all .2s ease}',
-            '.tag-picker-dropdown .tp-item:hover{background:rgba(255,255,255,0.1);color:var(--text,#fff);padding-left:18px}',
-            '.tag-picker-dropdown .tp-item.selected{color:var(--accent);background:rgba(79,195,247,0.1)}',
-            '.tag-picker-dropdown .tp-empty{padding:10px 12px;font-size:12px;color:var(--text-muted,rgba(255,255,255,.5))}',
+            '.tag-picker-dropdown .tp-item{padding:9px 14px;font-size:12.5px;color:rgba(255,255,255,.92);cursor:pointer;transition:background .15s ease,color .15s ease}',
+            '.tag-picker-dropdown .tp-item:hover{background:rgba(115,170,255,.22);color:#fff}',
+            '.tag-picker-dropdown .tp-item.selected{color:#9fc4ff;background:rgba(115,170,255,.16)}',
+            '.tag-picker-dropdown .tp-empty{padding:10px 12px;font-size:12px;color:rgba(255,255,255,.6)}',
         ].join('\n');
         var el = document.createElement('style');
         el.id = STYLE_ID;
