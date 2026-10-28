@@ -1094,50 +1094,48 @@ const BlogApp = {
         return null;
     },
 
-    // 渲染主页（最近动态 + 数据行 + 文章大卡与列表）
+    // 渲染主页（入口数字 + 文章区 + 今日简报）
     async renderHome(force = false) {
         // 文章区不依赖网络，先渲染，避免图库接口慢时主页整块空白
         this.renderHomeArticles();
         this.renderHomeNews();
-
-        const box = document.getElementById('dashboardStats');
-        if (!box || (box.dataset.rendered && !force)) return;
-        box.dataset.rendered = '1';
-
-        const settings = this.getBlogSettings();
-        const stats = (settings && settings.stats) || { posts: true, tags: true, words: true, images: true };
-
-        const posts = this.posts.length;
-        const tags = new Set(this.posts.flatMap(p => p.tags || [])).size;
-        const totalWords = this.posts.reduce((s, p) => s + (p.wordCount || 0), 0);
-        let images = 0;
-        try {
-            // 图库来自外部站点，给个上限，接口慢/离线时数据行不至于一直空着
-            const list = await Promise.race([
-                this.loadGalleryImages(),
-                new Promise((_, reject) => setTimeout(() => reject(new Error('图库接口超时')), 3000)),
-            ]);
-            images = (list || []).length;
-        } catch (e) { }
-
-        // 紧凑数据行（根据设置选择显示项）
-        const items = [];
-        if (stats.posts !== false) items.push(`<span class="home-stat"><b>${posts}</b>文章</span>`);
-        if (stats.tags !== false) items.push(`<span class="home-stat"><b>${tags}</b>标签</span>`);
-        if (stats.words !== false) items.push(`<span class="home-stat"><b>${totalWords.toLocaleString('zh-CN')}</b>字</span>`);
-        if (stats.images !== false) items.push(`<span class="home-stat"><b>${images}</b>图片</span>`);
-
-        box.innerHTML = items.join('') || '<span class="home-stat"><b>—</b>暂无数据</span>';
+        this.renderHomeCta(force);
 
         // 入场动效（Anime.js）
         if (typeof anime !== 'undefined') {
-            anime.animate('.view-home .dash-hero, .view-home .home-stats, .view-home .home-articles > *, .view-home .home-shortcuts, .view-home .dash-bottom', {
+            anime.animate('.view-home .dash-hero, .view-home .home-articles > *, .view-home .home-news, .view-home .home-shortcuts, .view-home .dash-bottom', {
                 opacity: [0, 1],
                 translateY: [16, 0],
                 duration: 500,
                 delay: anime.stagger(60),
                 ease: 'out(2)'
             });
+        }
+    },
+
+    // 首页入口数字：文章数 / 图库照片数（图库接口慢或离线时显示占位）
+    async renderHomeCta(force = false) {
+        const postsEl = document.getElementById('homeCtaPosts');
+        const photosEl = document.getElementById('homeCtaPhotos');
+        if (!postsEl && !photosEl) return;
+
+        if (postsEl && (!postsEl.dataset.rendered || force)) {
+            postsEl.textContent = this.posts.length;
+            postsEl.dataset.rendered = '1';
+        }
+
+        if (photosEl && (!photosEl.dataset.rendered || force)) {
+            photosEl.dataset.rendered = '1';
+            try {
+                // 图库来自外部站点，给个上限，避免一直停在占位
+                const list = await Promise.race([
+                    this.loadGalleryImages(),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('图库接口超时')), 3000)),
+                ]);
+                photosEl.textContent = (list || []).length;
+            } catch (e) {
+                photosEl.textContent = '—';
+            }
         }
     },
 

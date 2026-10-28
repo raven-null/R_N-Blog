@@ -3462,3 +3462,90 @@ html.reader-focus .article-content {
         font-size: 16px;
     }
 }
+
+/* ===== 首页入口：大号彩色数字 + 小标签 + 竖分隔线 ===== */
+.home-hero .home-cta {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    margin-top: 12px;
+}
+
+.home-cta-item {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+    padding: 0 20px;
+    border: 0;
+    border-left: 1px solid var(--border);
+    background: none;
+    font-family: inherit;
+    text-align: left;
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
+    transition: transform 0.2s;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.home-cta-item:first-child {
+    padding-left: 0;
+    border-left: 0;
+}
+
+.home-cta-big {
+    font-family: 'Courier New', monospace;
+    font-size: 24px;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: 1px;
+    background: linear-gradient(135deg, #93a5ff, #5f74f2);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    transition: filter 0.2s;
+}
+
+.home-cta-big.is-violet {
+    background: linear-gradient(135deg, #c584ff, #8b3dfa);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.home-cta-big.is-pink {
+    background: linear-gradient(135deg, #ff9dc4, #ff3d7f);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-size: 20px;
+}
+
+.home-cta-sub {
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--text-muted);
+}
+
+.home-cta-item:hover {
+    transform: translateY(-2px);
+}
+
+.home-cta-item:hover .home-cta-big {
+    filter: brightness(1.18);
+}
+
+@media (max-width: 640px) {
+    .home-cta-item {
+        padding: 0 14px;
+    }
+
+    .home-cta-big {
+        font-size: 21px;
+    }
+
+    .home-cta-big.is-pink {
+        font-size: 17px;
+    }
+}

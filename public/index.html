@@ -13,7 +13,7 @@
     <script src="/js/site-icon.js?v=1.0.0" defer></script>
 
     <!-- Styles -->
-    <link rel="stylesheet" href="css/style.css?v=3.19.0">
+    <link rel="stylesheet" href="css/style.css?v=3.20.0">
     <link rel="stylesheet" href="css/glass.css?v=1.0.14">
     <link rel="stylesheet" href="css/wheel.css?v=1.0.0">
 
@@ -142,9 +142,18 @@
                             <div class="dash-name">博主</div>
                             <div class="dash-bio">欢迎来到我的博客</div>
                             <div class="home-cta">
-                                <button class="home-cta-btn home-cta-primary" onclick="BlogApp.goView('blog')">浏览文章</button>
-                                <button class="home-cta-btn" onclick="BlogApp.goView('gallery')">看看图库</button>
-                                <a class="home-cta-btn home-cta-ghost" href="feed.xml" target="_blank" rel="noopener">RSS 订阅</a>
+                                <button class="home-cta-item" onclick="BlogApp.goView('blog')">
+                                    <b class="home-cta-big" id="homeCtaPosts">—</b>
+                                    <span class="home-cta-sub">文章</span>
+                                </button>
+                                <button class="home-cta-item" onclick="BlogApp.goView('gallery')">
+                                    <b class="home-cta-big is-violet" id="homeCtaPhotos">—</b>
+                                    <span class="home-cta-sub">照片</span>
+                                </button>
+                                <a class="home-cta-item" href="feed.xml" target="_blank" rel="noopener">
+                                    <b class="home-cta-big is-pink">RSS</b>
+                                    <span class="home-cta-sub">订阅</span>
+                                </a>
                             </div>
                         </div>
                         <div class="dash-clock" id="dashClock">
@@ -152,9 +161,6 @@
                             <div class="dash-clock-time" id="dashClockTime"></div>
                         </div>
                     </div>
-
-                    <!-- 数据概览 -->
-                    <div class="home-stats" id="dashboardStats"></div>
 
                     <!-- 最新文章：左封面大卡 + 右更新列表 -->
                     <div class="home-articles">
@@ -330,7 +336,7 @@
 
     <!-- Scripts -->
     <script src="js/theme.js?v=3.13.6" defer></script>
-    <script src="js/app.js?v=3.45.0" defer></script>
+    <script src="js/app.js?v=3.46.0" defer></script>
     <script src="js/animations.js?v=3.14.0" defer></script>
 
     <script>

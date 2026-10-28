@@ -2378,10 +2378,6 @@
             document.getElementById('setViewHome').checked=s.views?s.views.home!==false:true;
             document.getElementById('setViewBlog').checked=s.views?s.views.blog!==false:true;
             document.getElementById('setViewGallery').checked=s.views?s.views.gallery!==false:true;
-            document.getElementById('setStatPosts').checked=s.stats?s.stats.posts!==false:true;
-            document.getElementById('setStatTags').checked=s.stats?s.stats.tags!==false:true;
-            document.getElementById('setStatWords').checked=s.stats?s.stats.words!==false:true;
-            document.getElementById('setStatImages').checked=s.stats?s.stats.images!==false:true;
             document.getElementById('setNavTags').value=(s.navTags||[]).join(',');
             document.getElementById('setAboutVersion').value=s.about?s.about.version||'':'';
             document.getElementById('setAboutTech').value=s.about?s.about.tech||'':'';
@@ -2584,12 +2580,6 @@
                     home:document.getElementById('setViewHome').checked,
                     blog:document.getElementById('setViewBlog').checked,
                     gallery:document.getElementById('setViewGallery').checked,
-                },
-                stats:{
-                    posts:document.getElementById('setStatPosts').checked,
-                    tags:document.getElementById('setStatTags').checked,
-                    words:document.getElementById('setStatWords').checked,
-                    images:document.getElementById('setStatImages').checked,
                 },
                 navTags:document.getElementById('setNavTags').value.split(',').map(s=>s.trim()).filter(Boolean),
                 about:{
