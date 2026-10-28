@@ -13,7 +13,7 @@
     <script src="/js/site-icon.js?v=1.0.0" defer></script>
 
     <!-- Styles -->
-    <link rel="stylesheet" href="css/style.css?v=3.34.0">
+    <link rel="stylesheet" href="css/style.css?v=3.35.0">
     <link rel="stylesheet" href="css/glass.css?v=1.0.14">
     <link rel="stylesheet" href="css/wheel.css?v=1.0.0">
 
@@ -67,10 +67,6 @@
                     <button class="view-btn" data-view="gallery" onclick="BlogApp.switchView('gallery')">图库</button>
                     <button class="view-btn" data-view="projects" onclick="BlogApp.switchView('projects')">项目</button>
                 </div>
-                <!-- 主题切换（圆角矩形，图标 + 当前主题名） -->
-                <button class="top-theme-btn" id="topThemeBtn" type="button" onclick="ThemeManager.nextTheme()">
-                    <span class="top-theme-icon">◐</span><span class="top-theme-name">主题</span>
-                </button>
             </div>
         </header>
 
@@ -192,6 +188,11 @@
                             <div class="dash-clock-date" id="dashClockDate"></div>
                             <div class="dash-clock-time" id="dashClockTime"></div>
                         </div>
+
+                        <!-- 主题切换（圆角矩形，图标 + 当前主题名） -->
+                        <button class="home-theme-btn" id="homeThemeBtn" type="button" onclick="ThemeManager.nextTheme()">
+                            <span class="home-theme-icon">◐</span><span class="home-theme-name">主题</span>
+                        </button>
                     </div>
 
                     <!-- 文章区：左 = 最新文章 + 图库缩略，右 = 今日简报 -->
@@ -346,7 +347,7 @@
     </div>
 
     <!-- Scripts -->
-    <script src="js/theme.js?v=3.15.0" defer></script>
+    <script src="js/theme.js?v=3.16.0" defer></script>
     <script src="js/app.js?v=3.58.0" defer></script>
     <script src="js/animations.js?v=3.14.0" defer></script>
 

@@ -253,10 +253,10 @@ const ThemeManager = {
             btn.innerHTML = theme.icon;
             btn.title = theme.name;
         });
-        // 主页顶部的圆角矩形主题按钮：图标 + 当前主题名
-        document.querySelectorAll('.top-theme-btn').forEach(btn => {
+        // 主页欢迎区里的圆角矩形主题按钮：图标 + 当前主题名
+        document.querySelectorAll('.home-theme-btn').forEach(btn => {
             const theme = this.getCurrentTheme();
-            btn.innerHTML = `<span class="top-theme-icon">${theme.icon}</span><span class="top-theme-name">${theme.name}</span>`;
+            btn.innerHTML = `<span class="home-theme-icon">${theme.icon}</span><span class="home-theme-name">${theme.name}</span>`;
             btn.title = `切换主题（当前：${theme.name}）`;
             btn.setAttribute('aria-label', `切换主题，当前 ${theme.name}`);
         });

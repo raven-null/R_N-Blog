@@ -3994,15 +3994,21 @@ html.reader-focus .article-content {
     opacity: 0.75;
 }
 
-/* ===== 主页顶部：主题切换按钮（圆角矩形，图标 + 当前主题名） ===== */
-.top-theme-btn {
+/* ===== 主页欢迎区：主题切换按钮（圆角矩形，图标 + 当前主题名） ===== */
+.home-hero {
+    position: relative;
+}
+
+.home-theme-btn {
+    position: absolute;
+    right: 18px;
+    bottom: 14px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 6px;
-    height: 34px;
-    min-width: 88px;
-    padding: 0 14px;
+    height: 32px;
+    padding: 0 12px;
     border: 1px solid var(--border);
     border-radius: 10px;
     background: var(--bg-card);
@@ -4016,31 +4022,33 @@ html.reader-focus .article-content {
     -webkit-tap-highlight-color: transparent;
 }
 
-.top-theme-btn:hover {
+.home-theme-btn:hover {
     border-color: var(--accent);
     color: var(--text-primary);
     transform: translateY(-1px);
 }
 
-.top-theme-btn:active {
+.home-theme-btn:active {
     transform: translateY(0);
 }
 
-.top-theme-icon {
+.home-theme-icon {
     font-size: 14px;
     line-height: 1;
 }
 
-.top-theme-name {
+.home-theme-name {
     font-size: 11px;
     line-height: 1;
     white-space: nowrap;
 }
 
-/* 窄屏顶部空间紧张：隐藏顶部主题按钮（移动端可用轮盘里的「主题」） */
+/* 窄屏欢迎区会换行，按钮改为行内排列，避免绝对定位压到内容 */
 @media (max-width: 700px) {
-    .top-theme-btn {
-        display: none;
+    .home-theme-btn {
+        position: static;
+        margin-top: 10px;
+        align-self: flex-start;
     }
 }
 
