@@ -1099,6 +1099,7 @@ const BlogApp = {
         // 文章区不依赖网络，先渲染，避免图库接口慢时主页整块空白
         this.renderHomeArticles();
         this.renderHomeNews();
+        this.renderHomeProjects();
         this.renderHomeCta(force);
 
         // 入场动效（Anime.js）
@@ -1281,6 +1282,87 @@ const BlogApp = {
             const action = m ? m[1] : '';
             el.classList.toggle('is-active', action === this.currentView);
         });
+    },
+
+    // 加载 GitHub 仓库列表（后端 /api/github，失败返回空数组）
+    async loadGithubRepos() {
+        const CACHE_KEY = 'blog-github-repos';
+        const CACHE_TTL = 10 * 60 * 1000;
+        try {
+            const cached = JSON.parse(sessionStorage.getItem(CACHE_KEY) || 'null');
+            if (cached && Array.isArray(cached.items) && Date.now() - cached.t < CACHE_TTL) return cached.items;
+        } catch (e) { /* 忽略缓存异常 */ }
+
+        try {
+            const res = await fetch(`${this.config.apiBase}/api/github?limit=12`, { cache: 'no-store' });
+            if (!res.ok) {
+                let msg = 'HTTP ' + res.status;
+                try {
+                    const errBody = await res.json();
+                    if (errBody && errBody.message) msg = errBody.message;
+                } catch (e) { /* 忽略解析失败 */ }
+                throw new Error(msg);
+            }
+            const data = await res.json();
+            const items = data && Array.isArray(data.items) ? data.items : [];
+            try {
+                sessionStorage.setItem(CACHE_KEY, JSON.stringify({ t: Date.now(), items }));
+            } catch (e) { /* 忽略写入失败 */ }
+            return items;
+        } catch (e) {
+            console.warn('[github] 项目列表加载失败:', e);
+            return [];
+        }
+    },
+
+    // 渲染主页「我的项目」（GitHub 仓库卡片）
+    async renderHomeProjects() {
+        const box = document.getElementById('homeProjectsGrid');
+        if (!box || box.dataset.rendered) return;
+        box.dataset.rendered = '1';
+
+        const items = await this.loadGithubRepos();
+        if (!items.length) {
+            box.innerHTML = '<div class="home-empty">项目列表暂时不可用</div>';
+            return;
+        }
+
+        box.innerHTML = items.map(repo => {
+            const color = this.escAttr(repo.languageColor || '#8b8b8b');
+            const lang = repo.language
+                ? `<span class="home-project-lang"><i style="background:${color}"></i>${this.esc(repo.language)}</span>`
+                : '';
+            const stars = Number(repo.stars) > 0 ? `<span class="home-project-star">★ ${Number(repo.stars)}</span>` : '';
+            return `
+                <a class="home-project" href="${this.escAttr(repo.htmlUrl)}" target="_blank" rel="noopener">
+                    <div class="home-project-head">
+                        <span class="home-project-name">${this.esc(repo.name)}</span>
+                        ${stars}
+                    </div>
+                    <div class="home-project-desc">${this.esc(repo.description || '暂无描述')}</div>
+                    <div class="home-project-foot">
+                        ${lang}
+                        <span class="home-project-time">${this.relativeTime(repo.updatedAt)}</span>
+                    </div>
+                </a>
+            `;
+        }).join('');
+    },
+
+    // 相对时间：刚刚 / 12 分钟前 / 3 天前 / 2 个月前
+    relativeTime(iso) {
+        const t = new Date(iso).getTime();
+        if (!t || isNaN(t)) return '';
+        const diff = Date.now() - t;
+        if (diff < 0) return '刚刚';
+        const minute = 60 * 1000;
+        const hour = 60 * minute;
+        const day = 24 * hour;
+        if (diff < hour) return Math.max(1, Math.round(diff / minute)) + ' 分钟前';
+        if (diff < day) return Math.round(diff / hour) + ' 小时前';
+        if (diff < 30 * day) return Math.round(diff / day) + ' 天前';
+        if (diff < 365 * day) return Math.round(diff / (30 * day)) + ' 个月前';
+        return Math.round(diff / (365 * day)) + ' 年前';
     },
 
     // 执行轮盘选项

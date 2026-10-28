@@ -19,6 +19,12 @@
   to = "/.netlify/functions/news"
   status = 200
 
+# GitHub 仓库列表（主页「我的项目」卡片）
+[[redirects]]
+  from = "/api/github"
+  to = "/.netlify/functions/github"
+  status = 200
+
 [[redirects]]
   from = "/api/comments"
   to = "/.netlify/functions/comments"

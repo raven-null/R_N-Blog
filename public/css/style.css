@@ -3549,3 +3549,111 @@ html.reader-focus .article-content {
         font-size: 17px;
     }
 }
+
+/* ===== 主页「我的项目」（GitHub 仓库） ===== */
+.home-projects-all {
+    float: right;
+    font-size: 12px;
+    font-weight: 400;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.home-projects-all:hover {
+    color: var(--accent);
+}
+
+.home-projects-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 12px;
+}
+
+.home-project {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--bg-secondary);
+    text-decoration: none;
+    color: inherit;
+    transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+}
+
+.home-project:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 24px var(--shadow);
+}
+
+.home-project-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.home-project-name {
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: var(--text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.home-project-star {
+    flex-shrink: 0;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.home-project-desc {
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--text-muted);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    min-height: 2.7em;
+}
+
+.home-project-foot {
+    margin-top: auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.home-project-lang {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.home-project-lang i {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.home-project-time {
+    white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+    .home-projects-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}

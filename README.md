@@ -9,6 +9,7 @@
 - 🏷️ **标签体系** - 标签按钮弹出面板，展示全部标签及文章计数，支持筛选
 - 🎨 **十套主题** - Dark / Light / Cyberpunk / Sepia / Neon / Nord / Dracula / Ocean / Forest / Sunset，自动持久化
 - 🏠 **三视图** - 主页（身份名片 / 文章数 · 照片数 · RSS 入口 / 封面大卡 + 更新列表 / 今日简报 / 内容入口）/ 文章（瀑布流卡片）/ 图库（灯箱相册），顶栏滑块切换
+- 📦 **GitHub 项目** - 主页「我的项目」展示仓库卡片（名称 / 描述 / 语言色点 / 更新时间），数据经后端 `/api/github` 聚合并缓存 30 分钟
 - 📰 **今日简报** - 已并入主页：后端 NewsNow API 聚合 17 个热门来源，每小时更新，每期展示最新 8 条并可按出品方筛选；失败自动回退本地数据
 - 💬 **留言系统** - 文章页底部支持留言，数据存于后端 Netlify Blobs（`/api/comments`）
 - 📚 **阅读体验** - 阅读工具栏（字号 / 行距 / 字体 / 护眼 / 夜间 / 专注）、目录、进度条、代码复制、图片灯箱
@@ -44,7 +45,7 @@ python -m http.server 8080
 
 ### 后端服务（可选，用于资讯与留言）
 
-今日简报（主页内）与留言功能依赖 Netlify 后端（`https://r-n-blog-server.netlify.app`，代码在独立仓库 `02-blog-server`）。后端不可用时：
+今日简报（主页内）、留言、头像代理与「我的项目」卡片依赖 Netlify 后端（`https://r-n-blog-server.netlify.app`，代码在独立仓库 `02-blog-server`）。后端不可用时：
 
 - **今日简报**：自动回退读取本地 `data/recommendations.json`
 - **留言**：显示「留言功能暂时不可用」
@@ -119,6 +120,22 @@ node scripts/build-gallery.js
 
 - 本地生成：`node scripts/update-news.js`（`--dry` 预览不落盘）
 - 校验：`node scripts/check-recommendations.js`（`--check` 追加链接体检）
+
+## 📦 GitHub 项目
+
+主页「我的项目」卡片通过后端 `/api/github`（`netlify/functions/github.ts`）拉取 GitHub 仓库：
+
+- 默认账号 `raven-null`，自动排除 fork 与已归档仓库，按最近提交排序
+- 结果写入 **Netlify Blobs**（本地开发回退 `.local-data/github-repos`），缓存 30 分钟；接口失败时返回上一次成功的缓存
+- 可选环境变量（Netlify → Site settings → Environment variables）：
+
+| 变量 | 说明 |
+|------|------|
+| `GITHUB_TOKEN` | 个人访问令牌（只读即可）。不配也能用，匿名接口限速 60 次/小时，配合缓存完全够用 |
+| `GITHUB_OWNER` | 账号名，默认 `raven-null` |
+| `GITHUB_CACHE_TTL` | 缓存毫秒数，默认 `1800000`（30 分钟） |
+
+手动刷新：`GET /api/github?refresh=1`。
 
 ## 💬 留言
 
