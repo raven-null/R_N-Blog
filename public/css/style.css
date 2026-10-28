@@ -3956,8 +3956,8 @@ html.reader-focus .article-content {
 .home-articles > .home-news .news-list {
     flex: 1;
     min-height: 0;
-    /* 限高：无限追加的内容在列表内部滚动，卡片高度保持稳定 */
-    max-height: min(420px, 56vh);
+    /* 固定盒子高度：无限追加的内容只在列表内部滚动，卡片本身不被拉长 */
+    max-height: 420px;
     overflow-y: auto;
     overscroll-behavior: contain;
 }
@@ -4028,8 +4028,9 @@ html.reader-focus .article-content {
     }
 
     .home-articles > .home-news .news-list {
-        max-height: none;
-        overflow-y: visible;
+        /* 窄屏同样在盒子内滚动，不把卡片拉长 */
+        max-height: min(380px, 60vh);
+        overflow-y: auto;
     }
 
     .home-articles > .home-news .news-item-title {
