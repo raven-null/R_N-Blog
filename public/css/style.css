@@ -3956,7 +3956,10 @@ html.reader-focus .article-content {
 .home-articles > .home-news .news-list {
     flex: 1;
     min-height: 0;
+    /* 限高：无限追加的内容在列表内部滚动，卡片高度保持稳定 */
+    max-height: min(420px, 56vh);
     overflow-y: auto;
+    overscroll-behavior: contain;
 }
 
 .home-articles > .home-news .news-item {
@@ -3976,6 +3979,16 @@ html.reader-focus .article-content {
 
 .home-articles > .home-news .news-item-meta {
     display: none;
+}
+
+/* 简报无限下滑：到底提示 */
+.news-end {
+    padding: 14px 8px 6px;
+    text-align: center;
+    font-size: 11px;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+    opacity: 0.75;
 }
 
 @media (max-width: 900px) {

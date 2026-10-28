@@ -976,7 +976,7 @@ const BlogApp = {
     async loadNews() {
         // 后端 API（NewsNow 聚合资讯）
         try {
-            const res = await fetch(`${this.config.apiBase}/api/news?flat=1&limit=80`);
+            const res = await fetch(`${this.config.apiBase}/api/news?flat=1&limit=100`);
             if (res.ok) {
                 const data = await res.json();
                 if (data && data.status === 'success' && Array.isArray(data.items)) {
@@ -1012,7 +1012,7 @@ const BlogApp = {
         return Array.isArray(items) ? items : [];
     },
 
-    // 渲染主页「今日简报」（原「每日新闻」视图，取最新若干条）
+    // 渲染主页「今日简报」（无限下滑：初始一批，滚到底继续追加）
     async renderHomeNews() {
         const list = document.getElementById('newsList');
         if (!list || list.dataset.rendered) return;
@@ -1020,33 +1020,106 @@ const BlogApp = {
         try {
             const items = await this.loadNews();
             this.newsItems = items;
-            this.buildNewsFilter(items);
-            this.renderNewsList(items);
+            this.newsPool = items;
+            this.newsShown = 0;
+            list.innerHTML = '';
+            this.renderMoreNews();
+            this.bindNewsInfiniteScroll(list);
+            this.fillNewsIfShort(list);
         } catch (e) {
             console.error('资讯加载失败:', e);
             list.innerHTML = '<div class="home-empty">资讯加载失败，稍后再试</div>';
         }
     },
 
-    // 根据新闻出品方动态生成筛选按钮
-    buildNewsFilter(items) {
-        const box = document.getElementById('newsFilter');
-        if (!box) return;
-        const sources = new Set(items.map(it => it.source).filter(Boolean));
-        box.innerHTML = '<button class="news-filter-btn active" data-cat="all" onclick="BlogApp.filterNews(\'all\')">全部</button>' +
-            [...sources].map(s => `<button class="news-filter-btn" data-cat="${this.esc(s)}" onclick="BlogApp.filterNews('${this.esc(s)}')">${this.esc(s)}</button>`).join('');
+    // 每条资讯的 HTML（列表与追加共用）
+    newsItemHTML(it) {
+        return `
+            <a class="news-item" href="${this.escAttr(it.url || '#')}" target="_blank" rel="noopener">
+                <span class="news-item-cat">${this.esc(it.source || it.category || '资讯')}</span>
+                <span class="news-item-title">${this.esc(it.title)}</span>
+                <span class="news-item-meta">${this.esc(it.source || '')}${it.date ? ' · ' + this.formatDate(it.date) : ''}</span>
+            </a>
+        `;
     },
 
-    // 筛选资讯（全部 / 出品方）
+    // 追加下一批资讯（每次 8 条），池子见底后给出提示
+    renderMoreNews() {
+        const list = document.getElementById('newsList');
+        if (!list) return;
+        const pool = this.newsPool || [];
+        const batch = 8;
+
+        if (this.newsShown >= pool.length) {
+            if (!list.querySelector('.news-end')) {
+                const end = document.createElement('div');
+                end.className = 'news-end';
+                end.textContent = pool.length ? `已显示全部 ${pool.length} 条` : '暂无资讯';
+                list.appendChild(end);
+            }
+            return;
+        }
+
+        const next = pool.slice(this.newsShown, this.newsShown + batch);
+        this.newsShown += next.length;
+        list.insertAdjacentHTML('beforeend', next.map(it => this.newsItemHTML(it)).join(''));
+
+        // 新追加的条目做个淡入，避免突兀
+        if (typeof anime !== 'undefined') {
+            const items = list.querySelectorAll('.news-item');
+            const fresh = [...items].slice(-next.length);
+            anime.animate(fresh, {
+                opacity: [0, 1],
+                translateX: [16, 0],
+                duration: 320,
+                delay: anime.stagger(20),
+                ease: 'out(2)'
+            });
+        }
+    },
+
+    // 列表内无限下滑：接近底部就再追加一批
+    bindNewsInfiniteScroll(list) {
+        if (!list || list.dataset.scrollBound) return;
+        list.dataset.scrollBound = '1';
+        let ticking = false;
+        list.addEventListener('scroll', () => {
+            if (ticking) return;
+            ticking = true;
+            requestAnimationFrame(() => {
+                ticking = false;
+                if (list.scrollTop + list.clientHeight >= list.scrollHeight - 60) {
+                    this.renderMoreNews();
+                }
+            });
+        }, { passive: true });
+    },
+
+    // 内容不足一屏（没有滚动条就没有滚动事件）时继续补，直到能滚或池子见底
+    fillNewsIfShort(list) {
+        let guard = 0;
+        while (guard++ < 30) {
+            const hasMore = (this.newsPool || []).length > (this.newsShown || 0);
+            if (!hasMore) {
+                this.renderMoreNews(); // 池子已空：补上「已显示全部」提示
+                return;
+            }
+            if (list.scrollHeight > list.clientHeight + 4) return;
+            this.renderMoreNews();
+        }
+    },
+
+    // 筛选资讯（保留给旧缓存页面兜底；主页已不展示来源按钮）
     filterNews(src) {
-        document.querySelectorAll('#newsFilter .news-filter-btn').forEach(b => {
+        const buttons = document.querySelectorAll('#newsFilter .news-filter-btn');
+        buttons.forEach(b => {
             b.classList.toggle('active', b.dataset.cat === src);
         });
         const items = src === 'all' ? this.newsItems : this.newsItems.filter(it => it.source === src);
         this.renderNewsList(items);
     },
 
-    // 渲染资讯列表（主页只展示最新 8 条，一行一条：出品方徽标 + 标题 + 出品方 · 日期）
+    // 一次性渲染资讯列表（筛选兜底用）
     renderNewsList(items) {
         const list = document.getElementById('newsList');
         if (!list) return;
@@ -1055,24 +1128,7 @@ const BlogApp = {
             list.innerHTML = '<div class="home-empty">暂无资讯</div>';
             return;
         }
-        list.innerHTML = rows.map(it => `
-            <a class="news-item" href="${it.url || '#'}" target="_blank" rel="noopener">
-                <span class="news-item-cat">${this.esc(it.source || it.category || '资讯')}</span>
-                <span class="news-item-title">${this.esc(it.title)}</span>
-                <span class="news-item-meta">${this.esc(it.source || '')}${it.date ? ' · ' + this.formatDate(it.date) : ''}</span>
-            </a>
-        `).join('');
-
-        // 入场动效（Anime.js）
-        if (typeof anime !== 'undefined') {
-            anime.animate(list.querySelectorAll('.news-item'), {
-                opacity: [0, 1],
-                translateX: [20, 0],
-                duration: 400,
-                delay: anime.stagger(25),
-                ease: 'out(2)'
-            });
-        }
+        list.innerHTML = rows.map(it => this.newsItemHTML(it)).join('');
     },
 
     // HTML 转义（用于卡片文本）
