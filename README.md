@@ -8,8 +8,8 @@
 - 📝 **Markdown 文章** - `posts` 目录丢入 `.md` 文件即可显示
 - 🏷️ **标签体系** - 标签按钮弹出面板，展示全部标签及文章计数，支持筛选
 - 🎨 **十套主题** - Dark / Light / Cyberpunk / Sepia / Neon / Nord / Dracula / Ocean / Forest / Sunset，自动持久化
-- 🏠 **五视图** - 主页（个人名片 / 数据概览 / 最新文章 / 内容入口）/ 文章（瀑布流卡片）/ 图库（灯箱相册）/ 每日新闻（资讯列表，按出品方筛选），顶栏滑块切换
-- 📰 **每日新闻** - 后端 NewsNow API 聚合 17 个热门来源，每小时更新；失败自动回退本地数据；按新闻出品方筛选
+- 🏠 **三视图** - 主页（身份名片 / 数据概览 / 封面大卡 + 更新列表 / 今日简报 / 内容入口）/ 文章（瀑布流卡片）/ 图库（灯箱相册），顶栏滑块切换
+- 📰 **今日简报** - 已并入主页：后端 NewsNow API 聚合 17 个热门来源，每小时更新，每期展示最新 8 条并可按出品方筛选；失败自动回退本地数据
 - 💬 **留言系统** - 文章页底部支持留言，数据存于后端 Netlify Blobs（`/api/comments`）
 - 📚 **阅读体验** - 阅读工具栏（字号 / 行距 / 字体 / 护眼 / 夜间 / 专注）、目录、进度条、代码复制、图片灯箱
 - ⚡ **动画** - Anime.js 驱动卡片入场、视图切换等动效
@@ -32,7 +32,7 @@ python -m http.server 8080
 # 右键 index.html -> Open with Live Server
 ```
 
-> 本地运行无后端时，每日新闻与留言会显示"功能暂时不可用"或回退本地数据；完整功能需部署后端（见下文「后端服务」）。
+> 本地运行无后端时，今日简报与留言会显示"功能暂时不可用"或回退本地数据；完整功能需部署后端（见下文「后端服务」）。
 
 ### 部署到 GitHub Pages
 
@@ -44,9 +44,9 @@ python -m http.server 8080
 
 ### 后端服务（可选，用于资讯与留言）
 
-每日新闻与留言功能依赖 Netlify 后端（`https://r-n-blog-server.netlify.app`，代码在独立仓库 `02-blog-server`）。后端不可用时：
+今日简报（主页内）与留言功能依赖 Netlify 后端（`https://r-n-blog-server.netlify.app`，代码在独立仓库 `02-blog-server`）。后端不可用时：
 
-- **每日新闻**：自动回退读取本地 `data/recommendations.json`
+- **今日简报**：自动回退读取本地 `data/recommendations.json`
 - **留言**：显示「留言功能暂时不可用」
 
 ## 📝 添加文章
@@ -108,9 +108,9 @@ node scripts/build-gallery.js
 
 运行完成后提交生成的文件即可，图库支持灯箱查看、左右切换、下载、幻灯片放映与页码跳转。
 
-## 📰 每日新闻
+## 📰 今日简报（主页内）
 
-「每日新闻」视图以**列表形式**展示聚合资讯（无卡片图片），顶部按**新闻出品方**筛选。数据优先来自后端 NewsNow API（`/api/news`，聚合 17 个热门来源、每小时更新），失败时回退本地 `data/recommendations.json`；点击新闻在新窗口打开原文或站内阅读。
+「今日简报」是主页内的一张卡片（不再有独立视图），以**列表形式**展示聚合资讯（无卡片图片），顶部按**新闻出品方**筛选，每期展示最新 8 条。数据优先来自后端 NewsNow API（`/api/news`，聚合 17 个热门来源、每小时更新），失败时回退本地 `data/recommendations.json`；点击新闻在新窗口打开原文或站内阅读。
 
 **更新方式：**
 
@@ -170,7 +170,7 @@ node scripts/build-gallery.js
 ## 📁 项目结构
 
 ```
-├── index.html / article.html    # 首页（四视图）/ 文章详情页（含留言区）
+├── index.html / article.html    # 首页（主页 / 文章 / 图库）/ 文章详情页（含留言区）
 ├── feed.xml / CNAME / .nojekyll # RSS / 自定义域名 / Jekyll 关闭标记
 ├── .github/workflows/
 │   └── update-news.yml          # 每日资讯自动更新（GitHub Actions）
@@ -178,7 +178,7 @@ node scripts/build-gallery.js
 │   ├── style.css                # 主样式（主题、响应式）
 │   └── highlight-github-dark.min.css  # 代码高亮
 ├── js/
-│   ├── app.js                   # 首页逻辑（加载、筛选、搜索、四视图、资讯、留言）
+│   ├── app.js                   # 首页逻辑（加载、筛选、搜索、三视图、主页简报、留言）
 │   ├── markdown.js              # Markdown 解析（frontmatter、渲染）
 │   ├── theme.js                 # 主题管理（10 套主题、持久化）
 │   ├── chat.js                  # AI 助手（流式、多会话、划词问答）

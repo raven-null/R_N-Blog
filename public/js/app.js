@@ -506,9 +506,9 @@ const BlogApp = {
         this.closeSearch();
     },
 
-    // 切换视图（主页 / 博客 / 图库 / 每日新闻）
+    // 切换视图（主页 / 博客 / 图库）
     switchView(view) {
-        const valid = ['home', 'blog', 'gallery', 'news'];
+        const valid = ['home', 'blog', 'gallery'];
         if (!valid.includes(view) || this.currentView === view) return;
 
         // 检查该视图是否被设置禁用
@@ -549,7 +549,6 @@ const BlogApp = {
         // 首次进入渲染内容
         if (view === 'home') this.renderHome();
         if (view === 'gallery') this.renderGallery();
-        if (view === 'news') this.renderNewsView();
 
         // 入场动画
         const activeView = document.getElementById('view-' + view);
@@ -971,8 +970,8 @@ const BlogApp = {
         return Array.isArray(items) ? items : [];
     },
 
-    // 渲染每日新闻视图（列表式，无卡片图片）
-    async renderNewsView() {
+    // 渲染主页「今日简报」（原「每日新闻」视图，取最新若干条）
+    async renderHomeNews() {
         const list = document.getElementById('newsList');
         if (!list || list.dataset.rendered) return;
         list.dataset.rendered = '1';
@@ -983,7 +982,7 @@ const BlogApp = {
             this.renderNewsList(items);
         } catch (e) {
             console.error('资讯加载失败:', e);
-            list.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:40px;">资讯加载失败</p>';
+            list.innerHTML = '<div class="home-empty">资讯加载失败，稍后再试</div>';
         }
     },
 
@@ -1005,15 +1004,16 @@ const BlogApp = {
         this.renderNewsList(items);
     },
 
-    // 渲染资讯列表（一行一条：出品方徽标 + 标题 + 出品方 · 日期）
+    // 渲染资讯列表（主页只展示最新 8 条，一行一条：出品方徽标 + 标题 + 出品方 · 日期）
     renderNewsList(items) {
         const list = document.getElementById('newsList');
         if (!list) return;
-        if (!items.length) {
-            list.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:40px;">暂无资讯</p>';
+        const rows = items.slice(0, 8);
+        if (!rows.length) {
+            list.innerHTML = '<div class="home-empty">暂无资讯</div>';
             return;
         }
-        list.innerHTML = items.map(it => `
+        list.innerHTML = rows.map(it => `
             <a class="news-item" href="${it.url || '#'}" target="_blank" rel="noopener">
                 <span class="news-item-cat">${this.esc(it.source || it.category || '资讯')}</span>
                 <span class="news-item-title">${this.esc(it.title)}</span>
@@ -1094,10 +1094,12 @@ const BlogApp = {
         return null;
     },
 
-    // 渲染主页（统计概览 + 最新文章）
+    // 渲染主页（最近动态 + 数据行 + 文章大卡与列表）
     async renderHome(force = false) {
-        // 最新文章不依赖网络，先渲染，避免图库接口慢时主页整块空白
-        this.renderHomeLatest();
+        // 文章区不依赖网络，先渲染，避免图库接口慢时主页整块空白
+        this.renderHomeFocus();
+        this.renderHomeArticles();
+        this.renderHomeNews();
 
         const box = document.getElementById('dashboardStats');
         if (!box || (box.dataset.rendered && !force)) return;
@@ -1111,7 +1113,7 @@ const BlogApp = {
         const totalWords = this.posts.reduce((s, p) => s + (p.wordCount || 0), 0);
         let images = 0;
         try {
-            // 图库来自外部站点，给个上限，接口慢/离线时统计区不至于一直空着
+            // 图库来自外部站点，给个上限，接口慢/离线时数据行不至于一直空着
             const list = await Promise.race([
                 this.loadGalleryImages(),
                 new Promise((_, reject) => setTimeout(() => reject(new Error('图库接口超时')), 3000)),
@@ -1119,18 +1121,18 @@ const BlogApp = {
             images = (list || []).length;
         } catch (e) { }
 
-        // 统计概览（根据设置选择显示项）
-        const cards = [];
-        if (stats.posts !== false) cards.push(`<div class="dashboard-card"><div class="dashboard-num">${posts}</div><div class="dashboard-label">文章</div></div>`);
-        if (stats.tags !== false) cards.push(`<div class="dashboard-card"><div class="dashboard-num">${tags}</div><div class="dashboard-label">标签</div></div>`);
-        if (stats.words !== false) cards.push(`<div class="dashboard-card"><div class="dashboard-num">${totalWords.toLocaleString('zh-CN')}</div><div class="dashboard-label">总字数</div></div>`);
-        if (stats.images !== false) cards.push(`<div class="dashboard-card"><div class="dashboard-num">${images}</div><div class="dashboard-label">图库图片</div></div>`);
+        // 紧凑数据行（根据设置选择显示项）
+        const items = [];
+        if (stats.posts !== false) items.push(`<span class="home-stat"><b>${posts}</b>文章</span>`);
+        if (stats.tags !== false) items.push(`<span class="home-stat"><b>${tags}</b>标签</span>`);
+        if (stats.words !== false) items.push(`<span class="home-stat"><b>${totalWords.toLocaleString('zh-CN')}</b>字</span>`);
+        if (stats.images !== false) items.push(`<span class="home-stat"><b>${images}</b>图片</span>`);
 
-        box.innerHTML = cards.join('') || '<div class="dashboard-card"><div class="dashboard-num">—</div><div class="dashboard-label">统计</div></div>';
+        box.innerHTML = items.join('') || '<span class="home-stat"><b>—</b>暂无数据</span>';
 
         // 入场动效（Anime.js）
         if (typeof anime !== 'undefined') {
-            anime.animate('.view-home .dash-hero, .view-home .home-cta, .view-home .dashboard-card, .view-home .dash-panel', {
+            anime.animate('.view-home .dash-hero, .view-home .home-cta, .view-home .home-articles > *, .view-home .home-shortcuts, .view-home .dash-bottom', {
                 opacity: [0, 1],
                 translateY: [16, 0],
                 duration: 500,
@@ -1140,18 +1142,78 @@ const BlogApp = {
         }
     },
 
-    // 渲染主页「最新文章」列表（发布时间最新的 5 篇）
-    renderHomeLatest() {
-        const box = document.getElementById('homeLatest');
+    // 主页「最近更新」一行：指向最新发布的一篇
+    renderHomeFocus() {
+        const el = document.getElementById('homeFocus');
+        if (!el) return;
+        const latest = this.postsSorted()[0];
+        if (!latest) {
+            el.innerHTML = '';
+            return;
+        }
+        el.innerHTML = `<span class="home-focus-key">最近更新</span>
+            <a class="home-focus-link" href="article.html?post=${this.escAttr(latest.filename)}&blob=${this.escAttr(latest.id || '')}">${this.esc(latest.title)}</a>`;
+    },
+
+    // 按发布时间倒序的文章列表
+    postsSorted() {
+        return [...this.posts].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+    },
+
+    // 主页文章区：左封面大卡（最新一篇）+ 右更新列表（其余 4 篇）
+    renderHomeArticles() {
+        const sorted = this.postsSorted();
+        this.renderHomeFeatured(sorted[0]);
+        this.renderHomeLatest(sorted.slice(1, 5));
+    },
+
+    // 封面大卡：最新一篇
+    renderHomeFeatured(post) {
+        const box = document.getElementById('homeFeatured');
         if (!box) return;
-        const list = [...this.posts]
-            .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))
-            .slice(0, 5);
-        if (!list.length) {
+
+        if (!post) {
+            box.removeAttribute('href');
             box.innerHTML = '<div class="home-empty">还没有文章</div>';
             return;
         }
-        box.innerHTML = list.map(post => {
+
+        const date = this.formatDate(post.date);
+        const typeLabel = post.type === 'whiteboard' ? '交互白板'
+            : post.type === 'mindmap' ? '思维导图'
+            : post.type === 'graph' ? '节点图'
+            : '博客文章';
+        const tags = (post.tags || []).slice(0, 3).map(t => `<span class="home-tag">${this.esc(t)}</span>`).join('');
+        const gradient = this.getGradientColors(post.tags || []);
+        const icon = this.getCardIcon(post.tags || []);
+
+        box.setAttribute('href', `article.html?post=${this.escAttr(post.filename)}&blob=${this.escAttr(post.id || '')}`);
+        box.innerHTML = `
+            <div class="home-feature-cover" style="background: linear-gradient(145deg, ${gradient[0]}, ${gradient[1]});">
+                ${post.image
+                    ? `<img src="${this.escAttr(post.image)}" alt="${this.esc(post.title)}" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="BlogApp.handleCoverError(this)">`
+                    : `<span class="home-feature-icon">${this.esc(icon)}</span>`}
+                <span class="home-feature-badge">${typeLabel}</span>
+            </div>
+            <div class="home-feature-body">
+                <div class="home-feature-meta">${date}${tags ? ' · ' + tags : ''}</div>
+                <div class="home-feature-title">${this.esc(post.title)}</div>
+                <div class="home-feature-excerpt">${this.esc(post.excerpt || '')}</div>
+            </div>
+            <div class="home-feature-foot">阅读全文 <span class="home-feature-arrow">→</span></div>
+        `;
+    },
+
+    // 更新列表：传入要渲染的文章数组
+    renderHomeLatest(list) {
+        const box = document.getElementById('homeLatest');
+        if (!box) return;
+        const rows = Array.isArray(list) ? list : this.postsSorted().slice(0, 5);
+        if (!rows.length) {
+            box.innerHTML = '<div class="home-empty">还没有更多文章</div>';
+            return;
+        }
+        box.innerHTML = rows.map(post => {
             const date = this.formatDate(post.date);
             const tags = (post.tags || []).slice(0, 3).map(t => `<span class="home-tag">${this.esc(t)}</span>`).join('');
             const typeLabel = post.type === 'whiteboard' ? '白板'
@@ -1172,6 +1234,19 @@ const BlogApp = {
         if (this.currentView !== view) this.switchView(view);
         if (type) this.filterByType(type);
         else if (view === 'blog') this.filterByTag(null);
+    },
+
+    // 滚动到主页内的某个区块（如今日简报）
+    scrollToSection(id) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const scroller = document.getElementById('scrollArea');
+        if (scroller) {
+            const top = el.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop - 16;
+            scroller.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+        } else {
+            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
     },
 
     // ===================== 留言区（我的视图） =====================

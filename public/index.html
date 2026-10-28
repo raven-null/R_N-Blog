@@ -13,7 +13,7 @@
     <script src="/js/site-icon.js?v=1.0.0" defer></script>
 
     <!-- Styles -->
-    <link rel="stylesheet" href="css/style.css?v=3.17.0">
+    <link rel="stylesheet" href="css/style.css?v=3.18.0">
     <link rel="stylesheet" href="css/glass.css?v=1.0.14">
 
     <!-- 首页只渲染卡片列表（摘要由后端给出），不需要 Markdown 解析与代码高亮：
@@ -64,7 +64,6 @@
                     <button class="view-btn active" data-view="home" onclick="BlogApp.switchView('home')">主页</button>
                     <button class="view-btn" data-view="blog" onclick="BlogApp.switchView('blog')">文章</button>
                     <button class="view-btn" data-view="gallery" onclick="BlogApp.switchView('gallery')">图库</button>
-                    <button class="view-btn" data-view="news" onclick="BlogApp.switchView('news')">每日新闻</button>
                 </div>
             </div>
         </header>
@@ -131,33 +130,18 @@
                     <div class="gallery-grid" id="galleryGrid"></div>
                 </section>
 
-                <!-- 视图：每日新闻 -->
-                <section class="view view-news" id="view-news" style="display:none;">
-                    <div class="news-feed">
-                        <div class="news-feed-head">
-                            <div class="news-feed-filter" id="newsFilter">
-                                <button class="news-filter-btn active" data-cat="all" onclick="BlogApp.filterNews('all')">全部</button>
-                            </div>
-                        </div>
-                        <div class="news-list" id="newsList">
-                            <div class="loading">
-                                <div class="loading-spinner"></div>
-                                <p>Loading...</p>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
             <!-- 视图：主页 -->
             <section class="view view-home" id="view-home">
                 <div class="dashboard">
 
-                    <!-- 欢迎区 -->
+                    <!-- 欢迎区：身份 / 最近动态 / 数据 / 时间 -->
                     <div class="dash-hero home-hero">
                         <img class="dash-avatar" src="images/Default/profile -picture.webp" alt="博主">
                         <div class="dash-identity">
                             <div class="dash-name">博主</div>
                             <div class="dash-bio">欢迎来到我的博客</div>
+                            <div class="home-focus" id="homeFocus"></div>
+                            <div class="home-stats" id="dashboardStats"></div>
                         </div>
                         <div class="dash-clock" id="dashClock">
                             <div class="dash-clock-date" id="dashClockDate"></div>
@@ -172,15 +156,30 @@
                         <a class="home-cta-btn home-cta-ghost" href="feed.xml" target="_blank" rel="noopener">RSS 订阅</a>
                     </div>
 
-                    <!-- 统计概览 -->
-                    <div class="dashboard-stats" id="dashboardStats"></div>
-
-                    <!-- 最新文章 -->
-                    <div class="dash-panel">
-                        <div class="dash-panel-title">最新文章
-                            <span class="home-more" onclick="BlogApp.goView('blog')">全部 ›</span>
+                    <!-- 最新文章：左封面大卡 + 右更新列表 -->
+                    <div class="home-articles">
+                        <a class="home-feature dash-panel" id="homeFeatured" href="article.html" aria-label="最新文章">
+                            <div class="home-empty">加载中...</div>
+                        </a>
+                        <div class="dash-panel home-recent">
+                            <div class="dash-panel-title">最近更新
+                                <span class="home-more" onclick="BlogApp.goView('blog')">全部 ›</span>
+                            </div>
+                            <div class="home-latest" id="homeLatest">
+                                <div class="home-empty">加载中...</div>
+                            </div>
                         </div>
-                        <div class="home-latest" id="homeLatest">
+                    </div>
+
+                    <!-- 今日简报（原「每日新闻」视图并入主页） -->
+                    <div class="dash-panel home-news" id="homeNews">
+                        <div class="dash-panel-title">今日简报
+                            <span class="home-news-hint">聚合热榜 · 每日更新</span>
+                        </div>
+                        <div class="news-feed-filter home-news-filter" id="newsFilter">
+                            <button class="news-filter-btn active" data-cat="all" onclick="BlogApp.filterNews('all')">全部</button>
+                        </div>
+                        <div class="news-list" id="newsList">
                             <div class="home-empty">加载中...</div>
                         </div>
                     </div>
@@ -209,9 +208,9 @@
                                 <span class="home-shortcut-icon">▦</span>
                                 <span class="home-shortcut-label">图库</span>
                             </button>
-                            <button class="home-shortcut" onclick="BlogApp.goView('news')">
+                            <button class="home-shortcut" onclick="BlogApp.scrollToSection('homeNews')">
                                 <span class="home-shortcut-icon">●</span>
-                                <span class="home-shortcut-label">每日新闻</span>
+                                <span class="home-shortcut-label">今日简报</span>
                             </button>
                         </div>
                     </div>
@@ -233,7 +232,10 @@
             </main>
 
             <!-- Footer -->
-            <footer class="footer">
+            <footer class="footer footer-home">
+                <div class="footer-left">
+                    <span class="footer-runtime" id="footerRuntime">本站已运行 —</span>
+                </div>
                 <div class="footer-right">
                     <a href="feed.xml" class="footer-link" target="_blank" rel="noopener">RSS</a>
                     <a href="article.html?post=01-blog-usage-guide.md" class="footer-link">About</a>
@@ -280,7 +282,7 @@
 
     <!-- Scripts -->
     <script src="js/theme.js?v=3.13.6" defer></script>
-    <script src="js/app.js?v=3.42.0" defer></script>
+    <script src="js/app.js?v=3.43.0" defer></script>
     <script src="js/animations.js?v=3.14.0" defer></script>
 
     <script>
@@ -600,6 +602,24 @@
             timeEl.textContent = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
         }
 
+        // ===== 页脚：本站运行时长（起始时间按需修改） =====
+        function initSiteRuntime() {
+            const el = document.getElementById('footerRuntime');
+            if (!el) return;
+            const START = new Date('2026-08-06T00:00:00+08:00').getTime();
+            const pad = n => String(n).padStart(2, '0');
+            const tick = () => {
+                const diff = Math.max(0, Date.now() - START);
+                const days = Math.floor(diff / 86400000);
+                const hours = Math.floor(diff / 3600000) % 24;
+                const mins = Math.floor(diff / 60000) % 60;
+                const secs = Math.floor(diff / 1000) % 60;
+                el.textContent = `本站已运行 ${days} 天 ${pad(hours)}:${pad(mins)}:${pad(secs)}`;
+            };
+            tick();
+            setInterval(tick, 1000);
+        }
+
         // ===== Init =====
         document.addEventListener('DOMContentLoaded', async () => {
             // 加载博客设置并应用（需在 BlogApp.init 前）
@@ -609,6 +629,9 @@
             // 欢迎区日期时间（每秒更新）
             updateDashClock();
             setInterval(updateDashClock, 1000);
+
+            // 页脚运行时长（每秒更新）
+            initSiteRuntime();
 
             // Scroll observer
             initScrollObserver();
@@ -714,7 +737,7 @@
                 const _hasRoute = _params.has('type') || _params.has('tag');
                 let _startView = 'home';
                 if (_views.home === false) {
-                    const _valid = ['blog', 'gallery', 'news'];
+                    const _valid = ['blog', 'gallery'];
                     _startView = _valid.find(v => _views[v] !== false) || 'home';
                 }
                 if (_hasRoute) _startView = 'blog';
