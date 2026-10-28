@@ -4375,3 +4375,84 @@ html.reader-focus .article-content {
 .home-post-tags {
     margin-top: 6px;
 }
+
+/* ===== 简报做短 + 右侧主题盒子 ===== */
+.home-articles > .home-news {
+    flex: 1;
+    min-width: 0;
+}
+
+/* 简报列表再收紧：约 3 条高度 */
+.home-articles > .home-news .news-list {
+    max-height: 160px;
+}
+
+/* 简报与主题盒子并排 */
+.home-top-row {
+    display: grid;
+    grid-template-columns: minmax(0, 2.4fr) minmax(0, 1fr);
+    gap: 20px;
+    align-items: stretch;
+}
+
+.home-theme-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.home-theme-box .dash-panel-title {
+    width: 100%;
+    text-align: center;
+}
+
+/* 盒子里的按钮做大一点，居中显示 */
+.home-theme-box .home-theme-btn {
+    height: 40px;
+    padding: 0 18px;
+    font-size: 12px;
+    border-radius: 12px;
+}
+
+.home-theme-box .home-theme-icon {
+    font-size: 16px;
+}
+
+.home-theme-box .home-theme-name {
+    font-size: 12px;
+}
+
+@media (max-width: 900px) {
+    .home-top-row {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .home-articles > .home-news .news-list {
+        max-height: 140px;
+    }
+}
+
+/* ===== 最终覆盖：简报改为后代选择器（现在包在 .home-top-row 里）===== */
+.home-articles .home-news {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    min-width: 0;
+}
+
+.home-articles .home-news .news-list {
+    flex: none;
+    min-height: 0;
+    max-height: 160px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+@media (max-width: 900px) {
+    .home-articles .home-news .news-list {
+        max-height: 140px;
+    }
+}

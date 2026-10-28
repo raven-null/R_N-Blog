@@ -13,7 +13,7 @@
     <script src="/js/site-icon.js?v=1.0.0" defer></script>
 
     <!-- Styles -->
-    <link rel="stylesheet" href="css/style.css?v=3.40.0">
+    <link rel="stylesheet" href="css/style.css?v=3.41.0">
     <link rel="stylesheet" href="css/glass.css?v=1.0.14">
     <link rel="stylesheet" href="css/wheel.css?v=1.0.0">
 
@@ -190,18 +190,24 @@
                         </div>
                     </div>
 
-                    <!-- 内容区：今日简报（右侧带主题按钮）+ 图库 / 文章封面并排 -->
+                    <!-- 内容区：简报（右侧有主题盒子）+ 图库 / 文章封面并排 -->
                     <div class="home-articles">
-                        <div class="dash-panel home-news" id="homeNews">
-                            <div class="dash-panel-title home-news-title">今日简报
-                                <span class="home-news-hint">聚合热榜 · 每日更新</span>
-                                <!-- 主题切换（圆角矩形，图标 + 当前主题名） -->
+                        <div class="home-top-row">
+                            <div class="dash-panel home-news" id="homeNews">
+                                <div class="dash-panel-title home-news-title">今日简报
+                                    <span class="home-news-hint">聚合热榜 · 每日更新</span>
+                                </div>
+                                <div class="news-list" id="newsList">
+                                    <div class="home-empty">加载中...</div>
+                                </div>
+                            </div>
+
+                            <!-- 简报右侧的盒子：放主题切换按钮 -->
+                            <div class="dash-panel home-theme-box">
+                                <div class="dash-panel-title">主题</div>
                                 <button class="home-theme-btn" id="homeThemeBtn" type="button" onclick="ThemeManager.nextTheme()">
                                     <span class="home-theme-icon">◐</span><span class="home-theme-name">主题</span>
                                 </button>
-                            </div>
-                            <div class="news-list" id="newsList">
-                                <div class="home-empty">加载中...</div>
                             </div>
                         </div>
 
