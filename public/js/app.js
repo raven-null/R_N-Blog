@@ -1203,7 +1203,7 @@ const BlogApp = {
 
         // 入场动效（Anime.js）
         if (typeof anime !== 'undefined') {
-            anime.animate('.view-home .dash-hero, .view-home .home-articles > *, .view-home .home-news, .view-home .home-shortcuts, .view-home .dash-bottom', {
+            anime.animate('.view-home .dash-hero, .view-home .home-articles > *, .view-home .home-news, .view-home .dash-bottom', {
                 opacity: [0, 1],
                 translateY: [16, 0],
                 duration: 500,
@@ -1315,7 +1315,6 @@ const BlogApp = {
         wrap.innerHTML = `
             <a class="home-slide" id="homeSlideLink" href="#">
                 <img class="home-slide-img" id="homeSlideImg" alt="" decoding="async" referrerpolicy="no-referrer">
-                <span class="home-slide-count" id="homeSlideCount"></span>
             </a>
         `;
         const link = document.getElementById('homeSlideLink');
@@ -1336,7 +1335,6 @@ const BlogApp = {
         this.homeSlideIndex = idx;
 
         const img = document.getElementById('homeSlideImg');
-        const count = document.getElementById('homeSlideCount');
         if (!img) return;
 
         const photo = photos[idx];
@@ -1348,7 +1346,6 @@ const BlogApp = {
             // 下一帧加类触发淡入
             requestAnimationFrame(() => img.classList.add('is-in'));
         }
-        if (count) count.textContent = `${idx + 1} / ${photos.length}`;
 
         // 预加载下一张：切换时基本不用等网络（浏览器缓存命中）
         const next = photos[(idx + 1) % photos.length];
