@@ -61,10 +61,10 @@
                 <a href="/admin.html" class="top-bar-brand" title="进入后台">我的博客</a>
                 <div class="top-bar-views" id="viewSwitch">
                     <div class="view-indicator" id="viewIndicator"></div>
-                    <button class="view-btn active" data-view="blog" onclick="BlogApp.switchView('blog')">文章</button>
+                    <button class="view-btn active" data-view="home" onclick="BlogApp.switchView('home')">主页</button>
+                    <button class="view-btn" data-view="blog" onclick="BlogApp.switchView('blog')">文章</button>
                     <button class="view-btn" data-view="gallery" onclick="BlogApp.switchView('gallery')">图库</button>
                     <button class="view-btn" data-view="news" onclick="BlogApp.switchView('news')">每日新闻</button>
-                    <button class="view-btn" data-view="dashboard" onclick="BlogApp.switchView('dashboard')">我的</button>
                 </div>
             </div>
         </header>
@@ -117,7 +117,7 @@
             <main class="main-content">
 
                 <!-- 视图：博客 -->
-                <section class="view view-blog" id="view-blog">
+                <section class="view view-blog" id="view-blog" style="display:none;">
                     <div id="posts">
                         <div class="loading">
                             <div class="loading-spinner"></div>
@@ -148,12 +148,12 @@
                     </div>
                 </section>
 
-            <!-- 视图：仪表盘 -->
-            <section class="view view-dashboard" id="view-dashboard" style="display:none;">
+            <!-- 视图：主页 -->
+            <section class="view view-home" id="view-home">
                 <div class="dashboard">
 
                     <!-- 欢迎区 -->
-                    <div class="dash-hero">
+                    <div class="dash-hero home-hero">
                         <img class="dash-avatar" src="images/Default/profile -picture.webp" alt="博主">
                         <div class="dash-identity">
                             <div class="dash-name">博主</div>
@@ -165,42 +165,55 @@
                         </div>
                     </div>
 
+                    <!-- 入口按钮 -->
+                    <div class="home-cta">
+                        <button class="home-cta-btn home-cta-primary" onclick="BlogApp.goView('blog')">浏览文章</button>
+                        <button class="home-cta-btn" onclick="BlogApp.goView('gallery')">看看图库</button>
+                        <a class="home-cta-btn home-cta-ghost" href="feed.xml" target="_blank" rel="noopener">RSS 订阅</a>
+                    </div>
+
                     <!-- 统计概览 -->
                     <div class="dashboard-stats" id="dashboardStats"></div>
 
-                    <!-- 留言区 -->
-                    <div class="dash-panel comment-section" id="comment-section">
-                        <div class="dash-panel-title">留言</div>
-                        <div class="comment-list" id="comment-list">
-                            <div class="comment-empty">加载留言中...</div>
+                    <!-- 最新文章 -->
+                    <div class="dash-panel">
+                        <div class="dash-panel-title">最新文章
+                            <span class="home-more" onclick="BlogApp.goView('blog')">全部 ›</span>
                         </div>
-                        <form class="comment-form" id="comment-form">
-                            <div class="comment-form-row">
-                                <input type="text" id="comment-name" placeholder="昵称 *" maxlength="32" required>
-                            </div>
-                            <div class="comment-form-main">
-                                <textarea id="comment-content" placeholder="写下你的留言... *（支持纯文本，最长 5000 字）" maxlength="5000" required></textarea>
-                                <div class="comment-form-side">
-                                    <label class="comment-upload" title="上传图片（jpg/png/gif/webp，≤2MB）">
-                                        <input type="file" id="comment-image" accept="image/jpeg,image/png,image/gif,image/webp" hidden>
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                                            <circle cx="8.5" cy="8.5" r="1.5"></circle>
-                                            <polyline points="21 15 16 10 5 21"></polyline>
-                                        </svg>
-                                        上传图片
-                                    </label>
-                                    <div class="comment-image-preview" id="comment-image-preview" style="display:none;">
-                                        <img id="comment-image-thumb" alt="已选图片">
-                                        <button type="button" id="comment-image-remove" title="移除图片">&times;</button>
-                                    </div>
-                                    <button type="submit" id="comment-submit">发表留言</button>
-                                </div>
-                            </div>
-                            <div class="comment-form-footer">
-                                <span class="comment-tip" id="comment-tip"></span>
-                            </div>
-                        </form>
+                        <div class="home-latest" id="homeLatest">
+                            <div class="home-empty">加载中...</div>
+                        </div>
+                    </div>
+
+                    <!-- 内容入口 -->
+                    <div class="dash-panel">
+                        <div class="dash-panel-title">内容入口</div>
+                        <div class="home-shortcuts">
+                            <button class="home-shortcut" onclick="BlogApp.goView('blog', 'article')">
+                                <span class="home-shortcut-icon">{ }</span>
+                                <span class="home-shortcut-label">文章</span>
+                            </button>
+                            <button class="home-shortcut" onclick="BlogApp.goView('blog', 'board')">
+                                <span class="home-shortcut-icon">▤</span>
+                                <span class="home-shortcut-label">白板</span>
+                            </button>
+                            <button class="home-shortcut" onclick="BlogApp.goView('blog', 'mindmap')">
+                                <span class="home-shortcut-icon">△</span>
+                                <span class="home-shortcut-label">导图</span>
+                            </button>
+                            <button class="home-shortcut" onclick="BlogApp.goView('blog', 'graph')">
+                                <span class="home-shortcut-icon">○</span>
+                                <span class="home-shortcut-label">节点图</span>
+                            </button>
+                            <button class="home-shortcut" onclick="BlogApp.goView('gallery')">
+                                <span class="home-shortcut-icon">▦</span>
+                                <span class="home-shortcut-label">图库</span>
+                            </button>
+                            <button class="home-shortcut" onclick="BlogApp.goView('news')">
+                                <span class="home-shortcut-icon">●</span>
+                                <span class="home-shortcut-label">每日新闻</span>
+                            </button>
+                        </div>
                     </div>
 
                     <!-- 关于 -->
@@ -552,7 +565,7 @@
                 if (views[v] === false) btn.style.display = 'none';
             });
             // 确保当前视图按钮可见
-            const activeViewBtn = document.querySelector('#viewSwitch .view-btn[data-view="' + (BlogApp.currentView || 'blog') + '"]');
+            const activeViewBtn = document.querySelector('#viewSwitch .view-btn[data-view="' + (BlogApp.currentView || 'home') + '"]');
             if (activeViewBtn && activeViewBtn.style.display === 'none') {
                 activeViewBtn.style.display = '';
             }
@@ -695,15 +708,18 @@
                 const tagsTitle = document.getElementById('tagsDropdownTitle');
                 if (tagsTitle) tagsTitle.textContent = `全部标签（${tagCount} 个）`;
 
-                // 初始化视图滑块指示器位置（若 blog 被禁用则跳到第一个可见视图）
+                // 初始化视图滑块指示器位置（若主页被禁用则跳到第一个可见视图；带 ?type/?tag 时直接进文章视图）
                 const _views = (blogSettings && blogSettings.views) || {};
-                let _startView = 'blog';
-                if (_views.blog === false) {
-                    const _valid = ['gallery', 'news', 'dashboard'];
-                    _startView = _valid.find(v => _views[v] !== false) || 'blog';
+                const _params = new URLSearchParams(window.location.search);
+                const _hasRoute = _params.has('type') || _params.has('tag');
+                let _startView = 'home';
+                if (_views.home === false) {
+                    const _valid = ['blog', 'gallery', 'news'];
+                    _startView = _valid.find(v => _views[v] !== false) || 'home';
                 }
-                setTimeout(() => BlogApp.moveIndicator(_startView), 0);
-                if (_startView !== 'blog') {
+                if (_hasRoute) _startView = 'blog';
+                setTimeout(() => BlogApp.moveIndicator(BlogApp.currentView || _startView), 0);
+                if (BlogApp.currentView !== _startView && _views[_startView] !== false) {
                     BlogApp.switchView(_startView);
                 }
 

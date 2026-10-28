@@ -2923,3 +2923,195 @@ html.reader-focus .article-content {
     display: block;
     background: #0b0b0e;
 }
+
+/* ===== 主页视图（Home） ===== */
+
+/* 顶栏入口按钮 */
+.home-cta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.home-cta-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 22px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    color: var(--text-secondary);
+    font-family: inherit;
+    font-size: 14px;
+    letter-spacing: 1px;
+    line-height: 1.2;
+    cursor: pointer;
+    text-decoration: none;
+    transition: border-color 0.25s, color 0.25s, transform 0.25s, box-shadow 0.25s;
+}
+
+.home-cta-btn:hover {
+    border-color: var(--accent);
+    color: var(--text-primary);
+    transform: translateY(-2px);
+}
+
+.home-cta-primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--bg-primary);
+    font-weight: 700;
+}
+
+.home-cta-primary:hover {
+    color: var(--bg-primary);
+    box-shadow: 0 10px 26px var(--shadow);
+}
+
+.home-cta-ghost {
+    background: transparent;
+}
+
+/* 最新文章列表 */
+.home-latest {
+    display: flex;
+    flex-direction: column;
+}
+
+.home-article {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 4px;
+    border-bottom: 1px dashed var(--border);
+    color: inherit;
+    text-decoration: none;
+    transition: padding-left 0.2s;
+}
+
+.home-article:last-child {
+    border-bottom: 0;
+}
+
+.home-article:hover {
+    padding-left: 10px;
+}
+
+.home-article-date {
+    flex-shrink: 0;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.home-article-title {
+    flex: 1;
+    min-width: 0;
+    font-size: 15px;
+    color: var(--text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    transition: color 0.2s;
+}
+
+.home-article:hover .home-article-title {
+    color: var(--accent);
+}
+
+.home-article-type {
+    margin-left: 8px;
+    padding: 1px 6px;
+    border: 1px solid var(--border-light);
+    border-radius: 4px;
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.home-article-tags {
+    flex-shrink: 0;
+    display: flex;
+    gap: 6px;
+}
+
+.home-tag {
+    padding: 2px 8px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+/* 「全部 ›」查看更多 */
+.home-more {
+    float: right;
+    font-size: 12px;
+    font-weight: 400;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.home-more:hover {
+    color: var(--accent);
+}
+
+.home-empty {
+    padding: 24px 4px;
+    text-align: center;
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+/* 内容入口宫格 */
+.home-shortcuts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    gap: 12px;
+}
+
+.home-shortcut {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 18px 10px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    font-family: inherit;
+    font-size: 13px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: border-color 0.25s, color 0.25s, transform 0.25s;
+}
+
+.home-shortcut:hover {
+    border-color: var(--accent);
+    color: var(--text-primary);
+    transform: translateY(-3px);
+}
+
+.home-shortcut-icon {
+    font-family: 'Courier New', monospace;
+    font-size: 18px;
+    color: var(--accent);
+}
+
+/* 主页移动端适配 */
+@media (max-width: 640px) {
+    .home-hero {
+        flex-wrap: wrap;
+    }
+
+    .home-article-tags {
+        display: none;
+    }
+
+    .home-shortcuts {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}

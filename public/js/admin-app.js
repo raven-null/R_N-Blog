@@ -2375,10 +2375,10 @@
             renderSettingsAvatar(s.avatar);
             document.getElementById('setAuthorName').value=s.authorName||'';
             document.getElementById('setBio').value=s.bio||'';
+            document.getElementById('setViewHome').checked=s.views?s.views.home!==false:true;
             document.getElementById('setViewBlog').checked=s.views?s.views.blog!==false:true;
             document.getElementById('setViewGallery').checked=s.views?s.views.gallery!==false:true;
             document.getElementById('setViewNews').checked=s.views?s.views.news!==false:true;
-            document.getElementById('setViewDashboard').checked=s.views?s.views.dashboard!==false:true;
             document.getElementById('setStatPosts').checked=s.stats?s.stats.posts!==false:true;
             document.getElementById('setStatTags').checked=s.stats?s.stats.tags!==false:true;
             document.getElementById('setStatWords').checked=s.stats?s.stats.words!==false:true;
@@ -2582,10 +2582,10 @@
                 authorName,
                 bio:document.getElementById('setBio').value.trim(),
                 views:{
+                    home:document.getElementById('setViewHome').checked,
                     blog:document.getElementById('setViewBlog').checked,
                     gallery:document.getElementById('setViewGallery').checked,
                     news:document.getElementById('setViewNews').checked,
-                    dashboard:document.getElementById('setViewDashboard').checked,
                 },
                 stats:{
                     posts:document.getElementById('setStatPosts').checked,

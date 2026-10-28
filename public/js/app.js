@@ -19,8 +19,8 @@ const BlogApp = {
     // 当前选中的标签
     currentTag: null,
     currentType: null, // 内容形态筛选：null | 'board'（白板）| 'mindmap'（导图）| 'graph'（节点图）| 'article'（文章）
-    // 当前视图（博客 / 图库 / 仪表盘）
-    currentView: 'blog',
+    // 当前视图（主页 / 博客 / 图库 / 每日新闻）
+    currentView: 'home',
     // 图库图片清单缓存
     galleryImages: null,
 
@@ -32,6 +32,11 @@ const BlogApp = {
         await this.loadPosts();
         console.log('[BlogApp] 文章加载完成:', this.posts.length, '篇');
         this.render();
+        // 主页为默认视图时，渲染统计概览与最新文章
+        if (this.currentView === 'home') this.renderHome();
+        // 顶部筛选导航（全部 / 文章 / 白板…）只在文章视图显示
+        const navBar = document.getElementById('navBar');
+        if (navBar) navBar.style.display = this.currentView === 'blog' ? '' : 'none';
         console.log('[BlogApp] 渲染完成');
         this.setupEventListeners();
         this.bindPagePrefetch();
@@ -501,9 +506,9 @@ const BlogApp = {
         this.closeSearch();
     },
 
-    // 切换视图（博客 / 图库 / 每日新闻 / 仪表盘）
+    // 切换视图（主页 / 博客 / 图库 / 每日新闻）
     switchView(view) {
-        const valid = ['blog', 'gallery', 'news', 'dashboard'];
+        const valid = ['home', 'blog', 'gallery', 'news'];
         if (!valid.includes(view) || this.currentView === view) return;
 
         // 检查该视图是否被设置禁用
@@ -542,9 +547,9 @@ const BlogApp = {
         });
 
         // 首次进入渲染内容
+        if (view === 'home') this.renderHome();
         if (view === 'gallery') this.renderGallery();
         if (view === 'news') this.renderNewsView();
-        if (view === 'dashboard') this.renderDashboard();
 
         // 入场动画
         const activeView = document.getElementById('view-' + view);
@@ -1089,10 +1094,13 @@ const BlogApp = {
         return null;
     },
 
-    // 渲染仪表盘（统计概览 + 关于）
-    async renderDashboard() {
+    // 渲染主页（统计概览 + 最新文章）
+    async renderHome(force = false) {
+        // 最新文章不依赖网络，先渲染，避免图库接口慢时主页整块空白
+        this.renderHomeLatest();
+
         const box = document.getElementById('dashboardStats');
-        if (!box || box.dataset.rendered) return;
+        if (!box || (box.dataset.rendered && !force)) return;
         box.dataset.rendered = '1';
 
         const settings = this.getBlogSettings();
@@ -1103,7 +1111,12 @@ const BlogApp = {
         const totalWords = this.posts.reduce((s, p) => s + (p.wordCount || 0), 0);
         let images = 0;
         try {
-            images = (await this.loadGalleryImages()).length;
+            // 图库来自外部站点，给个上限，接口慢/离线时统计区不至于一直空着
+            const list = await Promise.race([
+                this.loadGalleryImages(),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('图库接口超时')), 3000)),
+            ]);
+            images = (list || []).length;
         } catch (e) { }
 
         // 统计概览（根据设置选择显示项）
@@ -1117,7 +1130,7 @@ const BlogApp = {
 
         // 入场动效（Anime.js）
         if (typeof anime !== 'undefined') {
-            anime.animate('.dashboard .dash-hero, .dashboard .dashboard-card, .dashboard .dash-panel', {
+            anime.animate('.view-home .dash-hero, .view-home .home-cta, .view-home .dashboard-card, .view-home .dash-panel', {
                 opacity: [0, 1],
                 translateY: [16, 0],
                 duration: 500,
@@ -1125,9 +1138,40 @@ const BlogApp = {
                 ease: 'out(2)'
             });
         }
+    },
 
-        // 初始化留言区（postId 固定为 dashboard）
-        this.initComments('dashboard');
+    // 渲染主页「最新文章」列表（发布时间最新的 5 篇）
+    renderHomeLatest() {
+        const box = document.getElementById('homeLatest');
+        if (!box) return;
+        const list = [...this.posts]
+            .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))
+            .slice(0, 5);
+        if (!list.length) {
+            box.innerHTML = '<div class="home-empty">还没有文章</div>';
+            return;
+        }
+        box.innerHTML = list.map(post => {
+            const date = this.formatDate(post.date);
+            const tags = (post.tags || []).slice(0, 3).map(t => `<span class="home-tag">${this.esc(t)}</span>`).join('');
+            const typeLabel = post.type === 'whiteboard' ? '白板'
+                : post.type === 'mindmap' ? '导图'
+                : post.type === 'graph' ? '节点图' : '';
+            return `
+                <a class="home-article" href="article.html?post=${this.escAttr(post.filename)}&blob=${this.escAttr(post.id || '')}">
+                    <span class="home-article-date">${date}</span>
+                    <span class="home-article-title">${this.esc(post.title)}${typeLabel ? `<span class="home-article-type">${typeLabel}</span>` : ''}</span>
+                    <span class="home-article-tags">${tags}</span>
+                </a>
+            `;
+        }).join('');
+    },
+
+    // 主页入口：切到指定视图（可选再按内容形态筛选）
+    goView(view, type) {
+        if (this.currentView !== view) this.switchView(view);
+        if (type) this.filterByType(type);
+        else if (view === 'blog') this.filterByTag(null);
     },
 
     // ===================== 留言区（我的视图） =====================
@@ -1330,11 +1374,13 @@ const BlogApp = {
         });
     },
 
-    // 处理 URL 路由（标签）
+    // 处理 URL 路由（形态 / 标签）——带参数时进入文章视图
     handleRoute() {
         const urlParams = new URLSearchParams(window.location.search);
         const type = urlParams.get('type');
         const tag = urlParams.get('tag');
+        if (!type && !tag) return; // 无参数：停留在主页
+        this.switchView('blog');
         if (type === 'board' || type === 'article' || type === 'mindmap' || type === 'graph') { this.filterByType(type); return; }
         if (tag) this.filterByTag(tag);
     },

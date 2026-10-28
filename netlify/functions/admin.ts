@@ -1419,7 +1419,7 @@ export default async (req: Request) => {
       avatar: "",
       authorName: "",
       bio: "",
-      views: { blog: true, gallery: true, news: true, dashboard: true },
+      views: { home: true, blog: true, gallery: true, news: true },
       stats: { posts: true, tags: true, words: true, images: true },
       navTags: [],
       about: { version: "", tech: "", updated: "" },
@@ -1528,10 +1528,10 @@ export default async (req: Request) => {
         authorName: String(authorName || "").trim(),
         bio: String(bio || "").trim(),
         views: {
+          home: views?.home !== false,
           blog: views?.blog !== false,
           gallery: views?.gallery !== false,
           news: views?.news !== false,
-          dashboard: views?.dashboard !== false,
         },
         stats: {
           posts: stats?.posts !== false,
