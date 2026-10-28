@@ -1146,14 +1146,12 @@ const BlogApp = {
         return [...this.posts].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
     },
 
-    // 主页文章区：左封面大卡（最新一篇）+ 右更新列表（其余 4 篇）
+    // 主页文章区：最新一篇的封面大卡
     renderHomeArticles() {
-        const sorted = this.postsSorted();
-        this.renderHomeFeatured(sorted[0]);
-        this.renderHomeLatest(sorted.slice(1, 5));
+        this.renderHomeFeatured(this.postsSorted()[0]);
     },
 
-    // 封面大卡：最新一篇
+    // 封面大卡：最新一篇（横向：封面 + 文字，窄屏自动堆叠）
     renderHomeFeatured(post) {
         const box = document.getElementById('homeFeatured');
         if (!box) return;
@@ -1188,31 +1186,6 @@ const BlogApp = {
             </div>
             <div class="home-feature-foot">阅读全文 <span class="home-feature-arrow">→</span></div>
         `;
-    },
-
-    // 更新列表：传入要渲染的文章数组
-    renderHomeLatest(list) {
-        const box = document.getElementById('homeLatest');
-        if (!box) return;
-        const rows = Array.isArray(list) ? list : this.postsSorted().slice(0, 5);
-        if (!rows.length) {
-            box.innerHTML = '<div class="home-empty">还没有更多文章</div>';
-            return;
-        }
-        box.innerHTML = rows.map(post => {
-            const date = this.formatDate(post.date);
-            const tags = (post.tags || []).slice(0, 3).map(t => `<span class="home-tag">${this.esc(t)}</span>`).join('');
-            const typeLabel = post.type === 'whiteboard' ? '白板'
-                : post.type === 'mindmap' ? '导图'
-                : post.type === 'graph' ? '节点图' : '';
-            return `
-                <a class="home-article" href="article.html?post=${this.escAttr(post.filename)}&blob=${this.escAttr(post.id || '')}">
-                    <span class="home-article-date">${date}</span>
-                    <span class="home-article-title">${this.esc(post.title)}${typeLabel ? `<span class="home-article-type">${typeLabel}</span>` : ''}</span>
-                    <span class="home-article-tags">${tags}</span>
-                </a>
-            `;
-        }).join('');
     },
 
     // 主页入口：切到指定视图（可选再按内容形态筛选）
