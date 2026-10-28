@@ -1,0 +1,209 @@
+/* ===== 移动端轮盘菜单（右侧半圆按钮 → 环形选项） ===== */
+
+/* --- 触发按钮：右侧边缘中部半圆竖条 --- */
+.wheel-trigger {
+    display: none;
+    position: fixed;
+    top: 50%;
+    right: 0;
+    transform: translateY(-50%);
+    z-index: 85;
+    width: 32px;
+    height: 92px;
+    padding: 0;
+    border: 1px solid var(--border);
+    border-right: 0;
+    border-radius: 999px 0 0 999px;
+    background: var(--bg-card);
+    backdrop-filter: blur(12px);
+    color: var(--text-secondary);
+    cursor: pointer;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    box-shadow: -8px 0 24px var(--shadow);
+    transition: width 0.25s, background 0.25s, color 0.25s, border-color 0.25s;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.wheel-trigger i {
+    display: block;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: currentColor;
+    transition: transform 0.25s;
+}
+
+.wheel-trigger.active {
+    width: 26px;
+    color: var(--accent);
+    border-color: var(--accent);
+}
+
+.wheel-trigger.active i:nth-child(1) {
+    transform: translateX(-2px);
+}
+
+.wheel-trigger.active i:nth-child(3) {
+    transform: translateX(2px);
+}
+
+/* --- 遮罩层 --- */
+.wheel-layer {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    opacity: 0;
+    visibility: hidden;
+    background: rgba(0, 0, 0, 0.42);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.wheel-layer.open {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* 打开时锁住内容区滚动（避免轮盘下方滚动穿透） */
+body.wheel-open #scrollArea {
+    overflow: hidden;
+}
+
+/* --- 轮盘：以 (50%, 42%) 为圆心的 0×0 锚点 --- */
+.wheel {
+    position: absolute;
+    left: 50%;
+    top: 42%;
+    width: 0;
+    height: 0;
+}
+
+/* --- 中心关闭按钮 --- */
+.wheel-center {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 64px;
+    height: 64px;
+    margin: -32px 0 0 -32px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    color: var(--text-secondary);
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    box-shadow: 0 10px 30px var(--shadow);
+    transform: scale(0.6);
+    opacity: 0;
+    transition: transform 0.4s cubic-bezier(0.22, 1.2, 0.36, 1), opacity 0.25s, color 0.2s, border-color 0.2s;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.wheel-layer.open .wheel-center {
+    transform: scale(1);
+    opacity: 1;
+}
+
+.wheel-center:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+}
+
+/* --- 环形选项 --- */
+.wheel-item {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 62px;
+    height: 62px;
+    margin: -31px 0 0 -31px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 0;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    backdrop-filter: blur(12px);
+    color: var(--text-secondary);
+    font-family: inherit;
+    font-size: 10px;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    box-shadow: 0 8px 24px var(--shadow);
+    opacity: 0;
+    pointer-events: none;
+    /* 收起态：贴合圆心（与展开态保持相同 transform 结构，插值才平滑） */
+    transform: rotate(var(--a)) translateY(0px) rotate(calc(var(--a) * -1)) scale(0.4);
+    transition: transform 0.5s cubic-bezier(0.22, 1.2, 0.36, 1), opacity 0.3s, color 0.2s, border-color 0.2s;
+    transition-delay: var(--d, 0s);
+    -webkit-tap-highlight-color: transparent;
+}
+
+.wheel-layer.open .wheel-item {
+    opacity: 1;
+    pointer-events: auto;
+    transform: rotate(var(--a)) translateY(calc(var(--wheel-r, 112px) * -1)) rotate(calc(var(--a) * -1)) scale(1);
+}
+
+.wheel-item:active {
+    color: var(--accent);
+    border-color: var(--accent);
+}
+
+.wheel-item.is-active {
+    color: var(--accent);
+    border-color: var(--accent);
+}
+
+.wheel-item svg {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+}
+
+.wheel-label {
+    font-size: 9px;
+    line-height: 1;
+    white-space: nowrap;
+    transform: scale(0.95);
+}
+
+/* --- 仅窄屏显示触发按钮 --- */
+@media (max-width: 768px) {
+    .wheel-trigger {
+        display: flex;
+    }
+}
+
+/* --- 横屏矮视口：缩小半径与圆点尺寸 --- */
+@media (max-height: 460px) {
+    .wheel-item {
+        width: 54px;
+        height: 54px;
+        margin: -27px 0 0 -27px;
+    }
+
+    .wheel-center {
+        width: 56px;
+        height: 56px;
+        margin: -28px 0 0 -28px;
+    }
+}
+
+/* --- 减少动效偏好 --- */
+@media (prefers-reduced-motion: reduce) {
+    .wheel-item,
+    .wheel-center,
+    .wheel-layer {
+        transition-duration: 0.01s;
+        transition-delay: 0s !important;
+    }
+}

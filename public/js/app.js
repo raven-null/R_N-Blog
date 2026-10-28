@@ -1249,6 +1249,88 @@ const BlogApp = {
         }
     },
 
+    // ===================== 移动端轮盘菜单 =====================
+
+    wheelOpen: false,
+
+    // 打开 / 收起轮盘
+    toggleWheel() {
+        if (this.wheelOpen) this.closeWheel();
+        else this.openWheel();
+    },
+
+    openWheel() {
+        const layer = document.getElementById('wheelLayer');
+        const trigger = document.getElementById('wheelTrigger');
+        if (!layer) return;
+        // 环半径按屏幕短边自适应（88–168px）
+        const radius = Math.round(Math.min(window.innerWidth, window.innerHeight) * 0.31);
+        layer.style.setProperty('--wheel-r', Math.max(88, Math.min(radius, 168)) + 'px');
+        layer.classList.add('open');
+        this.wheelOpen = true;
+        if (trigger) {
+            trigger.classList.add('active');
+            trigger.setAttribute('aria-expanded', 'true');
+        }
+        document.body.classList.add('wheel-open');
+        this.syncWheelActive();
+    },
+
+    closeWheel() {
+        const layer = document.getElementById('wheelLayer');
+        const trigger = document.getElementById('wheelTrigger');
+        this.wheelOpen = false;
+        if (layer) layer.classList.remove('open');
+        if (trigger) {
+            trigger.classList.remove('active');
+            trigger.setAttribute('aria-expanded', 'false');
+        }
+        document.body.classList.remove('wheel-open');
+    },
+
+    // 高亮当前视图对应的轮盘选项
+    syncWheelActive() {
+        const layer = document.getElementById('wheelLayer');
+        if (!layer) return;
+        layer.querySelectorAll('.wheel-item').forEach(el => {
+            const m = /runWheelAction\('([^']+)'\)/.exec(el.getAttribute('onclick') || '');
+            const action = m ? m[1] : '';
+            el.classList.toggle('is-active', action === this.currentView);
+        });
+    },
+
+    // 执行轮盘选项
+    runWheelAction(action) {
+        this.closeWheel();
+        switch (action) {
+            case 'home':
+                this.goView('home');
+                break;
+            case 'blog':
+                this.goView('blog');
+                break;
+            case 'gallery':
+                this.goView('gallery');
+                break;
+            case 'news':
+                // 简报已并入主页：切回主页并滚到简报卡
+                this.goView('home');
+                setTimeout(() => this.scrollToSection('homeNews'), 80);
+                break;
+            case 'theme':
+                if (typeof ThemeManager !== 'undefined' && typeof ThemeManager.nextTheme === 'function') {
+                    ThemeManager.nextTheme();
+                }
+                break;
+            case 'top': {
+                const scroller = document.getElementById('scrollArea');
+                if (scroller) scroller.scrollTo({ top: 0, behavior: 'smooth' });
+                else window.scrollTo({ top: 0, behavior: 'smooth' });
+                break;
+            }
+        }
+    },
+
     // ===================== 留言区（我的视图） =====================
 
     // 初始化留言区
