@@ -1487,7 +1487,7 @@ const BlogApp = {
         }
     },
 
-    // 渲染主页「我的项目」（GitHub 仓库卡片）
+    // 渲染主页「我的项目」（GitHub 仓库卡片，单行横向，可拖拽/滑动查看）
     async renderHomeProjects() {
         const box = document.getElementById('homeProjectsGrid');
         if (!box || box.dataset.rendered) return;
@@ -1500,6 +1500,56 @@ const BlogApp = {
         }
 
         box.innerHTML = items.map(repo => this.githubRepoCard(repo)).join('');
+        this.bindProjectsDragScroll(box);
+    },
+
+    // 项目横向列表：鼠标按住拖拽滚动（触屏走原生滑动，不显示滚动条）
+    bindProjectsDragScroll(grid) {
+        if (!grid || grid.dataset.dragBound) return;
+        grid.dataset.dragBound = '1';
+
+        let dragging = false;
+        let moved = false;
+        let startX = 0;
+        let startLeft = 0;
+
+        grid.addEventListener('pointerdown', (e) => {
+            if (e.pointerType !== 'mouse' || e.button !== 0) return;
+            dragging = true;
+            moved = false;
+            startX = e.clientX;
+            startLeft = grid.scrollLeft;
+        });
+
+        grid.addEventListener('pointermove', (e) => {
+            if (!dragging) return;
+            const dx = e.clientX - startX;
+            if (!moved && Math.abs(dx) > 4) {
+                moved = true;
+                grid.classList.add('is-dragging');
+            }
+            if (moved) {
+                e.preventDefault();
+                grid.scrollLeft = startLeft - dx;
+            }
+        });
+
+        const stop = () => {
+            dragging = false;
+            grid.classList.remove('is-dragging');
+        };
+        grid.addEventListener('pointerup', stop);
+        grid.addEventListener('pointerleave', stop);
+        grid.addEventListener('pointercancel', stop);
+
+        // 刚拖拽过就不要触发卡片跳转
+        grid.addEventListener('click', (e) => {
+            if (moved) {
+                e.preventDefault();
+                e.stopPropagation();
+                moved = false;
+            }
+        }, true);
     },
 
     // 单个 GitHub 仓库卡片（主页与项目页共用）

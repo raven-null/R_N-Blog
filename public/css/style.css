@@ -3566,9 +3566,34 @@ html.reader-focus .article-content {
 }
 
 .home-projects-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    display: flex;
+    flex-wrap: nowrap;
     gap: 12px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    /* 隐藏滚动条：靠拖拽/滑动查看 */
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x;
+    scroll-behavior: smooth;
+    cursor: grab;
+    padding-bottom: 2px;
+}
+
+.home-projects-grid::-webkit-scrollbar {
+    display: none;
+}
+
+.home-projects-grid.is-dragging {
+    cursor: grabbing;
+    scroll-behavior: auto;
+    user-select: none;
+}
+
+.home-project {
+    flex: 0 0 auto;
+    width: 240px;
 }
 
 .home-project {
@@ -3653,8 +3678,9 @@ html.reader-focus .article-content {
 }
 
 @media (max-width: 640px) {
-    .home-projects-grid {
-        grid-template-columns: minmax(0, 1fr);
+    /* 单行横向滑动，窄屏卡片收窄一点，保证一屏能看到下一条 */
+    .home-project {
+        width: 200px;
     }
 }
 
