@@ -2378,6 +2378,7 @@
             document.getElementById('setViewHome').checked=s.views?s.views.home!==false:true;
             document.getElementById('setViewBlog').checked=s.views?s.views.blog!==false:true;
             document.getElementById('setViewGallery').checked=s.views?s.views.gallery!==false:true;
+            document.getElementById('setViewProjects').checked=s.views?s.views.projects!==false:true;
             document.getElementById('setNavTags').value=(s.navTags||[]).join(',');
             document.getElementById('setAboutVersion').value=s.about?s.about.version||'':'';
             document.getElementById('setAboutTech').value=s.about?s.about.tech||'':'';
@@ -2580,6 +2581,7 @@
                     home:document.getElementById('setViewHome').checked,
                     blog:document.getElementById('setViewBlog').checked,
                     gallery:document.getElementById('setViewGallery').checked,
+                    projects:document.getElementById('setViewProjects').checked,
                 },
                 navTags:document.getElementById('setNavTags').value.split(',').map(s=>s.trim()).filter(Boolean),
                 about:{

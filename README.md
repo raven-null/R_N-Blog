@@ -8,7 +8,7 @@
 - 📝 **Markdown 文章** - `posts` 目录丢入 `.md` 文件即可显示
 - 🏷️ **标签体系** - 标签按钮弹出面板，展示全部标签及文章计数，支持筛选
 - 🎨 **十套主题** - Dark / Light / Cyberpunk / Sepia / Neon / Nord / Dracula / Ocean / Forest / Sunset，自动持久化
-- 🏠 **三视图** - 主页（身份名片 / 文章数 · 照片数 · RSS 入口 / 封面大卡 + 更新列表 / 今日简报 / 内容入口）/ 文章（瀑布流卡片）/ 图库（灯箱相册），顶栏滑块切换
+- 🏠 **四视图** - 主页（身份名片 / 文章数 · 照片数 · RSS 入口 / 封面大卡 + 更新列表 / 今日简报 / 内容入口）/ 文章（瀑布流卡片）/ 图库（灯箱相册）/ 项目（已上线站点 + GitHub 仓库），顶栏滑块切换
 - 📦 **GitHub 项目** - 主页「我的项目」展示仓库卡片（名称 / 描述 / 语言色点 / 更新时间），数据经后端 `/api/github` 聚合并缓存 30 分钟
 - 📰 **今日简报** - 已并入主页：后端 NewsNow API 聚合 17 个热门来源，每小时更新，每期展示最新 8 条并可按出品方筛选；失败自动回退本地数据
 - 💬 **留言系统** - 文章页底部支持留言，数据存于后端 Netlify Blobs（`/api/comments`）
@@ -120,6 +120,23 @@ node scripts/build-gallery.js
 
 - 本地生成：`node scripts/update-news.js`（`--dry` 预览不落盘）
 - 校验：`node scripts/check-recommendations.js`（`--check` 追加链接体检）
+
+## 🗂️ 项目页
+
+顶栏「项目」视图分两块：
+
+- **已上线**：手动维护的站点列表（个人图床 / 个人资料库 / 绳网模拟 / 创世），卡片带自动截图封面、域名与访问入口。清单在 `public/js/app.js` 的 `deployedProjects` 里改
+- **GitHub 仓库**：来自下文 `/api/github`，展示名称、描述、语言色点、最近提交时间
+
+### 自动生成项目封面
+
+```bash
+node scripts/build-project-covers.mjs            # 全部重新截图
+node scripts/build-project-covers.mjs --only=gallery,world   # 只截指定站点
+COVER_WAIT_MS=8000 node scripts/build-project-covers.mjs     # SPA 渲染慢时加长等待
+```
+
+脚本会起无头 Chrome（CDP）打开每个站点，等首屏渲染完成后整屏截图，用 sharp 压成 800×500 的 webp 存进 `public/images/projects/`。截图是静态文件，随仓库提交；站点改版后重跑一次即可。新增站点时在脚本的 `SITES` 与 `app.js` 的 `deployedProjects` 各加一条。
 
 ## 📦 GitHub 项目
 

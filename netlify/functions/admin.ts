@@ -1419,7 +1419,7 @@ export default async (req: Request) => {
       avatar: "",
       authorName: "",
       bio: "",
-      views: { home: true, blog: true, gallery: true, news: true },
+      views: { home: true, blog: true, gallery: true, projects: true },
       stats: { posts: true, tags: true, words: true, images: true },
       navTags: [],
       about: { version: "", tech: "", updated: "" },
@@ -1531,7 +1531,7 @@ export default async (req: Request) => {
           home: views?.home !== false,
           blog: views?.blog !== false,
           gallery: views?.gallery !== false,
-          news: views?.news !== false,
+          projects: views?.projects !== false,
         },
         stats: {
           posts: stats?.posts !== false,

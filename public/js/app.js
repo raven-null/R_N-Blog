@@ -506,9 +506,9 @@ const BlogApp = {
         this.closeSearch();
     },
 
-    // 切换视图（主页 / 博客 / 图库）
+    // 切换视图（主页 / 博客 / 图库 / 项目）
     switchView(view) {
-        const valid = ['home', 'blog', 'gallery'];
+        const valid = ['home', 'blog', 'gallery', 'projects'];
         if (!valid.includes(view) || this.currentView === view) return;
 
         // 检查该视图是否被设置禁用
@@ -549,6 +549,7 @@ const BlogApp = {
         // 首次进入渲染内容
         if (view === 'home') this.renderHome();
         if (view === 'gallery') this.renderGallery();
+        if (view === 'projects') this.renderProjects();
 
         // 入场动画
         const activeView = document.getElementById('view-' + view);
@@ -1327,26 +1328,136 @@ const BlogApp = {
             return;
         }
 
-        box.innerHTML = items.map(repo => {
-            const color = this.escAttr(repo.languageColor || '#8b8b8b');
-            const lang = repo.language
-                ? `<span class="home-project-lang"><i style="background:${color}"></i>${this.esc(repo.language)}</span>`
+        box.innerHTML = items.map(repo => this.githubRepoCard(repo)).join('');
+    },
+
+    // 单个 GitHub 仓库卡片（主页与项目页共用）
+    githubRepoCard(repo) {
+        const color = this.escAttr(repo.languageColor || '#8b8b8b');
+        const lang = repo.language
+            ? `<span class="home-project-lang"><i style="background:${color}"></i>${this.esc(repo.language)}</span>`
+            : '';
+        const stars = Number(repo.stars) > 0 ? `<span class="home-project-star">★ ${Number(repo.stars)}</span>` : '';
+        return `
+            <a class="home-project" href="${this.escAttr(repo.htmlUrl)}" target="_blank" rel="noopener">
+                <div class="home-project-head">
+                    <span class="home-project-name">${this.esc(repo.name)}</span>
+                    ${stars}
+                </div>
+                <div class="home-project-desc">${this.esc(repo.description || '暂无描述')}</div>
+                <div class="home-project-foot">
+                    ${lang}
+                    <span class="home-project-time">${this.relativeTime(repo.updatedAt)}</span>
+                </div>
+            </a>
+        `;
+    },
+
+    // ===================== 项目视图 =====================
+
+    // 已部署的站点（想加项目改这里即可；新站跑一次 scripts/build-project-covers.mjs 生成封面）
+    deployedProjects: [
+        {
+            name: '个人图床',
+            desc: '图片托管与图库站点：分类浏览、灯箱查看、幻灯放映，支持访问密码与分级内容。',
+            url: 'https://r-gallery.netlify.app/',
+            host: 'r-gallery.netlify.app',
+            icon: '▦',
+            tag: 'JavaScript',
+            cover: 'images/projects/gallery.webp',
+        },
+        {
+            name: '个人资料库',
+            desc: '资源与文档集中存放，按类目检索，随手取用。',
+            url: 'https://r-database.netlify.app/',
+            host: 'r-database.netlify.app',
+            icon: '▤',
+            tag: 'JavaScript',
+            cover: 'images/projects/database.webp',
+        },
+        {
+            name: '绳网模拟',
+            desc: '绳网社区的项目模拟开发，界面与交互用 Vue 实现。',
+            url: 'https://interknot.netlify.app/',
+            host: 'interknot.netlify.app',
+            icon: '◇',
+            tag: 'Vue',
+            cover: 'images/projects/interknot.webp',
+        },
+        {
+            name: '创世',
+            desc: '长夜城 · 网页游戏，TypeScript 构建的世界。',
+            url: 'https://ravennull.monster/',
+            host: 'ravennull.monster',
+            icon: '◈',
+            tag: 'TypeScript',
+            cover: 'images/projects/world.webp',
+        },
+    ],
+
+    // 项目视图：已上线站点 + GitHub 仓库
+    renderProjects() {
+        this.renderDeployedProjects();
+        this.renderGithubProjects();
+    },
+
+    // 已上线站点卡片（封面截图 + 名称 / 描述 / 域名）
+    renderDeployedProjects() {
+        const box = document.getElementById('deployedProjects');
+        if (!box || box.dataset.rendered) return;
+        box.dataset.rendered = '1';
+
+        if (!this.deployedProjects.length) {
+            box.innerHTML = '<div class="home-empty">暂无已上线项目</div>';
+            return;
+        }
+
+        box.innerHTML = this.deployedProjects.map(p => {
+            const cover = p.cover
+                ? `<div class="project-card-cover"><img src="${this.escAttr(p.cover)}" alt="${this.esc(p.name)}" loading="lazy" decoding="async" onerror="BlogApp.onProjectCoverError(this)"></div>`
                 : '';
-            const stars = Number(repo.stars) > 0 ? `<span class="home-project-star">★ ${Number(repo.stars)}</span>` : '';
             return `
-                <a class="home-project" href="${this.escAttr(repo.htmlUrl)}" target="_blank" rel="noopener">
-                    <div class="home-project-head">
-                        <span class="home-project-name">${this.esc(repo.name)}</span>
-                        ${stars}
+            <a class="project-card" href="${this.escAttr(p.url)}" target="_blank" rel="noopener">
+                ${cover}
+                <div class="project-card-body">
+                    <div class="project-card-head">
+                        <span class="project-card-icon">${this.esc(p.icon || '◆')}</span>
+                        <span class="project-card-name">${this.esc(p.name)}</span>
+                        ${p.tag ? `<span class="project-card-tag">${this.esc(p.tag)}</span>` : ''}
                     </div>
-                    <div class="home-project-desc">${this.esc(repo.description || '暂无描述')}</div>
-                    <div class="home-project-foot">
-                        ${lang}
-                        <span class="home-project-time">${this.relativeTime(repo.updatedAt)}</span>
+                    <div class="project-card-desc">${this.esc(p.desc)}</div>
+                    <div class="project-card-foot">
+                        <span class="project-card-host">${this.esc(p.host)}</span>
+                        <span class="project-card-visit">访问 →</span>
                     </div>
-                </a>
-            `;
+                </div>
+            </a>
+        `;
         }).join('');
+    },
+
+    // 封面加载失败：退化成图标底（不影响卡片可用）
+    onProjectCoverError(img) {
+        const wrap = img.parentElement;
+        if (!wrap) return;
+        img.remove();
+        wrap.classList.add('is-empty');
+        wrap.innerHTML = '<span class="project-card-cover-icon">▣</span>';
+    },
+
+    // GitHub 仓库卡片（项目视图）
+    async renderGithubProjects() {
+        const box = document.getElementById('projectsGithubGrid');
+        if (!box || box.dataset.rendered) return;
+        box.dataset.rendered = '1';
+
+        const items = await this.loadGithubRepos();
+        if (!items.length) {
+            box.innerHTML = '<div class="home-empty">仓库列表暂时不可用</div>';
+            return;
+        }
+
+        box.innerHTML = items.map(repo => this.githubRepoCard(repo)).join('');
     },
 
     // 相对时间：刚刚 / 12 分钟前 / 3 天前 / 2 个月前
