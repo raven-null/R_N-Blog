@@ -643,42 +643,71 @@ const BlogApp = {
         }
     },
 
-    // 真正拉取图库清单（分页取完，首次可能较慢）
+    // 真正拉取图库清单
+    // 管理员（有凭据）走直连拉全量；观光模式优先读会话缓存 → 后端 /api/gallery（Blobs 缓存）→ 直连兜底
     async fetchGalleryList() {
         const base = this.config.galleryBase;
         const token = this.galleryViewKey();
-        let list = [];
-        let unlocked = false;
+
         if (token) {
             try {
-                list = await this.fetchGalleryPages(base, { token });
-                unlocked = true;
+                const list = await this.fetchGalleryPages(base, { token });
+                this.galleryImages = this.mapGalleryPhotos(list, token);
+                return this.galleryImages;
             } catch (e) {
-                list = [];
-                unlocked = false;
+                /* 凭据失效就退回观光模式 */
             }
         }
-        if (!unlocked) {
+
+        const CACHE_KEY = 'blog-gallery-list-v1';
+        const CACHE_TTL = 10 * 60 * 1000;
+        try {
+            const cached = JSON.parse(sessionStorage.getItem(CACHE_KEY) || 'null');
+            if (cached && Array.isArray(cached.list) && Date.now() - cached.t < CACHE_TTL) {
+                this.galleryImages = cached.list;
+                return this.galleryImages;
+            }
+        } catch (e) { /* 忽略缓存异常 */ }
+
+        let photos = null;
+        try {
+            const res = await fetch(`${this.config.apiBase}/api/gallery?limit=1000`, { cache: 'no-store' });
+            if (res.ok) {
+                const data = await res.json();
+                if (data && Array.isArray(data.photos)) photos = data.photos;
+            }
+        } catch (e) { /* 后端不可用，走直连 */ }
+
+        if (!photos) {
             try {
-                list = await this.fetchGalleryPages(base, { safe: true });
+                photos = await this.fetchGalleryPages(base, { safe: true });
             } catch (e) {
-                list = [];
+                photos = [];
             }
         }
-        const tokenQ = unlocked ? 'token=' + encodeURIComponent(token) : '';
+
+        this.galleryImages = this.mapGalleryPhotos(photos, '');
+        try {
+            sessionStorage.setItem(CACHE_KEY, JSON.stringify({ t: Date.now(), list: this.galleryImages }));
+        } catch (e) { /* 存不下就算了 */ }
+        return this.galleryImages;
+    },
+
+    // 统一映射成前端使用的图片对象（后端代理已给绝对地址，直连兜底时自己拼）
+    mapGalleryPhotos(list, token) {
+        const base = this.config.galleryBase;
+        const tokenQ = token ? 'token=' + encodeURIComponent(token) : '';
         const rawQ = tokenQ ? '?' + tokenQ : '';
-        // 缩略图带 v=2：r-gallery 把缩略图从 480px 提到 960px，换 URL 才能绕过 CDN 的旧图缓存
         const thumbQ = tokenQ ? '?' + tokenQ + '&v=2' : '?v=2';
-        this.galleryImages = list.map(p => ({
+        return (list || []).map(p => ({
             id: p.id,
             title: p.title || '',
             rating: p.rating || 'general',
             tags: p.tags || [],
             categories: p.categories || [],
-            url: base + '/api/photos/' + encodeURIComponent(p.id) + '/raw' + rawQ,
-            thumb: base + '/api/photos/' + encodeURIComponent(p.id) + '/thumb' + thumbQ,
+            url: p.url || base + '/api/photos/' + encodeURIComponent(p.id) + '/raw' + rawQ,
+            thumb: p.thumb || base + '/api/photos/' + encodeURIComponent(p.id) + '/thumb' + thumbQ,
         }));
-        return this.galleryImages;
     },
 
     // 分页拉取 r-gallery 的照片列表（limit 上限 500，按 cursor 循环取完）
@@ -1201,15 +1230,12 @@ const BlogApp = {
         `;
     },
 
-    // 主页图库缩略（2×2，观光安全：不展示 R16/R18 内容）
+    // 主页图库轮播（一次一张，全部循环播放；观光安全：不展示 R16/R18 内容）
     async renderHomePhotos() {
-        const grid = document.getElementById('homePhotoGrid');
+        const wrap = document.getElementById('homeSlideshow');
         const panel = document.getElementById('homePhotos');
-        if (!grid || grid.dataset.rendered) return;
-        grid.dataset.rendered = '1';
-
-        // 图库接口首次可能要 8 秒左右，先摆骨架，数据到了再替换
-        grid.innerHTML = '<div class="home-photo is-loading"></div>'.repeat(4);
+        if (!wrap || wrap.dataset.rendered) return;
+        wrap.dataset.rendered = '1';
 
         let photos = [];
         try {
@@ -1217,7 +1243,7 @@ const BlogApp = {
                 this.loadGalleryImages(),
                 new Promise((_, reject) => setTimeout(() => reject(new Error('图库接口超时')), 15000)),
             ]);
-            photos = (list || []).filter(p => !this.isR18Image(p)).slice(0, 4);
+            photos = (list || []).filter(p => !this.isR18Image(p));
         } catch (e) {
             photos = [];
         }
@@ -1228,11 +1254,68 @@ const BlogApp = {
             return;
         }
 
-        grid.innerHTML = photos.map(p => `
-            <a class="home-photo" href="#" onclick="BlogApp.goView('gallery'); return false;" title="${this.escAttr(p.title || '查看图库')}">
-                <img src="${this.escAttr(p.thumb || p.url)}" alt="${this.escAttr(p.title || '图库图片')}" loading="lazy" decoding="async" referrerpolicy="no-referrer">
+        this.homeSlides = photos;
+        wrap.classList.remove('is-loading');
+        wrap.innerHTML = `
+            <a class="home-slide" id="homeSlideLink" href="#">
+                <img class="home-slide-img" id="homeSlideImg" alt="" decoding="async" referrerpolicy="no-referrer">
+                <span class="home-slide-count" id="homeSlideCount"></span>
             </a>
-        `).join('');
+        `;
+        const link = document.getElementById('homeSlideLink');
+        if (link) link.addEventListener('click', (e) => { e.preventDefault(); this.goView('gallery'); });
+        // 鼠标停在上面就暂停轮播，移开继续
+        wrap.addEventListener('mouseenter', () => this.stopHomeSlideTimer());
+        wrap.addEventListener('mouseleave', () => this.startHomeSlideTimer());
+
+        this.showHomeSlide(0);
+        this.startHomeSlideTimer();
+    },
+
+    // 显示第 i 张（越界自动循环），并预加载下一张
+    showHomeSlide(i) {
+        const photos = this.homeSlides || [];
+        if (!photos.length) return;
+        const idx = ((i % photos.length) + photos.length) % photos.length;
+        this.homeSlideIndex = idx;
+
+        const img = document.getElementById('homeSlideImg');
+        const count = document.getElementById('homeSlideCount');
+        if (!img) return;
+
+        const photo = photos[idx];
+        const src = photo.thumb || photo.url;
+        if (img.getAttribute('src') !== src) {
+            img.classList.remove('is-in');
+            img.setAttribute('src', src);
+            img.alt = photo.title || '图库图片';
+            // 下一帧加类触发淡入
+            requestAnimationFrame(() => img.classList.add('is-in'));
+        }
+        if (count) count.textContent = `${idx + 1} / ${photos.length}`;
+
+        // 预加载下一张：切换时基本不用等网络（浏览器缓存命中）
+        const next = photos[(idx + 1) % photos.length];
+        if (next) {
+            const pre = new Image();
+            pre.src = next.thumb || next.url;
+        }
+    },
+
+    startHomeSlideTimer() {
+        this.stopHomeSlideTimer();
+        if (!this.homeSlides || this.homeSlides.length < 2) return;
+        this.homeSlideTimer = setInterval(() => {
+            if (document.hidden) return; // 页面不可见时跳过，省流量
+            this.showHomeSlide(this.homeSlideIndex + 1);
+        }, 5000);
+    },
+
+    stopHomeSlideTimer() {
+        if (this.homeSlideTimer) {
+            clearInterval(this.homeSlideTimer);
+            this.homeSlideTimer = null;
+        }
     },
 
     // 主页入口：切到指定视图（可选再按内容形态筛选）

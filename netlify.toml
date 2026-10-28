@@ -25,6 +25,12 @@
   to = "/.netlify/functions/github"
   status = 200
 
+# 图库清单代理（带 Blobs 缓存，主页轮播与图库视图共用）
+[[redirects]]
+  from = "/api/gallery"
+  to = "/.netlify/functions/gallery"
+  status = 200
+
 [[redirects]]
   from = "/api/comments"
   to = "/.netlify/functions/comments"
