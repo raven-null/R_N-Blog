@@ -3994,6 +3994,60 @@ html.reader-focus .article-content {
     opacity: 0.75;
 }
 
+/* ===== 主题切换按钮：圆角矩形（图标 + 当前主题名） ===== */
+.theme-toggle {
+    width: auto;
+    min-width: 96px;
+    height: 38px;
+    padding: 0 14px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-family: inherit;
+    font-size: 12px;
+    letter-spacing: 1px;
+    box-shadow: 0 8px 24px var(--shadow);
+    transition: border-color 0.2s, color 0.2s, transform 0.2s, box-shadow 0.2s;
+}
+
+.theme-toggle:hover {
+    transform: translateY(-2px);
+}
+
+.theme-toggle:active {
+    transform: translateY(0);
+}
+
+.theme-toggle-icon {
+    font-size: 15px;
+    line-height: 1;
+}
+
+.theme-toggle-name {
+    font-size: 11px;
+    line-height: 1;
+    color: inherit;
+    white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+    .theme-toggle {
+        width: auto;
+        min-width: 88px;
+        height: 36px;
+        bottom: 16px;
+        right: max(16px, var(--safe-right));
+        padding: 0 12px;
+        font-size: 11px;
+    }
+
+    .theme-toggle-icon {
+        font-size: 14px;
+    }
+}
+
 @media (max-width: 900px) {
     .home-articles {
         grid-template-columns: minmax(0, 1fr);

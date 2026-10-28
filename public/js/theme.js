@@ -246,12 +246,13 @@ const ThemeManager = {
         return this.themes[this.currentTheme];
     },
 
-    // 更新所有主题切换按钮的显示
+    // 更新所有主题切换按钮的显示（图标 + 当前主题名）
     updateThemeButtons() {
         document.querySelectorAll('.theme-toggle').forEach(btn => {
             const theme = this.getCurrentTheme();
-            btn.innerHTML = theme.icon;
-            btn.title = theme.name;
+            btn.innerHTML = `<span class="theme-toggle-icon">${theme.icon}</span><span class="theme-toggle-name">${theme.name}</span>`;
+            btn.title = `切换主题（当前：${theme.name}）`;
+            btn.setAttribute('aria-label', `切换主题，当前 ${theme.name}`);
         });
     },
 
@@ -259,10 +260,10 @@ const ThemeManager = {
     createThemeToggle(container) {
         const toggle = document.createElement('button');
         toggle.className = 'theme-toggle';
-        toggle.innerHTML = this.getCurrentTheme().icon;
-        toggle.title = this.getCurrentTheme().name;
+        toggle.type = 'button';
         toggle.addEventListener('click', () => this.nextTheme());
         (container || document.body).appendChild(toggle);
+        this.updateThemeButtons();
         return toggle;
     }
 };
