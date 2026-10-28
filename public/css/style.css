@@ -3379,3 +3379,86 @@ html.reader-focus .article-content {
         justify-content: center;
     }
 }
+
+/* ===== 主页欢迎区紧凑化：按钮组进欢迎区，数据行独立成行 ===== */
+.home-hero {
+    padding: 16px 20px;
+    gap: 16px;
+}
+
+.home-hero .dash-avatar {
+    width: 54px;
+    height: 54px;
+    box-shadow: 0 0 0 3px var(--glow), 0 6px 18px var(--shadow);
+}
+
+.home-hero .dash-name {
+    font-size: 17px;
+    letter-spacing: 0.5px;
+}
+
+.home-hero .dash-bio {
+    margin-top: 3px;
+    font-size: 12px;
+}
+
+.home-hero .home-cta {
+    margin-top: 10px;
+    gap: 8px;
+}
+
+.home-hero .home-cta-btn {
+    padding: 6px 14px;
+    font-size: 12px;
+    gap: 6px;
+}
+
+.home-hero .dash-clock-date {
+    font-size: 11px;
+}
+
+.home-hero .dash-clock-time {
+    margin-top: 2px;
+    font-size: 16px;
+}
+
+/* 数据行：脱离欢迎区，紧跟其下单独一行 */
+.home-stats {
+    margin-top: 0;
+    padding: 0 4px;
+    gap: 24px;
+}
+
+.home-stats .home-stat {
+    font-size: 11px;
+}
+
+.home-stats .home-stat b {
+    font-size: 18px;
+}
+
+/* 紧凑欢迎区：窄屏 */
+@media (max-width: 640px) {
+    .home-hero {
+        padding: 14px 16px;
+        gap: 12px;
+    }
+
+    .home-hero .dash-avatar {
+        width: 48px;
+        height: 48px;
+    }
+
+    .home-hero .home-cta-btn {
+        padding: 6px 12px;
+        font-size: 11px;
+    }
+
+    .home-stats {
+        gap: 16px;
+    }
+
+    .home-stats .home-stat b {
+        font-size: 16px;
+    }
+}

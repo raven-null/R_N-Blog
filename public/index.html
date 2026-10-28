@@ -13,7 +13,7 @@
     <script src="/js/site-icon.js?v=1.0.0" defer></script>
 
     <!-- Styles -->
-    <link rel="stylesheet" href="css/style.css?v=3.18.0">
+    <link rel="stylesheet" href="css/style.css?v=3.19.0">
     <link rel="stylesheet" href="css/glass.css?v=1.0.14">
     <link rel="stylesheet" href="css/wheel.css?v=1.0.0">
 
@@ -135,14 +135,17 @@
             <section class="view view-home" id="view-home">
                 <div class="dashboard">
 
-                    <!-- 欢迎区：身份 / 最近动态 / 数据 / 时间 -->
+                    <!-- 欢迎区：身份 + 入口按钮 + 时间 -->
                     <div class="dash-hero home-hero">
                         <img class="dash-avatar" src="images/Default/profile -picture.webp" alt="博主">
                         <div class="dash-identity">
                             <div class="dash-name">博主</div>
                             <div class="dash-bio">欢迎来到我的博客</div>
-                            <div class="home-focus" id="homeFocus"></div>
-                            <div class="home-stats" id="dashboardStats"></div>
+                            <div class="home-cta">
+                                <button class="home-cta-btn home-cta-primary" onclick="BlogApp.goView('blog')">浏览文章</button>
+                                <button class="home-cta-btn" onclick="BlogApp.goView('gallery')">看看图库</button>
+                                <a class="home-cta-btn home-cta-ghost" href="feed.xml" target="_blank" rel="noopener">RSS 订阅</a>
+                            </div>
                         </div>
                         <div class="dash-clock" id="dashClock">
                             <div class="dash-clock-date" id="dashClockDate"></div>
@@ -150,12 +153,8 @@
                         </div>
                     </div>
 
-                    <!-- 入口按钮 -->
-                    <div class="home-cta">
-                        <button class="home-cta-btn home-cta-primary" onclick="BlogApp.goView('blog')">浏览文章</button>
-                        <button class="home-cta-btn" onclick="BlogApp.goView('gallery')">看看图库</button>
-                        <a class="home-cta-btn home-cta-ghost" href="feed.xml" target="_blank" rel="noopener">RSS 订阅</a>
-                    </div>
+                    <!-- 数据概览 -->
+                    <div class="home-stats" id="dashboardStats"></div>
 
                     <!-- 最新文章：左封面大卡 + 右更新列表 -->
                     <div class="home-articles">
@@ -331,7 +330,7 @@
 
     <!-- Scripts -->
     <script src="js/theme.js?v=3.13.6" defer></script>
-    <script src="js/app.js?v=3.44.0" defer></script>
+    <script src="js/app.js?v=3.45.0" defer></script>
     <script src="js/animations.js?v=3.14.0" defer></script>
 
     <script>

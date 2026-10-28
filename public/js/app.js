@@ -1097,7 +1097,6 @@ const BlogApp = {
     // 渲染主页（最近动态 + 数据行 + 文章大卡与列表）
     async renderHome(force = false) {
         // 文章区不依赖网络，先渲染，避免图库接口慢时主页整块空白
-        this.renderHomeFocus();
         this.renderHomeArticles();
         this.renderHomeNews();
 
@@ -1132,7 +1131,7 @@ const BlogApp = {
 
         // 入场动效（Anime.js）
         if (typeof anime !== 'undefined') {
-            anime.animate('.view-home .dash-hero, .view-home .home-cta, .view-home .home-articles > *, .view-home .home-shortcuts, .view-home .dash-bottom', {
+            anime.animate('.view-home .dash-hero, .view-home .home-stats, .view-home .home-articles > *, .view-home .home-shortcuts, .view-home .dash-bottom', {
                 opacity: [0, 1],
                 translateY: [16, 0],
                 duration: 500,
@@ -1140,19 +1139,6 @@ const BlogApp = {
                 ease: 'out(2)'
             });
         }
-    },
-
-    // 主页「最近更新」一行：指向最新发布的一篇
-    renderHomeFocus() {
-        const el = document.getElementById('homeFocus');
-        if (!el) return;
-        const latest = this.postsSorted()[0];
-        if (!latest) {
-            el.innerHTML = '';
-            return;
-        }
-        el.innerHTML = `<span class="home-focus-key">最近更新</span>
-            <a class="home-focus-link" href="article.html?post=${this.escAttr(latest.filename)}&blob=${this.escAttr(latest.id || '')}">${this.esc(latest.title)}</a>`;
     },
 
     // 按发布时间倒序的文章列表
