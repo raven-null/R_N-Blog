@@ -4212,3 +4212,150 @@ html.reader-focus .article-content {
         -webkit-line-clamp: 2;
     }
 }
+
+/* ===== 简报标题行：右侧主题按钮 ===== */
+.home-news-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.home-news-title .home-news-hint {
+    float: none;
+    margin-left: auto;
+}
+
+/* 主题按钮从欢迎区移到简报标题行内 */
+.home-theme-btn {
+    position: static;
+    margin: 0;
+    height: 28px;
+    padding: 0 10px;
+    font-size: 11px;
+    flex-shrink: 0;
+}
+
+.home-theme-btn .home-theme-icon {
+    font-size: 13px;
+}
+
+/* ===== 图库 + 文章封面并排 ===== */
+.home-media {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 20px;
+}
+
+.home-photos,
+.home-post {
+    flex: none;
+    height: 420px;
+    padding: 0;
+    overflow: hidden;
+}
+
+.home-photos {
+    position: relative;
+}
+
+.home-slideshow {
+    flex: 1;
+    height: 100%;
+}
+
+/* 文章封面卡：封面铺满 + 底部毛玻璃遮罩 */
+.home-post {
+    position: relative;
+    display: block;
+    text-decoration: none;
+    color: inherit;
+}
+
+.home-post-media {
+    position: absolute;
+    inset: 0;
+}
+
+.home-post-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0;
+    transition: opacity 0.6s ease;
+}
+
+.home-post-img.is-in {
+    opacity: 1;
+}
+
+.home-post-badge {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    color: #fff;
+    font-size: 11px;
+    letter-spacing: 1px;
+}
+
+.home-post-mask {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 56px 20px 18px;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.35) 60%, rgba(0, 0, 0, 0));
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    pointer-events: none;
+}
+
+.home-post-title {
+    color: #fff;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.45;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.home-post-tags {
+    margin-top: 8px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.home-post-tag {
+    padding: 2px 8px;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    border-radius: 999px;
+    color: #fff;
+    font-size: 11px;
+    letter-spacing: 1px;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+@media (max-width: 900px) {
+    .home-media {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .home-photos,
+    .home-post {
+        height: 260px;
+    }
+
+    .home-theme-btn {
+        height: 26px;
+        padding: 0 8px;
+    }
+}

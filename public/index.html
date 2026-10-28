@@ -13,7 +13,7 @@
     <script src="/js/site-icon.js?v=1.0.0" defer></script>
 
     <!-- Styles -->
-    <link rel="stylesheet" href="css/style.css?v=3.38.0">
+    <link rel="stylesheet" href="css/style.css?v=3.39.0">
     <link rel="stylesheet" href="css/glass.css?v=1.0.14">
     <link rel="stylesheet" href="css/wheel.css?v=1.0.0">
 
@@ -188,26 +188,39 @@
                             <div class="dash-clock-date" id="dashClockDate"></div>
                             <div class="dash-clock-time" id="dashClockTime"></div>
                         </div>
-
-                        <!-- 主题切换（圆角矩形，图标 + 当前主题名） -->
-                        <button class="home-theme-btn" id="homeThemeBtn" type="button" onclick="ThemeManager.nextTheme()">
-                            <span class="home-theme-icon">◐</span><span class="home-theme-name">主题</span>
-                        </button>
                     </div>
 
-                    <!-- 内容区：今日简报（紧凑）+ 图库轮播 -->
+                    <!-- 内容区：今日简报（右侧带主题按钮）+ 图库 / 文章封面并排 -->
                     <div class="home-articles">
                         <div class="dash-panel home-news" id="homeNews">
-                            <div class="dash-panel-title">今日简报
+                            <div class="dash-panel-title home-news-title">今日简报
                                 <span class="home-news-hint">聚合热榜 · 每日更新</span>
+                                <!-- 主题切换（圆角矩形，图标 + 当前主题名） -->
+                                <button class="home-theme-btn" id="homeThemeBtn" type="button" onclick="ThemeManager.nextTheme()">
+                                    <span class="home-theme-icon">◐</span><span class="home-theme-name">主题</span>
+                                </button>
                             </div>
                             <div class="news-list" id="newsList">
                                 <div class="home-empty">加载中...</div>
                             </div>
                         </div>
 
-                        <div class="dash-panel home-photos" id="homePhotos">
-                            <div class="home-slideshow is-loading" id="homeSlideshow"></div>
+                        <div class="home-media">
+                            <div class="dash-panel home-photos" id="homePhotos">
+                                <div class="home-slideshow is-loading" id="homeSlideshow"></div>
+                            </div>
+
+                            <!-- 博客文章封面轮播：封面铺满，底部毛玻璃遮罩放标题与标签 -->
+                            <a class="dash-panel home-post" id="homePostStage" href="article.html" aria-label="博客文章">
+                                <div class="home-post-media">
+                                    <img class="home-post-img" id="homePostImg" alt="" decoding="async" referrerpolicy="no-referrer">
+                                    <span class="home-post-badge" id="homePostBadge"></span>
+                                </div>
+                                <div class="home-post-mask">
+                                    <div class="home-post-title" id="homePostTitle">加载中...</div>
+                                    <div class="home-post-tags" id="homePostTags"></div>
+                                </div>
+                            </a>
                         </div>
                     </div>
 
@@ -342,7 +355,7 @@
 
     <!-- Scripts -->
     <script src="js/theme.js?v=3.16.0" defer></script>
-    <script src="js/app.js?v=3.60.0" defer></script>
+    <script src="js/app.js?v=3.61.0" defer></script>
     <script src="js/animations.js?v=3.14.0" defer></script>
 
     <script>

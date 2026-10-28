@@ -1196,11 +1196,97 @@ const BlogApp = {
         return null;
     },
 
-    // 渲染主页（入口数字 + 今日简报 + 图库轮播 + 项目）
+    // 主页文章封面轮播：封面铺满盒子，底部毛玻璃遮罩显示标题与标签
+    renderHomePostStage() {
+        const stage = document.getElementById('homePostStage');
+        const img = document.getElementById('homePostImg');
+        if (!stage || !img) return;
+
+        const posts = (this.posts || []).filter(p => p && p.filename);
+        if (!posts.length) {
+            stage.removeAttribute('href');
+            const titleEl = document.getElementById('homePostTitle');
+            if (titleEl) titleEl.textContent = '还没有文章';
+            this.stopHomePostTimer();
+            return;
+        }
+
+        this.homePosts = posts;
+        // 悬停暂停，移开继续
+        if (!stage.dataset.hoverBound) {
+            stage.dataset.hoverBound = '1';
+            stage.addEventListener('mouseenter', () => this.stopHomePostTimer());
+            stage.addEventListener('mouseleave', () => this.startHomePostTimer());
+        }
+
+        this.showHomePost(0);
+        this.startHomePostTimer();
+    },
+
+    // 显示第 i 篇文章封面（越界循环）并预加载下一张
+    showHomePost(i) {
+        const posts = this.homePosts || [];
+        if (!posts.length) return;
+        const idx = ((i % posts.length) + posts.length) % posts.length;
+        this.homePostIndex = idx;
+        const post = posts[idx];
+
+        const stage = document.getElementById('homePostStage');
+        const img = document.getElementById('homePostImg');
+        const titleEl = document.getElementById('homePostTitle');
+        const tagsEl = document.getElementById('homePostTags');
+        const badgeEl = document.getElementById('homePostBadge');
+        if (!stage || !img) return;
+
+        const cover = post.image || 'images/Default/web-logo.webp';
+        if (img.getAttribute('src') !== cover) {
+            img.classList.remove('is-in');
+            img.setAttribute('src', cover);
+            img.alt = post.title || '文章封面';
+            requestAnimationFrame(() => img.classList.add('is-in'));
+        }
+        if (titleEl) titleEl.textContent = post.title || '';
+        if (tagsEl) {
+            tagsEl.innerHTML = (post.tags || []).slice(0, 3)
+                .map(t => `<span class="home-post-tag">${this.esc(t)}</span>`).join('');
+        }
+        if (badgeEl) {
+            badgeEl.textContent = post.type === 'whiteboard' ? '交互白板'
+                : post.type === 'mindmap' ? '思维导图'
+                : post.type === 'graph' ? '节点图' : '博客文章';
+        }
+        stage.setAttribute('href', `article.html?post=${this.escAttr(post.filename)}&blob=${this.escAttr(post.id || '')}`);
+
+        // 预加载下一张封面
+        const next = posts[(idx + 1) % posts.length];
+        if (next && next.image) {
+            const pre = new Image();
+            pre.src = next.image;
+        }
+    },
+
+    startHomePostTimer() {
+        this.stopHomePostTimer();
+        if (!this.homePosts || this.homePosts.length < 2) return;
+        this.homePostTimer = setInterval(() => {
+            if (document.hidden) return;
+            this.showHomePost(this.homePostIndex + 1);
+        }, 5000);
+    },
+
+    stopHomePostTimer() {
+        if (this.homePostTimer) {
+            clearInterval(this.homePostTimer);
+            this.homePostTimer = null;
+        }
+    },
+
+    // 渲染主页（入口数字 + 今日简报 + 图库轮播 + 文章封面轮播 + 项目）
     async renderHome(force = false) {
         // 内容区不依赖图库接口的部分先渲染，避免主页整块空白
         this.renderHomeNews();
         this.renderHomePhotos();
+        this.renderHomePostStage();
         this.renderHomeProjects();
         this.renderHomeCta(force);
 
