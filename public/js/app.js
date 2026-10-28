@@ -631,8 +631,20 @@ const BlogApp = {
     // 加载图库图片：数据源为 r-gallery 站点（博客自己不再存图）
     // - 观光模式：?safe=1，服务端已剔除 R16/R18；
     // - 管理员：带图库密码（gallery_key 或后台 admin_key）拉全量，图片 URL 也带 token 才能取字节。
+    // - 并发调用共享同一次请求（主页要缩略图的同时入口要照片数），避免重复拉取
     async loadGalleryImages() {
         if (this.galleryImages) return this.galleryImages;
+        if (this.galleryPromise) return this.galleryPromise;
+        this.galleryPromise = this.fetchGalleryList();
+        try {
+            return await this.galleryPromise;
+        } finally {
+            this.galleryPromise = null;
+        }
+    },
+
+    // 真正拉取图库清单（分页取完，首次可能较慢）
+    async fetchGalleryList() {
         const base = this.config.galleryBase;
         const token = this.galleryViewKey();
         let list = [];
@@ -1100,6 +1112,7 @@ const BlogApp = {
         // 文章区不依赖网络，先渲染，避免图库接口慢时主页整块空白
         this.renderHomeArticles();
         this.renderHomeNews();
+        this.renderHomePhotos();
         this.renderHomeProjects();
         this.renderHomeCta(force);
 
@@ -1132,7 +1145,7 @@ const BlogApp = {
                 // 图库来自外部站点，给个上限，避免一直停在占位
                 const list = await Promise.race([
                     this.loadGalleryImages(),
-                    new Promise((_, reject) => setTimeout(() => reject(new Error('图库接口超时')), 3000)),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('图库接口超时')), 15000)),
                 ]);
                 photosEl.textContent = (list || []).length;
             } catch (e) {
@@ -1186,6 +1199,40 @@ const BlogApp = {
             </div>
             <div class="home-feature-foot">阅读全文 <span class="home-feature-arrow">→</span></div>
         `;
+    },
+
+    // 主页图库缩略（2×2，观光安全：不展示 R16/R18 内容）
+    async renderHomePhotos() {
+        const grid = document.getElementById('homePhotoGrid');
+        const panel = document.getElementById('homePhotos');
+        if (!grid || grid.dataset.rendered) return;
+        grid.dataset.rendered = '1';
+
+        // 图库接口首次可能要 8 秒左右，先摆骨架，数据到了再替换
+        grid.innerHTML = '<div class="home-photo is-loading"></div>'.repeat(4);
+
+        let photos = [];
+        try {
+            const list = await Promise.race([
+                this.loadGalleryImages(),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('图库接口超时')), 15000)),
+            ]);
+            photos = (list || []).filter(p => !this.isR18Image(p)).slice(0, 4);
+        } catch (e) {
+            photos = [];
+        }
+
+        // 拿不到图片就整块隐藏，避免主页出现空卡片
+        if (!photos.length) {
+            if (panel) panel.style.display = 'none';
+            return;
+        }
+
+        grid.innerHTML = photos.map(p => `
+            <a class="home-photo" href="#" onclick="BlogApp.goView('gallery'); return false;" title="${this.escAttr(p.title || '查看图库')}">
+                <img src="${this.escAttr(p.thumb || p.url)}" alt="${this.escAttr(p.title || '图库图片')}" loading="lazy" decoding="async" referrerpolicy="no-referrer">
+            </a>
+        `).join('');
     },
 
     // 主页入口：切到指定视图（可选再按内容形态筛选）

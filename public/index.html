@@ -13,7 +13,7 @@
     <script src="/js/site-icon.js?v=1.0.0" defer></script>
 
     <!-- Styles -->
-    <link rel="stylesheet" href="css/style.css?v=3.23.0">
+    <link rel="stylesheet" href="css/style.css?v=3.27.0">
     <link rel="stylesheet" href="css/glass.css?v=1.0.14">
     <link rel="stylesheet" href="css/wheel.css?v=1.0.0">
 
@@ -190,11 +190,22 @@
                         </div>
                     </div>
 
-                    <!-- 文章区：左 = 最新文章大卡，右 = 今日简报（原「最近更新」位置） -->
+                    <!-- 文章区：左 = 最新文章 + 图库缩略，右 = 今日简报 -->
                     <div class="home-articles">
-                        <a class="home-feature dash-panel" id="homeFeatured" href="article.html" aria-label="最新文章">
-                            <div class="home-empty">加载中...</div>
-                        </a>
+                        <div class="home-left">
+                            <a class="home-feature dash-panel" id="homeFeatured" href="article.html" aria-label="最新文章">
+                                <div class="home-empty">加载中...</div>
+                            </a>
+
+                            <div class="dash-panel home-photos" id="homePhotos">
+                                <div class="dash-panel-title">图库
+                                    <span class="home-more" onclick="BlogApp.goView('gallery')">全部 ›</span>
+                                </div>
+                                <div class="home-photo-grid" id="homePhotoGrid">
+                                    <div class="home-empty">加载中...</div>
+                                </div>
+                            </div>
+                        </div>
 
                         <div class="dash-panel home-news" id="homeNews">
                             <div class="dash-panel-title">今日简报
@@ -371,7 +382,7 @@
 
     <!-- Scripts -->
     <script src="js/theme.js?v=3.13.6" defer></script>
-    <script src="js/app.js?v=3.49.0" defer></script>
+    <script src="js/app.js?v=3.51.0" defer></script>
     <script src="js/animations.js?v=3.14.0" defer></script>
 
     <script>
