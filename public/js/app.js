@@ -1196,10 +1196,9 @@ const BlogApp = {
         return null;
     },
 
-    // 渲染主页（入口数字 + 文章区 + 今日简报）
+    // 渲染主页（入口数字 + 今日简报 + 图库轮播 + 项目）
     async renderHome(force = false) {
-        // 文章区不依赖网络，先渲染，避免图库接口慢时主页整块空白
-        this.renderHomeArticles();
+        // 内容区不依赖图库接口的部分先渲染，避免主页整块空白
         this.renderHomeNews();
         this.renderHomePhotos();
         this.renderHomeProjects();

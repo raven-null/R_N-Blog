@@ -13,7 +13,7 @@
     <script src="/js/site-icon.js?v=1.0.0" defer></script>
 
     <!-- Styles -->
-    <link rel="stylesheet" href="css/style.css?v=3.36.0">
+    <link rel="stylesheet" href="css/style.css?v=3.38.0">
     <link rel="stylesheet" href="css/glass.css?v=1.0.14">
     <link rel="stylesheet" href="css/wheel.css?v=1.0.0">
 
@@ -195,18 +195,8 @@
                         </button>
                     </div>
 
-                    <!-- 文章区：左 = 最新文章 + 图库缩略，右 = 今日简报 -->
+                    <!-- 内容区：今日简报（紧凑）+ 图库轮播 -->
                     <div class="home-articles">
-                        <div class="home-left">
-                            <a class="home-feature dash-panel" id="homeFeatured" href="article.html" aria-label="最新文章">
-                                <div class="home-empty">加载中...</div>
-                            </a>
-
-                            <div class="dash-panel home-photos" id="homePhotos">
-                                <div class="home-slideshow is-loading" id="homeSlideshow"></div>
-                            </div>
-                        </div>
-
                         <div class="dash-panel home-news" id="homeNews">
                             <div class="dash-panel-title">今日简报
                                 <span class="home-news-hint">聚合热榜 · 每日更新</span>
@@ -214,6 +204,10 @@
                             <div class="news-list" id="newsList">
                                 <div class="home-empty">加载中...</div>
                             </div>
+                        </div>
+
+                        <div class="dash-panel home-photos" id="homePhotos">
+                            <div class="home-slideshow is-loading" id="homeSlideshow"></div>
                         </div>
                     </div>
 
@@ -348,7 +342,7 @@
 
     <!-- Scripts -->
     <script src="js/theme.js?v=3.16.0" defer></script>
-    <script src="js/app.js?v=3.59.0" defer></script>
+    <script src="js/app.js?v=3.60.0" defer></script>
     <script src="js/animations.js?v=3.14.0" defer></script>
 
     <script>

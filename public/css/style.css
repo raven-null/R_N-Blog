@@ -3677,8 +3677,50 @@ html.reader-focus .article-content {
     white-space: nowrap;
 }
 
+/* ===== 内容区：今日简报（紧凑）+ 图库轮播，单列排布 ===== */
+.home-articles {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.home-articles > .home-news {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+/* 简报：紧凑但留够高度，约 5 条高度，内部滚动 */
+.home-articles > .home-news .news-list {
+    flex: 1;
+    min-height: 0;
+    max-height: 240px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+.home-photos {
+    flex: none;
+}
+
+/* 图库轮播：铺满宽度，固定高度（图片 cover 裁切） */
+.home-slideshow {
+    flex: none;
+    height: 320px;
+}
+
+@media (max-width: 900px) {
+    .home-articles > .home-news .news-list {
+        max-height: 180px;
+    }
+
+    .home-slideshow {
+        height: 220px;
+    }
+}
+
 @media (max-width: 640px) {
-    /* 单行横向滑动，窄屏卡片收窄一点，保证一屏能看到下一条 */
+    /* 项目单行横向滑动：窄屏卡片收窄一点，保证一屏能看到下一条 */
     .home-project {
         width: 200px;
     }
@@ -4118,6 +4160,52 @@ html.reader-focus .article-content {
         /* 窄屏同样在盒子内滚动，不把卡片拉长 */
         max-height: min(380px, 60vh);
         overflow-y: auto;
+    }
+
+    .home-articles > .home-news .news-item-title {
+        -webkit-line-clamp: 2;
+    }
+}
+
+/* ===== 主页内容区（最终覆盖）：单列，简报在上、图库在下 ===== */
+.home-articles {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.home-articles > .home-news {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+/* 简报：紧凑高度（约 5 条），内部滚动 */
+.home-articles > .home-news .news-list {
+    flex: none;
+    min-height: 0;
+    max-height: 240px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+.home-photos {
+    flex: none;
+}
+
+/* 图库轮播：铺满宽度，固定高度 */
+.home-slideshow {
+    flex: none;
+    height: 320px;
+}
+
+@media (max-width: 900px) {
+    .home-articles > .home-news .news-list {
+        max-height: 180px;
+    }
+
+    .home-slideshow {
+        height: 220px;
     }
 
     .home-articles > .home-news .news-item-title {
