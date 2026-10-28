@@ -13,7 +13,7 @@
     <script src="/js/site-icon.js?v=1.0.0" defer></script>
 
     <!-- Styles -->
-    <link rel="stylesheet" href="css/style.css?v=3.16.14">
+    <link rel="stylesheet" href="css/style.css?v=3.17.0">
     <link rel="stylesheet" href="css/glass.css?v=1.0.14">
 
     <!-- 首页只渲染卡片列表（摘要由后端给出），不需要 Markdown 解析与代码高亮：
@@ -280,7 +280,7 @@
 
     <!-- Scripts -->
     <script src="js/theme.js?v=3.13.6" defer></script>
-    <script src="js/app.js?v=3.41.0" defer></script>
+    <script src="js/app.js?v=3.42.0" defer></script>
     <script src="js/animations.js?v=3.14.0" defer></script>
 
     <script>
@@ -721,6 +721,21 @@
                 setTimeout(() => BlogApp.moveIndicator(BlogApp.currentView || _startView), 0);
                 if (BlogApp.currentView !== _startView && _views[_startView] !== false) {
                     BlogApp.switchView(_startView);
+                }
+
+                // 兜底：若浏览器缓存了旧版 app.js（不认识 home 视图），手动回落到文章视图，
+                // 避免「新 HTML + 旧 JS」导致主页 DOM 与滑块/筛选条状态错配
+                if (_startView === 'home' && typeof BlogApp.renderHome !== 'function') {
+                    const viewHome = document.getElementById('view-home');
+                    const viewBlog = document.getElementById('view-blog');
+                    const navBar = document.getElementById('navBar');
+                    if (viewHome) viewHome.style.display = 'none';
+                    if (viewBlog) viewBlog.style.display = '';
+                    if (navBar) navBar.style.display = '';
+                    document.querySelectorAll('#viewSwitch .view-btn').forEach(btn => {
+                        btn.classList.toggle('active', btn.dataset.view === 'blog');
+                    });
+                    if (typeof BlogApp.moveIndicator === 'function') BlogApp.moveIndicator('blog');
                 }
 
                 // Init card observer after posts render
