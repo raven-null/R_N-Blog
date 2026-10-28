@@ -26,18 +26,15 @@ const BlogApp = {
 
     // 初始化应用
     async init() {
-        console.log('[BlogApp] 初始化开始');
         ThemeManager.init();
         ThemeManager.createThemeToggle();
         await this.loadPosts();
-        console.log('[BlogApp] 文章加载完成:', this.posts.length, '篇');
         this.render();
         // 主页为默认视图时，渲染统计概览与最新文章
         if (this.currentView === 'home') this.renderHome();
         // 顶部筛选导航（全部 / 文章 / 白板…）只在文章视图显示
         const navBar = document.getElementById('navBar');
         if (navBar) navBar.style.display = this.currentView === 'blog' ? '' : 'none';
-        console.log('[BlogApp] 渲染完成');
         this.setupEventListeners();
         this.bindPagePrefetch();
         this.handleRoute();
@@ -59,7 +56,6 @@ const BlogApp = {
     // force=true 时跳过 sessionStorage 缓存，强制从服务器重新拉取
     async loadPosts(force = false) {
         try {
-            console.log('[loadPosts] 开始加载文章');
             const CACHE_KEY = 'blog-posts-data-v16';
             const CACHE_TTL = 15 * 1000; // 缓存有效期 15 秒（缩短，保证改动后尽快可见）
             const cachedRaw = sessionStorage.getItem(CACHE_KEY);
@@ -68,7 +64,6 @@ const BlogApp = {
                     const cached = JSON.parse(cachedRaw);
                     // 检查缓存是否过期（存有时间戳）
                     if (cached.t && Date.now() - cached.t < CACHE_TTL && Array.isArray(cached.posts)) {
-                        console.log('[loadPosts] 使用缓存数据');
                         this.posts = cached.posts;
                         this.filteredPosts = [...this.posts];
                         return;
@@ -86,11 +81,8 @@ const BlogApp = {
             this.posts = [];
 
             // 仅从 Blobs 加载文章
-            console.log('[loadPosts] 从 Blobs 加载文章');
             const blobResults = await this.loadBlobPosts();
-            console.log('[loadPosts] Blobs 返回:', blobResults.length, '篇');
             this.posts = blobResults.filter(p => p !== null);
-            console.log('[loadPosts] 过滤后:', this.posts.length, '篇');
 
             // 按日期降序排序
             this.posts.sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -116,7 +108,7 @@ const BlogApp = {
                 };
                 sessionStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
             } catch (e) {
-                console.warn('文章缓存失败（不影响使用）:', e);
+                /* 静默：属于正常回退路径，不刷控制台 */
             }
         } catch (error) {
             console.error('加载文章失败:', error);
@@ -152,6 +144,9 @@ const BlogApp = {
     _lastFingerprint: null,
     _pollTimer: null,
     _bc: null,
+    // 连续失败计数与冷却时间：接口不稳时不再死缠，避免控制台反复报网络错误
+    _failCount: 0,
+    _cooldownUntil: 0,
 
     // 生成文章索引指纹（id + 日期 + 标题，任一变化即视为改动）
     _articlesFingerprint(index) {
@@ -163,10 +158,15 @@ const BlogApp = {
 
     // 静默检查：与服务器索引比对，有变化才重新加载并渲染
     async refreshIfChanged() {
+        // 失败后按次数退避（30s → 60s → 120s，最长 5 分钟），避免频繁报错
+        if (Date.now() < this._cooldownUntil) return;
         try {
             const res = await fetch('/api/admin?action=articles', { cache: 'no-store' });
+            if (!res.ok) throw new Error('HTTP ' + res.status);
             const data = await res.json();
             if (data.status !== 'success' || !Array.isArray(data.data)) return;
+            this._failCount = 0;
+            this._cooldownUntil = 0;
             const fp = this._articlesFingerprint(data.data);
             // 首次调用只记录指纹，不做无谓刷新
             if (this._lastFingerprint === null) {
@@ -174,12 +174,16 @@ const BlogApp = {
                 return;
             }
             if (fp !== this._lastFingerprint) {
-                console.log('[BlogApp] 检测到文章变化，自动刷新');
                 this._lastFingerprint = fp;
                 await this.loadPosts(true);
                 this.render();
             }
-        } catch (e) { /* 静默失败，下次轮询再试 */ }
+        } catch (e) {
+            // 静默失败：累计次数并进入冷却，下次轮询再试
+            this._failCount = (this._failCount || 0) + 1;
+            const backoff = Math.min(30000 * Math.pow(2, this._failCount - 1), 300000);
+            this._cooldownUntil = Date.now() + backoff;
+        }
     },
 
     // 启动实时刷新：30 秒轮询 + 标签页可见时立即检查 + 后台广播即时通知
@@ -297,7 +301,7 @@ const BlogApp = {
             <div class="card" data-href="article.html?post=${this.escAttr(post.filename)}&blob=${this.escAttr(post.id || '')}" onclick="BlogApp.openPost('${this.escAttr(post.filename)}', '${this.escAttr(post.id || '')}')">
                 ${post.image ? `
                     <div class="card-img" style="height: ${this.getCardHeight(post)}px;">
-                        <img src="${this.escAttr(post.image)}" alt="${this.esc(post.title)}" class="img-placeholder" loading="lazy" decoding="async"
+                        <img src="${this.escAttr(post.image)}" alt="${this.esc(post.title)}" class="img-placeholder" decoding="async"
                              referrerpolicy="no-referrer"
                              data-g1="${gradientColors[0]}" data-g2="${gradientColors[1]}" data-icon="${this.getCardIcon(post.tags || [])}"
                              onload="BlogApp.handleCoverLoad(this)"
@@ -333,7 +337,7 @@ const BlogApp = {
         const tags = (post.tags || []).map(tag => `<span>${this.esc(tag)}</span>`).join(' ');
         const cover = post.image
             ? `<div class="board-cover has-img">
-                    <img src="${this.escAttr(post.image)}" alt="${this.esc(post.title)}" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="BlogApp.handleCoverError(this)">
+                    <img src="${this.escAttr(post.image)}" alt="${this.esc(post.title)}" decoding="async" referrerpolicy="no-referrer" onerror="BlogApp.handleCoverError(this)">
                     <span class="board-chip">交互白板</span>
                </div>`
             : `<div class="board-cover">
@@ -996,7 +1000,7 @@ const BlogApp = {
                 }
             }
         } catch (e) {
-            console.warn('后端资讯加载失败，回退本地数据:', e);
+            /* 静默：属于正常回退路径，不刷控制台 */
         }
 
         // 回退：本地 recommendations.json
@@ -1213,15 +1217,26 @@ const BlogApp = {
         }
     },
 
-    // 首页入口数字：文章数 / 图库照片数（图库接口慢或离线时显示占位）
+    // 首页入口数字：文章数 / 图库照片数 / GitHub 项目数（接口慢或离线时显示占位）
     async renderHomeCta(force = false) {
         const postsEl = document.getElementById('homeCtaPosts');
         const photosEl = document.getElementById('homeCtaPhotos');
-        if (!postsEl && !photosEl) return;
+        const projectsEl = document.getElementById('homeCtaProjects');
+        if (!postsEl && !photosEl && !projectsEl) return;
 
         if (postsEl && (!postsEl.dataset.rendered || force)) {
             postsEl.textContent = this.posts.length;
             postsEl.dataset.rendered = '1';
+        }
+
+        if (projectsEl && (!projectsEl.dataset.rendered || force)) {
+            projectsEl.dataset.rendered = '1';
+            try {
+                const repos = await this.loadGithubRepos();
+                projectsEl.textContent = (repos || []).length || '—';
+            } catch (e) {
+                projectsEl.textContent = '—';
+            }
         }
 
         if (photosEl && (!photosEl.dataset.rendered || force)) {
@@ -1273,7 +1288,7 @@ const BlogApp = {
         box.innerHTML = `
             <div class="home-feature-cover" style="background: linear-gradient(145deg, ${gradient[0]}, ${gradient[1]});">
                 ${post.image
-                    ? `<img src="${this.escAttr(post.image)}" alt="${this.esc(post.title)}" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="BlogApp.handleCoverError(this)">`
+                    ? `<img src="${this.escAttr(post.image)}" alt="${this.esc(post.title)}" decoding="async" referrerpolicy="no-referrer" onerror="BlogApp.handleCoverError(this)">`
                     : `<span class="home-feature-icon">${this.esc(icon)}</span>`}
                 <span class="home-feature-badge">${typeLabel}</span>
             </div>
@@ -1467,7 +1482,7 @@ const BlogApp = {
             } catch (e) { /* 忽略写入失败 */ }
             return items;
         } catch (e) {
-            console.warn('[github] 项目列表加载失败:', e);
+            /* 静默：属于正常回退路径，不刷控制台 */
             return [];
         }
     },
@@ -1763,7 +1778,7 @@ const BlogApp = {
                 </div>
             `).join('');
         } catch (e) {
-            console.warn('留言加载失败:', e);
+            /* 静默：属于正常回退路径，不刷控制台 */
             list.innerHTML = '<div class="comment-empty">留言功能暂时不可用</div>';
             const form = document.getElementById('comment-form');
             if (form) form.style.display = 'none';

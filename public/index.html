@@ -178,10 +178,10 @@
                                     <b class="home-cta-big is-violet" id="homeCtaPhotos">—</b>
                                     <span class="home-cta-sub">照片</span>
                                 </button>
-                                <a class="home-cta-item" href="feed.xml" target="_blank" rel="noopener">
-                                    <b class="home-cta-big is-pink">RSS</b>
-                                    <span class="home-cta-sub">订阅</span>
-                                </a>
+                                <button class="home-cta-item" onclick="BlogApp.goView('projects')">
+                                    <b class="home-cta-big is-pink" id="homeCtaProjects">—</b>
+                                    <span class="home-cta-sub">项目</span>
+                                </button>
                             </div>
                         </div>
                         <div class="dash-clock" id="dashClock">
@@ -343,7 +343,7 @@
 
     <!-- Scripts -->
     <script src="js/theme.js?v=3.13.6" defer></script>
-    <script src="js/app.js?v=3.56.0" defer></script>
+    <script src="js/app.js?v=3.58.0" defer></script>
     <script src="js/animations.js?v=3.14.0" defer></script>
 
     <script>
@@ -582,12 +582,15 @@
         async function loadBlogSettings() {
             try {
                 const res = await fetch('/api/admin?action=settings');
+                if (!res.ok) return; // 无后端（静态托管）时静默跳过
+                const type = res.headers.get('content-type') || '';
+                if (!type.includes('json')) return;
                 const data = await res.json();
                 if (data.status === 'success' && data.data) {
                     blogSettings = data.data;
                 }
             } catch (e) {
-                console.warn('博客设置加载失败:', e);
+                /* 静默：后台不可用时用默认设置，不刷控制台 */
             }
         }
 
