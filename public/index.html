@@ -13,7 +13,7 @@
     <script src="/js/site-icon.js?v=1.0.0" defer></script>
 
     <!-- Styles -->
-    <link rel="stylesheet" href="css/style.css?v=3.79.0">
+    <link rel="stylesheet" href="css/style.css?v=3.80.0">
     <link rel="stylesheet" href="css/glass.css?v=1.0.14">
     <link rel="stylesheet" href="css/wheel.css?v=1.0.0">
 
@@ -394,22 +394,27 @@
     <div class="deskpet" id="deskPet" data-state="awake">
         <div class="deskpet-bubble" id="deskPetBubble" role="status" aria-live="polite"></div>
         <button class="deskpet-body" id="deskPetBody" type="button" aria-label="摸摸桌宠">
-            <svg class="deskpet-art" viewBox="0 0 120 132" aria-hidden="true">
-                <ellipse class="dp-shadow" cx="60" cy="126" rx="24" ry="4.5"></ellipse>
-                <path class="dp-ear" d="M31 47 L27 17 L52 34 Z"></path>
-                <path class="dp-ear" d="M89 47 L93 17 L68 34 Z"></path>
-                <path class="dp-ear-in" d="M34 43 L31 25 L46 35 Z"></path>
-                <path class="dp-ear-in" d="M86 43 L89 25 L74 35 Z"></path>
-                <path class="dp-body" d="M60 30 C87 30 100 52 100 75 C100 92 92 104 84 110 C78 115 74 118 68 118 C62 118 62 112 56 112 C50 112 50 118 44 118 C38 118 34 114 28 108 C21 100 20 90 20 75 C20 52 33 30 60 30 Z"></path>
-                <g class="dp-eyes" id="dpEyes">
-                    <ellipse class="dp-eye" cx="47" cy="72" rx="6.8" ry="8.4"></ellipse>
-                    <ellipse class="dp-eye" cx="73" cy="72" rx="6.8" ry="8.4"></ellipse>
-                    <circle class="dp-shine" cx="49.2" cy="68.6" r="2.4"></circle>
-                    <circle class="dp-shine" cx="75.2" cy="68.6" r="2.4"></circle>
+            <svg class="deskpet-art" id="petSvg" viewBox="0 0 120 132" aria-hidden="true">
+                <ellipse class="dp-shadow" cx="60" cy="126" rx="23" ry="4.2"></ellipse>
+                <g class="pet-root" id="petRoot">
+                    <path class="pet-antenna" d="M60 34 L60 18"></path>
+                    <circle class="pet-antenna-dot" id="petAntennaDot" cx="60" cy="15" r="4"></circle>
+                    <path class="pet-body" d="M60 30 C87 30 101 50 101 74 C101 98 84 116 60 116 C36 116 19 98 19 74 C19 50 33 30 60 30 Z"></path>
+                    <ellipse class="pet-gloss" id="petGloss" cx="41" cy="52" rx="12" ry="7"></ellipse>
+                    <g class="pet-eyes" id="petEyes">
+                        <ellipse class="pet-eye" id="petEyeL" cx="46" cy="71" rx="7" ry="9"></ellipse>
+                        <ellipse class="pet-eye" id="petEyeR" cx="74" cy="71" rx="7" ry="9"></ellipse>
+                        <circle class="pet-eye-shine" cx="48.5" cy="67" r="2.2"></circle>
+                        <circle class="pet-eye-shine" cx="76.5" cy="67" r="2.2"></circle>
+                    </g>
+                    <g class="pet-eyes-happy" id="petEyesHappy">
+                        <path d="M39 72 q7 -9 14 0"></path>
+                        <path d="M67 72 q7 -9 14 0"></path>
+                    </g>
+                    <path class="pet-mouth" id="petMouth" d="M54 86 q6 3 12 0"></path>
+                    <ellipse class="pet-cheek" cx="33" cy="85" rx="5.5" ry="3.4"></ellipse>
+                    <ellipse class="pet-cheek" cx="87" cy="85" rx="5.5" ry="3.4"></ellipse>
                 </g>
-                <path class="dp-mouth" d="M55 87 q5 5.5 10 0"></path>
-                <ellipse class="dp-cheek" cx="35" cy="84" rx="5.6" ry="3.4"></ellipse>
-                <ellipse class="dp-cheek" cx="85" cy="84" rx="5.6" ry="3.4"></ellipse>
             </svg>
             <span class="deskpet-zzz" aria-hidden="true">z</span>
         </button>
@@ -490,7 +495,8 @@
 
     <!-- Scripts -->
     <script src="js/theme.js?v=3.16.0" defer></script>
-    <script src="js/app.js?v=3.90.0" defer></script>
+    <script src="js/pet-engine.js?v=1.0.0" defer></script>
+    <script src="js/app.js?v=3.91.0" defer></script>
     <script src="js/animations.js?v=3.14.0" defer></script>
 
     <script>

@@ -6814,3 +6814,67 @@ body.canvas-on .reading-progress {
         display: none;
     }
 }
+
+/* ===== 桌宠：自制弹簧生物（几何原创） ===== */
+.pet-root {
+    transform-box: fill-box;
+    transform-origin: 50% 92%;
+}
+
+.pet-body {
+    fill: #f7f8fc;
+    stroke: rgba(110, 120, 190, 0.85);
+    stroke-width: 2.4;
+    stroke-linejoin: round;
+    filter: drop-shadow(0 4px 10px rgba(20, 24, 50, 0.18));
+}
+
+.pet-antenna {
+    fill: none;
+    stroke: rgba(110, 120, 190, 0.85);
+    stroke-width: 2.2;
+    stroke-linecap: round;
+}
+
+.pet-antenna-dot {
+    fill: var(--accent, #6c8cff);
+    filter: drop-shadow(0 0 6px var(--accent, #6c8cff));
+}
+
+.pet-gloss {
+    fill: #ffffff;
+    opacity: 0.4;
+}
+
+.pet-eye {
+    fill: #22263a;
+    transition: opacity 0.1s linear;
+}
+
+.pet-eye-shine {
+    fill: #ffffff;
+    opacity: 0.92;
+}
+
+.pet-eyes-happy {
+    opacity: 0;
+    transition: opacity 0.14s linear;
+}
+
+.pet-eyes-happy path {
+    fill: none;
+    stroke: #22263a;
+    stroke-width: 3;
+    stroke-linecap: round;
+}
+
+.pet-mouth {
+    fill: none;
+    stroke: #3f4358;
+    stroke-width: 2.2;
+    stroke-linecap: round;
+}
+
+.pet-cheek {
+    fill: rgba(255, 150, 190, 0.42);
+}

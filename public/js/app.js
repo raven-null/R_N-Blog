@@ -2074,6 +2074,9 @@ const BlogApp = {
 
         this.restorePetPos();
 
+        // 自制弹簧生物引擎：状态机 + 挤压拉伸 + 多边形眼睛
+        this.petEngine = window.PetEngine ? window.PetEngine.mount(document.getElementById('petSvg')) : null;
+
         let dragging = false;
         let moved = false;
         let startX = 0;
@@ -2092,6 +2095,7 @@ const BlogApp = {
             originX = rect.left;
             originY = rect.top;
             pet.classList.add('is-dragging');
+            if (this.petEngine) this.petEngine.setState('dragged');
             try { body.setPointerCapture(e.pointerId); } catch (err) { /* 忽略 */ }
         };
 
@@ -2108,6 +2112,7 @@ const BlogApp = {
             if (!dragging) return;
             dragging = false;
             pet.classList.remove('is-dragging');
+            if (this.petEngine) this.petEngine.setState('idle');
             try { body.releasePointerCapture(e.pointerId); } catch (err) { /* 忽略 */ }
             if (moved) {
                 this.savePetPos();
@@ -2122,6 +2127,23 @@ const BlogApp = {
             lastTap = now;
             this.petReact();
         };
+
+        body.addEventListener('pointerenter', () => {
+            if (this.petEngine && !this.petSleeping && !dragging) this.petEngine.setState('curious');
+        });
+        body.addEventListener('pointerleave', () => {
+            if (this.petEngine && !this.petSleeping && !dragging) this.petEngine.setState('idle');
+        });
+
+        // 你在输入框里打字时，它会竖起来听
+        document.addEventListener('focusin', (e) => {
+            if (!this.petEngine || this.petSleeping) return;
+            if (e.target.closest('input, textarea')) this.petEngine.setState('listening');
+        });
+        document.addEventListener('focusout', (e) => {
+            if (!this.petEngine || this.petSleeping) return;
+            if (e.target.closest('input, textarea')) this.petEngine.setState('idle');
+        });
 
         body.addEventListener('pointerdown', onDown);
         body.addEventListener('pointermove', onMove);
@@ -2197,9 +2219,12 @@ const BlogApp = {
             this.petSay('喵…醒了');
             return;
         }
-        pet.classList.remove('is-hop');
-        void pet.offsetWidth;
-        pet.classList.add('is-hop');
+        if (this.petEngine) this.petEngine.poke();
+        else {
+            pet.classList.remove('is-hop');
+            void pet.offsetWidth;
+            pet.classList.add('is-hop');
+        }
         const lines = this.petLines;
         this.petSay(lines[Math.floor(Math.random() * lines.length)]);
     },
@@ -2240,6 +2265,10 @@ const BlogApp = {
         if (!pet) return;
         this.petSleeping = force === undefined ? !this.petSleeping : !!force;
         pet.dataset.state = this.petSleeping ? 'sleep' : 'awake';
+        if (this.petEngine) {
+            if (this.petSleeping) this.petEngine.sleep();
+            else this.petEngine.wake();
+        }
         if (this.petSleeping) {
             clearInterval(this.petIdleTimer);
             this.petIdleTimer = null;
@@ -2260,17 +2289,10 @@ const BlogApp = {
         }, 46000);
     },
 
-    // 眼睛看向鼠标（限制位移，看起来像在看你）
+    // 眼睛看向鼠标（交给引擎算，带弹簧滞后）
     aimPetEyes(mouseX, mouseY) {
-        const eyes = document.getElementById('dpEyes');
-        const pet = document.getElementById('deskPet');
-        if (!eyes || !pet || pet.dataset.state === 'sleep') return;
-        const rect = pet.getBoundingClientRect();
-        const cx = rect.left + rect.width / 2;
-        const cy = rect.top + rect.height * 0.62;
-        const dx = Math.max(-1, Math.min(1, (mouseX - cx) / 260));
-        const dy = Math.max(-1, Math.min(1, (mouseY - cy) / 260));
-        eyes.style.transform = `translate(${(dx * 3).toFixed(2)}px, ${(dy * 2.4).toFixed(2)}px)`;
+        if (!this.petEngine || this.petSleeping) return;
+        this.petEngine.setGaze(mouseX, mouseY);
     },
 
     // ===================== 主页：无限画布 =====================
