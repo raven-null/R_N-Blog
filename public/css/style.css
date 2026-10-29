@@ -7863,3 +7863,55 @@ body.view-gallery-active .footer-home {
     object-fit: cover !important;
     background: var(--surface-3);
 }
+
+/* ============================================================
+   手写体点缀：只用在标题性、装饰性的地方，正文保持易读字体
+   ============================================================ */
+.hv-name,
+.hv-block-title,
+.hv-clock-time,
+.hv-clock-date,
+.hv-stat-num,
+.home-theme-name {
+    font-family: var(--font-hand);
+    font-weight: 400;
+    letter-spacing: 0.01em;
+}
+
+.hv-name {
+    font-size: 34px;
+    line-height: 1.15;
+}
+
+.hv-block-title {
+    font-size: 20px;
+}
+
+.hv-clock-time {
+    font-size: 30px;
+}
+
+.hv-stat-num {
+    font-size: 34px;
+}
+
+/* 文章页：标题与各级小标题 */
+.article-title,
+.article-content h1,
+.article-content h2,
+.article-content h3,
+.reader-toolbar .reader-font-size,
+.toc-title {
+    font-family: var(--font-hand);
+}
+
+.article-title {
+    font-weight: 400;
+    letter-spacing: 0.01em;
+}
+
+.article-content h2,
+.article-content h3 {
+    font-weight: 400;
+    letter-spacing: 0.01em;
+}

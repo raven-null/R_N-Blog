@@ -1,4 +1,24 @@
 /* ============================================================
+   手写体
+   ------------------------------------------------------------
+   拉丁字母 / 数字 → Virgil（Excalidraw 白板用的那套手写体，OFL）
+   中文 → 系统楷体（KaiTi / 楷体 / STKaiti），零下载也有书写感
+   想换成更强的中文手写体，把 "LXGW WenKai" 插到 KaiTi 前面即可。
+   ============================================================ */
+@font-face {
+    font-family: 'Virgil';
+    src: url('/fonts/Virgil.woff2') format('woff2');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+:root {
+    --font-hand: 'Virgil', 'LXGW WenKai', KaiTi, 'Kaiti SC', STKaiti, '楷体',
+        'Songti SC', 'Hiragino Sans GB', cursive;
+}
+
+/* ============================================================
    Design Tokens · Quiet Neutral（冷底 + 阳光强调）
    ------------------------------------------------------------
    底子是冷的（slate 冷灰），暖只出现在强调元素上：
