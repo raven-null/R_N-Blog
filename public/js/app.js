@@ -1762,6 +1762,16 @@ const BlogApp = {
         this.closeEditor();
     },
 
+    // 删除当天日记
+    async deleteJournal() {
+        if (!this.lifeState.date) return;
+        try {
+            await this.lifeApi(`?type=journal&date=${encodeURIComponent(this.lifeState.date)}`, { method: 'DELETE' });
+            this.lifeState.journals = (this.lifeState.journals || []).filter(j => j.date !== this.lifeState.date);
+            this.renderJournalView();
+        } catch (err) { /* 忽略 */ }
+    },
+
     // 任务列表的完成 / 删除
     async onLifeTaskClick(e) {
         const row = e.target.closest('.life-task');
@@ -1836,6 +1846,12 @@ const BlogApp = {
         // 归档月份切换
         document.getElementById('lifePrevMonth')?.addEventListener('click', () => this.changeLifeMonth(-1));
         document.getElementById('lifeNextMonth')?.addEventListener('click', () => this.changeLifeMonth(1));
+
+        // 删除当天日记
+        document.getElementById('journalDeleteBtn')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.deleteJournal();
+        });
 
         // 日历点击联动（日历会重建，用事件委托）
         document.getElementById('homeCalendar')?.addEventListener('click', (e) => {

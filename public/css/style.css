@@ -5540,3 +5540,58 @@ html.reader-focus .article-content {
     transform: translate(14px, 14px) scale(0.96) !important;
     opacity: 0.8;
 }
+
+/* ===== 日记盒子：宽度与简报一致 + 删除按钮 ===== */
+.home-journal-box {
+    /* 简报在 .home-top-row 里占 2.4fr / 总 3.4fr 减去间距，这里对齐同宽 */
+    width: calc((100% - 20px) * 2.4 / 3.4);
+    max-width: calc((100% - 20px) * 2.4 / 3.4);
+}
+
+.home-journal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.journal-del-btn {
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--bg-card);
+    color: var(--text-muted);
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s, border-color 0.2s, color 0.2s;
+}
+
+.home-journal-box:hover .journal-del-btn,
+.journal-del-btn:focus-visible {
+    opacity: 1;
+}
+
+.journal-del-btn:hover {
+    border-color: #ff6b6b;
+    color: #ff6b6b;
+}
+
+@media (max-width: 900px) {
+    .home-journal-box {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .journal-del-btn {
+        opacity: 1;
+    }
+}
+
+/* 日记标题行右侧给手柄留位，避免删除按钮与 ⤢/⠿ 重叠 */
+.home-journal-head {
+    padding-right: 62px;
+}
