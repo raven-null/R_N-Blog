@@ -46,6 +46,10 @@ const BlogApp = {
         this.bindBoxPlay();
         // 赛博猫娘对话
         this.initDeskPet();
+        // 桌宠心智：看页面 / 主动说话 / 接 AI / 语音
+        if (window.PetMind) {
+            window.PetMind.start();
+        }
 
         // 身份区时钟（每分钟刷新一次显示）
         this.renderHvClock();

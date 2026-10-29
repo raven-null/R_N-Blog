@@ -284,3 +284,41 @@
 [data-theme="dark"] {
     --shadow-color: rgba(0, 0, 0, 0.55);
 }
+
+/* ============================================================
+   文字明暗：亮底近黑字，暗底暖白字
+   ------------------------------------------------------------
+   data-tone 由 js/tone.js 维护（主题 + 天色时段共同决定）。
+   这一层用 !important 盖住主题内联值，保证所有页面一致。
+   ============================================================ */
+html[data-tone="light"] {
+    --text: #16130f !important;
+    --text-primary: #16130f !important;
+    --text-secondary: #4a443c !important;
+    --text-muted: #7a7266 !important;
+}
+
+html[data-tone="dark"] {
+    --text: #f7f3ea !important;
+    --text-primary: #f7f3ea !important;
+    --text-secondary: #cdc6b8 !important;
+    --text-muted: #9c9487 !important;
+}
+
+/* 正文颜色统一取令牌（不要用 inherit，否则会退到浏览器默认纯黑） */
+html,
+body {
+    color: var(--text);
+}
+
+/* 输入框里的字也要跟着走 */
+html[data-tone] input,
+html[data-tone] textarea,
+html[data-tone] select {
+    color: var(--text);
+}
+
+html[data-tone] input::placeholder,
+html[data-tone] textarea::placeholder {
+    color: var(--text-muted);
+}

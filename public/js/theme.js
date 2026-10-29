@@ -161,6 +161,8 @@ const ThemeManager = {
             this.applyColors(colors);
         }
 
+        if (window.Tone) window.Tone.refresh();
+
         localStorage.setItem('blog-theme', key);
         this.updateThemeButtons();
     },

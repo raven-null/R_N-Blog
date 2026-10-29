@@ -126,6 +126,7 @@
     root.style.setProperty('--sun-x', L.arc.x.toFixed(2) + '%');
     root.style.setProperty('--sun-y', L.arc.y.toFixed(2) + '%');
     root.setAttribute('data-period', L.period.key);
+    if (window.Tone) window.Tone.refresh();
     const dark = root.getAttribute('data-theme') === 'dark';
     root.style.setProperty('--art-brightness', (dark ? L.tone.brightness * 0.55 : L.tone.brightness).toFixed(3));
     root.style.setProperty('--art-tint', L.tone.tint.toFixed(3));
