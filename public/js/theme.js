@@ -1,227 +1,167 @@
 /**
  * 主题管理器
- * 负责主题切换、CSS变量更新和主题持久化
+ * ------------------------------------------------------------
+ * 一套骨架 × {浅色, 深色} × 强调色 = 十个主题。
+ * 主题只负责两件事：换骨架（纸白 / 冷黑）和换强调色（阳光金系）。
+ * 尺寸、圆角、阴影层级全部来自 css/tokens.css，不在这里重复。
  */
 const ThemeManager = {
-    // 当前主题标识
-    currentTheme: 'dark',
+    currentTheme: 'paper',
 
-    // 主题配置
-    themes: {
-        dark: {
-            name: 'Dark',
-            icon: '◐',
-            colors: {
-                '--bg-primary': '#0a0a0a',
-                '--bg-secondary': '#111111',
-                '--bg-tertiary': '#1a1a1a',
-                '--bg-card': '#0f0f0f',
-                '--text-primary': '#f0f0f0',
-                '--text-secondary': '#b0b0b0',
-                '--text-muted': '#666666',
-                '--accent': '#ffffff',
-                '--accent-dim': '#888888',
-                '--border': '#222222',
-                '--border-light': '#2a2a2a',
-                '--shadow': 'rgba(0, 0, 0, 0.5)',
-                '--glow': 'rgba(255, 255, 255, 0.05)'
-            }
-        },
+    /* ---------- 两套骨架 ---------- */
+    skeletons: {
         light: {
-            name: 'Light',
-            icon: '○',
-            colors: {
-                '--bg-primary': '#fafafa',
-                '--bg-secondary': '#ffffff',
-                '--bg-tertiary': '#f0f0f0',
-                '--bg-card': '#ffffff',
-                '--text-primary': '#111111',
-                '--text-secondary': '#555555',
-                '--text-muted': '#999999',
-                '--accent': '#000000',
-                '--accent-dim': '#777777',
-                '--border': '#e0e0e0',
-                '--border-light': '#d0d0d0',
-                '--shadow': 'rgba(0, 0, 0, 0.08)',
-                '--glow': 'rgba(0, 0, 0, 0.03)'
-            }
+            bg: '#fbf8f1',
+            bgSub: '#f6f2e8',
+            surface: '#fffefb',
+            surface2: '#fbf7ef',
+            surface3: '#f3eee1',
+            text: '#1c1a16',
+            textSec: '#56514a',
+            textMuted: '#8a8479',
+            border: '#e9e3d5',
+            borderStrong: '#d6cebb',
         },
-        cyberpunk: {
-            name: 'Cyberpunk',
-            icon: '◈',
-            colors: {
-                '--bg-primary': '#030712',
-                '--bg-secondary': '#0a1128',
-                '--bg-tertiary': '#0f172a',
-                '--bg-card': '#070e1f',
-                '--text-primary': '#e2e8f0',
-                '--text-secondary': '#94a3b8',
-                '--text-muted': '#6366f1',
-                '--accent': '#7C3AED',
-                '--accent-dim': '#10B981',
-                '--border': '#1e1b4b',
-                '--border-light': '#312e81',
-                '--shadow': 'rgba(124, 58, 237, 0.2)',
-                '--glow': 'rgba(124, 58, 237, 0.1)'
-            }
+        dark: {
+            bg: '#0b0f17',
+            bgSub: '#0e131c',
+            surface: '#121822',
+            surface2: '#18202c',
+            surface3: '#1f2836',
+            text: '#e8edf5',
+            textSec: '#a3aebd',
+            textMuted: '#6f7d8f',
+            border: '#222b38',
+            borderStrong: '#33404f',
         },
-        sepia: {
-            name: 'Sepia',
-            icon: '◎',
-            colors: {
-                '--bg-primary': '#f5f0e8',
-                '--bg-secondary': '#faf6ee',
-                '--bg-tertiary': '#ede6d6',
-                '--bg-card': '#faf6ee',
-                '--text-primary': '#3d3427',
-                '--text-secondary': '#6b5d4f',
-                '--text-muted': '#a0917f',
-                '--accent': '#b85c38',
-                '--accent-dim': '#e07b4f',
-                '--border': '#d9cfc0',
-                '--border-light': '#c8bba8',
-                '--shadow': 'rgba(61, 52, 39, 0.1)',
-                '--glow': 'rgba(184, 92, 56, 0.08)'
-            }
-        },
-        neon: {
-            name: 'Neon',
-            icon: '◆',
-            colors: {
-                '--bg-primary': '#0d0221',
-                '--bg-secondary': '#150538',
-                '--bg-tertiary': '#1a0a45',
-                '--bg-card': '#120330',
-                '--text-primary': '#f0e6ff',
-                '--text-secondary': '#c9b8e8',
-                '--text-muted': '#7b68a6',
-                '--accent': '#ff2d95',
-                '--accent-dim': '#00f0ff',
-                '--border': '#2d1b69',
-                '--border-light': '#3d2580',
-                '--shadow': 'rgba(255, 45, 149, 0.15)',
-                '--glow': 'rgba(255, 45, 149, 0.1)'
-            }
-        },
-        nord: {
-            name: 'Nord',
-            icon: '❖',
-            colors: {
-                '--bg-primary': '#2e3440',
-                '--bg-secondary': '#3b4252',
-                '--bg-tertiary': '#434c5e',
-                '--bg-card': '#353c4a',
-                '--text-primary': '#eceff4',
-                '--text-secondary': '#d8dee9',
-                '--text-muted': '#7b88a1',
-                '--accent': '#88c0d0',
-                '--accent-dim': '#81a1c1',
-                '--border': '#4c566a',
-                '--border-light': '#5e6779',
-                '--shadow': 'rgba(0, 0, 0, 0.25)',
-                '--glow': 'rgba(136, 192, 208, 0.1)'
-            }
-        },
-        dracula: {
-            name: 'Dracula',
-            icon: '❂',
-            colors: {
-                '--bg-primary': '#282a36',
-                '--bg-secondary': '#343746',
-                '--bg-tertiary': '#3e4155',
-                '--bg-card': '#303340',
-                '--text-primary': '#f8f8f2',
-                '--text-secondary': '#cccce0',
-                '--text-muted': '#7970a9',
-                '--accent': '#bd93f9',
-                '--accent-dim': '#ff79c6',
-                '--border': '#44475a',
-                '--border-light': '#565970',
-                '--shadow': 'rgba(0, 0, 0, 0.3)',
-                '--glow': 'rgba(189, 147, 249, 0.12)'
-            }
-        },
-        ocean: {
-            name: 'Ocean',
-            icon: '≋',
-            colors: {
-                '--bg-primary': '#0a192f',
-                '--bg-secondary': '#112240',
-                '--bg-tertiary': '#1a3158',
-                '--bg-card': '#0d1b33',
-                '--text-primary': '#ccd6f6',
-                '--text-secondary': '#8892b0',
-                '--text-muted': '#5a6a8a',
-                '--accent': '#64ffda',
-                '--accent-dim': '#57cbff',
-                '--border': '#1e3a5f',
-                '--border-light': '#2a4a72',
-                '--shadow': 'rgba(0, 0, 0, 0.35)',
-                '--glow': 'rgba(100, 255, 218, 0.08)'
-            }
-        },
-        forest: {
-            name: 'Forest',
-            icon: '♧',
-            colors: {
-                '--bg-primary': '#1a2e1a',
-                '--bg-secondary': '#223522',
-                '--bg-tertiary': '#2a422a',
-                '--bg-card': '#1e321e',
-                '--text-primary': '#d4e8d4',
-                '--text-secondary': '#a3c4a3',
-                '--text-muted': '#6d946d',
-                '--accent': '#4ade80',
-                '--accent-dim': '#22c55e',
-                '--border': '#2d5a2d',
-                '--border-light': '#3a6e3a',
-                '--shadow': 'rgba(0, 0, 0, 0.3)',
-                '--glow': 'rgba(74, 222, 128, 0.1)'
-            }
-        },
-        sunset: {
-            name: 'Sunset',
-            icon: '☀',
-            colors: {
-                '--bg-primary': '#1c1017',
-                '--bg-secondary': '#2a1520',
-                '--bg-tertiary': '#381a2a',
-                '--bg-card': '#221218',
-                '--text-primary': '#fce4ec',
-                '--text-secondary': '#d4a0b0',
-                '--text-muted': '#a06878',
-                '--accent': '#ff6b9d',
-                '--accent-dim': '#ff9f43',
-                '--border': '#4a2030',
-                '--border-light': '#5e2a40',
-                '--shadow': 'rgba(0, 0, 0, 0.3)',
-                '--glow': 'rgba(255, 107, 157, 0.12)'
-            }
-        }
     },
 
-    // 初始化：从本地存储读取主题或使用默认主题
+    /* ---------- 强调色（阳光系 + 一个冷色备选） ---------- */
+    accents: {
+        sun: {
+            light: { fill: '#f0a20c', hover: '#d98f06', strong: '#a15c00', soft: '#fdf2da' },
+            dark: { fill: '#ffc02e', hover: '#ffcf5c', strong: '#ffd166', soft: '#3a2c08' },
+            on: '#2a1a02',
+        },
+        amber: {
+            light: { fill: '#f59e0b', hover: '#db8b05', strong: '#a65e00', soft: '#fdf3dc' },
+            dark: { fill: '#fbbf24', hover: '#fcd34d', strong: '#fcd34d', soft: '#3b2d06' },
+            on: '#2a1a02',
+        },
+        gold: {
+            light: { fill: '#d4af37', hover: '#bd9a2c', strong: '#7d6210', soft: '#faf4dd' },
+            dark: { fill: '#e8c65a', hover: '#f0d47c', strong: '#f0d47c', soft: '#332b0d' },
+            on: '#241c02',
+        },
+        ember: {
+            light: { fill: '#f97316', hover: '#e0650c', strong: '#9c3d00', soft: '#fdece0' },
+            dark: { fill: '#ff8a3d', hover: '#ffa066', strong: '#ffa066', soft: '#3a1c07' },
+            on: '#2b1102',
+        },
+        indigo: {
+            light: { fill: '#6366f1', hover: '#4f46e5', strong: '#4338ca', soft: '#ececfd' },
+            dark: { fill: '#8b8df5', hover: '#a3a5f8', strong: '#a3a5f8', soft: '#1c1f3d' },
+            on: '#ffffff',
+        },
+    },
+
+    /* ---------- 十个主题：骨架 + 强调色 ---------- */
+    themes: {
+        paper: { name: '日光', icon: '○', scheme: 'light', accent: 'sun' },
+        dawn: { name: '晨光', icon: '◎', scheme: 'light', accent: 'amber' },
+        sand: { name: '沙丘', icon: '◍', scheme: 'light', accent: 'gold' },
+        sunset: { name: '落日', icon: '◒', scheme: 'light', accent: 'ember' },
+        sky: { name: '晴空', icon: '◌', scheme: 'light', accent: 'indigo' },
+        night: { name: '夜色', icon: '◐', scheme: 'dark', accent: 'sun' },
+        amber: { name: '琥珀', icon: '◉', scheme: 'dark', accent: 'amber' },
+        gilt: { name: '镀金', icon: '✦', scheme: 'dark', accent: 'gold' },
+        ember: { name: '余烬', icon: '✷', scheme: 'dark', accent: 'ember' },
+        midnight: { name: '子夜', icon: '●', scheme: 'dark', accent: 'indigo' },
+    },
+
+    /* 老主题名映射到新主题，避免老用户本地存的名字失效 */
+    aliases: {
+        dark: 'night',
+        light: 'paper',
+        cyberpunk: 'midnight',
+        sepia: 'dawn',
+        neon: 'ember',
+        nord: 'sky',
+        dracula: 'midnight',
+        ocean: 'sky',
+        forest: 'sand',
+        gold: 'gilt',
+        terracotta: 'paper',
+        violet: 'sky',
+        cyan: 'sky',
+        green: 'sand',
+        orange: 'sunset',
+        pink: 'sunset',
+    },
+
+    // 把「骨架 + 强调色」算成一组 CSS 变量（新名字 + 老名字桥接）
+    buildColors(themeName) {
+        const key = this.aliases[themeName] || themeName;
+        const theme = this.themes[key];
+        if (!theme) return null;
+        const sk = this.skeletons[theme.scheme];
+        const ac = this.accents[theme.accent];
+        const pal = ac[theme.scheme] || ac.light;
+
+        return {
+            // 新令牌
+            '--bg': sk.bg,
+            '--bg-subtle': sk.bgSub,
+            '--surface': sk.surface,
+            '--surface-2': sk.surface2,
+            '--surface-3': sk.surface3,
+            '--text': sk.text,
+            '--text-secondary': sk.textSec,
+            '--text-muted': sk.textMuted,
+            '--accent': pal.fill,
+            '--accent-hover': pal.hover,
+            '--accent-strong': pal.strong,
+            '--accent-soft': pal.soft,
+            '--text-on-accent': ac.on,
+            '--border': sk.border,
+            '--border-strong': sk.borderStrong,
+            // 老名字（老样式直接用这些）
+            '--bg-primary': sk.bg,
+            '--bg-secondary': sk.bgSub,
+            '--bg-tertiary': sk.surface3,
+            '--bg-card': sk.surface,
+            '--text-primary': sk.text,
+            '--accent-dim': sk.textMuted,
+            '--border-light': sk.borderStrong,
+        };
+    },
+
+    // 初始化：读本地存储，老主题名自动迁移
     init() {
-        const savedTheme = localStorage.getItem('blog-theme') || 'dark';
-        this.setTheme(savedTheme);
+        const saved = localStorage.getItem('blog-theme') || 'paper';
+        this.setTheme(saved, { animate: false });
     },
 
-    // 设置指定主题并应用CSS变量
-    setTheme(themeName) {
-        if (!this.themes[themeName]) return;
+    setTheme(themeName, opts = {}) {
+        const key = this.aliases[themeName] || themeName;
+        if (!this.themes[key]) return;
 
-        this.currentTheme = themeName;
-        const theme = this.themes[themeName];
+        this.currentTheme = key;
+        const theme = this.themes[key];
+        const colors = this.buildColors(key);
 
-        // 使用 Anime.js 平滑过渡主题色，不可用时直接应用
-        if (window.BlogAnimations && window.BlogAnimations.ready) {
-            window.BlogAnimations.transitionTheme(theme.colors);
+        // 骨架与强调色也写到 html 上，方便 CSS 层（tokens.css / ui.css）判断
+        const root = document.documentElement;
+        root.setAttribute('data-theme', theme.scheme);
+        root.setAttribute('data-accent', theme.accent);
+
+        if (opts.animate !== false && window.BlogAnimations && window.BlogAnimations.ready) {
+            window.BlogAnimations.transitionTheme(colors);
         } else {
-            this.applyColors(theme.colors);
+            this.applyColors(colors);
         }
 
-        // 持久化到本地存储
-        localStorage.setItem('blog-theme', themeName);
+        localStorage.setItem('blog-theme', key);
         this.updateThemeButtons();
     },
 
@@ -235,26 +175,35 @@ const ThemeManager = {
 
     // 切换到下一个主题
     nextTheme() {
-        const themeNames = Object.keys(this.themes);
-        const currentIndex = themeNames.indexOf(this.currentTheme);
-        const nextIndex = (currentIndex + 1) % themeNames.length;
-        this.setTheme(themeNames[nextIndex]);
+        const names = Object.keys(this.themes);
+        const i = names.indexOf(this.currentTheme);
+        const next = names[(i + 1) % names.length];
+        this.setTheme(next);
     },
 
-    // 获取当前主题配置
+    // 主题清单（给主题面板用）
+    themeList() {
+        return Object.entries(this.themes).map(([key, t]) => ({
+            key,
+            name: t.name,
+            icon: t.icon,
+            scheme: t.scheme,
+            accent: t.accent,
+        }));
+    },
+
     getCurrentTheme() {
         return this.themes[this.currentTheme];
     },
 
     // 更新所有主题切换按钮的显示
     updateThemeButtons() {
-        document.querySelectorAll('.theme-toggle').forEach(btn => {
+        document.querySelectorAll('.theme-toggle').forEach((btn) => {
             const theme = this.getCurrentTheme();
             btn.innerHTML = theme.icon;
             btn.title = theme.name;
         });
-        // 主页欢迎区里的圆角矩形主题按钮：图标 + 当前主题名
-        document.querySelectorAll('.home-theme-btn').forEach(btn => {
+        document.querySelectorAll('.home-theme-btn').forEach((btn) => {
             const theme = this.getCurrentTheme();
             btn.innerHTML = `<span class="home-theme-icon">${theme.icon}</span><span class="home-theme-name">${theme.name}</span>`;
             btn.title = `切换主题（当前：${theme.name}）`;
@@ -271,7 +220,7 @@ const ThemeManager = {
         toggle.addEventListener('click', () => this.nextTheme());
         (container || document.body).appendChild(toggle);
         return toggle;
-    }
+    },
 };
 
 window.ThemeManager = ThemeManager;

@@ -256,3 +256,31 @@
         --dur-3: 0ms;
     }
 }
+
+/* ============================================================
+   旧变量桥接
+   ------------------------------------------------------------
+   站里原有的 style.css / glass.css / forms.css / editor-write.css
+   等约一万行样式用的是老名字（--bg-primary、--text-primary…）。
+   这里把老名字指向新令牌，老样式一行都不用改就能吃到新配色。
+   ============================================================ */
+:root,
+[data-theme] {
+    --bg-primary: var(--bg);
+    --bg-secondary: var(--bg-subtle);
+    --bg-tertiary: var(--surface-3);
+    --bg-card: var(--surface);
+    --text-primary: var(--text);
+    --accent-dim: var(--text-muted);
+    --border-light: var(--border-strong);
+    --shadow: var(--shadow-color);
+    --glow: var(--accent-soft);
+}
+
+:root {
+    --shadow-color: rgba(66, 54, 32, 0.16);
+}
+
+[data-theme="dark"] {
+    --shadow-color: rgba(0, 0, 0, 0.55);
+}
