@@ -9784,3 +9784,88 @@ html[data-tone="dark"] .hv-projects-box::after {
         font-size: 17px !important;
     }
 }
+
+/* ============================================================
+   文章卡：高度跟着封面图比例走
+   ============================================================ */
+.hv-carousel-box .hv-carousel {
+    width: 100%;
+    height: 480px;                 /* 首屏兜底，图加载完由 JS 接管 */
+    min-height: 0;
+    display: block;
+    position: relative;
+    transition: height 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.hv-carousel-box .hv-car-track {
+    display: flex !important;
+    align-items: flex-start !important;
+    width: 100% !important;
+    height: 100% !important;
+    padding: 0 !important;
+    gap: 0 !important;
+    overflow: hidden;
+    border-radius: 22px;
+}
+
+.hv-carousel-box .hv-car-track > * {
+    flex: 0 0 100% !important;
+    max-width: 100% !important;
+    width: 100% !important;
+}
+
+.hv-carousel-box .hv-car-item {
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    aspect-ratio: auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden;
+    border-radius: 22px !important;
+}
+
+/* 封面：按图片原始宽高比撑开 */
+.hv-carousel-box .hv-car-cover {
+    flex: 0 0 auto !important;
+    width: 100% !important;
+    height: auto !important;
+    aspect-ratio: var(--cover-ratio, 16 / 10);
+    min-height: 0 !important;
+    overflow: hidden;
+    border-radius: 22px 22px 0 0 !important;
+}
+
+.hv-carousel-box .hv-car-cover img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    display: block;
+}
+
+.hv-carousel-box .hv-car-body {
+    flex: 0 0 auto !important;
+    padding: 16px 20px 18px !important;
+}
+
+.hv-carousel-box .hv-car-title {
+    font-size: 20px !important;
+    line-height: 1.45 !important;
+    -webkit-line-clamp: 2 !important;
+    line-clamp: 2 !important;
+}
+
+@media (max-width: 900px) {
+    .hv-carousel-box .hv-carousel {
+        height: 380px;
+    }
+
+    .hv-carousel-box .hv-car-title {
+        font-size: 17px !important;
+    }
+
+    .hv-carousel-box .hv-car-body {
+        padding: 12px 16px 14px !important;
+    }
+}

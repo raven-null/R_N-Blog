@@ -1091,6 +1091,17 @@ const BlogApp = {
         let dir = 1;
         let hovering = false;
 
+        // 滚动过程中用 rAF 跟手同步高度（平滑滚动期间也能跟上）
+        let rafPending = false;
+        track.addEventListener('scroll', () => {
+            if (rafPending) return;
+            rafPending = true;
+            requestAnimationFrame(() => {
+                rafPending = false;
+                this.syncCarouselHeight();
+            });
+        }, { passive: true });
+
         const step = () => {
             if (!hovering) { raf = 0; return; }
             raf = requestAnimationFrame(step);
@@ -1631,7 +1642,47 @@ const BlogApp = {
                 + '</a>';
         }).join('');
 
+        // 封面图读完原始尺寸后，按比例定卡高
+        track.querySelectorAll('.hv-car-cover img').forEach((img) => {
+            const fix = () => {
+                const w = img.naturalWidth;
+                const h = img.naturalHeight;
+                if (!w || !h) return;
+                let ratio = w / h;
+                ratio = Math.max(0.9, Math.min(1.9, ratio));   // 别让长图把卡片拉飞
+                const item = img.closest('.hv-car-item');
+                if (item) item.style.setProperty('--cover-ratio', String(ratio));
+                this.syncCarouselHeight();
+            };
+            if (img.complete && img.naturalWidth) fix();
+            else img.addEventListener('load', fix, { once: true });
+            img.addEventListener('error', () => {
+                const cover = img.closest('.hv-car-cover');
+                if (cover) cover.style.display = 'none';
+                this.syncCarouselHeight();
+            }, { once: true });
+        });
+
         this.bindCarousel();
+        this.syncCarouselHeight();
+        setTimeout(() => this.syncCarouselHeight(), 300);
+        setTimeout(() => this.syncCarouselHeight(), 1200);
+    },
+
+    // 轮播容器高度跟着当前这张卡的封面走
+    syncCarouselHeight() {
+        const carousel = document.getElementById('hvCarousel');
+        const track = document.getElementById('hvCarTrack');
+        if (!carousel || !track) return;
+        const items = [...track.querySelectorAll('.hv-car-item')];
+        if (!items.length) return;
+        const w = track.clientWidth || 0;
+        if (!w) return;
+        const idx = Math.round(track.scrollLeft / w);
+        const card = items[Math.min(items.length - 1, Math.max(0, idx))];
+        if (!card) return;
+        const h = Math.round(card.offsetHeight);
+        if (h > 40) carousel.style.height = h + 'px';
     },
 
     // 轮播：按钮翻页 + 自动播放
@@ -1654,6 +1705,8 @@ const BlogApp = {
             if (next > max - 4) next = 0;            // 到底回开头，循环
             if (next < 0) next = max;
             track.scrollTo({ left: next, behavior: 'smooth' });
+            setTimeout(() => this.syncCarouselHeight(), 260);
+            setTimeout(() => this.syncCarouselHeight(), 620);
         };
 
         document.getElementById('hvCarousel')?.addEventListener('click', (e) => {
