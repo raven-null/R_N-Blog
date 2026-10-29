@@ -3310,6 +3310,41 @@ const BlogApp = {
             colH[c] = blockH;
         }
 
+        /* gallery 原版 v1.07：把「列内残留的空档」也填平 ——
+           多张大图跨列时，后续照片不一定填得严丝合缝，剩下的缝隙在这里
+           用一个高度正好的补位块补掉（图片按 cover 裁切），于是放大/跨列之后
+           不会留下明显的空洞。 */
+        {
+            const perCol = Array.from({ length: cols }, () => []);
+            for (const it of items) {
+                const span = it.w > cellW + 1 ? 2 : 1;
+                const c0 = Math.round(it.x / step);
+                for (let k = 0; k < span; k++) {
+                    const c = c0 + k;
+                    if (c >= 0 && c < cols) perCol[c].push(it);
+                }
+            }
+            let fillN = 0;
+            const fillGap = (c, y, h) => {
+                if (h <= 10) return;
+                const p = pool[fillN++ % pool.length];
+                items.push({
+                    id: p.id, key: 'gap-' + c + '-' + y + '-' + fillN + '-' + p.id,
+                    x: c * step, y, w: cellW, h,
+                    big: false, filler: true,
+                });
+                this.photoWallById.set(p.id, p);
+            };
+            for (let c = 0; c < cols; c++) {
+                const list = perCol[c].sort((a, b) => (a.y - b.y) || (b.h - a.h));
+                let y = 0;
+                for (const it of list) {
+                    if (it.y - y > 10) fillGap(c, y, it.y - GAP - y);
+                    y = Math.max(y, it.y + it.h);
+                }
+            }
+        }
+
         this.photoWallLayout = { items, cols, cellW, blockW: W, blockH: blockH - GAP };
     },
 

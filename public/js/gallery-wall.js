@@ -85,42 +85,46 @@
     return null;
   }
 
-  // ---------- 布局：瀑布流（把照片排成一条带，纵向重复） ----------
+  // ---------- 布局：瀑布流（直接调 app.js 里 gallery 原版算法） ----------
+  // gallery 的 wallComputeMasonry 会按顺序把照片塞进最短的列、
+  // 用空档填补跨列大图留下的缝、再把每列尾巴补齐到齐平 —— 这里原样复用。
   function buildMasonryBand() {
     if (S.masonryBand) return S.masonryBand;
+
+    const app = global.BlogApp;
     const wall = document.getElementById('galleryWall');
     const vw = wall ? wall.clientWidth : window.innerWidth;
-    const cols = Math.max(5, Math.min(12, Math.round(vw / 240)));
-    const cellW = CELL;
-    const stepX = cellW + GAP;
-    const colH = new Array(cols).fill(0);
-    const items = [];
-    const pool = S.pool;
 
-    for (let i = 0; i < pool.length; i++) {
-      const p = pool[i];
-      const ratio = ratioOf(p);
-      const big = cols >= 2 && i % 9 === 0;
-      let c = 0;
-      for (let k = 1; k < cols; k++) if (colH[k] < colH[c]) c = k;
-
-      if (big && c + 1 < cols) {
-        const spanW = cellW * 2 + GAP;
-        const y = colH[c];
-        const h = Math.round(spanW * ratio);
-        items.push({ id: p.id, x: c * stepX, y, w: spanW, h, big: true });
-        colH[c] = y + h + GAP;
-        colH[c + 1] = y + h + GAP;
-      } else {
-        const y = colH[c];
-        const h = Math.round(cellW * ratio);
-        items.push({ id: p.id, x: c * stepX, y, w: cellW, h, big: false });
-        colH[c] = y + h + GAP;
-      }
+    if (!app || typeof app.wallComputeMasonry !== 'function') {
+      // 兜底：退化成一列到底
+      const items = S.pool.map((p, k) => ({ id: p.id, x: 0, y: k * (CELL + GAP), w: CELL, h: CELL }));
+      S.masonryBand = { items, bandH: S.pool.length * (CELL + GAP), blockW: CELL, cols: 1, cellW: CELL };
+      return S.masonryBand;
     }
 
-    const bandH = Math.max.apply(null, colH) + GAP;
-    S.masonryBand = { items, bandH, blockW: cols * stepX - GAP, cols, cellW };
+    // 把无限墙的照片池与比例表交给 app.js 的那套算法
+    app.photoWallPool = S.pool;
+    app.photoWallRatio = S.ratio;
+    app.photoWallExpandedId = null;
+    if (!app.photoWallShrunk) app.photoWallShrunk = new Set();
+
+    // 给足够宽度，让它按照片数量自己算出列数（≈sqrt(n*1.4)，506 张约 27 列）
+    const wide = Math.max(vw * 4, 4200);
+    app.wallComputeMasonry(wide);
+
+    const layout = app.photoWallLayout;
+    if (!layout) {
+      S.masonryBand = { items: [], bandH: 600, blockW: wide, cols: 1, cellW: CELL };
+      return S.masonryBand;
+    }
+
+    S.masonryBand = {
+      items: layout.items,
+      bandH: Math.round(layout.blockH) + GAP,
+      blockW: Math.round(layout.blockW),
+      cols: layout.cols,
+      cellW: layout.cellW,
+    };
     return S.masonryBand;
   }
 
@@ -129,6 +133,12 @@
     const wall = document.getElementById('galleryWall');
     const body = document.getElementById('gwBody');
     if (!wall || !body || !S.pool.length) return;
+
+    // 有照片量到真实比例了 → 瀑布流带子重排一次
+    if (S.needRelayout) {
+      S.needRelayout = false;
+      S.masonryBand = null;
+    }
 
     const vw = wall.clientWidth;
     const vh = wall.clientHeight;
@@ -168,8 +178,8 @@
       }
     } else {
       const band = buildMasonryBand();
-      const pad = 300;
-      // 带子既是纵向重复，也横向平铺 —— 两个方向都无限
+      const pad = 400;
+      // 带子横纵平铺：band 宽度本来就是视口的 4 倍左右，横向很少看到重复
       const bandW = band.blockW + GAP;
       const h0 = Math.floor(wx0 / bandW) - 1;
       const h1 = Math.ceil(wx1 / bandW) + 1;
@@ -231,7 +241,18 @@
         const r = img.naturalHeight / img.naturalWidth;
         if (!S.ratio.has(photo.id)) {
           S.ratio.set(photo.id, r);
-          S.masonryBand = null;      // 有真实比例了，瀑布流带子要重排
+          S.ratioDirty = (S.ratioDirty || 0) + 1;
+          // 攒够一批再重排，避免每张图都抖一次
+          if (S.view === 'masonry' && !S.relayoutTimer) {
+            S.relayoutTimer = setTimeout(() => {
+              S.relayoutTimer = 0;
+              if (S.ratioDirty >= 8) {
+                S.ratioDirty = 0;
+                S.needRelayout = true;
+                apply();
+              }
+            }, 900);
+          }
         }
       });
       el.appendChild(img);
@@ -508,6 +529,7 @@
     setView,
     shuffle,
     render: apply,
+    get band() { return buildMasonryBand(); },
   };
 
   global.GalleryWall = GalleryWall;
