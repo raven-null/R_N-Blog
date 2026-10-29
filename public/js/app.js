@@ -1487,13 +1487,15 @@ const BlogApp = {
         return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
     },
 
-    // 初始化：没登录就整块隐藏（日历滚轮切月不受登录限制）
+    // 初始化：没登录就把任务/日记都藏起来（日历滚轮切月不受登录限制）
     async initLife() {
         const box = document.getElementById('homeLife');
+        const journalBox = document.getElementById('homeJournalBox');
         if (!box) return;
         this.bindCalendarWheel();
         if (!this.lifeAdminKey()) {
             box.style.display = 'none';
+            if (journalBox) journalBox.style.display = 'none';
             return;
         }
 
@@ -1503,12 +1505,7 @@ const BlogApp = {
         this._calViewMonth = this.lifeState.month;
         this.bindLifeEvents();
 
-        const ok = await this.loadLifeMonth(this.lifeState.month);
-        if (!ok) {
-            box.style.display = 'none';
-            return;
-        }
-        box.style.display = '';
+        await this.loadLifeMonth(this.lifeState.month);
     },
 
     // 日历滚轮切换月份：登录时连带切换任务/日记归档，未登录只翻日历
@@ -1575,15 +1572,15 @@ const BlogApp = {
     },
 
     renderLife() {
-        const dateEl = document.getElementById('lifeDateLabel');
         const monthEl = document.getElementById('lifeMonthLabel');
-        if (dateEl) dateEl.textContent = this.formatDateLabel(this.lifeState.date);
+        const journalDateEl = document.getElementById('journalDateLabel');
         if (monthEl) {
             const [y, m] = this.lifeState.month.split('-');
             monthEl.textContent = `${y} 年 ${Number(m)} 月`;
         }
+        if (journalDateEl) journalDateEl.textContent = this.formatDateLabel(this.lifeState.date);
         this.renderLifeTasks();
-        this.renderLifeJournal();
+        this.renderJournalView();
     },
 
     formatDateLabel(date) {
@@ -1594,97 +1591,175 @@ const BlogApp = {
         return `${Number(m)} 月 ${Number(d)} 日 · 周${names[weekday]}`;
     },
 
+    // 任务展示盒子：没有任务就整块折叠
     renderLifeTasks() {
+        const box = document.getElementById('homeLife');
+        const list = document.getElementById('lifeTaskList');
         const countEl = document.getElementById('lifeTaskCount');
+        if (!box || !list) return;
+
         const tasks = (this.lifeState.tasks || []).filter(t => t.date === this.lifeState.date);
         if (countEl) {
             const done = tasks.filter(t => t.done).length;
             countEl.textContent = tasks.length ? `${done}/${tasks.length}` : '';
         }
-        const html = tasks.length
-            ? tasks.map(t => `
-                <div class="life-task${t.done ? ' is-done' : ''}" data-id="${this.escAttr(t.id)}">
-                    <button class="life-task-check" type="button" title="切换完成">${t.done ? '✓' : ''}</button>
-                    <span class="life-task-title">${this.esc(t.title)}</span>
-                    <button class="life-task-del" type="button" title="删除">×</button>
-                </div>
-            `).join('')
-            : '<div class="home-empty">这一天还没有任务</div>';
 
-        // 任务卡片与日历盒子里的当天面板同步渲染
-        ['lifeTaskList', 'dayTaskList'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.innerHTML = html;
-        });
+        if (!tasks.length) {
+            box.style.display = 'none';
+            list.innerHTML = '';
+            return;
+        }
+
+        box.style.display = '';
+        list.innerHTML = tasks.map(t => `
+            <div class="life-task${t.done ? ' is-done' : ''}" data-id="${this.escAttr(t.id)}">
+                <button class="life-task-check" type="button" title="切换完成">${t.done ? '✓' : ''}</button>
+                <span class="life-task-title">${this.esc(t.title)}</span>
+                <button class="life-task-del" type="button" title="删除">×</button>
+            </div>
+        `).join('');
     },
 
-    renderLifeJournal() {
-        const ta = document.getElementById('lifeJournal');
-        const status = document.getElementById('lifeJournalStatus');
-        if (!ta) return;
+    // 日记展示盒子：当天没写就整块折叠
+    renderJournalView() {
+        const box = document.getElementById('homeJournalBox');
+        const body = document.getElementById('journalBody');
+        if (!box || !body) return;
         const entry = (this.lifeState.journals || []).find(j => j.date === this.lifeState.date);
-        ta.value = entry ? entry.content : '';
-        if (status) status.textContent = entry ? '已保存' : '';
+        if (!entry || !entry.content) {
+            box.style.display = 'none';
+            body.innerHTML = '';
+            return;
+        }
+        box.style.display = '';
+        body.innerHTML = entry.content
+            .split('\n')
+            .map(line => `<p>${this.esc(line) || '&nbsp;'}</p>`)
+            .join('');
     },
 
-    // 选择日期（日历点击）：日历盒子切换成「当天任务」面板
+    // 选择日期（日历点击）：从日历下方弹出编写盒子
     selectLifeDate(date) {
         if (!date) return;
         const month = date.slice(0, 7);
         this.lifeState.date = date;
+        const after = () => {
+            this.renderLife();
+            this.updateSelectedCalCell();
+            this.openEditor();
+        };
         if (month !== this.lifeState.month) {
-            this.loadLifeMonth(month).then(ok => { if (ok) this.showDayPanel(); });
+            this.loadLifeMonth(month).then(ok => { if (ok) after(); });
             return;
         }
-        this.renderLife();
-        this.showDayPanel();
+        after();
     },
 
-    // 切换到当天任务面板（日历暂时隐藏）
-    showDayPanel() {
-        const cal = document.getElementById('homeCalendar');
-        const panel = document.getElementById('homeDayPanel');
-        if (!cal || !panel) return;
-        cal.style.display = 'none';
-        panel.style.display = '';
-        const label = document.getElementById('dayPanelLabel');
+    // 更新日历选中态
+    updateSelectedCalCell() {
+        document.querySelectorAll('#homeCalendar .cal-day').forEach(el => {
+            el.classList.toggle('is-selected', el.dataset.date === this.lifeState.date);
+        });
+    },
+
+    // 打开编写盒子（第一步：选「任务 / 日记」）
+    openEditor() {
+        if (!this.lifeAdminKey()) return;
+        const ed = document.getElementById('homeEditor');
+        if (!ed) return;
+        ed.style.display = '';
+        const choice = document.getElementById('editorChoice');
+        const taskForm = document.getElementById('editorTaskForm');
+        const journalForm = document.getElementById('editorJournalForm');
+        const label = document.getElementById('editorDateLabel');
+        if (choice) choice.style.display = '';
+        if (taskForm) taskForm.style.display = 'none';
+        if (journalForm) journalForm.style.display = 'none';
         if (label) label.textContent = this.formatDateLabel(this.lifeState.date);
-        this.renderLifeTasks();
-        const input = document.getElementById('dayTaskInput');
-        if (input) setTimeout(() => input.focus(), 60);
     },
 
-    // 回到日历
-    hideDayPanel() {
-        const cal = document.getElementById('homeCalendar');
-        const panel = document.getElementById('homeDayPanel');
-        if (cal) cal.style.display = '';
-        if (panel) panel.style.display = 'none';
-        if (typeof window.renderCalendar === 'function') window.renderCalendar(this.lifeState.month);
+    // 点「任务 / 日记」→ 选择层隐藏，换成对应编写表单
+    chooseEditorKind(kind) {
+        const choice = document.getElementById('editorChoice');
+        const taskForm = document.getElementById('editorTaskForm');
+        const journalForm = document.getElementById('editorJournalForm');
+        if (choice) choice.style.display = 'none';
+
+        if (kind === 'task') {
+            if (journalForm) journalForm.style.display = 'none';
+            if (taskForm) taskForm.style.display = '';
+            const input = document.getElementById('editorTaskInput');
+            if (input) {
+                input.value = '';
+                setTimeout(() => input.focus(), 40);
+            }
+            return;
+        }
+
+        if (taskForm) taskForm.style.display = 'none';
+        if (journalForm) journalForm.style.display = '';
+        const ta = document.getElementById('editorJournalInput');
+        if (ta) {
+            const entry = (this.lifeState.journals || []).find(j => j.date === this.lifeState.date);
+            ta.value = entry ? entry.content : '';
+            setTimeout(() => ta.focus(), 40);
+        }
     },
 
-    // 添加任务（日历盒子里的输入框）
-    async addLifeTask(inputId) {
-        const input = document.getElementById(inputId);
-        if (!input) return;
-        const title = (input.value || '').trim();
-        if (!title) return;
-        input.value = '';
+    // 关闭编写盒子（提交或 ×）
+    closeEditor() {
+        const ed = document.getElementById('homeEditor');
+        if (ed) ed.style.display = 'none';
+    },
+
+    // 提交任务
+    async submitEditorTask() {
+        const input = document.getElementById('editorTaskInput');
+        const title = (input && input.value ? input.value : '').trim();
+        if (!title) {
+            this.closeEditor();
+            return;
+        }
         try {
             const data = await this.lifeApi('', {
                 method: 'POST',
                 body: JSON.stringify({ type: 'task', date: this.lifeState.date, title }),
             });
-            if (data && data.task) {
-                this.lifeState.tasks.push(data.task);
-                this.renderLifeTasks();
-            }
+            if (data && data.task) this.lifeState.tasks.push(data.task);
         } catch (err) {
-            input.value = title;
+            return; // 失败保留输入
         }
+        if (input) input.value = '';
+        this.renderLife();
+        this.closeEditor();
     },
 
-    // 任务列表的完成 / 删除（两个列表共用）
+    // 提交日记
+    async submitEditorJournal() {
+        const ta = document.getElementById('editorJournalInput');
+        const content = ta ? ta.value : '';
+        try {
+            const data = await this.lifeApi('', {
+                method: 'POST',
+                body: JSON.stringify({ type: 'journal', date: this.lifeState.date, content }),
+            });
+            if (!data || data.unauthorized) return;
+            const list = this.lifeState.journals;
+            const idx = list.findIndex(j => j.date === this.lifeState.date);
+            if (data.journal) {
+                if (idx >= 0) list[idx] = data.journal;
+                else list.push(data.journal);
+            } else if (idx >= 0) {
+                list.splice(idx, 1);
+            }
+        } catch (err) {
+            return;
+        }
+        this.renderLife();
+        this.closeEditor();
+    },
+
+    // 任务列表的完成 / 删除
     async onLifeTaskClick(e) {
         const row = e.target.closest('.life-task');
         if (!row) return;
@@ -1730,25 +1805,29 @@ const BlogApp = {
         if (!box || box.dataset.bound) return;
         box.dataset.bound = '1';
 
-        // 日历盒子里的当天面板：添加任务
-        document.getElementById('dayTaskForm')?.addEventListener('submit', (e) => {
-            e.preventDefault();
-            this.addLifeTask('dayTaskInput');
-        });
-
-        // 两个任务列表共用同一套完成 / 删除逻辑
-        document.getElementById('dayTaskList')?.addEventListener('click', (e) => this.onLifeTaskClick(e));
+        // 任务展示列表：勾选完成 / 删除
         document.getElementById('lifeTaskList')?.addEventListener('click', (e) => this.onLifeTaskClick(e));
 
-        // 返回日历
-        document.getElementById('dayBackBtn')?.addEventListener('click', () => this.hideDayPanel());
-
-        // 日记自动保存（停止输入 1.2 秒后）
-        document.getElementById('lifeJournal')?.addEventListener('input', () => {
-            const status = document.getElementById('lifeJournalStatus');
-            if (status) status.textContent = '编辑中…';
-            clearTimeout(this.lifeState.journalTimer);
-            this.lifeState.journalTimer = setTimeout(() => this.saveJournal(), 1200);
+        // 编写盒子：选类型 / 关闭（×）
+        const editor = document.getElementById('homeEditor');
+        if (editor && !editor.dataset.bound) {
+            editor.dataset.bound = '1';
+            editor.addEventListener('click', (e) => {
+                const kindBtn = e.target.closest('.editor-choice-btn');
+                if (kindBtn) {
+                    this.chooseEditorKind(kindBtn.dataset.kind);
+                    return;
+                }
+                if (e.target.closest('[data-close]')) this.closeEditor();
+            });
+        }
+        document.getElementById('editorTaskForm')?.addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.submitEditorTask();
+        });
+        document.getElementById('editorJournalForm')?.addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.submitEditorJournal();
         });
 
         // 归档月份切换
@@ -1761,31 +1840,6 @@ const BlogApp = {
             if (!cell || !cell.dataset.date) return;
             this.selectLifeDate(cell.dataset.date);
         });
-    },
-
-    async saveJournal() {
-        const ta = document.getElementById('lifeJournal');
-        const status = document.getElementById('lifeJournalStatus');
-        if (!ta) return;
-        const content = ta.value;
-        try {
-            const data = await this.lifeApi('', {
-                method: 'POST',
-                body: JSON.stringify({ type: 'journal', date: this.lifeState.date, content }),
-            });
-            if (!data || data.unauthorized) return;
-            const list = this.lifeState.journals;
-            const idx = list.findIndex(j => j.date === this.lifeState.date);
-            if (data.journal) {
-                if (idx >= 0) list[idx] = data.journal;
-                else list.push(data.journal);
-            } else if (idx >= 0) {
-                list.splice(idx, 1);
-            }
-            if (status) status.textContent = content ? '已保存' : '';
-        } catch (e) {
-            if (status) status.textContent = '保存失败';
-        }
     },
 
     // 主页入口：切到指定视图（可选再按内容形态筛选）

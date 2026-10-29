@@ -13,7 +13,7 @@
     <script src="/js/site-icon.js?v=1.0.0" defer></script>
 
     <!-- Styles -->
-    <link rel="stylesheet" href="css/style.css?v=3.50.0">
+    <link rel="stylesheet" href="css/style.css?v=3.51.0">
     <link rel="stylesheet" href="css/glass.css?v=1.0.14">
     <link rel="stylesheet" href="css/wheel.css?v=1.0.0">
 
@@ -199,48 +199,55 @@
                             <div class="dash-panel home-cal-box">
                                 <div class="home-calendar" id="homeCalendar"></div>
 
-                                <!-- 点日期后切换到的「当天任务」盒子 -->
-                                <div class="home-day-panel" id="homeDayPanel" style="display:none;">
-                                    <div class="day-panel-head">
-                                        <button class="day-back-btn" id="dayBackBtn" type="button" title="返回日历">‹ 日历</button>
-                                        <span class="day-label" id="dayPanelLabel"></span>
+                                <!-- 点日期后从日历下方弹出的编写盒子 -->
+                                <div class="home-editor" id="homeEditor" style="display:none;">
+                                    <!-- 第一步：选择写任务还是日记 -->
+                                    <div class="editor-choice" id="editorChoice">
+                                        <span class="editor-date" id="editorDateLabel"></span>
+                                        <button class="editor-choice-btn" type="button" data-kind="task">任务</button>
+                                        <button class="editor-choice-btn" type="button" data-kind="journal">日记</button>
+                                        <button class="editor-close" type="button" data-close="1" title="关闭">×</button>
                                     </div>
-                                    <form class="life-task-form" id="dayTaskForm">
-                                        <input type="text" id="dayTaskInput" placeholder="添加任务，回车保存" maxlength="120" autocomplete="off">
-                                        <button type="submit" title="添加">+</button>
+
+                                    <!-- 第二步：任务编写 -->
+                                    <form class="editor-form" id="editorTaskForm" style="display:none;">
+                                        <input type="text" id="editorTaskInput" placeholder="写下一个任务，回车或点提交保存" maxlength="120" autocomplete="off">
+                                        <button class="editor-submit" type="submit">提交</button>
+                                        <button class="editor-close" type="button" data-close="1" title="关闭">×</button>
                                     </form>
-                                    <div class="life-task-list" id="dayTaskList">
-                                        <div class="home-empty">这一天还没有任务</div>
-                                    </div>
+
+                                    <!-- 第二步：日记编写 -->
+                                    <form class="editor-form editor-form-journal" id="editorJournalForm" style="display:none;">
+                                        <textarea id="editorJournalInput" placeholder="写下今天的日记…" maxlength="20000"></textarea>
+                                        <div class="editor-form-actions">
+                                            <button class="editor-submit" type="submit">提交</button>
+                                            <button class="editor-close" type="button" data-close="1" title="关闭">×</button>
+                                        </div>
+                                    </form>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- 任务 + 日记（仅后台登录后显示） -->
+                    <!-- 任务展示（没有任务时整块折叠） -->
                     <div class="dash-panel home-life" id="homeLife" style="display:none;">
                         <div class="dash-panel-title home-life-head">
-                            <span id="lifeDateLabel">今天</span>
+                            <span>任务 <span class="life-count" id="lifeTaskCount"></span></span>
                             <span class="life-month-nav">
                                 <button class="life-nav-btn" id="lifePrevMonth" type="button" title="上一月">‹</button>
                                 <span class="life-month" id="lifeMonthLabel"></span>
                                 <button class="life-nav-btn" id="lifeNextMonth" type="button" title="下一月">›</button>
                             </span>
                         </div>
+                        <div class="life-task-list" id="lifeTaskList"></div>
+                    </div>
 
-                        <div class="home-life-body">
-                            <div class="life-col">
-                                <div class="life-col-head">任务 <span class="life-count" id="lifeTaskCount"></span></div>
-                                <div class="life-task-list" id="lifeTaskList">
-                                    <div class="home-empty">加载中...</div>
-                                </div>
-                            </div>
-
-                            <div class="life-col">
-                                <div class="life-col-head">日记 <span class="life-status" id="lifeJournalStatus"></span></div>
-                                <textarea class="life-journal" id="lifeJournal" placeholder="今天写点什么…（自动保存）" maxlength="20000"></textarea>
-                            </div>
+                    <!-- 日记展示 -->
+                    <div class="dash-panel home-journal-box" id="homeJournalBox" style="display:none;">
+                        <div class="dash-panel-title home-journal-head">
+                            <span>日记 <span class="life-month" id="journalDateLabel"></span></span>
                         </div>
+                        <div class="journal-body" id="journalBody"></div>
                     </div>
 
                     <!-- 内容区：简报（右侧有主题盒子）+ 图库 / 文章封面并排 -->
@@ -414,7 +421,7 @@
 
     <!-- Scripts -->
     <script src="js/theme.js?v=3.16.0" defer></script>
-    <script src="js/app.js?v=3.65.0" defer></script>
+    <script src="js/app.js?v=3.66.0" defer></script>
     <script src="js/animations.js?v=3.14.0" defer></script>
 
     <script>
