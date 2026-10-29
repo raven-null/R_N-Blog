@@ -3772,7 +3772,7 @@ const BlogApp = {
         }
 
         box.innerHTML = items.map(repo => this.githubRepoCard(repo)).join('');
-        this.bindProjectsDragScroll(box);
+        this.initProjectStack();
     },
 
     // 项目横向列表：鼠标按住拖拽滚动（触屏走原生滑动，不显示滚动条）
@@ -4308,7 +4308,7 @@ const BlogApp = {
             const now = Date.now();
             if (now - state.wheelAt < 240) return;
             state.wheelAt = now;
-            const live = [...box.children].filter((el) => el.classList.contains('news-item') || el.classList.contains('hv-photo'));
+            const live = [...box.children].filter((el) => el.classList.contains('news-item') || el.classList.contains('hv-photo') || el.classList.contains('home-project'));
             if (!live.length) return;
             const dir = Math.sign(e.deltaY) || 1;
             state.active = (state.active + dir + live.length) % live.length;
@@ -4328,7 +4328,7 @@ const BlogApp = {
             clearInterval(state.hoverTimer);
             state.hoverTimer = setInterval(() => {
                 if (document.hidden) return;
-                const live = [...box.children].filter((el) => el.classList.contains('news-item') || el.classList.contains('hv-photo'));
+                const live = [...box.children].filter((el) => el.classList.contains('news-item') || el.classList.contains('hv-photo') || el.classList.contains('home-project'));
                 if (!live.length) return;
                 state.active = (state.active + 1) % live.length;
                 this.paintStack(box);
@@ -4346,7 +4346,7 @@ const BlogApp = {
     paintStack(box) {
         const state = this.stackCards.get(box);
         if (!state) return;
-        const items = [...box.children].filter((el) => el.classList.contains('news-item') || el.classList.contains('hv-photo'));
+        const items = [...box.children].filter((el) => el.classList.contains('news-item') || el.classList.contains('hv-photo') || el.classList.contains('home-project'));
         const n = items.length;
         if (!n) return;
 
@@ -4397,6 +4397,15 @@ const BlogApp = {
         list.dataset.stackInit = '1';
         list.classList.add('stack-box');
         this.initStackBox(list, { autoMs: 3800 });
+    },
+
+    // 把项目列表初始化成堆叠
+    initProjectStack() {
+        const box = document.getElementById('homeProjectsGrid');
+        if (!box || box.dataset.stackInit === '1') return;
+        box.dataset.stackInit = '1';
+        box.classList.add('stack-box', 'stack-projects');
+        this.initStackBox(box, { autoMs: 4200 });
     },
 
     // 把首页照片初始化成堆叠

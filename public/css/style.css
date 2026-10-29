@@ -9062,3 +9062,58 @@ html.glass-ready .stack-box > [data-reveal].in-view {
         columns: 1;
     }
 }
+
+/* ============================================================
+   项目列表也做成堆叠卡片（滚轮切换 + 自动轮换）
+   ============================================================ */
+.hv-projects.stack-box {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    grid-template-rows: 1fr !important;
+    place-items: center;
+    height: 240px !important;
+    overflow: visible !important;
+    padding: 10px !important;
+    gap: 0 !important;
+    background: none !important;
+    border: 0 !important;
+}
+
+.hv-projects.stack-box > .home-project {
+    grid-area: 1 / 1 / 2 / 2 !important;
+    position: relative !important;
+    inset: auto !important;
+    width: min(420px, 100%) !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 18px 20px;
+    border-radius: 18px;
+    transform-origin: center center;
+    transition: transform 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+        opacity 0.35s ease !important;
+}
+
+.hv-projects.stack-box > .home-project {
+    transform:
+        rotate(var(--stack-rot, 0deg))
+        translate(var(--stack-x, 0px), var(--stack-y, 0px))
+        scale(var(--stack-s, 1)) !important;
+    opacity: var(--stack-o, 1) !important;
+}
+
+/* 堆叠里的项目卡文字大小 */
+.hv-projects.stack-box .home-project-name {
+    font-family: var(--font-hand);
+    font-size: 17px;
+}
+
+.hv-projects.stack-box .home-project-desc {
+    font-family: var(--font-hand);
+    font-size: 14px;
+}
+
+@media (max-width: 900px) {
+    .hv-projects.stack-box {
+        height: 200px !important;
+    }
+}
