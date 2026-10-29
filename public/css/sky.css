@@ -1,0 +1,192 @@
+/* ============================================================
+   昼夜天色背景 + 毛玻璃内容层
+   ------------------------------------------------------------
+   背景由 js/daylight.js 按真实时间算出：
+     --sky-top / --sky-bottom  天空渐变两端
+     --sky-glow / --sun-x / --sun-y  太阳或月亮的光晕
+   内容卡片用半透明 + backdrop-filter，透出后面的天色。
+   ============================================================ */
+
+:root {
+    --glass-card: rgba(255, 255, 255, 0.66);
+    --glass-card-strong: rgba(255, 255, 255, 0.8);
+    --glass-line: rgba(255, 255, 255, 0.55);
+    --glass-blur-card: 16px;
+    --sky-fade: 1.8s;
+}
+
+[data-theme="dark"] {
+    --glass-card: rgba(26, 30, 44, 0.62);
+    --glass-card-strong: rgba(26, 30, 44, 0.78);
+    --glass-line: rgba(255, 255, 255, 0.1);
+}
+
+/* ---------- 背景层 ---------- */
+.sky {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background: linear-gradient(180deg, var(--sky-top, #cfdff5) 0%, var(--sky-bottom, #fbf8f1) 100%);
+    transition: background var(--sky-fade) linear;
+}
+
+/* 太阳 / 月亮的光晕 */
+.sky::before {
+    content: '';
+    position: absolute;
+    left: var(--sun-x, 50%);
+    top: var(--sun-y, 30%);
+    width: 62vmax;
+    height: 62vmax;
+    margin: -31vmax 0 0 -31vmax;
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--sky-glow, #ffe6ad) 0%, rgba(255, 255, 255, 0) 62%);
+    opacity: var(--sky-glow-opacity, 0.5);
+    filter: blur(8px);
+    transition: left var(--sky-fade) linear, top var(--sky-fade) linear,
+        opacity var(--sky-fade) linear, background var(--sky-fade) linear;
+}
+
+/* 地平线附近再压一层薄雾，避免上下两色接缝生硬 */
+.sky::after {
+    content: '';
+    position: absolute;
+    inset: auto 0 0 0;
+    height: 46%;
+    background: linear-gradient(to top, var(--sky-bottom, #fbf8f1) 0%, transparent 100%);
+    opacity: 0.55;
+    transition: background var(--sky-fade) linear;
+}
+
+/* 深色主题：把天色整体压暗，但保留色相 */
+[data-theme="dark"] .sky {
+    filter: brightness(0.32) saturate(1.15);
+}
+
+/* 夜里再压一点，避免太亮 */
+[data-period="night"] .sky {
+    filter: brightness(0.9);
+}
+
+[data-theme="dark"][data-period="night"] .sky {
+    filter: brightness(0.2) saturate(1.2);
+}
+
+/* ---------- 让页面透出背景 ---------- */
+body {
+    background: transparent;
+}
+
+/* 滚动区、主内容都不要挡背景 */
+.scroll-area,
+.main-content {
+    background: transparent;
+}
+
+/* 顶栏：毛玻璃，随天色 */
+nav.navbar {
+    background: var(--glass-card) !important;
+    backdrop-filter: blur(var(--glass-blur-card)) saturate(1.3);
+    -webkit-backdrop-filter: blur(var(--glass-blur-card)) saturate(1.3);
+    border-bottom: 1px solid var(--glass-line);
+}
+
+/* ---------- 内容卡片：毛玻璃 ---------- */
+.hv-stat,
+.hv-post,
+.hv-card,
+.hv-news-block .home-news-list,
+.hv-projects > *,
+.hv-theme {
+    background: var(--glass-card) !important;
+    backdrop-filter: blur(var(--glass-blur-card)) saturate(1.25);
+    -webkit-backdrop-filter: blur(var(--glass-blur-card)) saturate(1.25);
+    border: 1px solid var(--glass-line) !important;
+    box-shadow: 0 2px 10px rgba(20, 26, 44, 0.05);
+}
+
+.hv-stat:hover,
+.hv-post:hover,
+.hv-projects > *:hover {
+    background: var(--glass-card-strong) !important;
+    box-shadow: 0 12px 30px rgba(20, 26, 44, 0.12);
+}
+
+/* 卡片里不该整块变透明的部分 */
+.hv-post-cover,
+.hv-photo,
+.hv-stat-num {
+    backdrop-filter: none;
+}
+
+/* 照片带缩略图保持原样，只加一层细线 */
+.hv-photo {
+    border: 1px solid var(--glass-line);
+    box-shadow: 0 2px 10px rgba(20, 26, 44, 0.06);
+}
+
+/* 日历卡片不必再套玻璃底色（里面本来就是网格） */
+.hv-cal-card {
+    background: var(--glass-card) !important;
+}
+
+/* 桌宠的气泡也走玻璃 */
+.deskpet-bubble {
+    background: var(--glass-card-strong) !important;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-color: var(--glass-line);
+}
+
+/* 不支持 backdrop-filter 的浏览器退回实色 */
+@supports not (backdrop-filter: blur(4px)) {
+    :root {
+        --glass-card: var(--surface);
+        --glass-card-strong: var(--surface);
+    }
+
+    .sky {
+        opacity: 0.9;
+    }
+}
+
+/* ---------- 天色控制条（可选，右下角小圆点提示当前时段） ---------- */
+.sky-badge {
+    position: fixed;
+    right: 22px;
+    bottom: 74px;
+    z-index: 60;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 11px;
+    font-size: 11.5px;
+    color: var(--text-secondary);
+    background: var(--glass-card);
+    border: 1px solid var(--glass-line);
+    border-radius: 999px;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    pointer-events: none;
+    opacity: 0.75;
+}
+
+.sky-badge .sky-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--sky-glow, #ffe6ad);
+    box-shadow: 0 0 8px var(--sky-glow, #ffe6ad);
+}
+
+[data-period="night"] .sky-badge .sky-dot {
+    background: #cfd9f2;
+    box-shadow: 0 0 8px #cfd9f2;
+}
+
+@media (max-width: 900px) {
+    .sky-badge {
+        display: none;
+    }
+}
