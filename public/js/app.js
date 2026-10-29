@@ -1071,7 +1071,6 @@ const BlogApp = {
             this.renderMoreNews();
             this.bindNewsInfiniteScroll(list);
             this.fillNewsIfShort(list);
-            this.bindNewsHoverScroll();
             // 简报改成堆叠卡片 + 滚轮切换（循环即无限）
             setTimeout(() => this.initNewsStack(), 500);
             this.initNewsStack();

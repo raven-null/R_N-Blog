@@ -350,19 +350,16 @@ body:not(.home-layout) .article-layout,
    仅当 JS 已就绪（html.glass-ready）才隐藏元素，脚本异常时页面保持可见 */
 html.glass-ready [data-reveal] {
     opacity: 0;
-    transform: translateY(30px);
-    filter: blur(12px);
+    transform: translateY(18px);
     transition:
-        opacity 0.9s ease,
-        transform 0.9s var(--spring),
-        filter 0.9s ease;
-    will-change: opacity, transform, filter;
+        opacity 0.55s ease,
+        transform 0.55s var(--spring);
+    will-change: opacity, transform;
 }
 
 html.glass-ready [data-reveal].in-view {
     opacity: 1;
     transform: translateY(0);
-    filter: blur(0);
 }
 
 /* 逐项错峰（兄弟节点按顺序延迟） */
