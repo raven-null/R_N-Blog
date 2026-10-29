@@ -143,19 +143,27 @@
     Cache-Control = "public, max-age=31536000, immutable"
 
 # HTML 一律回源校验：防止中间 CDN/浏览器长期缓存旧页面导致改版不生效
+# 边缘缓存：原来写 no-cache，导致每次访问都穿越 CDN 回源（TTFB 1.1~1.8s）
+# 现在让 Cloudflare 边缘存 60 秒，期间所有访客直接拿边缘副本；过期后先给旧页再后台刷新
 [[headers]]
   for = "/"
   [headers.values]
-    Cache-Control = "no-cache"
+    Cache-Control = "public, max-age=0, s-maxage=60, stale-while-revalidate=86400"
 
 [[headers]]
   for = "/*.html"
   [headers.values]
-    Cache-Control = "no-cache"
+    Cache-Control = "public, max-age=0, s-maxage=60, stale-while-revalidate=86400"
 
 # ===== 站点根图标 =====
 # 五个页面 head 已统一声明 favicon；/favicon.ico 也返回同一张图标，
 # 保证直接访问根路径图标、爬虫抓取、旧书签一致。
+# 字体：文件名带版本/内容不变，长缓存
+[[headers]]
+  for = "/fonts/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
 [[redirects]]
   from = "/favicon.ico"
   to = "/images/Default/web-logo.webp"
