@@ -55,6 +55,9 @@ const BlogApp = {
         });
         this.syncHvThemeIcon();
 
+        // 正文手写开关（记忆在 localStorage）
+        this.applyHandBody();
+
         this.initDeskPet();
         // 桌宠心智：看页面 / 主动说话 / 接 AI / 语音
         if (window.PetMind) {
@@ -1062,10 +1065,50 @@ const BlogApp = {
             this.renderMoreNews();
             this.bindNewsInfiniteScroll(list);
             this.fillNewsIfShort(list);
+            this.bindNewsHoverScroll();
         } catch (e) {
             console.error('资讯加载失败:', e);
             list.innerHTML = '<div class="home-empty">资讯加载失败，稍后再试</div>';
         }
+    },
+
+    // 简报：鼠标悬停时自动缓慢滚动（来回走，不会卡在底）
+    bindNewsHoverScroll() {
+        const list = document.getElementById('newsList');
+        if (!list || list.dataset.hoverBound) return;
+        list.dataset.hoverBound = '1';
+
+        let raf = 0;
+        let dir = 1;
+        let hovering = false;
+
+        const step = () => {
+            if (!hovering) { raf = 0; return; }
+            raf = requestAnimationFrame(step);
+            const max = list.scrollHeight - list.clientHeight;
+            if (max <= 4) return;
+            list.scrollTop += 2.4 * dir;
+            if (list.scrollTop >= max - 1) dir = -1;
+            if (list.scrollTop <= 0) dir = 1;
+        };
+
+        const start = () => {
+            hovering = true;
+            if (!raf) raf = requestAnimationFrame(step);
+        };
+        const stop = () => {
+            hovering = false;
+            if (raf) cancelAnimationFrame(raf);
+            raf = 0;
+        };
+
+        list.addEventListener('mouseenter', start);
+        list.addEventListener('mouseleave', stop);
+        list.addEventListener('pointerenter', start);
+        list.addEventListener('pointerleave', stop);
+        // 手指/触屏按住也能滚
+        list.addEventListener('touchstart', start, { passive: true });
+        list.addEventListener('touchend', stop);
     },
 
     // 每条资讯的 HTML（列表与追加共用）

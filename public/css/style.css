@@ -7915,3 +7915,112 @@ body.view-gallery-active .footer-home {
     font-weight: 400;
     letter-spacing: 0.01em;
 }
+
+/* ============================================================
+   今日简报：正方形卡片，纵向堆叠，悬停自动滚动
+   ============================================================ */
+.hv-news-block .home-news-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    padding: 10px 12px 16px;
+    max-height: 440px;
+    overflow-y: auto;
+    scroll-behavior: auto;
+    perspective: 900px;
+}
+
+.hv-news-block .news-item {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 12px;
+    flex: 0 0 auto;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    padding: 22px 24px;
+    margin-top: -58%;                  /* 大幅重叠，形成一叠卡片 */
+    border-radius: 18px;
+    background: var(--glass-card-strong, #fffdf8);
+    border: 1px solid var(--glass-line, var(--border));
+    box-shadow: 0 -8px 24px rgba(20, 26, 44, 0.10);
+    transition: margin-top 0.34s cubic-bezier(0.22, 1, 0.36, 1),
+        transform 0.28s ease, box-shadow 0.28s ease;
+    text-decoration: none;
+}
+
+.hv-news-block .news-item:first-child {
+    margin-top: 0;
+}
+
+/* 悬停：卡片散开一点，露出的标题更完整 */
+.hv-news-block .home-news-list:hover .news-item {
+    margin-top: -34%;
+    box-shadow: 0 -10px 30px rgba(20, 26, 44, 0.14);
+}
+
+.hv-news-block .home-news-list:hover .news-item:first-child {
+    margin-top: 0;
+}
+
+.hv-news-block .news-item:hover {
+    transform: translateY(-4px) scale(1.012);
+    z-index: 3;
+}
+
+.hv-news-block .news-item-cat {
+    font-family: var(--font-hand);
+    font-size: 15px;
+    color: var(--accent-strong, var(--accent));
+    letter-spacing: 0.04em;
+}
+
+.hv-news-block .news-item-title {
+    font-family: var(--font-hand);
+    font-size: 21px;
+    line-height: 1.5;
+    color: var(--text);
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.hv-news-block .news-item-meta {
+    font-family: var(--font-hand);
+    font-size: 13px;
+    color: var(--text-muted);
+    letter-spacing: 0.03em;
+}
+
+/* 深色主题下卡片阴影别太重 */
+html[data-tone="dark"] .hv-news-block .news-item {
+    box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.38);
+}
+
+/* ============================================================
+   正文手写开关
+   ============================================================ */
+body.hand-body .article-content,
+body.hand-body .article-content p,
+body.hand-body .article-content li,
+body.hand-body .article-content td,
+body.hand-body .article-content th,
+body.hand-body .article-content blockquote,
+body.hand-body .hv-post-title,
+body.hand-body .hv-bio,
+body.hand-body .news-item-title {
+    font-family: var(--font-hand);
+    letter-spacing: 0.02em;
+}
+
+body.hand-body .article-content {
+    font-size: 17px;
+    line-height: 1.95;
+}
+
+body.hand-body .article-content p {
+    font-size: 17px;
+}
