@@ -13,7 +13,7 @@
     <script src="/js/site-icon.js?v=1.0.0" defer></script>
 
     <!-- Styles -->
-    <link rel="stylesheet" href="css/style.css?v=3.53.0">
+    <link rel="stylesheet" href="css/style.css?v=3.57.0">
     <link rel="stylesheet" href="css/glass.css?v=1.0.14">
     <link rel="stylesheet" href="css/wheel.css?v=1.0.0">
 
@@ -187,8 +187,8 @@
                             </div>
                         </div>
 
-                        <!-- 时间 + 日历：两个独立盒子 -->
-                        <div class="home-side">
+                        <!-- 时间 + 日历：两个独立盒子（所有盒子都可拖动换位 / 缩放） -->
+                        <div class="home-side" id="homeSide">
                             <div class="dash-panel home-clock-box">
                                 <div class="dash-clock" id="dashClock">
                                     <div class="dash-clock-date" id="dashClockDate"></div>
@@ -275,13 +275,14 @@
                             </div>
                         </div>
 
-                        <div class="home-media">
-                            <div class="dash-panel home-photos" id="homePhotos">
+                        <!-- 图库与文章封面叠成「堆叠文件」，点一下换到上面 -->
+                        <div class="home-media home-stack" id="homeStack">
+                            <div class="dash-panel home-photos stack-card" id="homePhotos">
                                 <div class="home-slideshow is-loading" id="homeSlideshow"></div>
                             </div>
 
                             <!-- 博客文章封面轮播：封面铺满，底部毛玻璃遮罩放标题与标签 -->
-                            <a class="dash-panel home-post" id="homePostStage" href="article.html" aria-label="博客文章">
+                            <a class="dash-panel home-post stack-card" id="homePostStage" href="article.html" aria-label="博客文章">
                                 <div class="home-post-media">
                                     <img class="home-post-img" id="homePostImg" alt="" decoding="async" referrerpolicy="no-referrer">
                                     <span class="home-post-badge" id="homePostBadge"></span>
@@ -425,7 +426,7 @@
 
     <!-- Scripts -->
     <script src="js/theme.js?v=3.16.0" defer></script>
-    <script src="js/app.js?v=3.67.0" defer></script>
+    <script src="js/app.js?v=3.69.0" defer></script>
     <script src="js/animations.js?v=3.14.0" defer></script>
 
     <script>

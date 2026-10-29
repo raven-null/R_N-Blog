@@ -5294,3 +5294,249 @@ html.reader-focus .article-content {
     grid-template-rows: 0fr;
     margin: 0;
 }
+
+/* ===== 图库 + 文章封面叠成「堆叠文件」 ===== */
+.home-media.home-stack {
+    position: relative;
+    display: block;
+    min-height: 384px;
+    padding: 0 14px 14px 0;
+}
+
+.home-stack .stack-card {
+    position: absolute;
+    inset: 0 14px 14px 0;
+    height: auto;
+    transition: transform 0.42s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.3s ease, box-shadow 0.3s ease;
+    will-change: transform;
+}
+
+/* 默认：文章在上，照片在后露出边缘 */
+.home-stack .home-post {
+    z-index: 2;
+    transform: translate(0, 0) scale(1);
+    opacity: 1;
+}
+
+.home-stack .home-photos {
+    z-index: 1;
+    transform: translate(14px, 14px) scale(0.96);
+    opacity: 0.8;
+}
+
+/* 交换后：照片在上 */
+.home-stack.is-swapped .home-post {
+    z-index: 1;
+    transform: translate(14px, 14px) scale(0.96);
+    opacity: 0.8;
+}
+
+.home-stack.is-swapped .home-photos {
+    z-index: 2;
+    transform: translate(0, 0) scale(1);
+    opacity: 1;
+}
+
+.home-stack .stack-card:hover {
+    box-shadow: 0 18px 44px var(--shadow);
+}
+
+/* ===== 盒子缩放（时间 / 日历） ===== */
+.box-zoomable {
+    position: relative;
+    transform-origin: center center;
+    transition: transform 0.42s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.3s ease;
+}
+
+.box-zoomable.is-zoomed {
+    transform: scale(1.5);
+    z-index: 40;
+    box-shadow: 0 26px 70px var(--shadow);
+}
+
+/* 盒子角标按钮 */
+.box-zoom-btn,
+.box-swap-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 3;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--bg-card);
+    color: var(--text-muted);
+    font-size: 11px;
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s, border-color 0.2s, color 0.2s;
+}
+
+.box-swap-btn {
+    right: 34px;
+}
+
+.box-zoomable:hover .box-zoom-btn,
+.box-zoomable:hover .box-swap-btn,
+.box-zoomable.is-zoomed .box-zoom-btn,
+.box-zoomable.is-zoomed .box-swap-btn {
+    opacity: 1;
+}
+
+.box-zoom-btn:hover,
+.box-swap-btn:hover {
+    border-color: var(--accent);
+    color: var(--text-primary);
+}
+
+/* ===== 时间 / 日历交换位置 ===== */
+.home-side.is-swapped .home-clock-box {
+    order: 2;
+}
+
+.home-side.is-swapped .home-cal-box {
+    order: 1;
+}
+
+.home-side.is-swapped .home-clock-box,
+.home-side.is-swapped .home-cal-box {
+    animation: boxSwapPop 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes boxSwapPop {
+    from {
+        transform: scale(0.97);
+    }
+
+    to {
+        transform: scale(1);
+    }
+}
+
+@media (max-width: 900px) {
+    .home-media.home-stack {
+        min-height: 300px;
+    }
+
+    .box-zoomable.is-zoomed {
+        transform: scale(1.12);
+    }
+}
+
+/* ===== 所有盒子的通用手柄：放大 / 拖动换位 ===== */
+.free-box {
+    position: relative;
+}
+
+.free-box-btn {
+    position: absolute;
+    top: 8px;
+    z-index: 6;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--bg-card);
+    color: var(--text-muted);
+    font-size: 11px;
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s, border-color 0.2s, color 0.2s, background 0.2s;
+}
+
+.free-box-zoom {
+    right: 34px;
+}
+
+.free-box-drag {
+    right: 8px;
+    cursor: grab;
+    touch-action: none;
+}
+
+.free-box:hover .free-box-btn,
+.free-box.is-zoomed .free-box-btn,
+.free-box.is-dragging .free-box-btn {
+    opacity: 1;
+}
+
+.free-box-btn:hover {
+    border-color: var(--accent);
+    color: var(--text-primary);
+    background: var(--bg-secondary);
+}
+
+/* 放大：整体缩放并浮到上层 */
+.free-box {
+    transition: transform 0.42s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.3s ease;
+    transform-origin: center center;
+}
+
+.free-box.is-zoomed {
+    transform: scale(1.35);
+    z-index: 45;
+    box-shadow: 0 26px 70px var(--shadow);
+}
+
+/* 拖动中：浮起、跟手、不被过渡拖慢 */
+.free-box.is-dragging {
+    z-index: 70;
+    cursor: grabbing;
+    transition: box-shadow 0.2s ease;
+    box-shadow: 0 30px 80px var(--shadow);
+}
+
+.free-box.is-dragging .free-box-drag {
+    cursor: grabbing;
+    border-color: var(--accent);
+    color: var(--text-primary);
+}
+
+@media (max-width: 900px) {
+    .free-box.is-zoomed {
+        transform: scale(1.1);
+    }
+
+    /* 触屏上常显手柄，避免 hover 不可用 */
+    .free-box-btn {
+        opacity: 0.85;
+    }
+}
+
+
+/* ===== 锁定盒子 transform（glass.css 的 [data-reveal].in-view 会覆盖普通规则） ===== */
+.free-box.is-zoomed {
+    transform: scale(1.35) !important;
+}
+
+@media (max-width: 900px) {
+    .free-box.is-zoomed {
+        transform: scale(1.1) !important;
+    }
+}
+
+/* 堆叠卡片：下层往后缩的位移也要锁定 */
+.home-stack .home-photos {
+    transform: translate(14px, 14px) scale(0.96) !important;
+    opacity: 0.8;
+}
+
+.home-stack .home-post {
+    transform: none !important;
+    opacity: 1;
+}
+
+.home-stack.is-swapped .home-photos {
+    transform: none !important;
+    opacity: 1;
+}
+
+.home-stack.is-swapped .home-post {
+    transform: translate(14px, 14px) scale(0.96) !important;
+    opacity: 0.8;
+}

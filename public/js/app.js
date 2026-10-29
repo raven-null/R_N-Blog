@@ -41,6 +41,8 @@ const BlogApp = {
         this.startAutoRefresh();
         // 任务 + 日记：仅后台登录后显示
         this.initLife();
+        // 主页盒子的自由交互：堆叠切换 / 缩放 / 交换
+        this.bindBoxPlay();
         // 后台退出登录联动：admin_key / gallery_key 被清除时，前台图库 R18 恢复锁定
         window.addEventListener('storage', (e) => {
             if ((e.key === 'admin_key' || e.key === 'gallery_key') && !e.newValue) {
@@ -1841,6 +1843,152 @@ const BlogApp = {
             if (!cell || !cell.dataset.date) return;
             this.selectLifeDate(cell.dataset.date);
         });
+    },
+
+    // ===================== 主页盒子的自由交互 =====================
+    // 所有 .dash-panel 都能：⤢ 放大 / 还原，⠿ 拖动时与同层盒子换位（带位移动画）
+
+    bindBoxPlay() {
+        // 堆叠：图库 / 文章封面叠成「堆叠文件」，点下层翻到上面
+        const stack = document.getElementById('homeStack');
+        if (stack && !stack.dataset.bound) {
+            stack.dataset.bound = '1';
+            stack.addEventListener('click', (e) => {
+                const card = e.target.closest('.stack-card');
+                if (!card) return;
+                if (this.stackIsTop(card)) return;
+                e.preventDefault();
+                stack.classList.toggle('is-swapped');
+            });
+        }
+
+        // 给主页里所有盒子装手柄（含动态出现的任务 / 日记盒子）
+        this.refreshFreeBoxes();
+        // 内容变化后再次扫描（任务/日记盒子是按需显示的）
+        const observer = new MutationObserver(() => this.refreshFreeBoxes());
+        const dash = document.querySelector('.view-home .dashboard');
+        if (dash) observer.observe(dash, { childList: true, subtree: true, attributes: true, attributeFilter: ['style'] });
+    },
+
+    // 收集所有盒子并装上交互手柄
+    refreshFreeBoxes() {
+        const boxes = document.querySelectorAll('.view-home .dash-panel, .view-home .home-hero-row .home-hero');
+        boxes.forEach(el => {
+            if (el.dataset.freeHandles) return;
+            if (el.classList.contains('home-editor')) return; // 编写盒子不加手柄，避免干扰输入
+            el.dataset.freeHandles = '1';
+            el.classList.add('free-box');
+
+            const zoom = document.createElement('button');
+            zoom.type = 'button';
+            zoom.className = 'free-box-btn free-box-zoom';
+            zoom.title = '放大 / 还原';
+            zoom.textContent = '⤢';
+            zoom.addEventListener('click', (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                el.classList.toggle('is-zoomed');
+                const btn = el.querySelector('.free-box-zoom');
+                if (btn) btn.textContent = el.classList.contains('is-zoomed') ? '⤡' : '⤢';
+            });
+
+            const drag = document.createElement('button');
+            drag.type = 'button';
+            drag.className = 'free-box-btn free-box-drag';
+            drag.title = '按住拖动，与同层盒子换位';
+            drag.textContent = '⠿';
+            this.bindFreeDrag(drag, el);
+
+            el.appendChild(zoom);
+            el.appendChild(drag);
+        });
+    },
+
+    // 拖动换位：监听手柄上的指针事件
+    bindFreeDrag(handle, el) {
+        let dragging = false;
+        let startX = 0;
+        let startY = 0;
+
+        handle.addEventListener('pointerdown', (e) => {
+            if (e.button !== 0 && e.pointerType === 'mouse') return;
+            e.preventDefault();
+            e.stopPropagation();
+            dragging = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            el.classList.add('is-dragging');
+            try { handle.setPointerCapture(e.pointerId); } catch (err) { /* 忽略 */ }
+        });
+
+        handle.addEventListener('pointermove', (e) => {
+            if (!dragging) return;
+            e.preventDefault();
+            el.style.setProperty('transform', `translate(${e.clientX - startX}px, ${e.clientY - startY}px)`, 'important');
+        });
+
+        const finish = (e) => {
+            if (!dragging) return;
+            dragging = false;
+            el.classList.remove('is-dragging');
+            el.style.removeProperty('transform');
+            const target = this.findDropTarget(el, e.clientX, e.clientY);
+            if (target) this.swapBoxes(el, target);
+        };
+        handle.addEventListener('pointerup', finish);
+        handle.addEventListener('pointercancel', finish);
+    },
+
+    // 找落点：鼠标位置落在哪个「同层」盒子里
+    findDropTarget(el, x, y) {
+        const parent = el.parentNode;
+        if (!parent) return null;
+        const siblings = [...parent.children].filter(
+            c => c !== el && c.classList && c.classList.contains('free-box'),
+        );
+        for (const sib of siblings) {
+            const r = sib.getBoundingClientRect();
+            if (r.width < 1 || r.height < 1) continue;
+            if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return sib;
+        }
+        return null;
+    },
+
+    // 交换两个同层盒子的位置，并播放位移动画（类似互相挤压）
+    swapBoxes(a, b) {
+        const parent = a.parentNode;
+        if (!parent || b.parentNode !== parent) return;
+
+        const boxes = [...parent.children].filter(c => c.classList && c.classList.contains('free-box'));
+        const before = new Map(boxes.map(el => [el, el.getBoundingClientRect()]));
+
+        const aNext = a.nextSibling === b ? a : a.nextSibling;
+        parent.insertBefore(a, b);
+        if (aNext && aNext !== b) parent.insertBefore(b, aNext);
+        else parent.insertBefore(b, aNext === b ? a.nextSibling : null);
+
+        // FLIP：用上一次的位置做过渡
+        boxes.forEach(el => {
+            const b0 = before.get(el);
+            if (!b0) return;
+            const b1 = el.getBoundingClientRect();
+            const dx = b0.left - b1.left;
+            const dy = b0.top - b1.top;
+            if (!dx && !dy) return;
+            el.animate(
+                [{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'translate(0, 0)' }],
+                { duration: 380, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' },
+            );
+        });
+    },
+
+    // 堆叠中某张卡是否在最上层（默认文章在上，交换后照片在上）
+    stackIsTop(card) {
+        const stack = document.getElementById('homeStack');
+        if (!stack) return true;
+        const swapped = stack.classList.contains('is-swapped');
+        const isPhotos = card.id === 'homePhotos';
+        return swapped ? isPhotos : !isPhotos;
     },
 
     // 主页入口：切到指定视图（可选再按内容形态筛选）
