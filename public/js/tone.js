@@ -56,6 +56,36 @@
     '.dash-panel', '.card', '.project-card', '.home-project',
     // 桌宠对话
     '.pet-chat',
+    // 正文块级元素（表格 / 代码 / 引用 / 图片容器 / 提示块）
+    '.article-content pre',
+    '.article-content code',
+    '.article-content kbd',
+    '.article-content samp',
+    '.article-content table',
+    '.article-content thead',
+    '.article-content tbody',
+    '.article-content th',
+    '.article-content td',
+    '.article-content tr',
+    '.article-content blockquote',
+    '.article-content details',
+    '.article-content summary',
+    '.article-content figure',
+    '.article-content figcaption',
+    '.article-content hr',
+    '.article-content .code-block',
+    '.article-content .code-block-wrapper',
+    '.article-content .hljs',
+    '.article-content .table-wrap',
+    '.article-content .callout',
+    '.article-content .tips',
+    '.article-content .note',
+    '.article-content .warning',
+    '.article-content .markdown-body pre',
+    '.article-content [class*="block"]',
+    '.article-content [class*="callout"]',
+    '.article-content [class*="tip"]',
+    '.article-content [class*="note"]',
   ];
 
   const TEXT_SURFACES = [
@@ -72,11 +102,18 @@
     const dark = root.getAttribute('data-tone') === 'dark';
 
     SURFACES.forEach((sel) => {
+      // 正文里的代码/表格/引用用实底色，不要半透明玻璃
+      const solid = /article-content/.test(sel);
       document.querySelectorAll(sel).forEach((el) => {
         if (dark) {
-          el.style.setProperty('background-color', 'var(--glass-card, rgba(20, 24, 37, 0.72))', 'important');
+          if (solid) {
+            el.style.setProperty('background-color', 'var(--surface-2, #121822)', 'important');
+            el.style.setProperty('color', 'var(--text, #eef0f7)', 'important');
+          } else {
+            el.style.setProperty('background-color', 'var(--glass-card, rgba(20, 24, 37, 0.72))', 'important');
+            el.style.setProperty('color', 'var(--text, #eef0f7)', 'important');
+          }
           el.style.setProperty('background-image', 'none', 'important');
-          el.style.setProperty('color', 'var(--text)', 'important');
           el.style.setProperty('border-color', 'var(--glass-line, rgba(255,255,255,0.12))', 'important');
         } else {
           el.style.removeProperty('background-color');

@@ -45,6 +45,16 @@ const BlogApp = {
         // 主页盒子的自由交互：堆叠切换 / 缩放 / 交换
         this.bindBoxPlay();
         // 赛博猫娘对话
+        // 首页主题切换（时钟旁的小圆钮）
+        document.getElementById('hvThemeBtn')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (window.ThemeManager) {
+                ThemeManager.nextTheme();
+                this.syncHvThemeIcon();
+            }
+        });
+        this.syncHvThemeIcon();
+
         this.initDeskPet();
         // 桌宠心智：看页面 / 主动说话 / 接 AI / 语音
         if (window.PetMind) {
