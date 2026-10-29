@@ -7858,14 +7858,8 @@ body.view-gallery-active .footer-home {
     content-visibility: auto;
 }
 
-/* 补位块：高度是凑出来的，不能裁照片 —— 完整显示 + 留白底 */
-.gw-tile.is-filler img {
-    object-fit: contain !important;
-    background: var(--surface-3);
-}
-
-/* 放大态也用完整显示，别把照片裁掉 */
-.gw-tile.is-expanded img {
-    object-fit: contain !important;
+/* 所有格子一律 cover 填满，不留白（等比缩放后裁边，不会变形） */
+.gw-tile img {
+    object-fit: cover !important;
     background: var(--surface-3);
 }
