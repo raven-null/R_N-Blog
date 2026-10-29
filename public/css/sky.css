@@ -190,3 +190,84 @@ nav.navbar {
         display: none;
     }
 }
+
+/* ============================================================
+   强调色跟着天色走
+   ------------------------------------------------------------
+   theme.js 把主题色写成内联变量，这里用 !important 盖住，
+   于是按钮、标签、进度条、聚焦环都会随日出日落换色。
+   深色主题下自动提亮一档。
+   ============================================================ */
+
+/* 晨曦：暖橙金 */
+html[data-period="dawn"] {
+    --accent: #dd8a2b !important;
+    --accent-hover: #c5761c !important;
+    --accent-strong: #95510d !important;
+    --accent-soft: rgba(221, 138, 43, 0.14) !important;
+    --accent-ring: rgba(221, 138, 43, 0.34) !important;
+    --text-on-accent: #2a1a02 !important;
+}
+
+/* 白昼：阳光金（和主题默认一致，保持稳重） */
+html[data-period="day"] {
+    --accent: #f0a20c !important;
+    --accent-hover: #d98f06 !important;
+    --accent-strong: #a15c00 !important;
+    --accent-soft: rgba(240, 162, 12, 0.13) !important;
+    --accent-ring: rgba(240, 162, 12, 0.34) !important;
+    --text-on-accent: #2a1a02 !important;
+}
+
+/* 薄暮：落日橙红 */
+html[data-period="dusk"] {
+    --accent: #e06a38 !important;
+    --accent-hover: #c65825 !important;
+    --accent-strong: #9c3d12 !important;
+    --accent-soft: rgba(224, 106, 56, 0.13) !important;
+    --accent-ring: rgba(224, 106, 56, 0.33) !important;
+    --text-on-accent: #2a1204 !important;
+}
+
+/* 静夜：月光蓝 */
+html[data-period="night"] {
+    --accent: #5f7fc4 !important;
+    --accent-hover: #4c69ab !important;
+    --accent-strong: #3a5391 !important;
+    --accent-soft: rgba(95, 127, 196, 0.14) !important;
+    --accent-ring: rgba(95, 127, 196, 0.34) !important;
+    --text-on-accent: #ffffff !important;
+}
+
+/* 深色主题：提亮，夜里偏亮的冷蓝 */
+[data-theme="dark"][data-period="dawn"] {
+    --accent: #ffb055 !important;
+    --accent-hover: #ffc178 !important;
+    --accent-strong: #ffd08f !important;
+    --accent-soft: rgba(255, 176, 85, 0.16) !important;
+    --text-on-accent: #2a1a02 !important;
+}
+
+[data-theme="dark"][data-period="day"] {
+    --accent: #ffc02e !important;
+    --accent-hover: #ffcf5c !important;
+    --accent-strong: #ffd166 !important;
+    --accent-soft: rgba(255, 192, 46, 0.16) !important;
+    --text-on-accent: #2a1a02 !important;
+}
+
+[data-theme="dark"][data-period="dusk"] {
+    --accent: #ff8f5a !important;
+    --accent-hover: #ffa678 !important;
+    --accent-strong: #ffb894 !important;
+    --accent-soft: rgba(255, 143, 90, 0.16) !important;
+    --text-on-accent: #2a1204 !important;
+}
+
+[data-theme="dark"][data-period="night"] {
+    --accent: #8aa6e8 !important;
+    --accent-hover: #a3bbf0 !important;
+    --accent-strong: #b8cbf5 !important;
+    --accent-soft: rgba(138, 166, 232, 0.16) !important;
+    --text-on-accent: #0d1524 !important;
+}
