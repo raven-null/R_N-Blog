@@ -6878,3 +6878,29 @@ body.canvas-on .reading-progress {
 .pet-cheek {
     fill: rgba(255, 150, 190, 0.42);
 }
+
+/* ===== 桌宠底盘（grok 引擎形象坐在浅色圆盘上，任何主题都看得清） ===== */
+.deskpet-plate {
+    position: absolute;
+    inset: 3px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 50% 28%, #ffffff 0%, #eeeade 62%, #ddd8c8 100%);
+    box-shadow:
+        0 12px 28px rgba(8, 12, 30, 0.3),
+        inset 0 -10px 26px rgba(60, 48, 20, 0.07),
+        inset 0 2px 6px rgba(255, 255, 255, 0.9);
+    pointer-events: none;
+}
+
+.deskpet-art {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: block;
+    overflow: visible;
+}
+
+/* 引擎自己会设 --fg（形象色），这里给它一点柔和投影 */
+#grokPet {
+    filter: drop-shadow(0 2px 6px rgba(12, 16, 36, 0.22));
+}

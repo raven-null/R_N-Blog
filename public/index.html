@@ -13,7 +13,7 @@
     <script src="/js/site-icon.js?v=1.0.0" defer></script>
 
     <!-- Styles -->
-    <link rel="stylesheet" href="css/style.css?v=3.80.0">
+    <link rel="stylesheet" href="css/style.css?v=3.82.0">
     <link rel="stylesheet" href="css/glass.css?v=1.0.14">
     <link rel="stylesheet" href="css/wheel.css?v=1.0.0">
 
@@ -394,28 +394,8 @@
     <div class="deskpet" id="deskPet" data-state="awake">
         <div class="deskpet-bubble" id="deskPetBubble" role="status" aria-live="polite"></div>
         <button class="deskpet-body" id="deskPetBody" type="button" aria-label="摸摸桌宠">
-            <svg class="deskpet-art" id="petSvg" viewBox="0 0 120 132" aria-hidden="true">
-                <ellipse class="dp-shadow" cx="60" cy="126" rx="23" ry="4.2"></ellipse>
-                <g class="pet-root" id="petRoot">
-                    <path class="pet-antenna" d="M60 34 L60 18"></path>
-                    <circle class="pet-antenna-dot" id="petAntennaDot" cx="60" cy="15" r="4"></circle>
-                    <path class="pet-body" d="M60 30 C87 30 101 50 101 74 C101 98 84 116 60 116 C36 116 19 98 19 74 C19 50 33 30 60 30 Z"></path>
-                    <ellipse class="pet-gloss" id="petGloss" cx="41" cy="52" rx="12" ry="7"></ellipse>
-                    <g class="pet-eyes" id="petEyes">
-                        <ellipse class="pet-eye" id="petEyeL" cx="46" cy="71" rx="7" ry="9"></ellipse>
-                        <ellipse class="pet-eye" id="petEyeR" cx="74" cy="71" rx="7" ry="9"></ellipse>
-                        <circle class="pet-eye-shine" cx="48.5" cy="67" r="2.2"></circle>
-                        <circle class="pet-eye-shine" cx="76.5" cy="67" r="2.2"></circle>
-                    </g>
-                    <g class="pet-eyes-happy" id="petEyesHappy">
-                        <path d="M39 72 q7 -9 14 0"></path>
-                        <path d="M67 72 q7 -9 14 0"></path>
-                    </g>
-                    <path class="pet-mouth" id="petMouth" d="M54 86 q6 3 12 0"></path>
-                    <ellipse class="pet-cheek" cx="33" cy="85" rx="5.5" ry="3.4"></ellipse>
-                    <ellipse class="pet-cheek" cx="87" cy="85" rx="5.5" ry="3.4"></ellipse>
-                </g>
-            </svg>
+            <span class="deskpet-plate" aria-hidden="true"></span>
+            <svg class="deskpet-art" id="grokPet" role="img" aria-label="桌宠"></svg>
             <span class="deskpet-zzz" aria-hidden="true">z</span>
         </button>
     </div>
@@ -495,8 +475,17 @@
 
     <!-- Scripts -->
     <script src="js/theme.js?v=3.16.0" defer></script>
-    <script src="js/pet-engine.js?v=1.0.0" defer></script>
-    <script src="js/app.js?v=3.91.0" defer></script>
+    <!-- 桌宠动效引擎（spring-driven character，见 public/vendor/grok/README.md） -->
+    <script src="vendor/grok/geometry-data.js?v=1.0.0" defer></script>
+    <script src="vendor/grok/math.js?v=1.0.0" defer></script>
+    <script src="vendor/grok/tables.js?v=1.0.0" defer></script>
+    <script src="vendor/grok/pose.js?v=1.0.0" defer></script>
+    <script src="vendor/grok/tricks.js?v=1.0.0" defer></script>
+    <script src="vendor/grok/fx.js?v=1.0.0" defer></script>
+    <script src="vendor/grok/eyes.js?v=1.0.0" defer></script>
+    <script src="vendor/grok/character.js?v=1.0.0" defer></script>
+
+    <script src="js/app.js?v=3.93.0" defer></script>
     <script src="js/animations.js?v=3.14.0" defer></script>
 
     <script>

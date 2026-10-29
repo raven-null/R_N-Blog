@@ -2074,8 +2074,20 @@ const BlogApp = {
 
         this.restorePetPos();
 
-        // 自制弹簧生物引擎：状态机 + 挤压拉伸 + 多边形眼睛
-        this.petEngine = window.PetEngine ? window.PetEngine.mount(document.getElementById('petSvg')) : null;
+        // 桌宠动效引擎（spring-driven character）：弹簧动画 + 多边形眼睛 + 状态机
+        this.petEngine = window.GrokCharacter
+            ? new window.GrokCharacter(document.getElementById('grokPet'), {
+                shape: 'blob',
+                color: 'black',
+                scheme: 'light',
+                mode: 'hold',        // hold：我们手动切状态，不让它自己轮播
+                followPointer: true, // 眼睛跟鼠标
+            })
+            : null;
+        if (this.petEngine) {
+            this.petEngine.setState('idle');
+            this.petEngine.__petIdleTimer = 0;
+        }
 
         let dragging = false;
         let moved = false;
@@ -2095,7 +2107,7 @@ const BlogApp = {
             originX = rect.left;
             originY = rect.top;
             pet.classList.add('is-dragging');
-            if (this.petEngine) this.petEngine.setState('dragged');
+            this.petPlay('dragging', 0);
             try { body.setPointerCapture(e.pointerId); } catch (err) { /* 忽略 */ }
         };
 
@@ -2112,7 +2124,7 @@ const BlogApp = {
             if (!dragging) return;
             dragging = false;
             pet.classList.remove('is-dragging');
-            if (this.petEngine) this.petEngine.setState('idle');
+            this.petPlay('idle', 0);
             try { body.releasePointerCapture(e.pointerId); } catch (err) { /* 忽略 */ }
             if (moved) {
                 this.savePetPos();
@@ -2129,20 +2141,20 @@ const BlogApp = {
         };
 
         body.addEventListener('pointerenter', () => {
-            if (this.petEngine && !this.petSleeping && !dragging) this.petEngine.setState('curious');
+            if (this.petEngine && !this.petSleeping && !dragging) this.petPlay('curious', 0);
         });
         body.addEventListener('pointerleave', () => {
-            if (this.petEngine && !this.petSleeping && !dragging) this.petEngine.setState('idle');
+            if (this.petEngine && !this.petSleeping && !dragging) this.petPlay('idle', 0);
         });
 
         // 你在输入框里打字时，它会竖起来听
         document.addEventListener('focusin', (e) => {
             if (!this.petEngine || this.petSleeping) return;
-            if (e.target.closest('input, textarea')) this.petEngine.setState('listening');
+            if (e.target.closest('input, textarea')) this.petPlay('listening', 0);
         });
         document.addEventListener('focusout', (e) => {
             if (!this.petEngine || this.petSleeping) return;
-            if (e.target.closest('input, textarea')) this.petEngine.setState('idle');
+            if (e.target.closest('input, textarea')) this.petPlay('idle', 0);
         });
 
         body.addEventListener('pointerdown', onDown);
@@ -2219,7 +2231,7 @@ const BlogApp = {
             this.petSay('喵…醒了');
             return;
         }
-        if (this.petEngine) this.petEngine.poke();
+        if (this.petEngine) this.petPlay('excited', 1300);
         else {
             pet.classList.remove('is-hop');
             void pet.offsetWidth;
@@ -2266,8 +2278,8 @@ const BlogApp = {
         this.petSleeping = force === undefined ? !this.petSleeping : !!force;
         pet.dataset.state = this.petSleeping ? 'sleep' : 'awake';
         if (this.petEngine) {
-            if (this.petSleeping) this.petEngine.sleep();
-            else this.petEngine.wake();
+            clearTimeout(this.petEngine.__petIdleTimer);
+            try { this.petEngine.setState(this.petSleeping ? 'sleeping' : 'idle', { resetEyes: true }); } catch (e) { /* 忽略 */ }
         }
         if (this.petSleeping) {
             clearInterval(this.petIdleTimer);
@@ -2281,18 +2293,30 @@ const BlogApp = {
     startPetIdle() {
         clearInterval(this.petIdleTimer);
         this.petIdleTimer = setInterval(() => {
-            const pet = document.getElementById('deskPet');
-            if (!pet || document.hidden || this.petSleeping) return;
-            pet.classList.remove('is-hop');
-            void pet.offsetWidth;
-            pet.classList.add('is-hop');
-        }, 46000);
+            if (document.hidden || this.petSleeping || this.canvasDragging) return;
+            this.petPlay(['curious', 'excited', 'happy', 'thinking'][Math.floor(Math.random() * 4)], 1400);
+        }, 26000);
     },
 
-    // 眼睛看向鼠标（交给引擎算，带弹簧滞后）
+    // 眼睛看向鼠标：引擎的 followPointer 已经接管，这里只留一个空实现
     aimPetEyes(mouseX, mouseY) {
         if (!this.petEngine || this.petSleeping) return;
-        this.petEngine.setGaze(mouseX, mouseY);
+        if (typeof this.petEngine.setFollowPointer === 'function') {
+            this.petEngine.setFollowPointer(true);
+        }
+    },
+
+    // 切状态后过一会儿自己回 idle（引擎在 hold 模式下不会自动回落）
+    petPlay(state, backMs = 1200) {
+        if (!this.petEngine) return;
+        clearTimeout(this.petEngine.__petIdleTimer);
+        try { this.petEngine.setState(state, { resetEyes: true }); } catch (e) { return; }
+        if (backMs > 0) {
+            this.petEngine.__petIdleTimer = setTimeout(() => {
+                if (this.petSleeping) return;
+                try { this.petEngine.setState('idle'); } catch (e) { /* 忽略 */ }
+            }, backMs);
+        }
     },
 
     // ===================== 主页：无限画布 =====================
@@ -2401,7 +2425,7 @@ const BlogApp = {
 
         const coreH = core.offsetHeight || 1080;
         const PHOTO_W = 2400;
-        const PHOTO_H = 1700;
+        const PHOTO_H = this.photoWallContentH || 1700;
         const POST_W = 1080;
         const POST_H = 1500;
         const GAP_X = 320;
@@ -2773,119 +2797,108 @@ const BlogApp = {
             this.photoWallLayout = null;
             return;
         }
-        const W = body.clientWidth || 2320;
-        const H = body.clientHeight || 1600;
-        if (this.photoWallView === 'masonry') this.wallComputeMasonry(W, H);
-        else this.wallComputeGrid(W, H);
+        const W = body.clientWidth || 2400;
+        if (this.photoWallView === 'masonry') this.wallComputeMasonry(W);
+        else this.wallComputeGrid(W);
+        // 照片全排完墙会很长：把算出来的高度交给墙容器，再让画布重排位置
+        this.photoWallContentH = Math.round(this.photoWallLayout.blockH) + 44;
+        this.layoutCanvasNodes();
     },
 
-    /* 方格：先把「放大位置」定下来（被点开的那张 + 每 8 格随机一张），
-       再按行优先把剩下的格子全部填满 —— 整块区域不留空洞。 */
-    wallComputeGrid(W, H) {
+    /* 方格：把整池照片全部铺开（不再只铺一块），随机放大照旧，
+       墙面按行逐格填满、最后补齐成完整矩形，一张都不落下。 */
+    wallComputeGrid(W) {
         const GAP = this.WALL_GAP;
         const cols = Math.max(3, Math.round((W + GAP) / (this.WALL_CELL + GAP)));
-        const rows = Math.max(2, Math.round((H + GAP) / (this.WALL_CELL + GAP)));
         const cellW = (W - (cols - 1) * GAP) / cols;
-        const cellH = (H - (rows - 1) * GAP) / rows;
+        const cellH = cellW;
         const pool = this.photoWallPool;
+        if (!pool.length) {
+            this.photoWallLayout = null;
+            return;
+        }
+
+        // 被点开的那张排在最前面，好让它出现在第一块区域
+        let order = pool;
+        if (this.photoWallExpandedId && !this.photoWallShrunk.has(this.photoWallExpandedId)) {
+            const exp = pool.find((p) => p.id === this.photoWallExpandedId);
+            if (exp) order = [exp].concat(pool.filter((p) => p.id !== exp.id));
+        }
+
         const rnd = this.wallRnd();
+        const bigEvery = 8;
+        const bigOffset = Math.floor(rnd() * bigEvery);
 
-        const cellKey = (r, c) => r + ',' + c;
-        const occupied = new Set();
-        const bigCells = [];
-        const canBig = (r, c) => c + 1 < cols && r + 1 < rows
-            && !occupied.has(cellKey(r, c)) && !occupied.has(cellKey(r, c + 1))
-            && !occupied.has(cellKey(r + 1, c)) && !occupied.has(cellKey(r + 1, c + 1));
-        const markBig = (r, c) => {
-            bigCells.push({ r, c });
-            occupied.add(cellKey(r, c));
-            occupied.add(cellKey(r, c + 1));
-            occupied.add(cellKey(r + 1, c));
-            occupied.add(cellKey(r + 1, c + 1));
-        };
-
-        // ① 放大位置：被点开的那张优先占最近的可放大位置，其余按种子随机挑
-        const wantBig = Math.max(1, Math.round((cols * rows) / 8));
-        const candidates = [];
-        for (let r = 0; r < rows - 1; r++) {
-            for (let c = 0; c < cols - 1; c++) candidates.push({ r, c });
-        }
-        for (let i = candidates.length - 1; i > 0; i--) {
-            const j = Math.floor(rnd() * (i + 1));
-            const tmp = candidates[i];
-            candidates[i] = candidates[j];
-            candidates[j] = tmp;
-        }
-        for (const cand of candidates) {
-            if (bigCells.length >= wantBig) break;
-            if (canBig(cand.r, cand.c)) markBig(cand.r, cand.c);
-        }
-
-        // ② 先把要放大的照片挑出来（不重复），再按行优先填格子
-        const used = new Set();
-        let pcur = 0;
-        const takeFresh = () => {
-            for (let t = 0; t < pool.length; t++) {
-                const p = pool[(pcur + t) % pool.length];
-                if (!used.has(p.id)) {
-                    pcur = (pcur + t + 1) % pool.length;
-                    used.add(p.id);
-                    return p;
-                }
-            }
-            const p = pool[pcur++ % pool.length];
-            used.add(p.id);
-            return p;
-        };
-
-        const bigPhotos = [];
-        if (this.photoWallExpandedId) {
-            const p = pool.find((x) => x.id === this.photoWallExpandedId);
-            if (p && !this.photoWallShrunk.has(p.id)) {
-                used.add(p.id);
-                bigPhotos.push(p);
-            }
-        }
-        while (bigPhotos.length < bigCells.length) bigPhotos.push(takeFresh());
-
+        const filled = new Set();
         const items = [];
         this.photoWallById.clear();
-        const bigAt = new Map();
-        bigCells.forEach((b, i) => {
-            const p = bigPhotos[i];
-            if (p) bigAt.set(cellKey(b.r, b.c), p);
-        });
+        const cellKey = (r, c) => r + ',' + c;
+        const free = (r, c) => !filled.has(cellKey(r, c));
+        const canBig = (r, c) => c + 1 < cols
+            && free(r, c) && free(r, c + 1) && free(r + 1, c) && free(r + 1, c + 1);
+        const markBig = (r, c) => {
+            filled.add(cellKey(r, c));
+            filled.add(cellKey(r, c + 1));
+            filled.add(cellKey(r + 1, c));
+            filled.add(cellKey(r + 1, c + 1));
+        };
 
-        for (let r = 0; r < rows; r++) {
-            for (let c = 0; c < cols; c++) {
-                const bigPhoto = bigAt.get(cellKey(r, c));
-                if (bigPhoto) {
+        let pi = 0;
+        let rows = 1;
+        while (pi < order.length) {
+            for (let c = 0; c < cols && pi < order.length; c++) {
+                if (!free(rows - 1, c)) continue;
+                const p = order[pi];
+                const isExpanded = p.id === this.photoWallExpandedId;
+                const wantBig = isExpanded
+                    || (((pi + bigOffset) % bigEvery) === 0 && !this.photoWallShrunk.has(p.id));
+                pi++;
+                const r = rows - 1;
+                if (wantBig && canBig(r, c)) {
+                    markBig(r, c);
                     items.push({
-                        id: bigPhoto.id, key: bigPhoto.id,
+                        id: p.id, key: p.id,
                         x: c * (cellW + GAP), y: r * (cellH + GAP),
                         w: cellW * 2 + GAP, h: cellH * 2 + GAP,
-                        big: true, expanded: bigPhoto.id === this.photoWallExpandedId,
+                        big: true, expanded: isExpanded,
                     });
-                    this.photoWallById.set(bigPhoto.id, bigPhoto);
-                    continue;
+                } else {
+                    filled.add(cellKey(r, c));
+                    items.push({
+                        id: p.id, key: p.id,
+                        x: c * (cellW + GAP), y: r * (cellH + GAP),
+                        w: cellW, h: cellH,
+                        big: false, expanded: false,
+                    });
                 }
-                if (occupied.has(cellKey(r, c))) continue;   // 被大图盖住的格子
-                const p = takeFresh();
+                this.photoWallById.set(p.id, p);
+            }
+            rows++;
+        }
+
+        // 收尾：把最后几块空位补上（照片循环取，墙面保持完整矩形）
+        let filler = 0;
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                if (!free(r, c)) continue;
+                const p = pool[filler++ % pool.length];
+                filled.add(cellKey(r, c));
                 items.push({
-                    id: p.id, key: p.id,
+                    id: p.id, key: 'pad-' + r + '-' + c + '-' + p.id,
                     x: c * (cellW + GAP), y: r * (cellH + GAP),
                     w: cellW, h: cellH,
-                    big: false, expanded: false,
+                    big: false, filler: true,
                 });
                 this.photoWallById.set(p.id, p);
             }
         }
 
-        this.photoWallLayout = { items, cols, cellW, cellH, blockW: W, blockH: H };
+        const blockH = rows * (cellH + GAP) - GAP;
+        this.photoWallLayout = { items, cols, cellW, cellH, blockW: W, blockH };
     },
 
-    // 瀑布流：按高宽比塞进最短的列，排满整块高度后把各列尾巴补齐（底部齐平）
-    wallComputeMasonry(W, H) {
+    // 瀑布流：同样把整池照片全部排出来，最后把各列补齐到同一高度
+    wallComputeMasonry(W) {
         const GAP = this.WALL_GAP;
         const cols = Math.max(3, Math.round((W + GAP) / (this.WALL_CELL + GAP)));
         const cellW = (W - (cols - 1) * GAP) / cols;
@@ -2895,54 +2908,28 @@ const BlogApp = {
             this.photoWallLayout = null;
             return;
         }
+        let order = pool;
+        if (this.photoWallExpandedId && !this.photoWallShrunk.has(this.photoWallExpandedId)) {
+            const exp = pool.find((p) => p.id === this.photoWallExpandedId);
+            if (exp) order = [exp].concat(pool.filter((p) => p.id !== exp.id));
+        }
 
         const colH = new Array(cols).fill(0);
         const items = [];
         const gaps = [];
-        const used = new Set();
         this.photoWallById.clear();
-
         const shortest = () => {
             let c = 0;
             for (let i = 1; i < cols; i++) if (colH[i] < colH[c]) c = i;
             return c;
         };
 
-        let pi = 0;
-        const takeFresh = () => {
-            for (let t = 0; t < pool.length; t++) {
-                const p = pool[(pi + t) % pool.length];
-                if (!used.has(p.id)) {
-                    pi = (pi + t + 1) % pool.length;
-                    used.add(p.id);
-                    return p;
-                }
-            }
-            const p = pool[pi++ % pool.length];
-            used.add(p.id);
-            return p;
-        };
-
-        // 先给被点开的那张（要大的）留位置
-        let expandedPhoto = null;
-        if (this.photoWallExpandedId) {
-            const p = pool.find((x) => x.id === this.photoWallExpandedId);
-            if (p && !this.photoWallShrunk.has(p.id)) {
-                expandedPhoto = p;
-                used.add(p.id);
-            }
-        }
-
-        const maxItems = pool.length * 3;
-        let placedBig = 0;
-        for (let i = 0; i < maxItems; i++) {
-            if (Math.min.apply(null, colH) >= H) break;
-            const isFirst = i === 0 && expandedPhoto;
-            const p = isFirst ? expandedPhoto : takeFresh();
+        for (let i = 0; i < order.length; i++) {
+            const p = order[i];
             const ratio = this.wallPhotoRatio(p);
-            // 每 8 张随机挑一张占两列；被点开的那张一定是大的
+            const isExpanded = p.id === this.photoWallExpandedId;
             const randBig = (i % 8 === 0) && cols >= 2 && !this.photoWallShrunk.has(p.id);
-            const wantBig = cols >= 2 && (isFirst || randBig);
+            const wantBig = cols >= 2 && (isExpanded || randBig);
 
             if (wantBig) {
                 const c = shortest();
@@ -2950,18 +2937,16 @@ const BlogApp = {
                 const spanW = cellW * 2 + GAP;
                 const h = Math.round(spanW * ratio);
                 const y = Math.max(colH[left], colH[left + 1]);
-                // 两列高度差出来的空档交给后面的照片补
                 const shortCol = colH[left] < colH[left + 1] ? left : left + 1;
                 const gapH = Math.abs(colH[left] - colH[left + 1]) - GAP;
                 if (gapH > 24) gaps.push({ col: shortCol, y: Math.min(colH[left], colH[left + 1]), h: gapH });
                 items.push({
                     id: p.id, key: p.id, x: left * step, y, w: spanW, h,
-                    big: true, expanded: isFirst,
+                    big: true, expanded: isExpanded,
                 });
                 this.photoWallById.set(p.id, p);
                 colH[left] = y + h + GAP;
                 colH[left + 1] = y + h + GAP;
-                placedBig++;
                 continue;
             }
 
@@ -2985,22 +2970,23 @@ const BlogApp = {
             colH[c] += h + GAP;
         }
 
-        // 收尾：每列差的那截用「正好高度」的补位块补齐，块底齐平、不留空洞
-        let fillerN = 0;
+        // 收尾：各列高度拉齐（补位块用循环照片），块底齐平
+        const blockH = Math.max.apply(null, colH);
+        let n = 0;
         for (let c = 0; c < cols; c++) {
-            const remain = H - colH[c];
+            const remain = blockH - colH[c];
             if (remain <= 14) continue;
-            const p = takeFresh();
-            this.photoWallById.set(p.id, p);
+            const p = pool[n++ % pool.length];
             items.push({
-                id: p.id, key: `filler-${fillerN++}-${p.id}`,
+                id: p.id, key: 'pad-' + c + '-' + n + '-' + p.id,
                 x: c * step, y: colH[c], w: cellW, h: remain - GAP,
                 big: false, filler: true,
             });
-            colH[c] = H;
+            this.photoWallById.set(p.id, p);
+            colH[c] = blockH;
         }
 
-        this.photoWallLayout = { items, cols, cellW, blockW: W, blockH: H };
+        this.photoWallLayout = { items, cols, cellW, blockW: W, blockH: blockH - GAP };
     },
 
     wallRender() {
