@@ -1,0 +1,576 @@
+/* ============================================================
+   UI 基础层 · Quiet Neutral
+   ------------------------------------------------------------
+   只依赖 tokens.css。所有组件用 .ui- 前缀，避免和旧样式打架。
+   旧页面可以一页一页地把控件换成 ui-* 组件，不需要一次改完。
+   ============================================================ */
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: var(--font-sans);
+    font-size: var(--fs-base);
+    line-height: var(--lh-normal);
+    color: var(--text);
+    background: var(--bg);
+    -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- 排版 ---------- */
+.ui-h1 { font-size: var(--fs-3xl); line-height: var(--lh-tight); font-weight: var(--fw-semibold); letter-spacing: -0.02em; margin: 0; }
+.ui-h2 { font-size: var(--fs-2xl); line-height: var(--lh-tight); font-weight: var(--fw-semibold); letter-spacing: -0.015em; margin: 0; }
+.ui-h3 { font-size: var(--fs-xl); line-height: var(--lh-tight); font-weight: var(--fw-semibold); margin: 0; }
+.ui-h4 { font-size: var(--fs-lg); line-height: var(--lh-tight); font-weight: var(--fw-semibold); margin: 0; }
+.ui-text { font-size: var(--fs-md); line-height: var(--lh-relaxed); color: var(--text); }
+.ui-text-secondary { font-size: var(--fs-base); color: var(--text-secondary); }
+.ui-text-muted { font-size: var(--fs-sm); color: var(--text-muted); }
+.ui-mono { font-family: var(--font-mono); font-size: var(--fs-sm); font-variant-numeric: tabular-nums; }
+.ui-label { font-size: var(--fs-sm); font-weight: var(--fw-medium); color: var(--text-secondary); letter-spacing: 0.01em; }
+
+/* ---------- 按钮 ---------- */
+.ui-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-2);
+    height: var(--control-h);
+    padding: 0 var(--sp-4);
+    font-family: inherit;
+    font-size: var(--fs-base);
+    font-weight: var(--fw-medium);
+    color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background var(--dur-2) var(--ease), border-color var(--dur-2) var(--ease),
+        color var(--dur-2) var(--ease), box-shadow var(--dur-2) var(--ease);
+}
+
+.ui-btn:hover {
+    background: var(--surface-2);
+    border-color: var(--border-strong);
+}
+
+.ui-btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--accent-ring);
+    border-color: var(--accent);
+}
+
+.ui-btn:active {
+    background: var(--surface-3);
+}
+
+.ui-btn[disabled],
+.ui-btn[aria-disabled="true"] {
+    opacity: 0.45;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.ui-btn-primary {
+    color: var(--text-on-accent);
+    background: var(--accent);
+    border-color: transparent;
+}
+
+.ui-btn-primary:hover {
+    background: var(--accent-hover);
+    border-color: transparent;
+}
+
+.ui-btn-ghost {
+    background: transparent;
+    border-color: transparent;
+    color: var(--text-secondary);
+}
+
+.ui-btn-ghost:hover {
+    background: var(--surface-2);
+    color: var(--text);
+    border-color: transparent;
+}
+
+.ui-btn-danger {
+    color: var(--danger);
+    border-color: var(--border);
+}
+
+.ui-btn-danger:hover {
+    background: var(--danger-soft);
+    border-color: var(--danger);
+}
+
+.ui-btn-sm { height: var(--control-h-sm); padding: 0 var(--sp-3); font-size: var(--fs-sm); border-radius: var(--r-sm); }
+.ui-btn-lg { height: var(--control-h-lg); padding: 0 var(--sp-5); font-size: var(--fs-md); }
+.ui-btn-block { width: 100%; }
+
+.ui-btn-icon {
+    width: var(--control-h);
+    padding: 0;
+}
+
+.ui-btn-icon.ui-btn-sm { width: var(--control-h-sm); }
+.ui-btn-icon.ui-btn-lg { width: var(--control-h-lg); }
+
+/* ---------- 输入 ---------- */
+.ui-input,
+.ui-select,
+.ui-textarea {
+    width: 100%;
+    height: var(--control-h);
+    padding: 0 var(--sp-3);
+    font-family: inherit;
+    font-size: var(--fs-base);
+    color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    transition: border-color var(--dur-2) var(--ease), box-shadow var(--dur-2) var(--ease),
+        background var(--dur-2) var(--ease);
+}
+
+.ui-textarea {
+    height: auto;
+    min-height: 88px;
+    padding: var(--sp-2) var(--sp-3);
+    line-height: var(--lh-normal);
+    resize: vertical;
+}
+
+.ui-input::placeholder,
+.ui-textarea::placeholder {
+    color: var(--text-muted);
+}
+
+.ui-input:hover,
+.ui-select:hover,
+.ui-textarea:hover {
+    border-color: var(--border-strong);
+}
+
+.ui-input:focus,
+.ui-select:focus,
+.ui-textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-ring);
+}
+
+.ui-input-sm,
+.ui-select-sm { height: var(--control-h-sm); font-size: var(--fs-sm); border-radius: var(--r-sm); }
+
+.ui-field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-2);
+}
+
+.ui-field-hint {
+    font-size: var(--fs-xs);
+    color: var(--text-muted);
+}
+
+.ui-field-error {
+    font-size: var(--fs-xs);
+    color: var(--danger);
+}
+
+/* 开关 */
+.ui-switch {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2);
+    cursor: pointer;
+    user-select: none;
+}
+
+.ui-switch input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.ui-switch-track {
+    position: relative;
+    width: 38px;
+    height: 22px;
+    border-radius: var(--r-full);
+    background: var(--surface-3);
+    border: 1px solid var(--border);
+    transition: background var(--dur-2) var(--ease), border-color var(--dur-2) var(--ease);
+}
+
+.ui-switch-track::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--surface);
+    box-shadow: var(--shadow-1);
+    transition: transform var(--dur-2) var(--ease);
+}
+
+.ui-switch input:checked + .ui-switch-track {
+    background: var(--accent);
+    border-color: transparent;
+}
+
+.ui-switch input:checked + .ui-switch-track::after {
+    transform: translateX(16px);
+}
+
+.ui-switch input:focus-visible + .ui-switch-track {
+    box-shadow: 0 0 0 3px var(--accent-ring);
+}
+
+/* 复选框 / 单选 */
+.ui-check {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2);
+    cursor: pointer;
+    font-size: var(--fs-base);
+    color: var(--text-secondary);
+}
+
+.ui-check input {
+    appearance: none;
+    width: 17px;
+    height: 17px;
+    margin: 0;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--r-xs);
+    background: var(--surface);
+    cursor: pointer;
+    transition: background var(--dur-2) var(--ease), border-color var(--dur-2) var(--ease);
+}
+
+.ui-check input[type="radio"] {
+    border-radius: 50%;
+}
+
+.ui-check input:checked {
+    background: var(--accent);
+    border-color: var(--accent);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='white'%3E%3Cpath d='M6.4 11.6 3.2 8.4l1.1-1.1 2.1 2.1 5.3-5.3 1.1 1.1z'/%3E%3C/svg%3E");
+}
+
+.ui-check input[type="radio"]:checked {
+    background-image: none;
+    box-shadow: inset 0 0 0 3px var(--surface);
+}
+
+/* ---------- 卡片 ---------- */
+.ui-card {
+    padding: var(--pad-card);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    transition: border-color var(--dur-2) var(--ease), box-shadow var(--dur-2) var(--ease),
+        transform var(--dur-2) var(--ease);
+}
+
+.ui-card-hover:hover {
+    border-color: var(--border-strong);
+    box-shadow: var(--shadow-2);
+    transform: translateY(-2px);
+}
+
+.ui-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-3);
+    margin-bottom: var(--sp-3);
+}
+
+.ui-card-title {
+    font-size: var(--fs-md);
+    font-weight: var(--fw-semibold);
+    color: var(--text);
+}
+
+.ui-card-sub {
+    font-size: var(--fs-sm);
+    color: var(--text-muted);
+}
+
+/* 统计数字 */
+.ui-stat-value {
+    font-size: var(--fs-2xl);
+    font-weight: var(--fw-semibold);
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+}
+
+.ui-stat-label {
+    font-size: var(--fs-sm);
+    color: var(--text-muted);
+}
+
+/* ---------- 标签 / 徽章 ---------- */
+.ui-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-1);
+    height: 22px;
+    padding: 0 var(--sp-2);
+    font-size: var(--fs-xs);
+    color: var(--text-secondary);
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--r-full);
+    white-space: nowrap;
+}
+
+.ui-tag-accent {
+    color: var(--accent);
+    background: var(--accent-soft);
+    border-color: transparent;
+}
+
+.ui-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+}
+
+/* ---------- 表格 ---------- */
+.ui-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--fs-base);
+}
+
+.ui-table th {
+    height: var(--row-h);
+    padding: 0 var(--sp-3);
+    text-align: left;
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-medium);
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+}
+
+.ui-table td {
+    height: var(--row-h);
+    padding: 0 var(--sp-3);
+    color: var(--text-secondary);
+    border-bottom: 1px solid var(--border);
+}
+
+.ui-table tbody tr {
+    transition: background var(--dur-1) var(--ease);
+}
+
+.ui-table tbody tr:hover {
+    background: var(--surface-2);
+}
+
+.ui-table td:first-child {
+    color: var(--text);
+    font-weight: var(--fw-medium);
+}
+
+/* ---------- 提示条 ---------- */
+.ui-note {
+    display: flex;
+    gap: var(--sp-3);
+    padding: var(--sp-3) var(--sp-4);
+    font-size: var(--fs-base);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    background: var(--surface-2);
+    color: var(--text-secondary);
+}
+
+.ui-note-info { background: var(--accent-soft); border-color: transparent; color: var(--text); }
+.ui-note-success { background: var(--success-soft); border-color: transparent; color: var(--success); }
+.ui-note-warn { background: var(--warn-soft); border-color: transparent; color: var(--warn); }
+.ui-note-danger { background: var(--danger-soft); border-color: transparent; color: var(--danger); }
+
+/* ---------- 分段控件 ---------- */
+.ui-segment {
+    display: inline-flex;
+    padding: 3px;
+    gap: 2px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+}
+
+.ui-segment button {
+    height: calc(var(--control-h) - 8px);
+    padding: 0 var(--sp-3);
+    font-family: inherit;
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-medium);
+    color: var(--text-muted);
+    background: transparent;
+    border: 0;
+    border-radius: var(--r-sm);
+    cursor: pointer;
+    transition: color var(--dur-2) var(--ease), background var(--dur-2) var(--ease),
+        box-shadow var(--dur-2) var(--ease);
+}
+
+.ui-segment button:hover {
+    color: var(--text-secondary);
+}
+
+.ui-segment button[aria-pressed="true"] {
+    color: var(--text);
+    background: var(--surface);
+    box-shadow: var(--shadow-1);
+}
+
+/* ---------- 模态 / 抽屉 ---------- */
+.ui-overlay {
+    position: fixed;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: var(--sp-6);
+    background: rgba(10, 12, 20, 0.42);
+    backdrop-filter: blur(3px);
+    z-index: var(--z-modal);
+}
+
+.ui-modal {
+    width: min(520px, 100%);
+    padding: var(--sp-6);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-xl);
+    box-shadow: var(--shadow-3);
+}
+
+.ui-modal-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--sp-4);
+    margin-bottom: var(--sp-4);
+}
+
+.ui-modal-foot {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--sp-2);
+    margin-top: var(--sp-6);
+}
+
+/* ---------- 画布 HUD / 胶囊（沿用主页的用法，但走令牌） ---------- */
+.ui-hud {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-1);
+    padding: var(--sp-1);
+    background: var(--glass-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--r-full);
+    backdrop-filter: blur(var(--glass-blur));
+    box-shadow: var(--shadow-2);
+}
+
+.ui-hud button {
+    width: 30px;
+    height: 30px;
+    display: grid;
+    place-items: center;
+    font-size: var(--fs-md);
+    color: var(--text-secondary);
+    background: transparent;
+    border: 0;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background var(--dur-2) var(--ease), color var(--dur-2) var(--ease);
+}
+
+.ui-hud button:hover {
+    background: var(--surface-2);
+    color: var(--text);
+}
+
+.ui-capsule {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2);
+    padding: var(--sp-1) var(--sp-1) var(--sp-1) var(--sp-4);
+    background: var(--glass-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--r-full);
+    backdrop-filter: blur(var(--glass-blur));
+    box-shadow: var(--shadow-2);
+}
+
+.ui-capsule-label {
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-semibold);
+    letter-spacing: 0.06em;
+    color: var(--text-secondary);
+}
+
+.ui-capsule-sub {
+    font-size: var(--fs-xs);
+    color: var(--text-muted);
+}
+
+/* ---------- 空态 / 骨架 ---------- */
+.ui-empty {
+    display: grid;
+    place-items: center;
+    gap: var(--sp-2);
+    padding: var(--sp-9) var(--sp-6);
+    text-align: center;
+    color: var(--text-muted);
+    font-size: var(--fs-base);
+}
+
+.ui-skeleton {
+    border-radius: var(--r-sm);
+    background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface-3) 37%, var(--surface-2) 63%);
+    background-size: 400% 100%;
+    animation: ui-shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes ui-shimmer {
+    0% { background-position: 100% 0; }
+    100% { background-position: 0 0; }
+}
+
+/* ---------- 分区标题 ---------- */
+.ui-section-title {
+    display: flex;
+    align-items: baseline;
+    gap: var(--sp-3);
+    margin: 0 0 var(--sp-4);
+    padding-bottom: var(--sp-3);
+    border-bottom: 1px solid var(--border);
+}
+
+.ui-section-title h2 {
+    font-size: var(--fs-lg);
+    font-weight: var(--fw-semibold);
+    margin: 0;
+}
+
+.ui-section-title span {
+    font-size: var(--fs-sm);
+    color: var(--text-muted);
+}

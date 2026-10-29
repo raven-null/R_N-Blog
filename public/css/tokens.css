@@ -1,0 +1,235 @@
+/* ============================================================
+   Design Tokens · Quiet Neutral
+   ------------------------------------------------------------
+   一套骨架 × {light, dark} × 6 强调色 = 12 种组合。
+   所有页面（前台 / 后台 / 编辑器外壳）只从这里取色与尺度，
+   不再各自写死数值。
+
+   用法：
+     <html data-theme="light" data-accent="blue" data-density="cozy">
+   可选：
+     data-theme   light | dark
+     data-accent  blue | violet | cyan | green | orange | pink
+     data-density cozy | compact
+   ============================================================ */
+
+:root {
+    /* ---------- 中性骨架（浅色默认） ---------- */
+    --bg: #fbfbfc;
+    --bg-subtle: #f5f6f8;
+    --surface: #ffffff;
+    --surface-2: #f8f9fb;
+    --surface-3: #f1f2f5;
+
+    --border: rgba(16, 18, 28, 0.09);
+    --border-strong: rgba(16, 18, 28, 0.16);
+    --border-focus: var(--accent);
+
+    --text: #15161a;
+    --text-secondary: #565a66;
+    --text-muted: #8a8e99;
+    --text-on-accent: #ffffff;
+
+    /* ---------- 强调色（默认蓝，可被 data-accent 覆盖） ---------- */
+    --accent: #3b62f6;
+    --accent-hover: #2f53dd;
+    --accent-soft: rgba(59, 98, 246, 0.1);
+    --accent-ring: rgba(59, 98, 246, 0.32);
+
+    /* ---------- 语义色 ---------- */
+    --success: #17864b;
+    --success-soft: rgba(23, 134, 75, 0.1);
+    --warn: #b06f00;
+    --warn-soft: rgba(176, 111, 0, 0.11);
+    --danger: #d13a34;
+    --danger-soft: rgba(209, 58, 52, 0.1);
+
+    /* ---------- 圆角 ---------- */
+    --r-xs: 6px;
+    --r-sm: 8px;
+    --r-md: 10px;
+    --r-lg: 14px;
+    --r-xl: 18px;
+    --r-full: 999px;
+
+    /* ---------- 间距（4 的倍数） ---------- */
+    --sp-1: 4px;
+    --sp-2: 8px;
+    --sp-3: 12px;
+    --sp-4: 16px;
+    --sp-5: 20px;
+    --sp-6: 24px;
+    --sp-7: 32px;
+    --sp-8: 40px;
+    --sp-9: 56px;
+    --sp-10: 72px;
+
+    /* ---------- 字号 ---------- */
+    --fs-xs: 11.5px;
+    --fs-sm: 12.5px;
+    --fs-base: 14px;
+    --fs-md: 15px;
+    --fs-lg: 17px;
+    --fs-xl: 22px;
+    --fs-2xl: 28px;
+    --fs-3xl: 36px;
+
+    --lh-tight: 1.3;
+    --lh-normal: 1.6;
+    --lh-relaxed: 1.8;
+
+    /* ---------- 字重 ---------- */
+    --fw-normal: 400;
+    --fw-medium: 500;
+    --fw-semibold: 600;
+    --fw-bold: 700;
+
+    /* ---------- 字体 ---------- */
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+        "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+    --font-serif: "Songti SC", "Source Han Serif SC", "Noto Serif SC", Georgia, serif;
+    --font-mono: "SF Mono", "JetBrains Mono", "Cascadia Code", Consolas, monospace;
+
+    /* ---------- 阴影（三级，都很淡） ---------- */
+    --shadow-1: 0 1px 2px rgba(16, 18, 28, 0.06);
+    --shadow-2: 0 4px 14px rgba(16, 18, 28, 0.08);
+    --shadow-3: 0 16px 44px rgba(16, 18, 28, 0.14);
+    --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+
+    /* ---------- 动效（无弹跳，位移 4–8px） ---------- */
+    --ease: cubic-bezier(0.2, 0.7, 0.3, 1);
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --dur-1: 120ms;
+    --dur-2: 180ms;
+    --dur-3: 240ms;
+
+    /* ---------- 密度（cozy 默认 / compact 覆盖） ---------- */
+    --control-h: 36px;
+    --control-h-sm: 30px;
+    --control-h-lg: 42px;
+    --row-h: 40px;
+    --pad-card: 20px;
+    --gap-block: 20px;
+
+    /* ---------- 氛围层（可选，默认极轻） ---------- */
+    --glass-bg: rgba(255, 255, 255, 0.72);
+    --glass-blur: 14px;
+    --dot-color: rgba(16, 18, 28, 0.07);
+    --dot-size: 56px;
+
+    /* ---------- 层级 ---------- */
+    --z-base: 0;
+    --z-sticky: 20;
+    --z-overlay: 60;
+    --z-modal: 100;
+    --z-toast: 140;
+}
+
+/* ============================================================
+   深色
+   ============================================================ */
+[data-theme="dark"] {
+    --bg: #0e0f12;
+    --bg-subtle: #121318;
+    --surface: #16171c;
+    --surface-2: #1b1c22;
+    --surface-3: #22232b;
+
+    --border: rgba(255, 255, 255, 0.09);
+    --border-strong: rgba(255, 255, 255, 0.16);
+
+    --text: #f2f3f6;
+    --text-secondary: #a4a8b4;
+    --text-muted: #71757f;
+
+    --accent-soft: color-mix(in srgb, var(--accent) 18%, transparent);
+    --accent-ring: color-mix(in srgb, var(--accent) 42%, transparent);
+
+    --success: #3ddc84;
+    --success-soft: rgba(61, 220, 132, 0.14);
+    --warn: #ffc753;
+    --warn-soft: rgba(255, 199, 83, 0.14);
+    --danger: #ff6b63;
+    --danger-soft: rgba(255, 107, 99, 0.14);
+
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-2: 0 6px 18px rgba(0, 0, 0, 0.45);
+    --shadow-3: 0 20px 52px rgba(0, 0, 0, 0.6);
+    --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+
+    --glass-bg: rgba(22, 23, 28, 0.78);
+    --dot-color: rgba(255, 255, 255, 0.06);
+}
+
+/* ============================================================
+   强调色
+   ============================================================ */
+[data-accent="blue"] {
+    --accent: #3b62f6;
+    --accent-hover: #2f53dd;
+    --accent-soft: rgba(59, 98, 246, 0.1);
+    --accent-ring: rgba(59, 98, 246, 0.32);
+}
+
+[data-accent="violet"] {
+    --accent: #7c5cf5;
+    --accent-hover: #6b4ae0;
+    --accent-soft: rgba(124, 92, 245, 0.1);
+    --accent-ring: rgba(124, 92, 245, 0.32);
+}
+
+[data-accent="cyan"] {
+    --accent: #0d8fa8;
+    --accent-hover: #0a7a90;
+    --accent-soft: rgba(13, 143, 168, 0.1);
+    --accent-ring: rgba(13, 143, 168, 0.32);
+}
+
+[data-accent="green"] {
+    --accent: #17864b;
+    --accent-hover: #126e3d;
+    --accent-soft: rgba(23, 134, 75, 0.1);
+    --accent-ring: rgba(23, 134, 75, 0.32);
+}
+
+[data-accent="orange"] {
+    --accent: #d1651a;
+    --accent-hover: #b55714;
+    --accent-soft: rgba(209, 101, 26, 0.1);
+    --accent-ring: rgba(209, 101, 26, 0.32);
+}
+
+[data-accent="pink"] {
+    --accent: #d3407f;
+    --accent-hover: #b83469;
+    --accent-soft: rgba(211, 64, 127, 0.1);
+    --accent-ring: rgba(211, 64, 127, 0.32);
+}
+
+/* 深色下的强调色稍亮一点，避免糊在深底里 */
+[data-theme="dark"][data-accent="blue"] { --accent: #6d8bff; --accent-hover: #8aa2ff; }
+[data-theme="dark"][data-accent="violet"] { --accent: #a98bff; --accent-hover: #bda6ff; }
+[data-theme="dark"][data-accent="cyan"] { --accent: #3ecfe8; --accent-hover: #6fe0f2; }
+[data-theme="dark"][data-accent="green"] { --accent: #45d98a; --accent-hover: #6ee6a5; }
+[data-theme="dark"][data-accent="orange"] { --accent: #ffa257; --accent-hover: #ffb87c; }
+[data-theme="dark"][data-accent="pink"] { --accent: #ff7ab2; --accent-hover: #ff9cc5; }
+
+/* ============================================================
+   密度
+   ============================================================ */
+[data-density="compact"] {
+    --control-h: 30px;
+    --control-h-sm: 26px;
+    --control-h-lg: 36px;
+    --row-h: 32px;
+    --pad-card: 14px;
+    --gap-block: 12px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    :root {
+        --dur-1: 0ms;
+        --dur-2: 0ms;
+        --dur-3: 0ms;
+    }
+}

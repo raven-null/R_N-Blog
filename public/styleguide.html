@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light" data-accent="blue" data-density="cozy">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UI 样张 · Quiet Neutral</title>
+<link rel="stylesheet" href="css/tokens.css?v=1.0.0">
+<link rel="stylesheet" href="css/ui.css?v=1.0.0">
+<style>
+    /* 样张页自己的排版，只用到令牌，不引第三方 */
+    body { background: var(--bg); }
+
+    .sg-shell {
+        display: grid;
+        grid-template-columns: 232px minmax(0, 1fr);
+        min-height: 100vh;
+    }
+
+    /* 左侧目录 */
+    .sg-side {
+        position: sticky;
+        top: 0;
+        align-self: start;
+        height: 100vh;
+        padding: var(--sp-6) var(--sp-5);
+        border-right: 1px solid var(--border);
+        background: var(--bg-subtle);
+        overflow-y: auto;
+    }
+
+    .sg-brand {
+        display: flex;
+        align-items: center;
+        gap: var(--sp-2);
+        margin-bottom: var(--sp-6);
+    }
+
+    .sg-brand-mark {
+        width: 26px;
+        height: 26px;
+        border-radius: var(--r-sm);
+        background: var(--accent);
+        box-shadow: var(--shadow-1);
+    }
+
+    .sg-brand b { font-size: var(--fs-md); font-weight: var(--fw-semibold); }
+    .sg-brand span { font-size: var(--fs-xs); color: var(--text-muted); }
+
+    .sg-nav { display: flex; flex-direction: column; gap: 2px; }
+
+    .sg-nav a {
+        padding: 7px var(--sp-3);
+        font-size: var(--fs-sm);
+        color: var(--text-secondary);
+        text-decoration: none;
+        border-radius: var(--r-sm);
+        transition: background var(--dur-2) var(--ease), color var(--dur-2) var(--ease);
+    }
+
+    .sg-nav a:hover { background: var(--surface-2); color: var(--text); }
+
+    .sg-side-foot {
+        margin-top: var(--sp-7);
+        padding-top: var(--sp-4);
+        border-top: 1px solid var(--border);
+        font-size: var(--fs-xs);
+        color: var(--text-muted);
+        line-height: var(--lh-relaxed);
+    }
+
+    /* 主区 */
+    .sg-main { min-width: 0; }
+
+    .sg-topbar {
+        position: sticky;
+        top: 0;
+        z-index: var(--z-sticky);
+        display: flex;
+        align-items: center;
+        gap: var(--sp-4);
+        padding: var(--sp-4) var(--sp-7);
+        background: var(--glass-bg);
+        border-bottom: 1px solid var(--border);
+        backdrop-filter: blur(var(--glass-blur));
+    }
+
+    .sg-topbar-title { font-size: var(--fs-md); font-weight: var(--fw-semibold); }
+    .sg-topbar-spacer { flex: 1; }
+
+    .sg-swatches { display: flex; gap: 6px; }
+
+    .sg-swatch {
+        width: 22px;
+        height: 22px;
+        padding: 0;
+        border-radius: 50%;
+        border: 1px solid var(--border);
+        cursor: pointer;
+        transition: transform var(--dur-2) var(--ease), box-shadow var(--dur-2) var(--ease);
+    }
+
+    .sg-swatch:hover { transform: scale(1.12); }
+
+    .sg-swatch[aria-pressed="true"] {
+        box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
+    }
+
+    .sg-content {
+        padding: var(--sp-7) var(--sp-7) var(--sp-10);
+        max-width: 1080px;
+    }
+
+    .sg-section { margin-bottom: var(--sp-9); }
+
+    .sg-grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--gap-block); }
+    .sg-grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--gap-block); }
+    .sg-grid-4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--gap-block); }
+
+    .sg-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3); margin-bottom: var(--sp-3); }
+
+    .sg-stack { display: flex; flex-direction: column; gap: var(--sp-3); }
+
+    .sg-split { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp-4); }
+
+    /* 色板 */
+    .sg-token-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: var(--sp-3); }
+
+    .sg-token {
+        display: flex;
+        align-items: center;
+        gap: var(--sp-2);
+        font-size: var(--fs-xs);
+        color: var(--text-muted);
+    }
+
+    .sg-chip {
+        width: 26px;
+        height: 26px;
+        border-radius: var(--r-xs);
+        border: 1px solid var(--border);
+        flex: none;
+    }
+
+    /* 图片占位 */
+    .sg-thumb {
+        aspect-ratio: 4 / 3;
+        border-radius: var(--r-md);
+        background: linear-gradient(135deg, var(--accent-soft), var(--surface-3));
+        border: 1px solid var(--border);
+    }
+
+    .sg-measure {
+        height: 8px;
+        border-radius: var(--r-full);
+        background: var(--accent-soft);
+    }
+
+    .sg-measure > i {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+        background: var(--accent);
+    }
+
+    @media (max-width: 900px) {
+        .sg-shell { grid-template-columns: minmax(0, 1fr); }
+        .sg-side { display: none; }
+        .sg-content { padding: var(--sp-5); }
+        .sg-grid-2, .sg-grid-3, .sg-grid-4 { grid-template-columns: minmax(0, 1fr); }
+    }
+</style>
+</head>
+<body>
+
+<div class="sg-shell">
+    <!-- 左：目录 -->
+    <aside class="sg-side">
+        <div class="sg-brand">
+            <i class="sg-brand-mark"></i>
+            <div>
+                <b>Quiet Neutral</b><br>
+                <span>设计令牌 · v1</span>
+            </div>
+        </div>
+        <nav class="sg-nav">
+            <a href="#tokens">色彩与尺度</a>
+            <a href="#type">排版</a>
+            <a href="#buttons">按钮</a>
+            <a href="#forms">表单</a>
+            <a href="#cards">卡片与统计</a>
+            <a href="#tags">标签</a>
+            <a href="#table">表格</a>
+            <a href="#notes">提示条</a>
+            <a href="#overlays">模态与分段</a>
+            <a href="#canvas">画布 HUD 与胶囊</a>
+            <a href="#states">空态与骨架</a>
+        </nav>
+        <div class="sg-side-foot">
+            这一页只引 <code>tokens.css</code> 与 <code>ui.css</code>，
+            不含任何旧样式。确认气质之后，再按页迁移。
+        </div>
+    </aside>
+
+    <!-- 右：内容 -->
+    <main class="sg-main">
+        <div class="sg-topbar">
+            <span class="sg-topbar-title">UI 样张</span>
+            <span class="ui-tag">Quiet Neutral</span>
+            <span class="sg-topbar-spacer"></span>
+
+            <div class="ui-segment" id="densitySeg" role="group" aria-label="密度">
+                <button type="button" data-density="cozy" aria-pressed="true">宽松</button>
+                <button type="button" data-density="compact" aria-pressed="false">紧凑</button>
+            </div>
+
+            <div class="ui-segment" id="themeSeg" role="group" aria-label="明暗">
+                <button type="button" data-theme-set="light" aria-pressed="true">浅色</button>
+                <button type="button" data-theme-set="dark" aria-pressed="false">深色</button>
+            </div>
+
+            <div class="sg-swatches" id="accentSwatches" role="group" aria-label="强调色">
+                <button class="sg-swatch" type="button" data-accent-set="blue" aria-pressed="true" title="蓝" style="background:#3b62f6"></button>
+                <button class="sg-swatch" type="button" data-accent-set="violet" aria-pressed="false" title="紫" style="background:#7c5cf5"></button>
+                <button class="sg-swatch" type="button" data-accent-set="cyan" aria-pressed="false" title="青" style="background:#0d8fa8"></button>
+                <button class="sg-swatch" type="button" data-accent-set="green" aria-pressed="false" title="绿" style="background:#17864b"></button>
+                <button class="sg-swatch" type="button" data-accent-set="orange" aria-pressed="false" title="橙" style="background:#d1651a"></button>
+                <button class="sg-swatch" type="button" data-accent-set="pink" aria-pressed="false" title="粉" style="background:#d3407f"></button>
+            </div>
+        </div>
+
+        <div class="sg-content">
+
+            <!-- 色彩与尺度 -->
+            <section class="sg-section" id="tokens">
+                <div class="ui-section-title"><h2>色彩与尺度</h2><span>全部来自 tokens.css</span></div>
+
+                <div class="sg-grid-2" style="margin-bottom: var(--gap-block)">
+                    <div class="ui-card">
+                        <div class="ui-card-head"><span class="ui-card-title">中性层级</span></div>
+                        <div class="sg-token-list">
+                            <div class="sg-token"><i class="sg-chip" style="background:var(--bg)"></i>bg</div>
+                            <div class="sg-token"><i class="sg-chip" style="background:var(--bg-subtle)"></i>bg-subtle</div>
+                            <div class="sg-token"><i class="sg-chip" style="background:var(--surface)"></i>surface</div>
+                            <div class="sg-token"><i class="sg-chip" style="background:var(--surface-2)"></i>surface-2</div>
+                            <div class="sg-token"><i class="sg-chip" style="background:var(--surface-3)"></i>surface-3</div>
+                            <div class="sg-token"><i class="sg-chip" style="background:var(--border)"></i>border</div>
+                            <div class="sg-token"><i class="sg-chip" style="background:var(--text)"></i>text</div>
+                            <div class="sg-token"><i class="sg-chip" style="background:var(--text-secondary)"></i>text-secondary</div>
+                            <div class="sg-token"><i class="sg-chip" style="background:var(--text-muted)"></i>text-muted</div>
+                        </div>
+                    </div>
+                    <div class="ui-card">
+                        <div class="ui-card-head"><span class="ui-card-title">语义与强调</span></div>
+                        <div class="sg-token-list">
+                            <div class="sg-token"><i class="sg-chip" style="background:var(--accent)"></i>accent</div>
+                            <div class="sg-token"><i class="sg-chip" style="background:var(--accent-soft)"></i>accent-soft</div>
+                            <div class="sg-token"><i class="sg-chip" style="background:var(--success)"></i>success</div>
+                            <div class="sg-token"><i class="sg-chip" style="background:var(--warn)"></i>warn</div>
+                            <div class="sg-token"><i class="sg-chip" style="background:var(--danger)"></i>danger</div>
+                        </div>
+                        <div class="sg-row" style="margin-top: var(--sp-4)">
+                            <span class="ui-tag ui-tag-accent"><i class="ui-dot"></i>accent-soft</span>
+                            <span class="ui-tag">neutral</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ui-card">
+                    <div class="ui-card-head">
+                        <span class="ui-card-title">圆角、阴影、间距</span>
+                        <span class="ui-card-sub">圆角 6 / 8 / 10 / 14 / 18 / full</span>
+                    </div>
+                    <div class="sg-row" style="gap: var(--sp-4)">
+                        <div style="text-align:center"><div style="width:56px;height:48px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-xs)"></div><span class="ui-text-muted">xs 6</span></div>
+                        <div style="text-align:center"><div style="width:56px;height:48px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-sm)"></div><span class="ui-text-muted">sm 8</span></div>
+                        <div style="text-align:center"><div style="width:56px;height:48px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-md)"></div><span class="ui-text-muted">md 10</span></div>
+                        <div style="text-align:center"><div style="width:56px;height:48px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-lg)"></div><span class="ui-text-muted">lg 14</span></div>
+                        <div style="text-align:center"><div style="width:56px;height:48px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-xl)"></div><span class="ui-text-muted">xl 18</span></div>
+                        <div style="text-align:center"><div style="width:56px;height:48px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-full)"></div><span class="ui-text-muted">full</span></div>
+                    </div>
+                    <div class="sg-row" style="gap: var(--sp-4); margin-top: var(--sp-4)">
+                        <div style="width:120px;height:40px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);box-shadow:var(--shadow-1);display:grid;place-items:center;font-size:var(--fs-xs);color:var(--text-muted)">shadow-1</div>
+                        <div style="width:120px;height:40px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);box-shadow:var(--shadow-2);display:grid;place-items:center;font-size:var(--fs-xs);color:var(--text-muted)">shadow-2</div>
+                        <div style="width:120px;height:40px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);box-shadow:var(--shadow-3);display:grid;place-items:center;font-size:var(--fs-xs);color:var(--text-muted)">shadow-3</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 排版 -->
+            <section class="sg-section" id="type">
+                <div class="ui-section-title"><h2>排版</h2><span>界面用系统字，正文 15px / 1.8</span></div>
+                <div class="ui-card sg-stack">
+                    <h1 class="ui-h1">把安静留给界面</h1>
+                    <h2 class="ui-h2">让照片和文字说话</h2>
+                    <h3 class="ui-h3">区块标题 · h3</h3>
+                    <h4 class="ui-h4">卡片标题 · h4</h4>
+                    <p class="ui-text">正文：这是一段用于检查行高与字距的示例文字。统一的界面骨架应该退到内容后面，让阅读本身成为主角，而不是被装饰性的色块和光晕打断。</p>
+                    <p class="ui-text-secondary">次要文字：说明、补充信息、时间戳一类，颜色比正文弱一档。</p>
+                    <p class="ui-text-muted">弱化文字：辅助提示，例如「暂无数据」「最后更新于…」。</p>
+                    <span class="ui-label">LABEL · 小标签</span>
+                    <code class="ui-mono">app.js?v=3.93.0</code>
+                    <p style="font-family:var(--font-serif);font-size:var(--fs-xl);margin:0">衬线标题可选：给文章页增加一点纸感</p>
+                </div>
+            </section>
+
+            <!-- 按钮 -->
+            <section class="sg-section" id="buttons">
+                <div class="ui-section-title"><h2>按钮</h2><span>主 / 次 / 幽灵 / 危险，三种尺寸</span></div>
+                <div class="ui-card sg-stack">
+                    <div class="sg-row">
+                        <button class="ui-btn ui-btn-primary">主要操作</button>
+                        <button class="ui-btn">次要操作</button>
+                        <button class="ui-btn ui-btn-ghost">幽灵按钮</button>
+                        <button class="ui-btn ui-btn-danger">删除</button>
+                        <button class="ui-btn" disabled>禁用</button>
+                    </div>
+                    <div class="sg-row">
+                        <button class="ui-btn ui-btn-primary ui-btn-sm">小号</button>
+                        <button class="ui-btn ui-btn-primary">中号</button>
+                        <button class="ui-btn ui-btn-primary ui-btn-lg">大号</button>
+                        <button class="ui-btn ui-btn-primary ui-btn-icon" aria-label="加号">+</button>
+                        <button class="ui-btn ui-btn-icon ui-btn-sm" aria-label="更多">⋯</button>
+                    </div>
+                    <div class="sg-row">
+                        <button class="ui-btn ui-btn-primary ui-btn-block">整宽按钮（后台表单常用）</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 表单 -->
+            <section class="sg-section" id="forms">
+                <div class="ui-section-title"><h2>表单</h2><span>后台主要是这些</span></div>
+                <div class="sg-grid-2">
+                    <div class="ui-card sg-stack">
+                        <div class="ui-field">
+                            <label class="ui-label" for="f1">标题</label>
+                            <input class="ui-input" id="f1" placeholder="给文章起个名字">
+                        </div>
+                        <div class="ui-field">
+                            <label class="ui-label" for="f2">分类</label>
+                            <select class="ui-select" id="f2">
+                                <option>前端</option>
+                                <option>设计</option>
+                                <option>随笔</option>
+                            </select>
+                        </div>
+                        <div class="ui-field">
+                            <label class="ui-label" for="f3">摘要</label>
+                            <textarea class="ui-textarea" id="f3" placeholder="两三句话说清楚这篇讲什么"></textarea>
+                            <span class="ui-field-hint">会显示在文章卡片和列表里</span>
+                        </div>
+                        <div class="ui-field">
+                            <label class="ui-label" for="f4">错误态</label>
+                            <input class="ui-input" id="f4" value="2026-13-99" aria-invalid="true" style="border-color:var(--danger)">
+                            <span class="ui-field-error">日期格式不对</span>
+                        </div>
+                    </div>
+                    <div class="ui-card sg-stack">
+                        <div class="sg-split">
+                            <span class="ui-text-secondary">公开文章</span>
+                            <label class="ui-switch">
+                                <input type="checkbox" checked>
+                                <span class="ui-switch-track"></span>
+                            </label>
+                        </div>
+                        <div class="sg-split">
+                            <span class="ui-text-secondary">允许评论</span>
+                            <label class="ui-switch">
+                                <input type="checkbox">
+                                <span class="ui-switch-track"></span>
+                            </label>
+                        </div>
+                        <div class="sg-stack" style="gap: var(--sp-2)">
+                            <label class="ui-check"><input type="checkbox" checked> 只显示已发布</label>
+                            <label class="ui-check"><input type="checkbox"> 包含草稿</label>
+                            <label class="ui-check"><input type="radio" name="sg-r" checked> 按日期排序</label>
+                            <label class="ui-check"><input type="radio" name="sg-r"> 按标题排序</label>
+                        </div>
+                        <div class="ui-field">
+                            <label class="ui-label">输入框（小）</label>
+                            <input class="ui-input ui-input-sm" placeholder="搜索…">
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 卡片与统计 -->
+            <section class="sg-section" id="cards">
+                <div class="ui-section-title"><h2>卡片与统计</h2><span>主页、列表、后台概览共用</span></div>
+                <div class="sg-grid-3" style="margin-bottom: var(--gap-block)">
+                    <div class="ui-card">
+                        <div class="ui-stat-value">128</div>
+                        <div class="ui-stat-label">文章</div>
+                    </div>
+                    <div class="ui-card">
+                        <div class="ui-stat-value">506</div>
+                        <div class="ui-stat-label">照片</div>
+                    </div>
+                    <div class="ui-card">
+                        <div class="ui-stat-value">12</div>
+                        <div class="ui-stat-label">项目</div>
+                    </div>
+                </div>
+                <div class="sg-grid-2">
+                    <div class="ui-card ui-card-hover">
+                        <div class="ui-card-head">
+                            <span class="ui-card-title">文章卡片</span>
+                            <span class="ui-tag">前端</span>
+                        </div>
+                        <div class="sg-thumb" style="margin-bottom: var(--sp-3)"></div>
+                        <p class="ui-text-secondary" style="margin:0 0 var(--sp-3)">把主页改成无限画布之后我学到的事 —— 关于坐标、缩放与命中区域的一点笔记。</p>
+                        <div class="sg-split">
+                            <span class="ui-text-muted">2026-06-12</span>
+                            <span class="ui-tag ui-tag-accent">阅读</span>
+                        </div>
+                    </div>
+                    <div class="ui-card">
+                        <div class="ui-card-head">
+                            <span class="ui-card-title">进度 / 用量</span>
+                            <span class="ui-card-sub">3.2 / 5 GB</span>
+                        </div>
+                        <div class="sg-stack" style="gap: var(--sp-4)">
+                            <div>
+                                <div class="sg-split" style="margin-bottom: var(--sp-2)"><span class="ui-text-secondary">存储</span><span class="ui-text-muted">64%</span></div>
+                                <div class="sg-measure"><i style="width:64%"></i></div>
+                            </div>
+                            <div>
+                                <div class="sg-split" style="margin-bottom: var(--sp-2)"><span class="ui-text-secondary">本月带宽</span><span class="ui-text-muted">28%</span></div>
+                                <div class="sg-measure"><i style="width:28%"></i></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 标签 -->
+            <section class="sg-section" id="tags">
+                <div class="ui-section-title"><h2>标签</h2><span>标签、状态、语言色点</span></div>
+                <div class="ui-card">
+                    <div class="sg-row">
+                        <span class="ui-tag">前端</span>
+                        <span class="ui-tag">设计</span>
+                        <span class="ui-tag ui-tag-accent">Netlify</span>
+                        <span class="ui-tag"><i class="ui-dot" style="color:var(--success)"></i>已发布</span>
+                        <span class="ui-tag"><i class="ui-dot" style="color:var(--warn)"></i>草稿</span>
+                        <span class="ui-tag"><i class="ui-dot" style="color:var(--danger)"></i>已撤回</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 表格 -->
+            <section class="sg-section" id="table">
+                <div class="ui-section-title"><h2>表格</h2><span>后台列表页</span></div>
+                <div class="ui-card" style="padding:0; overflow:hidden">
+                    <table class="ui-table">
+                        <thead>
+                            <tr><th>标题</th><th>状态</th><th>标签</th><th>日期</th><th style="text-align:right">操作</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>从零搭一个只有静态文件也能跑的博客</td>
+                                <td><span class="ui-tag"><i class="ui-dot" style="color:var(--success)"></i>已发布</span></td>
+                                <td>前端</td>
+                                <td class="ui-mono">2026-06-12</td>
+                                <td style="text-align:right"><button class="ui-btn ui-btn-sm ui-btn-ghost">编辑</button></td>
+                            </tr>
+                            <tr>
+                                <td>把主页改成无限画布之后我学到的事</td>
+                                <td><span class="ui-tag"><i class="ui-dot" style="color:var(--warn)"></i>草稿</span></td>
+                                <td>设计</td>
+                                <td class="ui-mono">2026-06-08</td>
+                                <td style="text-align:right"><button class="ui-btn ui-btn-sm ui-btn-ghost">编辑</button></td>
+                            </tr>
+                            <tr>
+                                <td>图片墙：让 500 张照片不卡的办法</td>
+                                <td><span class="ui-tag"><i class="ui-dot" style="color:var(--success)"></i>已发布</span></td>
+                                <td>性能</td>
+                                <td class="ui-mono">2026-05-30</td>
+                                <td style="text-align:right"><button class="ui-btn ui-btn-sm ui-btn-ghost">编辑</button></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- 提示条 -->
+            <section class="sg-section" id="notes">
+                <div class="ui-section-title"><h2>提示条</h2><span>四种语义</span></div>
+                <div class="sg-stack">
+                    <div class="ui-note ui-note-info">已自动保存到本地草稿。</div>
+                    <div class="ui-note ui-note-success">发布成功，CDN 大约 30 秒后生效。</div>
+                    <div class="ui-note ui-note-warn">这个标签下还没有文章。</div>
+                    <div class="ui-note ui-note-danger">保存失败：接口返回 401，请检查密钥。</div>
+                </div>
+            </section>
+
+            <!-- 模态与分段 -->
+            <section class="sg-section" id="overlays">
+                <div class="ui-section-title"><h2>模态与分段</h2><span>这里只做静态展示</span></div>
+                <div class="sg-grid-2">
+                    <div class="ui-card" style="display:grid;place-items:center;min-height:230px;background:var(--bg-subtle)">
+                        <div class="ui-modal" style="width:100%;box-shadow:var(--shadow-2)">
+                            <div class="ui-modal-head">
+                                <div>
+                                    <div class="ui-card-title">删除这篇文章？</div>
+                                    <div class="ui-card-sub" style="margin-top:4px">删除后无法恢复</div>
+                                </div>
+                                <button class="ui-btn ui-btn-icon ui-btn-ghost" aria-label="关闭">×</button>
+                            </div>
+                            <p class="ui-text-secondary" style="margin:0">《把主页改成无限画布之后我学到的事》会从站点移除，相关图片不受影响。</p>
+                            <div class="ui-modal-foot">
+                                <button class="ui-btn">取消</button>
+                                <button class="ui-btn ui-btn-primary" style="background:var(--danger)">确认删除</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ui-card sg-stack">
+                        <div class="ui-segment">
+                            <button type="button" aria-pressed="true">全部</button>
+                            <button type="button" aria-pressed="false">已发布</button>
+                            <button type="button" aria-pressed="false">草稿</button>
+                        </div>
+                        <div class="ui-segment" style="width:fit-content">
+                            <button type="button" aria-pressed="false">方格</button>
+                            <button type="button" aria-pressed="true">瀑布流</button>
+                        </div>
+                        <div class="sg-row" style="margin:0">
+                            <button class="ui-btn ui-btn-sm">换一批</button>
+                            <button class="ui-btn ui-btn-sm ui-btn-ghost">导出</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 画布 HUD 与胶囊 -->
+            <section class="sg-section" id="canvas">
+                <div class="ui-section-title"><h2>画布 HUD 与胶囊</h2><span>主页现有的两块浮层，换成令牌版</span></div>
+                <div class="ui-card" style="background:
+                        radial-gradient(circle at 30% 20%, var(--accent-soft), transparent 55%),
+                        var(--surface-2);
+                    min-height: 240px;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: space-between;">
+                    <div class="sg-row" style="margin:0">
+                        <span class="ui-capsule">
+                            <span class="ui-capsule-label">图片墙</span>
+                            <span class="ui-capsule-sub">506 张</span>
+                            <span style="width:1px;height:16px;background:var(--border)"></span>
+                            <button class="ui-btn ui-btn-sm ui-btn-ghost">瀑布流</button>
+                            <button class="ui-btn ui-btn-sm ui-btn-ghost">换一批</button>
+                        </span>
+                    </div>
+                    <div class="sg-row" style="margin:0">
+                        <span class="ui-hud">
+                            <button type="button" aria-label="缩小">−</button>
+                            <button type="button" aria-label="放大">+</button>
+                            <button type="button" aria-label="回到主页">⌂</button>
+                        </span>
+                        <span class="ui-text-muted">拖动浏览 · 滚轮缩放 · 左边图片墙，右边文章墙</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 空态与骨架 -->
+            <section class="sg-section" id="states">
+                <div class="ui-section-title"><h2>空态与骨架</h2><span>加载中与没有数据</span></div>
+                <div class="sg-grid-2">
+                    <div class="ui-card ui-empty">
+                        <div class="ui-h4">这里还没有东西</div>
+                        <div class="ui-text-muted">写第一篇试试</div>
+                    </div>
+                    <div class="ui-card sg-stack">
+                        <div class="ui-skeleton" style="height:14px;width:60%"></div>
+                        <div class="ui-skeleton" style="height:14px;width:90%"></div>
+                        <div class="ui-skeleton" style="height:120px"></div>
+                        <div class="ui-skeleton" style="height:14px;width:40%"></div>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+    </main>
+</div>
+
+<script>
+    (function () {
+        const html = document.documentElement;
+
+        function press(group, key, value) {
+            document.querySelectorAll('[' + key + ']').forEach(function (b) {
+                b.setAttribute('aria-pressed', String(b.getAttribute(key) === value));
+            });
+        }
+
+        document.getElementById('themeSeg').addEventListener('click', function (e) {
+            const btn = e.target.closest('[data-theme-set]');
+            if (!btn) return;
+            html.setAttribute('data-theme', btn.dataset.themeSet);
+            press('themeSeg', 'data-theme-set', btn.dataset.themeSet);
+        });
+
+        document.getElementById('densitySeg').addEventListener('click', function (e) {
+            const btn = e.target.closest('[data-density]');
+            if (!btn) return;
+            html.setAttribute('data-density', btn.dataset.density);
+            press('densitySeg', 'data-density', btn.dataset.density);
+        });
+
+        document.getElementById('accentSwatches').addEventListener('click', function (e) {
+            const btn = e.target.closest('[data-accent-set]');
+            if (!btn) return;
+            html.setAttribute('data-accent', btn.dataset.accentSet);
+            press('accentSwatches', 'data-accent-set', btn.dataset.accentSet);
+        });
+
+        // 记住上次选择，刷新不用重来
+        try {
+            const saved = JSON.parse(localStorage.getItem('sg-prefs') || '{}');
+            if (saved.theme) { html.setAttribute('data-theme', saved.theme); press('themeSeg', 'data-theme-set', saved.theme); }
+            if (saved.accent) { html.setAttribute('data-accent', saved.accent); press('accentSwatches', 'data-accent-set', saved.accent); }
+            if (saved.density) { html.setAttribute('data-density', saved.density); press('densitySeg', 'data-density', saved.density); }
+        } catch (err) { /* 忽略 */ }
+
+        window.addEventListener('click', function () {
+            setTimeout(function () {
+                try {
+                    localStorage.setItem('sg-prefs', JSON.stringify({
+                        theme: html.getAttribute('data-theme'),
+                        accent: html.getAttribute('data-accent'),
+                        density: html.getAttribute('data-density'),
+                    }));
+                } catch (err) { /* 忽略 */ }
+            }, 0);
+        });
+    })();
+</script>
+</body>
+</html>
