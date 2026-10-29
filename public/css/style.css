@@ -8224,3 +8224,101 @@ html.glass-ready .stack-box > [data-reveal].in-view {
         translate(var(--stack-x, 0px), var(--stack-y, 0px))
         scale(var(--stack-s, 1)) !important;
 }
+
+/* ============================================================
+   简报卡高度跟内容走（标题短，盒子就矮，不空一大片）
+   ============================================================ */
+.hv-news-block .home-news-list.stack-box {
+    /* 高度由 JS 按最高那张卡实时计算 */
+    min-height: 120px !important;
+}
+
+.hv-news-block .home-news-list.stack-box > .news-item {
+    inset: auto 0 auto 0;             /* 左右铺满，上下自适应 */
+    height: auto !important;
+    top: 0;
+    left: 0;
+    right: 0;
+    padding: 20px 24px 18px;
+}
+
+/* 标题不固定行数上限，多长写多长，卡片跟着长 */
+.hv-news-block .home-news-list.stack-box > .news-item .news-item-title {
+    -webkit-line-clamp: unset;
+    line-clamp: unset;
+    display: block;
+    overflow: visible;
+}
+
+/* 卡片底部留出堆叠偏移的空间 */
+.hv-news-block .home-news-list.stack-box {
+    padding-bottom: 26px !important;
+}
+
+/* ============================================================
+   简报堆叠改用「grid 同格叠放」
+   ------------------------------------------------------------
+   所有卡片放进同一个 grid cell：容器高度自动等于最高的那张，
+   标题短的卡片盒子就矮，不再空一大片；transform 负责错位与旋转。
+   ============================================================ */
+.hv-news-block .home-news-list.stack-box {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    grid-template-rows: 1fr !important;
+    height: auto !important;
+    min-height: 0 !important;
+    padding: 0 0 26px !important;
+    align-items: start;
+}
+
+.hv-news-block .home-news-list.stack-box > .news-item {
+    grid-area: 1 / 1 / 2 / 2 !important;
+    position: relative !important;
+    inset: auto !important;
+    top: auto !important;
+    left: auto !important;
+    right: auto !important;
+    width: 100% !important;
+    height: auto !important;
+    margin: 0 !important;
+}
+
+/* 照片堆叠也走同格叠放，但保持固定相纸尺寸并居中 */
+.hv-photos.stack-box {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    grid-template-rows: 1fr !important;
+    place-items: center;
+    height: 300px !important;
+}
+
+.hv-photos.stack-box > .hv-photo {
+    grid-area: 1 / 1 / 2 / 2 !important;
+    position: relative !important;
+    inset: auto !important;
+    top: auto !important;
+    left: auto !important;
+    width: min(400px, 82%) !important;
+    height: 260px !important;
+    margin: 0 !important;
+    transform-origin: center center;
+}
+
+/* 照片不再需要 -50% 居中（grid 已经居中） */
+.stack-box.stack-photos > * {
+    transform:
+        rotate(var(--stack-rot, 0deg))
+        translate(var(--stack-x, 0px), var(--stack-y, 0px))
+        scale(var(--stack-s, 1)) !important;
+}
+
+@media (max-width: 900px) {
+    .hv-photos.stack-box {
+        height: 240px !important;
+    }
+
+    .hv-photos.stack-box > .hv-photo {
+        width: min(300px, 86%) !important;
+        height: 200px !important;
+    }
+}
