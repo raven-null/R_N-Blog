@@ -1091,17 +1091,6 @@ const BlogApp = {
         let dir = 1;
         let hovering = false;
 
-        // 滚动过程中用 rAF 跟手同步高度（平滑滚动期间也能跟上）
-        let rafPending = false;
-        track.addEventListener('scroll', () => {
-            if (rafPending) return;
-            rafPending = true;
-            requestAnimationFrame(() => {
-                rafPending = false;
-                this.syncCarouselHeight();
-            });
-        }, { passive: true });
-
         const step = () => {
             if (!hovering) { raf = 0; return; }
             raf = requestAnimationFrame(step);
@@ -1691,6 +1680,17 @@ const BlogApp = {
         if (!track || track.dataset.carBound) return;
         track.dataset.carBound = '1';
 
+        // 滚动过程中用 rAF 跟手同步高度（平滑滚动期间也能跟上）
+        let rafPending = false;
+        track.addEventListener('scroll', () => {
+            if (rafPending) return;
+            rafPending = true;
+            requestAnimationFrame(() => {
+                rafPending = false;
+                this.syncCarouselHeight();
+            });
+        }, { passive: true });
+
         const step = () => {
             const first = track.querySelector('.hv-car-item');
             const w = first ? first.getBoundingClientRect().width + 16 : track.clientWidth / 2;
@@ -1764,7 +1764,7 @@ const BlogApp = {
         };
         box.innerHTML = pick.map(tile).join('');
 
-        this.initLoopScroll(box);
+        this.initPhotoStack();
 
         box.addEventListener('click', (e) => {
             const btn = e.target.closest('.hv-photo');
@@ -4360,7 +4360,7 @@ const BlogApp = {
             e.preventDefault();
             e.stopPropagation();
             const now = Date.now();
-            if (now - state.wheelAt < 240) return;
+            if (now - state.wheelAt < 280) return;
             state.wheelAt = now;
             const live = [...box.children].filter((el) => el.classList.contains('news-item') || el.classList.contains('hv-photo') || el.classList.contains('home-project'));
             if (!live.length) return;
@@ -4371,7 +4371,7 @@ const BlogApp = {
         };
         box.addEventListener('wheel', onWheel, { passive: false });
         box.addEventListener('mousewheel', onWheel, { passive: false });
-        const outer = box.closest('.hv-photo-box, .hv-news-box');
+        const outer = box.closest('.hv-photo-box, .hv-news-box, .hv-projects-box');
         if (outer) {
             outer.addEventListener('wheel', onWheel, { passive: false });
             outer.addEventListener('mousewheel', onWheel, { passive: false });
@@ -4411,12 +4411,12 @@ const BlogApp = {
             el.style.setProperty('filter', 'none', 'important');
         });
 
-        // 层叠参数：越靠后转得越多、偏得越远、越淡
+        // 层叠参数（照「文件堆叠」设计稿）：最上面 -2°，往下依次 +1° / +3° / +4.6°
         const LAYERS = [
             { rot: -2, x: 0, y: 0, z: 40, opacity: 1, scale: 1 },
-            { rot: 1.5, x: 7, y: 7, z: 30, opacity: 0.94, scale: 0.985 },
-            { rot: 3.5, x: 14, y: 14, z: 20, opacity: 0.86, scale: 0.97 },
-            { rot: 5.5, x: 21, y: 20, z: 10, opacity: 0.72, scale: 0.955 },
+            { rot: 1, x: 5, y: 5, z: 30, opacity: 0.95, scale: 0.988 },
+            { rot: 3, x: 10, y: 10, z: 20, opacity: 0.88, scale: 0.972 },
+            { rot: 4.6, x: 15, y: 14, z: 10, opacity: 0.74, scale: 0.956 },
         ];
 
         items.forEach((el, i) => {
@@ -4425,15 +4425,17 @@ const BlogApp = {
             // 位置通过 CSS 变量传递，transform 由样式表用 !important 组合出来
             // —— 这样滚动 reveal 往元素上写的内联 transform 压不住它
             if (!layer) {
-                el.style.setProperty('--stack-rot', '7deg');
-                el.style.setProperty('--stack-x', '26px');
-                el.style.setProperty('--stack-y', '24px');
-                el.style.setProperty('--stack-s', '0.94');
+                el.style.setProperty('--stack-rot', '5deg');
+                el.style.setProperty('--stack-x', '18px');
+                el.style.setProperty('--stack-y', '17px');
+                el.style.setProperty('--stack-s', '0.95');
                 el.style.setProperty('--stack-o', '0');
                 el.style.setProperty('z-index', '1');
                 el.style.setProperty('pointer-events', 'none');
+                el.style.visibility = 'hidden';   // 压在最下面的几百张直接不渲染
                 return;
             }
+            el.style.visibility = '';
             el.style.setProperty('--stack-rot', layer.rot + 'deg');
             el.style.setProperty('--stack-x', layer.x + 'px');
             el.style.setProperty('--stack-y', layer.y + 'px');
@@ -4444,31 +4446,34 @@ const BlogApp = {
         });
     },
 
-    // 简报列表：全部渲染 + 无限滚动
+    // 简报：全部条目堆成一摞，滚轮循环切换（滚不完）
     initNewsStack() {
         const list = document.getElementById('newsList');
-        if (!list || list.dataset.loopInit === '1') return;
-        list.classList.remove('stack-box', 'stack-news');
-        list.classList.add('loop-box', 'loop-news');
-        this.initLoopScroll(list, { auto: true });
+        if (!list || list.dataset.stackInit === '1') return;
+        list.dataset.stackInit = '1';
+        list.classList.remove('loop-box', 'loop-news');
+        list.classList.add('stack-box', 'stack-news');
+        this.initStackBox(list, { autoMs: 4200 });
     },
 
-    // 项目列表：全部渲染 + 无限滚动
+    // 项目：全部堆成一摞
     initProjectStack() {
         const box = document.getElementById('homeProjectsGrid');
-        if (!box || box.dataset.loopInit === '1') return;
-        box.classList.remove('stack-box', 'stack-projects');
-        box.classList.add('loop-box', 'loop-projects');
-        this.initLoopScroll(box, { auto: true });
+        if (!box || box.dataset.stackInit === '1') return;
+        box.dataset.stackInit = '1';
+        box.classList.remove('loop-box', 'loop-projects');
+        box.classList.add('stack-box', 'stack-projects');
+        this.initStackBox(box, { autoMs: 4600 });
     },
 
-    // 首页照片：全部渲染 + 无限滚动
+    // 照片：全部堆成一摞
     initPhotoStack() {
         const box = document.getElementById('hvPhotos');
-        if (!box || box.dataset.loopInit === '1') return;
-        box.classList.remove('stack-box', 'stack-photos');
-        box.classList.add('loop-box', 'loop-photos');
-        this.initLoopScroll(box, { auto: true });
+        if (!box || box.dataset.stackInit === '1') return;
+        box.dataset.stackInit = '1';
+        box.classList.remove('loop-box', 'loop-photos');
+        box.classList.add('stack-box', 'stack-photos');
+        this.initStackBox(box, { autoMs: 3400 });
     },
 
     // ===================== 无限滚动 =====================

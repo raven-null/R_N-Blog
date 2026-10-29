@@ -9869,3 +9869,368 @@ html[data-tone="dark"] .hv-projects-box::after {
         padding: 12px 16px 14px !important;
     }
 }
+
+/* ============================================================
+   文件堆叠（照「文件堆叠」设计稿）
+   —— 所有卡片 absolute 重叠成同一摞，滚轮循环切换
+   ============================================================ */
+.stack-box {
+    position: relative !important;
+    display: block !important;
+    width: 100% !important;
+    height: 100% !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    background: none !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    scrollbar-width: none !important;
+}
+
+.stack-box > * {
+    position: absolute !important;
+    top: 50% !important;
+    left: 50% !important;
+    right: auto !important;
+    bottom: auto !important;
+    margin: 0 !important;
+    inset: auto !important;
+    transform-origin: center center;
+    transform:
+        translate(-50%, -50%)
+        rotate(var(--stack-rot, 0deg))
+        translate(var(--stack-x, 0px), var(--stack-y, 0px))
+        scale(var(--stack-s, 1)) !important;
+    opacity: var(--stack-o, 1) !important;
+    transition:
+        transform 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+        opacity 0.32s ease,
+        box-shadow 0.32s ease !important;
+    will-change: transform, opacity;
+}
+
+/* 最上面那张：抬起一点，像被捏住的文件 */
+.stack-box > *[style*="--stack-o: 1"] {
+    box-shadow:
+        0 16px 40px rgba(20, 26, 44, 0.22),
+        0 2px 6px rgba(20, 26, 44, 0.1) !important;
+}
+
+html[data-tone="dark"] .stack-box > *[style*="--stack-o: 1"] {
+    box-shadow:
+        0 18px 46px rgba(0, 0, 0, 0.55),
+        inset 0 1px 0 rgba(255, 255, 255, 0.11) !important;
+}
+
+/* ---------- 照片摞 ---------- */
+.stack-box.stack-photos > .hv-photo {
+    width: min(360px, 86%) !important;
+    height: auto !important;
+    aspect-ratio: 1 / 1 !important;
+    min-height: 0 !important;
+    max-height: 86% !important;
+    padding: 0 !important;
+    border-radius: 20px !important;
+    overflow: hidden !important;
+    background: var(--glass-card-strong, rgba(255, 253, 248, 0.9)) !important;
+    border: 1px solid var(--glass-line, rgba(255, 255, 255, 0.2)) !important;
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+}
+
+.stack-box.stack-photos > .hv-photo img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    border-radius: 20px !important;
+    display: block;
+    transform: none !important;
+    content-visibility: visible;
+}
+
+/* ---------- 简报摞 ---------- */
+.stack-box.stack-news > .news-item {
+    width: min(500px, 92%) !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: 84% !important;
+    padding: 18px 22px !important;
+    border-radius: 20px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    background: var(--glass-card-strong, rgba(255, 253, 248, 0.92)) !important;
+    border: 1px solid var(--glass-line, rgba(255, 255, 255, 0.2)) !important;
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    overflow: hidden !important;
+}
+
+.stack-box.stack-news > .news-item .news-item-title {
+    font-family: var(--font-hand) !important;
+    font-size: 17px !important;
+    line-height: 1.6 !important;
+    -webkit-line-clamp: 3 !important;
+    line-clamp: 3 !important;
+    color: var(--text, #1a1f2c) !important;
+}
+
+.stack-box.stack-news > .news-item .news-item-cat {
+    font-family: var(--font-hand) !important;
+    font-size: 12px !important;
+    color: var(--accent-strong, var(--accent, #8a6a2a)) !important;
+}
+
+.stack-box.stack-news > .news-item .news-item-meta {
+    font-family: var(--font-hand) !important;
+    font-size: 12px !important;
+    color: var(--text-muted, #7a8090) !important;
+}
+
+/* ---------- 项目摞 ---------- */
+.stack-box.stack-projects > .home-project {
+    width: min(470px, 90%) !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: 84% !important;
+    padding: 18px 22px !important;
+    border-radius: 20px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    background: var(--glass-card-strong, rgba(255, 253, 248, 0.92)) !important;
+    border: 1px solid var(--glass-line, rgba(255, 255, 255, 0.2)) !important;
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    overflow: hidden !important;
+}
+
+.stack-box.stack-projects > .home-project .home-project-name {
+    font-family: var(--font-hand) !important;
+    font-size: 18px !important;
+    color: var(--text, #1a1f2c) !important;
+}
+
+.stack-box.stack-projects > .home-project .home-project-desc {
+    font-family: var(--font-hand) !important;
+    font-size: 14px !important;
+    color: var(--text-muted, #6f7686) !important;
+    -webkit-line-clamp: 2 !important;
+    line-clamp: 2 !important;
+}
+
+/* 深色下卡片更透一点，像设计稿的玻璃 */
+html[data-tone="dark"] .stack-box.stack-news > .news-item,
+html[data-tone="dark"] .stack-box.stack-projects > .home-project {
+    background: rgba(38, 42, 54, 0.78) !important;
+    border-color: rgba(255, 255, 255, 0.13) !important;
+}
+
+html[data-tone="dark"] .stack-box.stack-photos > .hv-photo {
+    background: rgba(38, 42, 54, 0.78) !important;
+    border-color: rgba(255, 255, 255, 0.13) !important;
+}
+
+/* 堆叠不需要滚动提示 */
+.hv-photo-box::after,
+.hv-news-box::after,
+.hv-projects-box::after {
+    content: none !important;
+    display: none !important;
+}
+
+/* 外盒不要挡卡片阴影 */
+.hv-photo-box,
+.hv-news-box,
+.hv-projects-box {
+    overflow: visible !important;
+    padding: 6px !important;
+}
+
+@media (max-width: 900px) {
+    .stack-box.stack-photos > .hv-photo {
+        width: min(300px, 84%) !important;
+    }
+
+    .stack-box.stack-news > .news-item {
+        width: 94% !important;
+        padding: 14px 18px !important;
+    }
+
+    .stack-box.stack-projects > .home-project {
+        width: 92% !important;
+        padding: 14px 18px !important;
+    }
+}
+
+/* ============================================================
+   堆叠：高特异性覆盖（旧规则里 .hv-photo-scroll / .hv-projects 都写了 !important）
+   ============================================================ */
+.hv-photo-box .stack-box.stack-photos,
+.hv-news-box .stack-box.stack-news,
+.hv-projects-box .stack-box.stack-projects,
+.hv-photo-box #hvPhotos,
+.hv-news-box #newsList,
+.hv-projects-box #homeProjectsGrid {
+    display: block !important;
+    position: relative !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+    background: none !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    grid-template-columns: none !important;
+    grid-template-rows: none !important;
+    place-items: initial !important;
+    flex-direction: initial !important;
+    gap: 0 !important;
+    scroll-behavior: auto !important;
+}
+
+/* 所有卡片：绝对定位叠在同一处 */
+.hv-photo-box .stack-box.stack-photos > .hv-photo,
+.hv-news-box .stack-box.stack-news > .news-item,
+.hv-projects-box .stack-box.stack-projects > .home-project,
+.hv-photo-box #hvPhotos > .hv-photo,
+.hv-news-box #newsList > .news-item,
+.hv-projects-box #homeProjectsGrid > .home-project {
+    position: absolute !important;
+    top: 50% !important;
+    left: 50% !important;
+    right: auto !important;
+    bottom: auto !important;
+    inset: auto !important;
+    grid-area: auto !important;
+    flex: 0 0 auto !important;
+    margin: 0 !important;
+    transform-origin: center center;
+    transform:
+        translate(-50%, -50%)
+        rotate(var(--stack-rot, 0deg))
+        translate(var(--stack-x, 0px), var(--stack-y, 0px))
+        scale(var(--stack-s, 1)) !important;
+    opacity: var(--stack-o, 1) !important;
+    z-index: auto;
+    transition:
+        transform 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+        opacity 0.32s ease,
+        box-shadow 0.32s ease !important;
+}
+
+/* 照片卡尺寸 */
+.hv-photo-box .stack-box.stack-photos > .hv-photo,
+.hv-photo-box #hvPhotos > .hv-photo {
+    width: auto !important;
+    height: 80% !important;
+    aspect-ratio: 1 / 1 !important;
+    min-height: 0 !important;
+    min-width: 0 !important;
+    max-width: 92% !important;
+    max-height: none !important;
+    padding: 0 !important;
+    border-radius: 20px !important;
+    overflow: hidden !important;
+    background: var(--glass-card-strong, rgba(255, 253, 248, 0.92)) !important;
+    border: 1px solid var(--glass-line, rgba(255, 255, 255, 0.2)) !important;
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+}
+
+/* 简报卡尺寸 */
+.hv-news-box .stack-box.stack-news > .news-item,
+.hv-news-box #newsList > .news-item {
+    width: min(490px, 90%) !important;
+    height: 84% !important;
+    min-height: 0 !important;
+    max-width: none !important;
+    max-height: none !important;
+    padding: 18px 22px !important;
+    border-radius: 20px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    background: var(--glass-card-strong, rgba(255, 253, 248, 0.94)) !important;
+    border: 1px solid var(--glass-line, rgba(255, 255, 255, 0.2)) !important;
+    overflow: hidden !important;
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+}
+
+/* 项目卡尺寸 */
+.hv-projects-box .stack-box.stack-projects > .home-project,
+.hv-projects-box #homeProjectsGrid > .home-project {
+    width: min(460px, 86%) !important;
+    height: 84% !important;
+    min-height: 0 !important;
+    max-width: none !important;
+    max-height: none !important;
+    padding: 22px 26px !important;
+    border-radius: 20px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    gap: 10px !important;
+    background: var(--glass-card-strong, rgba(255, 253, 248, 0.94)) !important;
+    border: 1px solid var(--glass-line, rgba(255, 255, 255, 0.2)) !important;
+    overflow: hidden !important;
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+}
+
+/* 最上层那张的投影 */
+.hv-photo-box .stack-box > *[style*="--stack-o: 1"],
+.hv-news-box .stack-box > *[style*="--stack-o: 1"],
+.hv-projects-box .stack-box > *[style*="--stack-o: 1"] {
+    box-shadow:
+        0 16px 40px rgba(20, 26, 44, 0.2),
+        0 2px 6px rgba(20, 26, 44, 0.08) !important;
+}
+
+html[data-tone="dark"] .hv-photo-box .stack-box > *[style*="--stack-o: 1"],
+html[data-tone="dark"] .hv-news-box .stack-box > *[style*="--stack-o: 1"],
+html[data-tone="dark"] .hv-projects-box .stack-box > *[style*="--stack-o: 1"] {
+    box-shadow:
+        0 18px 46px rgba(0, 0, 0, 0.6),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+}
+
+/* 深色下的玻璃底 */
+html[data-tone="dark"] .hv-news-box #newsList > .news-item,
+html[data-tone="dark"] .hv-projects-box #homeProjectsGrid > .home-project {
+    background: rgba(38, 42, 54, 0.8) !important;
+    border-color: rgba(255, 255, 255, 0.13) !important;
+}
+
+html[data-tone="dark"] .hv-photo-box #hvPhotos > .hv-photo {
+    background: rgba(38, 42, 54, 0.8) !important;
+    border-color: rgba(255, 255, 255, 0.13) !important;
+}
+
+/* 折角小圆点（照设计稿的 pin），只在最上层显示 */
+.stack-pin {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.24);
+    border: 1px solid rgba(255, 255, 255, 0.34);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    pointer-events: none;
+    z-index: 5;
+}
+
+html[data-tone="dark"] .stack-pin {
+    background: rgba(255, 255, 255, 0.16);
+    border-color: rgba(255, 255, 255, 0.26);
+}
