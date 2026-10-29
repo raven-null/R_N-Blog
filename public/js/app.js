@@ -1677,8 +1677,29 @@ const BlogApp = {
         if (taskForm) taskForm.style.display = 'none';
         if (journalForm) journalForm.style.display = 'none';
         if (label) label.textContent = this.formatDateLabel(this.lifeState.date);
-        // 用 class 触发高度过渡（0fr -> 1fr），下方内容被平滑挤开
+
+        // 宽度对齐日历盒子，不超出它的尺寸
+        this.syncEditorWidth();
         wrap.classList.add('is-open');
+        if (!this._editorResizeBound) {
+            this._editorResizeBound = true;
+            window.addEventListener('resize', () => {
+                // 等一帧再量，避免拿到旧的布局尺寸
+                requestAnimationFrame(() => {
+                    const w = document.getElementById('homeEditorWrap');
+                    if (w && w.classList.contains('is-open')) this.syncEditorWidth();
+                });
+            }, { passive: true });
+        }
+    },
+
+    // 让编写盒子的宽度 = 日历盒子宽度，并与它右对齐
+    syncEditorWidth() {
+        const wrap = document.getElementById('homeEditorWrap');
+        const cal = document.querySelector('.home-cal-box');
+        if (!wrap || !cal) return;
+        const w = cal.getBoundingClientRect().width;
+        if (w > 0) wrap.style.setProperty('--editor-w', Math.round(w) + 'px');
     },
 
     // 点「任务 / 日记」→ 选择层隐藏，换成对应编写表单
