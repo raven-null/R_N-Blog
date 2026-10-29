@@ -5955,7 +5955,7 @@ html.reader-focus .article-content {
     right: 22px;
     bottom: 20px;
     z-index: 70;
-    width: 68px;
+    width: 44px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -5967,13 +5967,13 @@ html.reader-focus .article-content {
 
 .deskpet-body {
     position: relative;
-    width: 68px;
-    height: 74px;
+    width: 44px;
+    height: 44px;
     padding: 0;
     border: 0;
     background: none;
     cursor: grab;
-    filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.3));
+    filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.24));
     animation: dpFloat 4.2s ease-in-out infinite;
 }
 
@@ -6153,12 +6153,12 @@ html.reader-focus .article-content {
     .deskpet {
         right: 10px;
         bottom: 84px;
-        width: 56px;
+        width: 38px;
     }
 
     .deskpet-body {
-        width: 56px;
-        height: 62px;
+        width: 38px;
+        height: 38px;
     }
 
     .deskpet-bubble {
@@ -6883,13 +6883,13 @@ body.canvas-on .reading-progress {
 /* ===== 桌宠底盘（grok 引擎形象坐在浅色圆盘上，任何主题都看得清） ===== */
 .deskpet-plate {
     position: absolute;
-    inset: 3px;
+    inset: 1px;
     border-radius: 50%;
     background: radial-gradient(circle at 50% 28%, #ffffff 0%, #eeeade 62%, #ddd8c8 100%);
     box-shadow:
-        0 12px 28px rgba(8, 12, 30, 0.3),
-        inset 0 -10px 26px rgba(60, 48, 20, 0.07),
-        inset 0 2px 6px rgba(255, 255, 255, 0.9);
+        0 6px 16px rgba(8, 12, 30, 0.26),
+        inset 0 -5px 12px rgba(60, 48, 20, 0.07),
+        inset 0 1px 3px rgba(255, 255, 255, 0.9);
     pointer-events: none;
 }
 
@@ -6903,5 +6903,5 @@ body.canvas-on .reading-progress {
 
 /* 引擎自己会设 --fg（形象色），这里给它一点柔和投影 */
 #grokPet {
-    filter: drop-shadow(0 2px 6px rgba(12, 16, 36, 0.22));
+    filter: drop-shadow(0 1px 3px rgba(12, 16, 36, 0.2));
 }

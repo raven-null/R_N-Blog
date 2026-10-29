@@ -57,3 +57,26 @@ input::placeholder,
 textarea::placeholder {
     color: var(--text-muted);
 }
+
+/* ===== 编辑器页面（白板 / 导图 / 节点图）：画布背景跟随主题 ===== */
+html,
+body {
+    background: var(--bg);
+    color: var(--text);
+}
+
+/* Excalidraw 白板外壳 */
+.excalidraw,
+.excalidraw .App-menu_top,
+.excalidraw .layer-ui__wrapper,
+.excalidraw .App-bottom-bar,
+.excalidraw .App-menu {
+    background: var(--bg);
+}
+
+/* 节点图画布自带的浅灰底 */
+body > canvas,
+#canvas,
+#graph {
+    background: transparent;
+}
