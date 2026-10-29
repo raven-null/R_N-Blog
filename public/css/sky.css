@@ -390,3 +390,48 @@ html[data-tone="dark"] #loginPage {
     background: var(--surface) !important;   /* 深色主题：暗底，不再是一大块浅色 */
     color: var(--text) !important;           /* 配浅字 */
 }
+
+/* ============================================================
+   文章页：目录 / 顶栏 / 正文卡 也纳入暗色覆盖
+   ============================================================ */
+html[data-tone="dark"] .toc-sidebar-inner,
+html[data-tone="dark"] .toc-search,
+html[data-tone="dark"] .toc-search-input,
+html[data-tone="dark"] .sidebar-top-bar,
+html[data-tone="dark"] .sidebar-action-btn,
+html[data-tone="dark"] .mobile-top-bar,
+html[data-tone="dark"] .article-header,
+html[data-tone="dark"] .article-main,
+html[data-tone="dark"] .article-content,
+html[data-tone="dark"] .article-navigation,
+html[data-tone="dark"] .nav-card,
+html[data-tone="dark"] .rp-card,
+html[data-tone="dark"] .rc-card,
+html[data-tone="dark"] .comment-item-main,
+html[data-tone="dark"] .comment-form-main {
+    background: var(--glass-card, rgba(20, 24, 37, 0.72)) !important;
+    border-color: var(--glass-line, rgba(255, 255, 255, 0.12)) !important;
+    color: var(--text) !important;
+}
+
+html[data-tone="dark"] .article-title,
+html[data-tone="dark"] .toc-title,
+html[data-tone="dark"] .toc-parent-title,
+html[data-tone="dark"] .article-meta {
+    color: var(--text) !important;
+}
+
+html[data-tone="dark"] .toc-list a,
+html[data-tone="dark"] .toc-child,
+html[data-tone="dark"] .article-meta a {
+    color: var(--text-secondary) !important;
+}
+
+/* 浅色主题下目录/正文卡保持纸白 */
+html[data-tone="light"] .toc-sidebar-inner,
+html[data-tone="light"] .sidebar-top-bar,
+html[data-tone="light"] .mobile-top-bar,
+html[data-tone="light"] .article-header {
+    background: var(--glass-card, rgba(255, 253, 248, 0.85)) !important;
+    color: var(--text) !important;
+}
