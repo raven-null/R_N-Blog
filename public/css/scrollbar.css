@@ -107,6 +107,18 @@ table::-webkit-scrollbar,
     height: 0 !important;
 }
 
+/* 主页「我的项目」横向列表：靠拖拽/滑动查看，不显示滚动条
+   （这里必须带 !important，否则会被上面的 * 通配规则压掉） */
+.home-projects-grid {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+}
+.home-projects-grid::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+}
+
 /* 窄屏：更窄 */
 @media (max-width: 768px) {
     :root {
