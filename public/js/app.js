@@ -2457,6 +2457,10 @@ const BlogApp = {
             if (!this.canvasOn) return;
             if (e.button !== undefined && e.button !== 0) return;
             if (e.target.closest(SKIP)) return;
+            // 别让浏览器顺手开始「选文字 / 拖图片」，否则拖动时会出现蓝色高亮遮罩
+            if (e.cancelable) e.preventDefault();
+            const sel = window.getSelection && window.getSelection();
+            if (sel && sel.rangeCount) sel.removeAllRanges();
             this.stopCanvasInertia();
             this.canvasUserMoved = true;
             this.canvasDragging = true;
@@ -2635,15 +2639,25 @@ const BlogApp = {
             if (sub) sub.textContent = '';
             return;
         }
+        const esc = (s) => (this.escHtml ? this.escHtml(String(s)) : String(s));
         const list = posts.slice(0, 60).map((post) => {
-            const title = this.escHtml ? this.escHtml(post.title || '无标题') : (post.title || '无标题');
+            const title = esc(post.title || '无标题');
             const date = this.formatDate ? this.formatDate(post.date) : (post.date || '');
-            const tags = (post.tags || []).slice(0, 2).map((t) => `<span class="post-wall-tag">${t}</span>`).join('');
+            const tags = (post.tags || []).slice(0, 2)
+                .map((t) => `<span class="post-wall-tag">${esc(t)}</span>`).join('');
+            const excerpt = post.excerpt ? esc(String(post.excerpt).slice(0, 90)) : '';
+            const cover = post.image
+                ? `<span class="post-wall-cover"><img src="${esc(post.image)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.parentNode.remove()"></span>`
+                : '';
             const href = `article.html?post=${encodeURIComponent(post.filename || '')}`;
-            return `<a class="post-wall-item" href="${href}">`
-                + `<span class="post-wall-date">${date}</span>`
+            return `<a class="post-wall-item${cover ? ' has-cover' : ''}" href="${href}">`
+                + cover
                 + `<span class="post-wall-title">${title}</span>`
+                + (excerpt ? `<span class="post-wall-excerpt">${excerpt}</span>` : '')
+                + `<span class="post-wall-meta">`
+                + `<span class="post-wall-date">${date}</span>`
                 + (tags ? `<span class="post-wall-tags">${tags}</span>` : '')
+                + `</span>`
                 + `</a>`;
         }).join('');
         body.innerHTML = list;

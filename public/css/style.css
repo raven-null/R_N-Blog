@@ -6519,3 +6519,123 @@ body.canvas-on .reading-progress {
         display: none;
     }
 }
+
+/* ===== 画布拖动时不要出现蓝色选择遮罩 ===== */
+.canvas-drag-noselect,
+.canvas-drag-noselect * {
+    user-select: none !important;
+    -webkit-user-select: none !important;
+}
+
+.home-canvas {
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* 主页本体里的文字平时还是可以选的 */
+.home-canvas .canvas-core {
+    user-select: text;
+    -webkit-user-select: text;
+}
+
+.home-canvas.is-dragging,
+.home-canvas.is-dragging * {
+    user-select: none !important;
+    -webkit-user-select: none !important;
+    cursor: grabbing !important;
+}
+
+.home-canvas img,
+.home-canvas .canvas-wall {
+    -webkit-user-drag: none;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+/* ===== 文章墙：瀑布流（多列，卡片高度自然错落） ===== */
+.canvas-wall-posts .canvas-wall-body {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-right: 4px;
+}
+
+.canvas-wall-posts .post-wall-list {
+    display: block;
+    columns: 2;
+    column-gap: 16px;
+    height: auto;
+    min-height: 0;
+}
+
+.canvas-wall-posts .post-wall-item {
+    display: block;
+    break-inside: avoid;
+    -webkit-column-break-inside: avoid;
+    page-break-inside: avoid;
+    margin: 0 0 16px;
+    padding: 14px 15px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.03);
+    text-decoration: none;
+    transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+}
+
+.canvas-wall-posts .post-wall-item:hover {
+    transform: translateY(-2px);
+    border-color: var(--accent, #6c8cff);
+    background: rgba(108, 140, 255, 0.08);
+    box-shadow: 0 12px 26px var(--shadow);
+}
+
+.canvas-wall-posts .post-wall-cover {
+    display: block;
+    aspect-ratio: 16 / 10;
+    overflow: hidden;
+    border-radius: 10px;
+    margin-bottom: 11px;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.canvas-wall-posts .post-wall-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.canvas-wall-posts .post-wall-title {
+    display: block;
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.5;
+    color: var(--text);
+}
+
+.canvas-wall-posts .post-wall-excerpt {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin-top: 7px;
+    font-size: 12.5px;
+    line-height: 1.62;
+    color: var(--text-secondary);
+}
+
+.canvas-wall-posts .post-wall-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+}
+
+/* 三列：墙足够宽时更密 */
+@media (min-width: 1600px) {
+    .canvas-wall-posts .post-wall-list {
+        columns: 3;
+    }
+}
