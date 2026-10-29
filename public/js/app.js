@@ -1487,10 +1487,11 @@ const BlogApp = {
         return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
     },
 
-    // 初始化：没登录就整块隐藏
+    // 初始化：没登录就整块隐藏（日历滚轮切月不受登录限制）
     async initLife() {
         const box = document.getElementById('homeLife');
         if (!box) return;
+        this.bindCalendarWheel();
         if (!this.lifeAdminKey()) {
             box.style.display = 'none';
             return;
@@ -1499,6 +1500,7 @@ const BlogApp = {
         const today = this.formatDateKey(new Date());
         this.lifeState.date = today;
         this.lifeState.month = today.slice(0, 7);
+        this._calViewMonth = this.lifeState.month;
         this.bindLifeEvents();
 
         const ok = await this.loadLifeMonth(this.lifeState.month);
@@ -1507,6 +1509,36 @@ const BlogApp = {
             return;
         }
         box.style.display = '';
+    },
+
+    // 日历滚轮切换月份：登录时连带切换任务/日记归档，未登录只翻日历
+    bindCalendarWheel() {
+        const cal = document.getElementById('homeCalendar');
+        if (!cal || cal.dataset.wheelBound) return;
+        cal.dataset.wheelBound = '1';
+        this._calWheelAt = 0;
+
+        cal.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const now = Date.now();
+            if (now - (this._calWheelAt || 0) < 320) return;
+            this._calWheelAt = now;
+
+            const delta = e.deltaY > 0 ? 1 : -1;
+            const lifeBox = document.getElementById('homeLife');
+            const loggedIn = !!this.lifeAdminKey() && lifeBox && lifeBox.style.display !== 'none';
+
+            if (loggedIn) {
+                this.changeLifeMonth(delta);
+                return;
+            }
+            // 未登录：只翻日历视图
+            const base = this._calViewMonth || this.formatDateKey(new Date()).slice(0, 7);
+            const [y, m] = base.split('-').map(Number);
+            const d = new Date(y, m - 1 + delta, 1);
+            this._calViewMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+            if (typeof window.renderCalendar === 'function') window.renderCalendar(this._calViewMonth);
+        }, { passive: false });
     },
 
     // 统一请求（自动带 X-Admin-Key）
@@ -1615,6 +1647,7 @@ const BlogApp = {
         const month = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
         const today = this.formatDateKey(new Date());
         this.lifeState.date = month === today.slice(0, 7) ? today : `${month}-01`;
+        this._calViewMonth = month;
         await this.loadLifeMonth(month);
     },
 

@@ -4797,3 +4797,88 @@ html.reader-focus .article-content {
         min-height: 140px;
     }
 }
+
+/* ===== 时间移到左侧，日历填满整个盒子 ===== */
+.home-side {
+    display: flex;
+    align-items: stretch;
+    gap: 18px;
+}
+
+.home-side .dash-clock {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+    margin: 0;
+    text-align: left;
+}
+
+.home-calendar {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    margin-top: 0;
+}
+
+.cal-head {
+    flex: 0 0 auto;
+}
+
+/* 日期网格填满剩余高度（行高等分） */
+.cal-grid {
+    flex: 1;
+    grid-auto-rows: 1fr;
+}
+
+.cal-day {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: auto;
+    min-height: 18px;
+    font-size: 11px;
+}
+
+/* 滚轮切换月份时给出提示光标 */
+.home-calendar {
+    cursor: ns-resize;
+}
+
+@media (max-width: 900px) {
+    .home-side {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .home-side .dash-clock {
+        flex-direction: row;
+        align-items: baseline;
+        justify-content: flex-start;
+        gap: 12px;
+    }
+
+    .cal-grid {
+        grid-auto-rows: 24px;
+    }
+}
+
+/* 修正：右侧卡片改为左右排布（覆盖早前的 column 规则） */
+.home-side {
+    flex-direction: row;
+    align-items: stretch;
+    gap: 18px;
+}
+
+.home-calendar {
+    height: 100%;
+}
+
+@media (max-width: 900px) {
+    .home-side {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
