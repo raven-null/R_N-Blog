@@ -4997,3 +4997,49 @@ html.reader-focus .article-content {
         gap: 12px;
     }
 }
+
+/* ===== 欢迎区：个人信息卡做矮，时间与日历两盒做高 ===== */
+.home-hero-row {
+    align-items: start;
+}
+
+.home-hero-row .home-hero {
+    min-height: 0;
+}
+
+/* 右侧整列加高，两个盒子跟着变高（日历日期行也更高） */
+.home-side {
+    height: 340px;
+}
+
+.home-clock-box,
+.home-cal-box {
+    height: 100%;
+}
+
+@media (max-width: 900px) {
+    .home-side {
+        height: auto;
+    }
+
+    .home-clock-box {
+        height: auto;
+    }
+
+    .home-cal-box {
+        height: 280px;
+    }
+}
+
+/* 修正：窄屏下日历盒子不参与 flex 分配，用固定高度 */
+@media (max-width: 900px) {
+    .home-cal-box {
+        flex: none;
+        height: 280px;
+    }
+
+    .home-clock-box {
+        flex: none;
+        height: auto;
+    }
+}
