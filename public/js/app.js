@@ -1665,9 +1665,8 @@ const BlogApp = {
     // 打开编写盒子（第一步：选「任务 / 日记」）
     openEditor() {
         if (!this.lifeAdminKey()) return;
-        const ed = document.getElementById('homeEditor');
-        if (!ed) return;
-        ed.style.display = '';
+        const wrap = document.getElementById('homeEditorWrap');
+        if (!wrap) return;
         const choice = document.getElementById('editorChoice');
         const taskForm = document.getElementById('editorTaskForm');
         const journalForm = document.getElementById('editorJournalForm');
@@ -1676,6 +1675,8 @@ const BlogApp = {
         if (taskForm) taskForm.style.display = 'none';
         if (journalForm) journalForm.style.display = 'none';
         if (label) label.textContent = this.formatDateLabel(this.lifeState.date);
+        // 用 class 触发高度过渡（0fr -> 1fr），下方内容被平滑挤开
+        wrap.classList.add('is-open');
     },
 
     // 点「任务 / 日记」→ 选择层隐藏，换成对应编写表单
@@ -1706,10 +1707,10 @@ const BlogApp = {
         }
     },
 
-    // 关闭编写盒子（提交或 ×）
+    // 关闭编写盒子（提交或 ×）：高度收回，下方内容回弹
     closeEditor() {
-        const ed = document.getElementById('homeEditor');
-        if (ed) ed.style.display = 'none';
+        const wrap = document.getElementById('homeEditorWrap');
+        if (wrap) wrap.classList.remove('is-open');
     },
 
     // 提交任务

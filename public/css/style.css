@@ -5243,3 +5243,54 @@ html.reader-focus .article-content {
 .journal-body p:last-child {
     margin-bottom: 0;
 }
+
+/* ===== 编写盒子：独立卡片，从 0 高度平滑展开（挤压下方内容） ===== */
+.home-editor-wrap {
+    display: grid;
+    grid-template-rows: 0fr;
+    opacity: 0;
+    overflow: hidden;
+    transition: grid-template-rows 0.36s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.28s ease, margin 0.36s cubic-bezier(0.22, 1, 0.36, 1);
+    margin: 0;
+}
+
+.home-editor-wrap.is-open {
+    grid-template-rows: 1fr;
+    opacity: 1;
+    margin: 6px 0 0;
+}
+
+.home-editor-wrap > * {
+    min-height: 0;
+}
+
+.home-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    transform: translateY(-8px) scaleY(0.97);
+    transform-origin: top center;
+    transition: transform 0.36s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.home-editor-wrap.is-open .home-editor {
+    transform: translateY(0) scaleY(1);
+}
+
+/* 任务/日记展示盒子也要有被推动的过渡感 */
+.home-life,
+.home-journal-box {
+    transition: transform 0.36s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.28s ease;
+}
+
+/* 内层裁掉 padding，收起时高度真正归零 */
+.home-editor-inner {
+    min-height: 0;
+    overflow: hidden;
+}
+
+.home-editor-wrap {
+    display: grid;
+    grid-template-rows: 0fr;
+    margin: 0;
+}
