@@ -7839,8 +7839,10 @@ body.view-gallery-active .footer-home {
 /* 无限墙里「就地放大」：格子尺寸不变，用 scale 放大盖住邻居 */
 .gw-tile {
     transform-origin: center;
-    transition: left 0.2s ease, top 0.2s ease, transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
-        box-shadow 0.2s ease;
+    /* 只对位置和缩放做过渡；宽高变化是重排，过渡会把照片拉变形 */
+    transition: left 0.18s ease, top 0.18s ease,
+        transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+        box-shadow 0.2s ease !important;
 }
 
 .gw-tile.is-expanded {
@@ -7854,4 +7856,16 @@ body.view-gallery-active .footer-home {
 /* 无限墙用 will-change 提升合成性能 */
 .gw-tile img {
     content-visibility: auto;
+}
+
+/* 补位块：高度是凑出来的，不能裁照片 —— 完整显示 + 留白底 */
+.gw-tile.is-filler img {
+    object-fit: contain !important;
+    background: var(--surface-3);
+}
+
+/* 放大态也用完整显示，别把照片裁掉 */
+.gw-tile.is-expanded img {
+    object-fit: contain !important;
+    background: var(--surface-3);
 }

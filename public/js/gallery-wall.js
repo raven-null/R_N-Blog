@@ -173,7 +173,7 @@
 
           const w = big ? g.cellW * 2 + GAP : g.cellW;
           const h = big ? g.cellH * 2 + GAP : g.cellH;
-          placeTile(body, key, p, c * g.stepX, r * g.stepY, w, h, big);
+          placeTile(body, key, p, c * g.stepX, r * g.stepY, w, h, big, false);
         }
       }
     } else {
@@ -197,7 +197,7 @@
             if (yAbs > wy1 + pad || yAbs + it.h < wy0 - pad) continue;
             const key = 'm' + hx + '/' + b + '/' + it.id + '/' + Math.round(it.x);
             need.add(key);
-            placeTile(body, key, byId(it.id), xAbs, yAbs, it.w, it.h, it.big);
+            placeTile(body, key, byId(it.id), xAbs, yAbs, it.w, it.h, it.big, it.filler);
           }
         }
       }
@@ -221,7 +221,7 @@
     return S.pool.find((p) => p.id === id) || S.pool[0];
   }
 
-  function placeTile(body, key, photo, x, y, w, h, big) {
+  function placeTile(body, key, photo, x, y, w, h, big, filler) {
     if (!photo) return;
     let el = S.tiles.get(key);
     if (!el) {
@@ -266,7 +266,9 @@
     el.style.top = y + 'px';
     el.style.width = w + 'px';
     el.style.height = h + 'px';
+
     el.classList.toggle('is-big', !!big);
+    el.classList.toggle('is-filler', !!filler);
     el.classList.toggle('is-expanded', S.expandedKey === key);
   }
 
@@ -450,6 +452,41 @@
     }
   }
 
+  // 并发限流地预取图片尺寸，得到真实高宽比（瀑布流靠它决定格子高度）
+  async function preloadRatios(list, limit, concurrency) {
+    const targets = list.filter((p) => !S.ratio.has(p.id)).slice(0, limit);
+    if (!targets.length) return 0;
+
+    let cursor = 0;
+    let done = 0;
+
+    const worker = () => new Promise((resolve) => {
+      const step = () => {
+        if (cursor >= targets.length) { resolve(); return; }
+        const p = targets[cursor++];
+        const img = new Image();
+        img.decoding = 'async';
+        img.referrerPolicy = 'no-referrer';
+        const finish = () => {
+          if (img.naturalWidth > 0 && !S.ratio.has(p.id)) {
+            S.ratio.set(p.id, img.naturalHeight / img.naturalWidth);
+            done++;
+          }
+          step();
+        };
+        img.onload = finish;
+        img.onerror = finish;
+        img.src = p.thumb || p.url;
+      };
+      step();
+    });
+
+    const workers = [];
+    for (let i = 0; i < concurrency; i++) workers.push(worker());
+    await Promise.all(workers);
+    return done;
+  }
+
   // ---------- 数据 ----------
   async function loadPhotos() {
     if (S.pool.length || S.loading) return;
@@ -516,12 +553,24 @@
         setTimeout(() => document.getElementById('gwHint')?.classList.add('gone'), 4500);
       }
 
-      loadPhotos().then(() => {
+      loadPhotos().then(async () => {
         if (!S.pool.length) return;
-        // 每次进入都回到「适应宽度」并重绘
         S.tiles.forEach((el) => el.remove());
         S.tiles.clear();
+
+        // 先测一批真实比例（120 张、6 并发），瀑布流才有正确的格子高度
+        await preloadRatios(S.pool, 120, 6);
+        S.masonryBand = null;
+
         fitWidth();
+
+        // 剩下的在后台慢慢补测，攒一批再重排
+        if (S.pool.length > 120) {
+          preloadRatios(S.pool.slice(120), 400, 4).then(() => {
+            S.needRelayout = true;
+            apply();
+          });
+        }
       });
     },
 
