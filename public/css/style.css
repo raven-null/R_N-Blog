@@ -8820,3 +8820,245 @@ html.glass-ready .stack-box > [data-reveal].in-view {
 .hv-news-box .stack-box > * {
     pointer-events: auto !important;
 }
+
+/* ============================================================
+   两摞卡紧挨着：盒子宽度按内容走，不留大片空白
+   ============================================================ */
+.hv-media-row {
+    display: grid !important;
+    grid-template-columns: auto auto !important;
+    gap: 14px !important;
+    justify-content: center;
+    align-items: start;
+}
+
+.hv-photo-box {
+    width: auto !important;
+    min-width: 0 !important;
+}
+
+.hv-news-box {
+    width: 320px !important;
+}
+
+/* 照片卡铺满自己的盒子，不再居中留白 */
+.hv-photo-box .stack-box {
+    padding: 6px !important;
+}
+
+.hv-photo-box .stack-box > .hv-photo {
+    width: min(430px, 100%) !important;
+}
+
+/* 简报卡也用满宽度 */
+.hv-news-box .stack-box {
+    padding: 6px !important;
+}
+
+.hv-news-box .stack-box > .news-item {
+    width: 100% !important;
+}
+
+@media (max-width: 900px) {
+    .hv-media-row {
+        grid-template-columns: minmax(0, 1fr) !important;
+        justify-content: stretch;
+    }
+
+    .hv-news-box {
+        width: 100% !important;
+    }
+
+    .hv-photo-box .stack-box > .hv-photo {
+        width: min(340px, 100%) !important;
+    }
+}
+
+/* 右侧一列：简报堆叠 + 日历 */
+.hv-right-col {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    width: 320px;
+}
+
+.hv-right-col .hv-news-box {
+    width: 100% !important;
+    height: 330px !important;
+}
+
+.hv-right-col .hv-cal-card {
+    width: 100%;
+    padding: 12px;
+    border-radius: 16px;
+    background: var(--glass-card-strong, rgba(255, 253, 248, 0.9));
+    border: 1px solid var(--glass-line, var(--border));
+    box-shadow: 0 6px 20px rgba(20, 26, 44, 0.1);
+}
+
+@media (max-width: 900px) {
+    .hv-right-col {
+        width: 100%;
+    }
+
+    .hv-right-col .hv-news-box {
+        height: 300px !important;
+    }
+}
+
+/* ============================================================
+   首页瀑布流：所有盒子按列错落排列
+   ------------------------------------------------------------
+   用 CSS 多列实现（无需 JS 算高度）：每个盒子是一个瀑布流项，
+   高度各不相同，于是天然错落。媒体行与右侧列用 display:contents
+   拆开，让照片 / 简报 / 日历各自成为一项。
+   ============================================================ */
+.hv-masonry {
+    columns: 3;
+    column-gap: 16px;
+}
+
+.hv-masonry .hv-media-row,
+.hv-masonry .hv-right-col,
+.hv-masonry .hv-side-row {
+    display: contents !important;
+}
+
+.hv-masonry > *,
+.hv-masonry .hv-media-row > *,
+.hv-masonry .hv-right-col > *,
+.hv-masonry .hv-side-row > * {
+    break-inside: avoid;
+    -webkit-column-break-inside: avoid;
+    page-break-inside: avoid;
+    width: 100% !important;
+    margin: 0 0 16px !important;
+    display: block;
+}
+
+/* 媒体行拆开后，两个盒子的固定宽度不起作用 */
+.hv-masonry .hv-photo-box,
+.hv-masonry .hv-news-box,
+.hv-masonry .hv-right-col,
+.hv-masonry .hv-cal-card {
+    width: 100% !important;
+}
+
+/* ---------- 文章卡：正方形 ---------- */
+.hv-masonry .hv-carousel {
+    border-radius: 20px;
+    overflow: visible;
+}
+
+.hv-masonry .hv-car-track {
+    padding: 0;
+}
+
+.hv-masonry .hv-car-item {
+    aspect-ratio: 1 / 1;
+    border-radius: 20px !important;
+    justify-content: center;
+}
+
+.hv-masonry .hv-car-cover {
+    height: 55% !important;
+    flex: none;
+    border-radius: 20px 20px 0 0;
+}
+
+.hv-masonry .hv-car-body {
+    padding: 14px 16px 16px !important;
+    gap: 4px !important;
+    justify-content: center;
+}
+
+.hv-masonry .hv-car-title {
+    font-size: 17px !important;
+    line-height: 1.4 !important;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+}
+
+.hv-masonry .hv-car-meta {
+    font-size: 12px !important;
+}
+
+/* ---------- 照片盒子：正方形区域 ---------- */
+.hv-masonry .hv-photo-box {
+    height: auto !important;
+    aspect-ratio: 1 / 1;
+}
+
+.hv-masonry .hv-photo-box .stack-box {
+    height: 100% !important;
+    padding: 4px !important;
+}
+
+.hv-masonry .hv-photo-box .stack-box > .hv-photo {
+    width: 100% !important;
+    height: 100% !important;
+    aspect-ratio: auto;
+    padding: 8px;
+}
+
+/* ---------- 简报盒子：正方形区域 ---------- */
+.hv-masonry .hv-news-box {
+    height: auto !important;
+    aspect-ratio: 1 / 1;
+}
+
+.hv-masonry .hv-news-box .stack-box {
+    height: 100% !important;
+    padding: 4px !important;
+}
+
+.hv-masonry .hv-news-box .stack-box > .news-item {
+    min-height: 0;
+    padding: 18px 18px 16px;
+    justify-content: center;
+}
+
+.hv-masonry .hv-news-box .stack-box > .news-item .news-item-title {
+    font-size: 15.5px;
+    line-height: 1.55;
+    -webkit-line-clamp: 4;
+    line-clamp: 4;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* ---------- 日历 / 任务 / 项目 ---------- */
+.hv-masonry .hv-cal-card {
+    padding: 12px;
+    border-radius: 16px;
+    background: var(--glass-card-strong, rgba(255, 253, 248, 0.9));
+    border: 1px solid var(--glass-line, var(--border));
+    box-shadow: 0 6px 20px rgba(20, 26, 44, 0.1);
+}
+
+.hv-masonry .hv-side {
+    display: flex !important;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.hv-masonry .hv-projects-box .hv-projects {
+    grid-auto-flow: row;
+    grid-auto-columns: auto;
+    overflow: visible;
+    gap: 12px;
+}
+
+/* 窄屏：两列 → 一列 */
+@media (max-width: 1100px) {
+    .hv-masonry {
+        columns: 2;
+    }
+}
+
+@media (max-width: 780px) {
+    .hv-masonry {
+        columns: 1;
+    }
+}

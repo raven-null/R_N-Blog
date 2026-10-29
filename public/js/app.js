@@ -4300,14 +4300,6 @@ const BlogApp = {
             el.style.transform = '';
         });
 
-        // 每张卡右上角加序号角标
-        items.forEach((el, i) => {
-            if (el.querySelector('.stack-badge')) return;
-            const badge = document.createElement('span');
-            badge.className = 'stack-badge';
-            badge.textContent = (i + 1) + ' / ' + items.length;
-            el.appendChild(badge);
-        });
 
         // 滚轮切换：卡片和外壳空白处都能滚，滚轮不会带动页面
         const onWheel = (e) => {
