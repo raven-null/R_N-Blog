@@ -1,5 +1,5 @@
 /* 霞鹜文楷（OFL 开源中文手写体，按 unicode-range 分片按需加载；CDN 不可用时自动回退楷体） */
-@import url('https://cdn.jsdelivr.net/npm/lxgw-wenkai-webfont@1.7.0/lxgwwenkai-regular.css');
+/* 远程文楷字体已改为系统楷体，省掉一条 jsdelivr 往返 */
 
 /* ============================================================
    手写体
@@ -17,7 +17,7 @@
 }
 
 :root {
-    --font-hand: 'Virgil', 'LXGW WenKai', 'LXGW WenKai GB', KaiTi, 'Kaiti SC', STKaiti, '楷体',
+    --font-hand: 'Virgil', 'LXGW WenKai GB', KaiTi, 'Kaiti SC', STKaiti, '楷体',
         'Songti SC', 'Hiragino Sans GB', cursive;
 }
 
