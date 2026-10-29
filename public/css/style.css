@@ -6153,3 +6153,30 @@ html.reader-focus .article-content {
         width: 50%;
     }
 }
+
+/* ===== 移除「关于」区域（网格去掉最后一行） ===== */
+.view-home .dashboard {
+    grid-template-areas:
+        "profile clock calendar"
+        "post projects photos"
+        "post theme photos"
+        "news news cat"
+        "life journal cat";
+}
+
+@media (max-width: 900px) {
+    .view-home .dashboard {
+        grid-template-areas:
+            "profile"
+            "clock"
+            "calendar"
+            "post"
+            "photos"
+            "projects"
+            "theme"
+            "news"
+            "cat"
+            "life"
+            "journal";
+    }
+}
