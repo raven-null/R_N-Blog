@@ -7430,3 +7430,32 @@ body.canvas-on .reading-progress {
         grid-auto-columns: 236px;
     }
 }
+
+/* ---------- 身份区右侧：当前时间 ---------- */
+.hv-clock {
+    flex: none;
+    margin-left: auto;
+    text-align: right;
+}
+
+.hv-clock-time {
+    font-size: 28px;
+    font-weight: var(--fw-semibold);
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+}
+
+.hv-clock-date {
+    margin-top: 3px;
+    font-size: var(--fs-xs);
+    color: var(--text-muted);
+    letter-spacing: 0.02em;
+}
+
+@media (max-width: 900px) {
+    .hv-clock-time {
+        font-size: 22px;
+    }
+}

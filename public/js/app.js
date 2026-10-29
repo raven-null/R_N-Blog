@@ -46,6 +46,11 @@ const BlogApp = {
         this.bindBoxPlay();
         // 赛博猫娘对话
         this.initDeskPet();
+
+        // 身份区时钟（每分钟刷新一次显示）
+        this.renderHvClock();
+        clearInterval(this.hvClockTimer);
+        this.hvClockTimer = setInterval(() => this.renderHvClock(), 1000);
         this.initHomeCanvas();
         // 后台退出登录联动：admin_key / gallery_key 被清除时，前台图库 R18 恢复锁定
         window.addEventListener('storage', (e) => {
@@ -1291,6 +1296,29 @@ const BlogApp = {
         }
     },
 
+    // 身份区右侧的实时时钟
+    startHvClock() {
+        this.renderHvClock();
+        if (this.hvClockTimer) clearInterval(this.hvClockTimer);
+        this.hvClockTimer = setInterval(() => this.renderHvClock(), 1000);
+    },
+
+    renderHvClock() {
+        const t = document.getElementById('hvClockTime');
+        if (!t) return;
+        const now = new Date();
+        const hh = String(now.getHours()).padStart(2, '0');
+        const mm = String(now.getMinutes()).padStart(2, '0');
+        const text = hh + ':' + mm;
+        if (t.textContent !== text) {
+            t.textContent = text;
+            const d = document.getElementById('hvClockDate');
+            if (d) {
+                const names = ['日', '一', '二', '三', '四', '五', '六'];
+                d.textContent = (now.getMonth() + 1) + ' 月 ' + now.getDate() + ' 日 · 周' + names[now.getDay()];
+            }
+        }
+    },
     // 主页身份区：头像 / 名字 / 简介跟随博客设置
     renderHomeIdentity() {
         const settings = this.getBlogSettings && this.getBlogSettings();
@@ -1399,6 +1427,7 @@ const BlogApp = {
     async renderHome(force = false) {
         // 仪表盘：身份 / 数字 / 精选文章 / 照片带 / 简报 / 项目
         this.renderHomeIdentity();
+        this.startHvClock();
         setTimeout(function () { BlogApp.renderHomeIdentity(); }, 1200);
         this.renderHomeNews();
         this.renderHvPosts();
