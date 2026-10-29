@@ -142,6 +142,13 @@
     return Number.isFinite(h) ? h : null;
   }
 
+  // 清除旧版时段徽标（防止浏览器缓存里的老 HTML 还带着它）
+  function dropLegacyBadge() {
+    document.querySelectorAll('.sky-badge, #skyBadge').forEach(function (el) {
+      el.parentNode && el.parentNode.removeChild(el);
+    });
+  }
+
   const Daylight = {
     lightingFor,
     periodFor,
@@ -149,6 +156,9 @@
 
     // 开始按真实时间刷新
     start(intervalMs = 30000) {
+      dropLegacyBadge();
+      setTimeout(dropLegacyBadge, 400);
+      setTimeout(dropLegacyBadge, 1500);
       const forced = previewHour();
       const tick = () => {
         publish(forced === null ? clockMinutes(new Date()) : forced * 60);
