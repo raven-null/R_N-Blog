@@ -8756,3 +8756,67 @@ html.glass-ready .stack-box > [data-reveal].in-view {
         font-size: 19px !important;
     }
 }
+
+/* ============================================================
+   照片 / 简报：外壳不要背景，只留两摞堆叠卡片
+   ============================================================ */
+.hv-photo-box,
+.hv-news-box {
+    background: none !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+/* 里面也别再有底色 */
+.hv-photo-box .stack-box,
+.hv-news-box .stack-box,
+.hv-photo-scroll,
+.hv-news-box .home-news-list {
+    background: none !important;
+    border: 0 !important;
+    box-shadow: none !important;
+}
+
+/* ============================================================
+   不要显示滚动进度：所有相关容器彻底隐藏滚动条
+   ============================================================ */
+.hv-photo-box,
+.hv-news-box,
+.hv-photo-box *,
+.hv-news-box *,
+.stack-box,
+.stack-box *,
+.home-news-list,
+.hv-photo-scroll {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+}
+
+.hv-photo-box ::-webkit-scrollbar,
+.hv-news-box ::-webkit-scrollbar,
+.hv-photo-box::-webkit-scrollbar,
+.hv-news-box::-webkit-scrollbar,
+.stack-box::-webkit-scrollbar,
+.stack-box ::-webkit-scrollbar,
+.home-news-list::-webkit-scrollbar,
+.hv-photo-scroll::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+}
+
+/* 外壳要接住滚轮事件 */
+.hv-photo-box,
+.hv-news-box {
+    pointer-events: auto;
+    touch-action: pan-y;
+}
+
+/* 堆叠卡：被压住的也要能接滚轮（只是不响应点击） */
+.hv-photo-box .stack-box > *,
+.hv-news-box .stack-box > * {
+    pointer-events: auto !important;
+}

@@ -4309,28 +4309,41 @@ const BlogApp = {
             el.appendChild(badge);
         });
 
-        // 滚轮切换（只接管滚轮，不拦页面滚动到不了的地方）
-        box.addEventListener('wheel', (e) => {
+        // 滚轮切换：卡片和外壳空白处都能滚，滚轮不会带动页面
+        const onWheel = (e) => {
             e.preventDefault();
+            e.stopPropagation();
             const now = Date.now();
-            if (now - state.wheelAt < 260) return;
+            if (now - state.wheelAt < 240) return;
             state.wheelAt = now;
+            const live = [...box.children].filter((el) => el.classList.contains('news-item') || el.classList.contains('hv-photo'));
+            if (!live.length) return;
             const dir = Math.sign(e.deltaY) || 1;
-            state.active = (state.active + dir + items.length) % items.length;
+            state.active = (state.active + dir + live.length) % live.length;
             this.paintStack(box);
-        }, { passive: false });
+            startAuto();
+        };
+        box.addEventListener('wheel', onWheel, { passive: false });
+        box.addEventListener('mousewheel', onWheel, { passive: false });
+        const outer = box.closest('.hv-photo-box, .hv-news-box');
+        if (outer) {
+            outer.addEventListener('wheel', onWheel, { passive: false });
+            outer.addEventListener('mousewheel', onWheel, { passive: false });
+        }
 
-        // 悬停时自动轮换
+        // 自动轮换：默认就在走（不用悬停），滚轮操作后重新计时
         const startAuto = () => {
             clearInterval(state.hoverTimer);
             state.hoverTimer = setInterval(() => {
-                state.active = (state.active + 1) % items.length;
+                if (document.hidden) return;
+                const live = [...box.children].filter((el) => el.classList.contains('news-item') || el.classList.contains('hv-photo'));
+                if (!live.length) return;
+                state.active = (state.active + 1) % live.length;
                 this.paintStack(box);
             }, opts.autoMs || 3600);
         };
         const stopAuto = () => clearInterval(state.hoverTimer);
-        box.addEventListener('mouseenter', startAuto);
-        box.addEventListener('mouseleave', stopAuto);
+        startAuto();
         box.addEventListener('pointerdown', stopAuto);
         box.addEventListener('pointerup', startAuto);
 
