@@ -13,7 +13,7 @@
     <script src="/js/site-icon.js?v=1.0.0" defer></script>
 
     <!-- Styles -->
-    <link rel="stylesheet" href="css/style.css?v=3.46.0">
+    <link rel="stylesheet" href="css/style.css?v=3.47.0">
     <link rel="stylesheet" href="css/glass.css?v=1.0.14">
     <link rel="stylesheet" href="css/wheel.css?v=1.0.0">
 
@@ -187,26 +187,31 @@
                             </div>
                         </div>
 
-                        <!-- 时间 + 日历 -->
-                        <div class="dash-panel home-side">
-                            <div class="dash-clock" id="dashClock">
-                                <div class="dash-clock-date" id="dashClockDate"></div>
-                                <div class="dash-clock-time" id="dashClockTime"></div>
-                            </div>
-                            <div class="home-calendar" id="homeCalendar"></div>
-
-                            <!-- 点日期后切换到的「当天任务」盒子 -->
-                            <div class="home-day-panel" id="homeDayPanel" style="display:none;">
-                                <div class="day-panel-head">
-                                    <button class="day-back-btn" id="dayBackBtn" type="button" title="返回日历">‹ 日历</button>
-                                    <span class="day-label" id="dayPanelLabel"></span>
+                        <!-- 时间 + 日历：两个独立盒子 -->
+                        <div class="home-side">
+                            <div class="dash-panel home-clock-box">
+                                <div class="dash-clock" id="dashClock">
+                                    <div class="dash-clock-date" id="dashClockDate"></div>
+                                    <div class="dash-clock-time" id="dashClockTime"></div>
                                 </div>
-                                <form class="life-task-form" id="dayTaskForm">
-                                    <input type="text" id="dayTaskInput" placeholder="添加任务，回车保存" maxlength="120" autocomplete="off">
-                                    <button type="submit" title="添加">+</button>
-                                </form>
-                                <div class="life-task-list" id="dayTaskList">
-                                    <div class="home-empty">这一天还没有任务</div>
+                            </div>
+
+                            <div class="dash-panel home-cal-box">
+                                <div class="home-calendar" id="homeCalendar"></div>
+
+                                <!-- 点日期后切换到的「当天任务」盒子 -->
+                                <div class="home-day-panel" id="homeDayPanel" style="display:none;">
+                                    <div class="day-panel-head">
+                                        <button class="day-back-btn" id="dayBackBtn" type="button" title="返回日历">‹ 日历</button>
+                                        <span class="day-label" id="dayPanelLabel"></span>
+                                    </div>
+                                    <form class="life-task-form" id="dayTaskForm">
+                                        <input type="text" id="dayTaskInput" placeholder="添加任务，回车保存" maxlength="120" autocomplete="off">
+                                        <button type="submit" title="添加">+</button>
+                                    </form>
+                                    <div class="life-task-list" id="dayTaskList">
+                                        <div class="home-empty">这一天还没有任务</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>

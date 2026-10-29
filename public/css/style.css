@@ -4933,3 +4933,67 @@ html.reader-focus .article-content {
         max-height: 150px;
     }
 }
+
+/* ===== 时间与日历拆成两个独立盒子 ===== */
+.home-side {
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    gap: 20px;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+}
+
+.home-clock-box {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 6px;
+    min-width: 136px;
+    padding: 16px 18px;
+}
+
+.home-clock-box .dash-clock {
+    margin: 0;
+    text-align: left;
+}
+
+.home-cal-box {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 16px 18px;
+}
+
+.home-cal-box .home-calendar {
+    flex: 1;
+    height: auto;
+    display: flex;
+    flex-direction: column;
+    margin-top: 0;
+}
+
+@media (max-width: 900px) {
+    .home-side {
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .home-clock-box {
+        flex-direction: row;
+        align-items: baseline;
+        gap: 12px;
+        min-width: 0;
+    }
+
+    .home-clock-box .dash-clock {
+        display: flex;
+        align-items: baseline;
+        gap: 12px;
+    }
+}
