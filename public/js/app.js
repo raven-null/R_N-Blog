@@ -2328,6 +2328,8 @@ const BlogApp = {
             if (!this.canvasOn) return;
             this.layoutCanvasNodes();
             this.applyCanvas();
+            this.wallComputeLayout();
+            this.wallRender();
         });
 
         document.getElementById('canvasHud')?.addEventListener('click', (e) => {
@@ -2341,15 +2343,16 @@ const BlogApp = {
 
         document.getElementById('photoWallShuffle')?.addEventListener('click', (e) => {
             e.stopPropagation();
-            const list = this.photoWallPhotos.slice();
-            if (!list.length) return;
-            for (let i = list.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [list[i], list[j]] = [list[j], list[i]];
-            }
-            this.renderPhotoWall(list);
+            this.wallShuffle();
         });
 
+        document.getElementById('photoWallView')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.wallSetView(this.photoWallView === 'grid' ? 'masonry' : 'grid');
+        });
+
+        this.bindPhotoWall();
+        this.syncWallViewBtn();
         this.renderPostWall();
         this.loadPhotoWall();
         // 卡片、新闻渲染完主页会变高，等数据落地后再对一次焦（用户没动过才动）
@@ -2574,12 +2577,30 @@ const BlogApp = {
         canvas.addEventListener('touchcancel', () => { pinch = null; });
     },
 
-    // ---------- 左：图片墙 ----------
+    // ---------- 左：图片墙（方格 / 瀑布流，规矩对齐 private-gallery） ----------
+
+    WALL_CELL: 200,
+    WALL_GAP: 12,
+
+    photoWallPool: [],
+    photoWallLayout: null,
+    photoWallTiles: new Map(),
+    photoWallById: new Map(),
+    photoWallRatio: new Map(),      // id → 真实高宽比（图片加载后测得）
+    photoWallView: 'grid',          // grid | masonry
+    photoWallSeed: 1,
+    photoWallExpandedId: null,
+    photoWallShrunk: new Set(),
+    photoWallLoading: false,
+    photoWallClickTimer: null,
+    photoWallRelayoutTimer: null,
+    photoWallBatch: 0,
 
     async loadPhotoWall() {
         if (this.photoWallLoading) return;
-        if (this.photoWallPhotos.length) {
-            this.renderPhotoWall(this.photoWallPhotos);
+        if (this.photoWallPool.length) {
+            this.wallComputeLayout();
+            this.wallRender();
             return;
         }
         this.photoWallLoading = true;
@@ -2590,8 +2611,9 @@ const BlogApp = {
                 this.loadGalleryImages(),
                 new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 15000)),
             ]);
-            this.photoWallPhotos = (list || []).filter((p) => p && (p.thumb || p.url) && !this.isR18Image(p));
-            this.renderPhotoWall(this.photoWallPhotos);
+            this.photoWallPool = (list || []).filter((p) => p && (p.thumb || p.url) && !this.isR18Image(p));
+            this.wallShuffle(false);
+            this.wallRender();
         } catch (e) {
             if (sub) sub.textContent = '图片没加载出来';
         } finally {
@@ -2599,32 +2621,443 @@ const BlogApp = {
         }
     },
 
-    renderPhotoWall(photos) {
-        const body = document.getElementById('photoWallBody');
+    // 换一批：错开起点 + 换随机种子（决定哪几张被随机放大）
+    wallShuffle(render = true) {
+        const pool = this.photoWallPool;
+        if (!pool.length) return;
+        this.photoWallBatch++;
+        const start = (this.photoWallBatch * 37) % pool.length;
+        this.photoWallPool = pool.slice(start).concat(pool.slice(0, start));
+        this.photoWallSeed = (Math.random() * 1e9) | 0;
+        this.photoWallExpandedId = null;
+        this.photoWallShrunk.clear();
+        this.wallComputeLayout();
+        if (render) this.wallRender();
         const sub = document.getElementById('photoWallSub');
-        if (!body) return;
-        const COLS = 11;
-        const ROWS = 8;
-        const cells = COLS * ROWS;
-        const pool = photos || [];
-        if (!pool.length) {
-            body.innerHTML = '<div class="canvas-wall-empty">暂时没有照片</div>';
-            if (sub) sub.textContent = '';
+        if (sub) sub.textContent = `${this.photoWallPool.length} 张`;
+    },
+
+    wallSetView(view) {
+        const next = view === 'masonry' ? 'masonry' : 'grid';
+        if (next === this.photoWallView) return;
+        this.photoWallView = next;
+        this.photoWallExpandedId = null;
+        this.photoWallShrunk.clear();
+        this.wallComputeLayout();
+        this.wallRender();
+        this.syncWallViewBtn();
+    },
+
+    syncWallViewBtn() {
+        const btn = document.getElementById('photoWallView');
+        if (!btn) return;
+        btn.textContent = this.photoWallView === 'grid' ? '瀑布流' : '方格';
+        btn.title = this.photoWallView === 'grid' ? '切换成瀑布流' : '切换成方格';
+    },
+
+    // 确定性小随机（mulberry32）：重排时其它随机放大不会乱跳
+    wallRnd() {
+        let seed = this.photoWallSeed | 0;
+        return () => {
+            seed = (seed + 0x6D2B79F5) | 0;
+            let t = seed;
+            t = Math.imul(t ^ (t >>> 15), 1 | t);
+            t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+            return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        };
+    },
+
+    // 高宽比：优先用图片加载后测到的真实比例；还没有就按 id 稳定地编一个
+    wallPhotoRatio(p) {
+        const known = this.photoWallRatio.get(p.id);
+        if (known) return Math.min(2.6, Math.max(0.42, known));
+        const s = String(p.id || '');
+        let h = 0;
+        for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 1000;
+        return 0.62 + (h % 100) / 100 * 0.85;   // 0.62 ~ 1.47
+    },
+
+    wallComputeLayout() {
+        const body = document.getElementById('photoWallBody');
+        const pool = this.photoWallPool;
+        if (!body || !pool.length) {
+            this.photoWallLayout = null;
             return;
         }
-        // 以「批次偏移」取一圈连续照片，保证每次换一批都是不一样的一段
-        const offset = this.photoWallBatch++ * cells;
-        let html = '';
-        for (let i = 0; i < cells; i++) {
-            const p = pool[(offset + i) % pool.length];
-            const src = p.thumb || p.url;
-            const safeSrc = String(src).replace(/"/g, '&quot;');
-            html += `<button type="button" class="photo-wall-item" title="看图库">`
-                + `<img src="${safeSrc}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.style.visibility='hidden'">`
-                + `</button>`;
+        const W = body.clientWidth || 2320;
+        const H = body.clientHeight || 1600;
+        if (this.photoWallView === 'masonry') this.wallComputeMasonry(W, H);
+        else this.wallComputeGrid(W, H);
+    },
+
+    /* 方格：先把「放大位置」定下来（被点开的那张 + 每 8 格随机一张），
+       再按行优先把剩下的格子全部填满 —— 整块区域不留空洞。 */
+    wallComputeGrid(W, H) {
+        const GAP = this.WALL_GAP;
+        const cols = Math.max(3, Math.round((W + GAP) / (this.WALL_CELL + GAP)));
+        const rows = Math.max(2, Math.round((H + GAP) / (this.WALL_CELL + GAP)));
+        const cellW = (W - (cols - 1) * GAP) / cols;
+        const cellH = (H - (rows - 1) * GAP) / rows;
+        const pool = this.photoWallPool;
+        const rnd = this.wallRnd();
+
+        const cellKey = (r, c) => r + ',' + c;
+        const occupied = new Set();
+        const bigCells = [];
+        const canBig = (r, c) => c + 1 < cols && r + 1 < rows
+            && !occupied.has(cellKey(r, c)) && !occupied.has(cellKey(r, c + 1))
+            && !occupied.has(cellKey(r + 1, c)) && !occupied.has(cellKey(r + 1, c + 1));
+        const markBig = (r, c) => {
+            bigCells.push({ r, c });
+            occupied.add(cellKey(r, c));
+            occupied.add(cellKey(r, c + 1));
+            occupied.add(cellKey(r + 1, c));
+            occupied.add(cellKey(r + 1, c + 1));
+        };
+
+        // ① 放大位置：被点开的那张优先占最近的可放大位置，其余按种子随机挑
+        const wantBig = Math.max(1, Math.round((cols * rows) / 8));
+        const candidates = [];
+        for (let r = 0; r < rows - 1; r++) {
+            for (let c = 0; c < cols - 1; c++) candidates.push({ r, c });
         }
-        body.innerHTML = html;
-        if (sub) sub.textContent = `${pool.length} 张`;
+        for (let i = candidates.length - 1; i > 0; i--) {
+            const j = Math.floor(rnd() * (i + 1));
+            const tmp = candidates[i];
+            candidates[i] = candidates[j];
+            candidates[j] = tmp;
+        }
+        for (const cand of candidates) {
+            if (bigCells.length >= wantBig) break;
+            if (canBig(cand.r, cand.c)) markBig(cand.r, cand.c);
+        }
+
+        // ② 先把要放大的照片挑出来（不重复），再按行优先填格子
+        const used = new Set();
+        let pcur = 0;
+        const takeFresh = () => {
+            for (let t = 0; t < pool.length; t++) {
+                const p = pool[(pcur + t) % pool.length];
+                if (!used.has(p.id)) {
+                    pcur = (pcur + t + 1) % pool.length;
+                    used.add(p.id);
+                    return p;
+                }
+            }
+            const p = pool[pcur++ % pool.length];
+            used.add(p.id);
+            return p;
+        };
+
+        const bigPhotos = [];
+        if (this.photoWallExpandedId) {
+            const p = pool.find((x) => x.id === this.photoWallExpandedId);
+            if (p && !this.photoWallShrunk.has(p.id)) {
+                used.add(p.id);
+                bigPhotos.push(p);
+            }
+        }
+        while (bigPhotos.length < bigCells.length) bigPhotos.push(takeFresh());
+
+        const items = [];
+        this.photoWallById.clear();
+        const bigAt = new Map();
+        bigCells.forEach((b, i) => {
+            const p = bigPhotos[i];
+            if (p) bigAt.set(cellKey(b.r, b.c), p);
+        });
+
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                const bigPhoto = bigAt.get(cellKey(r, c));
+                if (bigPhoto) {
+                    items.push({
+                        id: bigPhoto.id, key: bigPhoto.id,
+                        x: c * (cellW + GAP), y: r * (cellH + GAP),
+                        w: cellW * 2 + GAP, h: cellH * 2 + GAP,
+                        big: true, expanded: bigPhoto.id === this.photoWallExpandedId,
+                    });
+                    this.photoWallById.set(bigPhoto.id, bigPhoto);
+                    continue;
+                }
+                if (occupied.has(cellKey(r, c))) continue;   // 被大图盖住的格子
+                const p = takeFresh();
+                items.push({
+                    id: p.id, key: p.id,
+                    x: c * (cellW + GAP), y: r * (cellH + GAP),
+                    w: cellW, h: cellH,
+                    big: false, expanded: false,
+                });
+                this.photoWallById.set(p.id, p);
+            }
+        }
+
+        this.photoWallLayout = { items, cols, cellW, cellH, blockW: W, blockH: H };
+    },
+
+    // 瀑布流：按高宽比塞进最短的列，排满整块高度后把各列尾巴补齐（底部齐平）
+    wallComputeMasonry(W, H) {
+        const GAP = this.WALL_GAP;
+        const cols = Math.max(3, Math.round((W + GAP) / (this.WALL_CELL + GAP)));
+        const cellW = (W - (cols - 1) * GAP) / cols;
+        const step = cellW + GAP;
+        const pool = this.photoWallPool;
+        if (!pool.length) {
+            this.photoWallLayout = null;
+            return;
+        }
+
+        const colH = new Array(cols).fill(0);
+        const items = [];
+        const gaps = [];
+        const used = new Set();
+        this.photoWallById.clear();
+
+        const shortest = () => {
+            let c = 0;
+            for (let i = 1; i < cols; i++) if (colH[i] < colH[c]) c = i;
+            return c;
+        };
+
+        let pi = 0;
+        const takeFresh = () => {
+            for (let t = 0; t < pool.length; t++) {
+                const p = pool[(pi + t) % pool.length];
+                if (!used.has(p.id)) {
+                    pi = (pi + t + 1) % pool.length;
+                    used.add(p.id);
+                    return p;
+                }
+            }
+            const p = pool[pi++ % pool.length];
+            used.add(p.id);
+            return p;
+        };
+
+        // 先给被点开的那张（要大的）留位置
+        let expandedPhoto = null;
+        if (this.photoWallExpandedId) {
+            const p = pool.find((x) => x.id === this.photoWallExpandedId);
+            if (p && !this.photoWallShrunk.has(p.id)) {
+                expandedPhoto = p;
+                used.add(p.id);
+            }
+        }
+
+        const maxItems = pool.length * 3;
+        let placedBig = 0;
+        for (let i = 0; i < maxItems; i++) {
+            if (Math.min.apply(null, colH) >= H) break;
+            const isFirst = i === 0 && expandedPhoto;
+            const p = isFirst ? expandedPhoto : takeFresh();
+            const ratio = this.wallPhotoRatio(p);
+            // 每 8 张随机挑一张占两列；被点开的那张一定是大的
+            const randBig = (i % 8 === 0) && cols >= 2 && !this.photoWallShrunk.has(p.id);
+            const wantBig = cols >= 2 && (isFirst || randBig);
+
+            if (wantBig) {
+                const c = shortest();
+                const left = c + 1 < cols ? c : c - 1;
+                const spanW = cellW * 2 + GAP;
+                const h = Math.round(spanW * ratio);
+                const y = Math.max(colH[left], colH[left + 1]);
+                // 两列高度差出来的空档交给后面的照片补
+                const shortCol = colH[left] < colH[left + 1] ? left : left + 1;
+                const gapH = Math.abs(colH[left] - colH[left + 1]) - GAP;
+                if (gapH > 24) gaps.push({ col: shortCol, y: Math.min(colH[left], colH[left + 1]), h: gapH });
+                items.push({
+                    id: p.id, key: p.id, x: left * step, y, w: spanW, h,
+                    big: true, expanded: isFirst,
+                });
+                this.photoWallById.set(p.id, p);
+                colH[left] = y + h + GAP;
+                colH[left + 1] = y + h + GAP;
+                placedBig++;
+                continue;
+            }
+
+            const h = Math.round(cellW * ratio);
+            let filledGap = false;
+            for (const g of gaps) {
+                if (h + GAP <= g.h) {
+                    items.push({ id: p.id, key: p.id, x: g.col * step, y: g.y, w: cellW, h, big: false });
+                    this.photoWallById.set(p.id, p);
+                    g.y += h + GAP;
+                    g.h -= h + GAP;
+                    filledGap = true;
+                    break;
+                }
+            }
+            if (filledGap) continue;
+
+            const c = shortest();
+            items.push({ id: p.id, key: p.id, x: c * step, y: colH[c], w: cellW, h, big: false });
+            this.photoWallById.set(p.id, p);
+            colH[c] += h + GAP;
+        }
+
+        // 收尾：每列差的那截用「正好高度」的补位块补齐，块底齐平、不留空洞
+        let fillerN = 0;
+        for (let c = 0; c < cols; c++) {
+            const remain = H - colH[c];
+            if (remain <= 14) continue;
+            const p = takeFresh();
+            this.photoWallById.set(p.id, p);
+            items.push({
+                id: p.id, key: `filler-${fillerN++}-${p.id}`,
+                x: c * step, y: colH[c], w: cellW, h: remain - GAP,
+                big: false, filler: true,
+            });
+            colH[c] = H;
+        }
+
+        this.photoWallLayout = { items, cols, cellW, blockW: W, blockH: H };
+    },
+
+    wallRender() {
+        const body = document.getElementById('photoWallBody');
+        const layout = this.photoWallLayout;
+        if (!body || !layout) return;
+        body.classList.toggle('is-masonry', this.photoWallView === 'masonry');
+
+        const alive = new Set();
+        for (const it of layout.items) {
+            alive.add(it.key);
+            let el = this.photoWallTiles.get(it.key);
+            if (!el) {
+                el = document.createElement('button');
+                el.type = 'button';
+                el.className = 'photo-wall-tile';
+                el.dataset.key = it.key;
+                el.dataset.id = it.id;
+                const img = document.createElement('img');
+                img.loading = 'lazy';
+                img.decoding = 'async';
+                img.referrerPolicy = 'no-referrer';
+                img.alt = '';
+                img.addEventListener('error', () => { img.style.visibility = 'hidden'; });
+                img.addEventListener('load', () => this.wallNoteRatio(it.id, img));
+                el.appendChild(img);
+                body.appendChild(el);
+                this.photoWallTiles.set(it.key, el);
+            }
+            const p = this.photoWallById.get(it.id);
+            const img = el.firstElementChild;
+            const src = p ? (p.thumb || p.url) : '';
+            if (src && img.getAttribute('src') !== src) img.src = src;
+            el.style.left = it.x + 'px';
+            el.style.top = it.y + 'px';
+            el.style.width = it.w + 'px';
+            el.style.height = it.h + 'px';
+            el.classList.toggle('is-big', !!it.big);
+            el.classList.toggle('is-expanded', !!it.expanded);
+        }
+        this.photoWallTiles.forEach((el, key) => {
+            if (alive.has(key)) return;
+            el.remove();
+            this.photoWallTiles.delete(key);
+        });
+        const sub = document.getElementById('photoWallSub');
+        if (sub) sub.textContent = `${this.photoWallPool.length} 张`;
+    },
+
+    // 记下真实高宽比；瀑布流下攒够一批就重排一次，让错落更接近真实形状
+    wallNoteRatio(id, img) {
+        if (!id || !img.naturalWidth) return;
+        const ratio = img.naturalHeight / img.naturalWidth;
+        const prev = this.photoWallRatio.get(id);
+        if (prev && Math.abs(prev - ratio) < 0.02) return;
+        this.photoWallRatio.set(id, ratio);
+        if (this.photoWallView !== 'masonry') return;
+        clearTimeout(this.photoWallRelayoutTimer);
+        this.photoWallRelayoutTimer = setTimeout(() => {
+            if (this.photoWallView !== 'masonry' || !this.canvasOn) return;
+            this.wallComputeLayout();
+            this.wallRender();
+        }, 700);
+    },
+
+    bindPhotoWall() {
+        const body = document.getElementById('photoWallBody');
+        if (!body || body.dataset.bound) return;
+        body.dataset.bound = '1';
+
+        // 单击：就地放大 / 收回（等 260ms 确认不是双击）
+        body.addEventListener('click', (e) => {
+            const tile = e.target.closest('.photo-wall-tile');
+            if (!tile) return;
+            if (this.canvasMoved > 6) return;      // 刚拖过画布，不算点击
+            const id = tile.dataset.id;
+            clearTimeout(this.photoWallClickTimer);
+            this.photoWallClickTimer = setTimeout(() => this.wallToggleBig(id), 260);
+        });
+
+        // 双击：进灯箱
+        body.addEventListener('dblclick', (e) => {
+            const tile = e.target.closest('.photo-wall-tile');
+            if (!tile) return;
+            clearTimeout(this.photoWallClickTimer);
+            this.wallOpenLightbox(tile.dataset.id);
+        });
+    },
+
+    // 点开某张：它占 2×2，周围整片让开；再点收回（并记住它别再随机放大）
+    wallToggleBig(id) {
+        const layout = this.photoWallLayout;
+        if (!layout) return;
+        const item = layout.items.find((it) => it.id === id && !it.filler);
+        if (!item) return;
+        if (this.photoWallExpandedId === id || item.expanded) {
+            this.photoWallExpandedId = null;
+            this.photoWallShrunk.add(id);
+        } else {
+            this.photoWallExpandedId = id;
+            this.photoWallShrunk.delete(id);
+        }
+        this.wallComputeLayout();
+        this.wallRender();
+        if (this.photoWallExpandedId) {
+            const tile = this.photoWallTiles.get(id);
+            if (tile) this.wallKeepInView(tile);
+        }
+    },
+
+    // 让某个格子留在视野里（画布坐标换算）
+    wallKeepInView(tile) {
+        const canvas = document.getElementById('homeCanvas');
+        const wall = document.getElementById('canvasPhotoWall');
+        if (!canvas || !wall) return;
+        const cr = canvas.getBoundingClientRect();
+        const wr = wall.getBoundingClientRect();
+        const s = this.canvasS;
+        const tileLeft = wr.left + parseFloat(tile.style.left || '0') * s;
+        const tileTop = wr.top + parseFloat(tile.style.top || '0') * s;
+        const tileW = parseFloat(tile.style.width || '0') * s;
+        const tileH = parseFloat(tile.style.height || '0') * s;
+        const pad = 60;
+        let dx = 0;
+        let dy = 0;
+        if (tileLeft < cr.left + pad) dx = cr.left + pad - tileLeft;
+        else if (tileLeft + tileW > cr.right - pad) dx = cr.right - pad - (tileLeft + tileW);
+        if (tileTop < cr.top + pad) dy = cr.top + pad - tileTop;
+        else if (tileTop + tileH > cr.bottom - pad) dy = cr.bottom - pad - (tileTop + tileH);
+        if (!dx && !dy) return;
+        this.canvasX += dx;
+        this.canvasY += dy;
+        this.applyCanvas();
+    },
+
+    // 双击进灯箱：用图片墙这批照片当导航序列
+    wallOpenLightbox(id) {
+        const pool = this.photoWallPool;
+        const idx = pool.findIndex((p) => p.id === id);
+        const target = idx >= 0 ? idx : 0;
+        const photo = pool[target];
+        if (!photo) return;
+        window.__galleryImages = pool;
+        if (typeof window.openGalleryLightbox === 'function') {
+            window.openGalleryLightbox(photo.url || photo.thumb, target);
+        }
     },
 
     // ---------- 右：文章墙 ----------

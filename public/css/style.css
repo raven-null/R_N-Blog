@@ -6639,3 +6639,105 @@ body.canvas-on .reading-progress {
         columns: 3;
     }
 }
+
+/* ===== 图片墙：绝对定位平铺（方格 / 瀑布流，规矩对齐 private-gallery） ===== */
+.canvas-wall-actions {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.canvas-wall-actions .canvas-wall-btn {
+    margin-left: 0;
+}
+
+.canvas-wall-photos .canvas-wall-body {
+    position: relative;
+    overflow: hidden;
+    display: block;
+}
+
+/* 旧版是 11×8 的 CSS grid，现在改绝对定位，顺手把残留的 grid 规则压掉 */
+.photo-wall-inner {
+    display: block;
+}
+
+.photo-wall-tile {
+    position: absolute;
+    padding: 0;
+    border: 0;
+    border-radius: 10px;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.04);
+    cursor: pointer;
+    transition:
+        left 0.34s cubic-bezier(0.22, 0.61, 0.36, 1),
+        top 0.34s cubic-bezier(0.22, 0.61, 0.36, 1),
+        width 0.34s cubic-bezier(0.22, 0.61, 0.36, 1),
+        height 0.34s cubic-bezier(0.22, 0.61, 0.36, 1),
+        box-shadow 0.22s ease;
+    will-change: left, top, width, height;
+}
+
+.photo-wall-tile img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    pointer-events: none;
+}
+
+.photo-wall-tile:hover {
+    z-index: 5;
+    box-shadow: 0 12px 30px var(--shadow);
+}
+
+/* 被点开放大的那张：亮一圈描边 */
+.photo-wall-tile.is-expanded {
+    z-index: 4;
+    outline: 2px solid var(--accent, #6c8cff);
+    outline-offset: -2px;
+    box-shadow: 0 16px 40px var(--shadow);
+}
+
+.photo-wall-tile.is-big:not(.is-expanded) {
+    z-index: 2;
+}
+
+/* ===== 画布上的两块墙：去掉边框，融进画布 ===== */
+.canvas-wall {
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    border-radius: 0;
+    padding: 0;
+    gap: 10px;
+}
+
+.canvas-wall-head {
+    padding: 0 2px;
+}
+
+.canvas-wall-title {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    color: var(--text-muted);
+}
+
+.canvas-wall-sub {
+    font-size: 11.5px;
+    color: var(--text-muted);
+    opacity: 0.75;
+}
+
+/* 墙里的按钮也轻一点，别像漂浮的卡片 */
+.canvas-wall-btn {
+    border-color: transparent;
+    color: var(--text-muted);
+}
+
+.canvas-wall-btn:hover {
+    border-color: var(--border);
+}

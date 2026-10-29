@@ -13,7 +13,7 @@
     <script src="/js/site-icon.js?v=1.0.0" defer></script>
 
     <!-- Styles -->
-    <link rel="stylesheet" href="css/style.css?v=3.75.0">
+    <link rel="stylesheet" href="css/style.css?v=3.78.0">
     <link rel="stylesheet" href="css/glass.css?v=1.0.14">
     <link rel="stylesheet" href="css/wheel.css?v=1.0.0">
 
@@ -174,9 +174,12 @@
                             <header class="canvas-wall-head">
                                 <span class="canvas-wall-title">图片墙</span>
                                 <span class="canvas-wall-sub" id="photoWallSub"></span>
-                                <button class="canvas-wall-btn" id="photoWallShuffle" type="button">换一批</button>
+                                <div class="canvas-wall-actions">
+                                    <button class="canvas-wall-btn" id="photoWallView" type="button" title="切换成瀑布流">瀑布流</button>
+                                    <button class="canvas-wall-btn" id="photoWallShuffle" type="button" title="换一批照片">换一批</button>
+                                </div>
                             </header>
-                            <div class="canvas-wall-body photo-wall-grid" id="photoWallBody"></div>
+                            <div class="canvas-wall-body photo-wall-inner" id="photoWallBody"></div>
                         </section>
 
                         <!-- 中心：主页本体 -->
@@ -488,7 +491,7 @@
 
     <!-- Scripts -->
     <script src="js/theme.js?v=3.16.0" defer></script>
-    <script src="js/app.js?v=3.85.0" defer></script>
+    <script src="js/app.js?v=3.89.0" defer></script>
     <script src="js/animations.js?v=3.14.0" defer></script>
 
     <script>
