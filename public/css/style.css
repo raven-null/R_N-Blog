@@ -8322,3 +8322,296 @@ html.glass-ready .stack-box > [data-reveal].in-view {
         height: 200px !important;
     }
 }
+
+/* ============================================================
+   新版首页：文章轮播 / 照片盒子 / 简报盒子（并排，各自无限滚动）
+   ============================================================ */
+
+/* ---------- 文章轮播 ---------- */
+.hv-carousel {
+    position: relative;
+    overflow: hidden;
+    border-radius: 18px;
+}
+
+.hv-car-track {
+    display: flex;
+    gap: 16px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    padding: 4px 2px 8px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.hv-car-track::-webkit-scrollbar {
+    display: none;
+}
+
+.hv-car-track > * {
+    flex: 0 0 calc(50% - 8px);
+    scroll-snap-align: start;
+}
+
+/* 轮播卡 */
+.hv-car-item {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    text-decoration: none;
+    border-radius: 16px;
+    background: var(--glass-card-strong, rgba(255, 253, 248, 0.92));
+    border: 1px solid var(--glass-line, var(--border));
+    box-shadow: 0 6px 20px rgba(20, 26, 44, 0.1);
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+    min-height: 190px;
+}
+
+.hv-car-item:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 14px 34px rgba(20, 26, 44, 0.18);
+}
+
+.hv-car-cover {
+    display: block;
+    height: 120px;
+    overflow: hidden;
+    background: var(--surface-3);
+}
+
+.hv-car-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.hv-car-body {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 12px 16px 14px;
+    flex: 1;
+}
+
+.hv-car-title {
+    font-family: var(--font-hand);
+    font-size: 17px;
+    line-height: 1.45;
+    color: var(--text);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.hv-car-meta {
+    margin-top: auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-family: var(--font-hand);
+    font-size: 12.5px;
+    color: var(--text-muted);
+}
+
+.hv-car-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 34px;
+    height: 34px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    font-size: 20px;
+    line-height: 1;
+    color: var(--text);
+    background: var(--glass-card-strong, rgba(255, 253, 248, 0.92));
+    border: 1px solid var(--glass-line, var(--border));
+    border-radius: 50%;
+    cursor: pointer;
+    z-index: 3;
+    opacity: 0;
+    transition: opacity 0.2s ease, background 0.2s ease;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+.hv-carousel:hover .hv-car-btn {
+    opacity: 1;
+}
+
+.hv-car-prev { left: 8px; }
+.hv-car-next { right: 8px; }
+
+/* ---------- 照片 + 简报 并排 ---------- */
+.hv-media-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: 20px;
+    align-items: start;
+}
+
+/* 照片盒子：独立卡片，内部纵向无限滚动 */
+.hv-photo-box {
+    position: relative;
+    height: 460px;
+    overflow: hidden;
+    border-radius: 18px;
+    background: var(--glass-card-strong, rgba(255, 253, 248, 0.92));
+    border: 1px solid var(--glass-line, var(--border));
+    box-shadow: 0 6px 20px rgba(20, 26, 44, 0.1);
+}
+
+.hv-photo-scroll {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    height: 100%;
+    overflow-y: auto;
+    padding: 8px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.hv-photo-scroll::-webkit-scrollbar {
+    display: none;
+}
+
+.hv-photo-scroll > .hv-photo {
+    position: relative;
+    display: block;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    padding: 0;
+    border: 0;
+    border-radius: 10px;
+    overflow: hidden;
+    cursor: pointer;
+    background: var(--surface-3);
+}
+
+.hv-photo-scroll > .hv-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.35s ease;
+}
+
+.hv-photo-scroll > .hv-photo:hover img {
+    transform: scale(1.06);
+}
+
+/* 简报盒子：窄、正方形卡、内部无限滚动 */
+.hv-news-box {
+    position: relative;
+    height: 460px;
+    overflow: hidden;
+    border-radius: 18px;
+    background: var(--glass-card-strong, rgba(255, 253, 248, 0.92));
+    border: 1px solid var(--glass-line, var(--border));
+    box-shadow: 0 6px 20px rgba(20, 26, 44, 0.1);
+}
+
+.hv-news-box .home-news-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    height: 100%;
+    overflow-y: auto;
+    padding: 10px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.hv-news-box .home-news-list::-webkit-scrollbar {
+    display: none;
+}
+
+/* 简报卡：接近正方形，字可换行 */
+.hv-news-box .news-item {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 8px;
+    flex: 0 0 auto;
+    min-height: 150px;
+    padding: 16px 18px;
+    border-radius: 14px;
+    background: var(--surface-2, rgba(0, 0, 0, 0.04));
+    border: 1px solid var(--border);
+    text-decoration: none;
+    transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.hv-news-box .news-item:hover {
+    transform: translateY(-2px);
+    background: var(--surface-3, rgba(0, 0, 0, 0.07));
+}
+
+.hv-news-box .news-item-cat {
+    font-family: var(--font-hand);
+    font-size: 13px;
+    color: var(--accent-strong, var(--accent));
+}
+
+.hv-news-box .news-item-title {
+    font-family: var(--font-hand);
+    font-size: 16px;
+    line-height: 1.55;
+    color: var(--text);
+    word-break: break-word;
+}
+
+.hv-news-box .news-item-meta {
+    margin-top: auto;
+    font-family: var(--font-hand);
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+/* ---------- 日历 / 任务 / 日记 那一行 ---------- */
+.hv-side-row {
+    display: block;
+}
+
+.hv-side-row .hv-side {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px;
+    align-items: start;
+}
+
+@media (max-width: 900px) {
+    .hv-car-track > * {
+        flex: 0 0 calc(100% - 4px);
+    }
+
+    .hv-media-row {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .hv-photo-box,
+    .hv-news-box {
+        height: 380px;
+    }
+
+    .hv-photo-scroll {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+/* 区块没有标题后，间距收紧 */
+.hv {
+    gap: 28px;
+}
+
+.hv-block > .hv-carousel {
+    margin-top: 0;
+}

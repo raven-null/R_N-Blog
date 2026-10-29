@@ -1072,6 +1072,15 @@ const BlogApp = {
             this.bindNewsInfiniteScroll(list);
             this.fillNewsIfShort(list);
             this.bindNewsHoverScroll();
+            // 简报也做无限滚动（内容复制一份）
+            setTimeout(() => {
+                const list = document.getElementById('newsList');
+                if (list && !list.dataset.loopCloned && list.children.length) {
+                    list.dataset.loopCloned = '1';
+                    list.innerHTML += list.innerHTML;
+                    this.makeLoopScroll(list);
+                }
+            }, 600);
             this.initNewsStack();
         } catch (e) {
             console.error('资讯加载失败:', e);
@@ -1598,41 +1607,86 @@ const BlogApp = {
 
     // ---------- 主页仪表盘：精选文章 / 照片带 ----------
 
-    // 精选文章：取最新三篇，有封面的优先
+    // 文章轮播：全部文章都在里面，自动切换 + 左右按钮
     renderHvPosts() {
-        const box = document.getElementById('hvPosts');
-        if (!box) return;
-        const posts = Array.isArray(this.posts) ? this.posts.slice() : [];
+        const track = document.getElementById('hvCarTrack');
+        if (!track) return;
+        const posts = Array.isArray(this.posts) ? this.posts : [];
         if (!posts.length) {
-            if (!box.dataset.empty) {
-                box.innerHTML = '<div class="home-empty">还没有文章</div>';
-                box.dataset.empty = '1';
+            if (!track.dataset.empty) {
+                track.innerHTML = '<div class="home-empty">还没有文章</div>';
+                track.dataset.empty = '1';
             }
             return;
         }
-        box.dataset.empty = '';
-        const withCover = posts.filter((p) => p.image);
-        const pick = (withCover.length >= 3 ? withCover : posts).slice(0, 3);
+        track.dataset.empty = '';
 
-        box.innerHTML = pick.map((post) => {
-            const href = `article.html?post=${encodeURIComponent(post.filename || '')}`;
+        track.innerHTML = posts.map((post) => {
+            const href = 'article.html?post=' + encodeURIComponent(post.filename || '');
             const title = this.esc(post.title || '无标题');
             const date = this.formatDate ? this.formatDate(post.date) : (post.date || '');
-            const tag = (post.tags && post.tags[0]) ? `<span class="hv-post-tag">${this.esc(post.tags[0])}</span>` : '';
+            const tag = (post.tags && post.tags[0]) ? '<span class="hv-post-tag">' + this.esc(post.tags[0]) + '</span>' : '';
             const cover = post.image
-                ? `<span class="hv-post-cover"><img src="${this.escAttr(post.image)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.parentNode.remove()"></span>`
+                ? '<span class="hv-car-cover"><img src="' + this.escAttr(post.image) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.parentNode.remove()"></span>'
                 : '';
-            return `<a class="hv-post" href="${href}">`
+            return '<a class="hv-car-item" href="' + href + '">'
                 + cover
-                + `<span class="hv-post-body">`
-                + `<span class="hv-post-title">${title}</span>`
-                + `<span class="hv-post-meta"><span>${date}</span>${tag}</span>`
-                + `</span>`
-                + `</a>`;
+                + '<span class="hv-car-body">'
+                + '<span class="hv-car-title">' + title + '</span>'
+                + '<span class="hv-car-meta"><span>' + date + '</span>' + tag + '</span>'
+                + '</span>'
+                + '</a>';
         }).join('');
+
+        this.bindCarousel();
     },
 
-    // 照片带：图库前 12 张，点开走灯箱
+    // 轮播：按钮翻页 + 自动播放
+    bindCarousel() {
+        const track = document.getElementById('hvCarTrack');
+        if (!track || track.dataset.carBound) return;
+        track.dataset.carBound = '1';
+
+        const step = () => {
+            const first = track.querySelector('.hv-car-item');
+            const w = first ? first.getBoundingClientRect().width + 16 : track.clientWidth / 2;
+            return Math.max(120, w);
+        };
+
+        const slide = (dir) => {
+            const w = step();
+            const max = track.scrollWidth - track.clientWidth;
+            if (max <= 4) return;
+            let next = track.scrollLeft + dir * w;
+            if (next > max - 4) next = 0;            // 到底回开头，循环
+            if (next < 0) next = max;
+            track.scrollTo({ left: next, behavior: 'smooth' });
+        };
+
+        document.getElementById('hvCarousel')?.addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-car-dir]');
+            if (!btn) return;
+            e.preventDefault();
+            slide(Number(btn.dataset.carDir) || 1);
+            restartAuto();
+        });
+
+        // 自动播放：8 秒一张，鼠标悬停暂停
+        let timer = 0;
+        const startAuto = () => {
+            clearInterval(timer);
+            timer = setInterval(() => slide(1), 8000);
+        };
+        const restartAuto = () => startAuto();
+        const carousel = document.getElementById('hvCarousel');
+        if (carousel) {
+            carousel.addEventListener('mouseenter', () => clearInterval(timer));
+            carousel.addEventListener('mouseleave', startAuto);
+        }
+        startAuto();
+    },
+
+    // 照片盒子：图库照片铺成网格，内部无限滚动（内容复制一份做无缝循环）
     async renderHvPhotos() {
         const box = document.getElementById('hvPhotos');
         if (!box || box.dataset.loaded) return;
@@ -1650,34 +1704,50 @@ const BlogApp = {
         }
 
         if (!photos.length) {
-            const block = box.closest('.hv-block');
-            if (block) block.style.display = 'none';
+            const wrap = box.closest('.hv-photo-box');
+            if (wrap) wrap.style.display = 'none';
             return;
         }
 
-        const pick = photos.slice(0, 12);
-        box.innerHTML = pick.map((p, i) => {
+        const pick = photos.slice(0, 30);
+        const tile = (p, i) => {
             const src = String(p.thumb || p.url).replace(/"/g, '&quot;');
-            return `<button type="button" class="hv-photo" data-idx="${i}" title="看图">`
-                + `<img src="${src}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.style.visibility='hidden'">`
-                + `</button>`;
-        }).join('');
-
-        this.initPhotoStack();
+            return '<button type="button" class="hv-photo" data-idx="' + i + '" title="看图">'
+                + '<img src="' + src + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.style.visibility=\'hidden\'">'
+                + '</button>';
+        };
+        // 复制一份，滚到底接回开头 → 视觉无缝，不需要进度条
+        box.innerHTML = pick.map(tile).join('') + pick.map(tile).join('');
 
         box.addEventListener('click', (e) => {
             const btn = e.target.closest('.hv-photo');
             if (!btn) return;
             const idx = Number(btn.dataset.idx) || 0;
-            const photo = pick[idx];
+            const photo = pick[idx % pick.length];
             if (!photo) return;
             window.__galleryImages = pick;
             if (typeof window.openGalleryLightbox === 'function') {
-                window.openGalleryLightbox(photo.url || photo.thumb, idx);
-            } else {
-                this.goView('gallery');
+                window.openGalleryLightbox(photo.url || photo.thumb, idx % pick.length);
             }
         });
+
+        this.makeLoopScroll(box);
+    },
+
+    // 无限滚动：滚过一半时悄悄把位置减回去，看起来永远滚不完
+    makeLoopScroll(el) {
+        if (!el || el.dataset.loopBound) return;
+        el.dataset.loopBound = '1';
+        el.addEventListener('scroll', () => {
+            const half = el.scrollHeight / 2;
+            if (half <= 0) return;
+            if (el.scrollTop >= half) {
+                el.scrollTop -= half;
+            } else if (el.scrollTop < 2) {
+                // 往上滚到头也接回来
+                el.scrollTop += half;
+            }
+        }, { passive: true });
     },
 
     // 渲染主页（入口数字 + 今日简报 + 图库轮播 + 文章封面轮播 + 项目）
