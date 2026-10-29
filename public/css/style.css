@@ -8159,3 +8159,68 @@ html.glass-ready .stack-box > [data-reveal].in-view {
     transition: transform 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94),
         opacity 0.35s ease !important;
 }
+
+/* ============================================================
+   照片堆叠：做成小相纸卡片，居中在容器里（不再铺满整幅）
+   ============================================================ */
+.hv-photos.stack-box {
+    height: 300px !important;
+    display: grid !important;
+    place-items: center;
+    padding: 0 !important;
+}
+
+.hv-photos.stack-box > .hv-photo {
+    position: absolute;
+    inset: auto;
+    top: 50%;
+    left: 50%;
+    width: min(400px, 82%);
+    height: 260px;
+    margin: 0;
+    padding: 8px;
+    background: var(--surface, #fff);
+    border: 0;
+    border-radius: 18px;
+    cursor: pointer;
+    box-shadow: 0 10px 34px rgba(20, 26, 44, 0.2);
+    /* 中心对齐交给 transform 链（见下方 .stack-photos 规则） */
+}
+
+.hv-photos.stack-box > .hv-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 12px;
+    display: block;
+}
+
+/* 照片角标位置微调 */
+.hv-photos.stack-box .stack-badge {
+    top: 12px;
+    right: 14px;
+    background: rgba(0, 0, 0, 0.45);
+    color: #fff;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+}
+
+@media (max-width: 900px) {
+    .hv-photos.stack-box {
+        height: 240px !important;
+    }
+
+    .hv-photos.stack-box > .hv-photo {
+        width: min(300px, 86%);
+        height: 200px;
+    }
+}
+
+/* 照片堆叠：transform 链前面先居中 */
+.stack-box.stack-photos > * {
+    transform:
+        translate(-50%, -50%)
+        rotate(var(--stack-rot, 0deg))
+        translate(var(--stack-x, 0px), var(--stack-y, 0px))
+        scale(var(--stack-s, 1)) !important;
+}
