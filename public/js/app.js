@@ -44,7 +44,7 @@ const BlogApp = {
         // 主页盒子的自由交互：堆叠切换 / 缩放 / 交换
         this.bindBoxPlay();
         // 赛博猫娘对话
-        this.initCatChat();
+        this.initDeskPet();
         // 后台退出登录联动：admin_key / gallery_key 被清除时，前台图库 R18 恢复锁定
         window.addEventListener('storage', (e) => {
             if ((e.key === 'admin_key' || e.key === 'gallery_key') && !e.newValue) {
@@ -1294,7 +1294,6 @@ const BlogApp = {
         this.renderHomePhotos();
         this.renderHomePostStage();
         this.renderHomeProjects();
-        this.renderHomeCybercat();
         this.renderHomeCta(force);
 
         // 入场动效（Anime.js）
@@ -2040,168 +2039,235 @@ const BlogApp = {
         return swapped ? isPhotos : !isPhotos;
     },
 
-    // 赛博猫娘占位插画：优先用图库第一张（观光安全），失败用默认图
-    async renderHomeCybercat() {
-        const img = document.getElementById('cybercatImg');
-        if (!img || img.dataset.rendered) return;
-        img.dataset.rendered = '1';
-        img.src = 'images/Default/web-logo.webp';
-        try {
-            const list = await Promise.race([
-                this.loadGalleryImages(),
-                new Promise((_, reject) => setTimeout(() => reject(new Error('图库接口超时')), 15000)),
-            ]);
-            const pick = (list || []).filter(p => !this.isR18Image(p))[0];
-            if (pick && (pick.thumb || pick.url)) img.src = pick.thumb || pick.url;
-        } catch (e) { /* 用默认图 */ }
-    },
+    // ===================== 桌面宠物：右下角的小幽灵猫 =====================
+    // 会飘、眨眼、跟着鼠标看；点一下说话，双击睡觉，可以拖着走（位置记住）
 
-    // ===================== 赛博猫娘对话（接站内 /api/ai） =====================
+    petSleeping: false,
+    petSayTimer: null,
+    petIdleTimer: null,
 
-    catMessages: [],
-    catBusy: false,
+    petLines: [
+        '喵～欢迎回来',
+        '要不要去「文章」翻翻？',
+        '右上角能换主题色，试试看',
+        '「图库」会自己一张张滑过去',
+        '「项目」里有我做的小东西',
+        '把我拖到别的地方也可以喵',
+        '双击我，我就去睡觉',
+        '今天的简报在下面哦',
+        '累了吧？歇一会儿',
+        '这座站是我守着的喵',
+        '我什么都不用做，就很开心',
+        '你按键盘的时候我在看你',
+        '别熬夜太晚，喵会心疼',
+        '摸摸头也可以（我不躲）',
+    ],
 
-    catPrompt: [
-        '你是这个博客站里的「赛博猫娘」，一只住在服务器里的猫耳少女。',
-        '说话简短活泼，句尾常带「喵」，偶尔用颜文字，但不要每句都卖萌。',
-        '你熟悉前端、AI 与这个博客的功能（主页/文章/图库/项目/任务日记/主题切换），能帮访客解决疑问。',
-        '被问到身份时，说自己是博客的赛博猫娘，不要说自己是某个语言模型。',
-        '回答控制在 3 行以内，除非对方要求详细解释。',
-    ].join('\n'),
+    initDeskPet() {
+        const pet = document.getElementById('deskPet');
+        const body = document.getElementById('deskPetBody');
+        if (!pet || !body || pet.dataset.bound) return;
+        pet.dataset.bound = '1';
 
-    initCatChat() {
-        const stage = document.getElementById('catStage');
-        const chat = document.getElementById('catChat');
-        const form = document.getElementById('catChatForm');
-        const closeBtn = document.getElementById('catChatClose');
-        if (!stage || !chat || chat.dataset.bound) return;
-        chat.dataset.bound = '1';
+        this.restorePetPos();
 
-        stage.addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.openCatChat();
-        });
-        closeBtn?.addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.closeCatChat();
-        });
-        form?.addEventListener('submit', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            const input = document.getElementById('catChatInput');
-            const text = (input && input.value ? input.value : '').trim();
-            if (!text) return;
-            input.value = '';
-            this.sendCatMessage(text);
-        });
-    },
+        let dragging = false;
+        let moved = false;
+        let startX = 0;
+        let startY = 0;
+        let originX = 0;
+        let originY = 0;
+        let lastTap = 0;
 
-    openCatChat() {
-        const chat = document.getElementById('catChat');
-        if (!chat) return;
-        chat.classList.add('is-open');
-        if (!this.catMessages.length) {
-            this.appendCatBubble('assistant', '喵～我是这只博客的赛博猫娘，有什么想问的吗？（可以问文章、图库、项目，也可以单纯聊天喵）');
-        }
-        setTimeout(() => document.getElementById('catChatInput')?.focus(), 80);
-    },
+        const onDown = (e) => {
+            if (e.button !== undefined && e.button !== 0) return;
+            const rect = pet.getBoundingClientRect();
+            dragging = true;
+            moved = false;
+            startX = e.clientX;
+            startY = e.clientY;
+            originX = rect.left;
+            originY = rect.top;
+            pet.classList.add('is-dragging');
+            try { body.setPointerCapture(e.pointerId); } catch (err) { /* 忽略 */ }
+        };
 
-    closeCatChat() {
-        document.getElementById('catChat')?.classList.remove('is-open');
-    },
+        const onMove = (e) => {
+            if (!dragging) return;
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+            if (!moved && Math.abs(dx) + Math.abs(dy) > 4) moved = true;
+            if (!moved) return;
+            this.movePet(originX + dx, originY + dy);
+        };
 
-    // 往对话区追加气泡。返回可继续更新的元素（流式用）
-    appendCatBubble(role, text) {
-        const body = document.getElementById('catChatBody');
-        if (!body) return null;
-        const el = document.createElement('div');
-        el.className = `cat-msg cat-msg-${role}`;
-        el.textContent = text;
-        body.appendChild(el);
-        body.scrollTop = body.scrollHeight;
-        return el;
-    },
-
-    // 发送消息：走 /api/ai 流式，逐字填充
-    async sendCatMessage(text) {
-        if (this.catBusy) return;
-        this.catBusy = true;
-        const hint = document.getElementById('catHint');
-        if (hint) hint.textContent = '思考中…';
-
-        this.appendCatBubble('user', text);
-        this.catMessages.push({ role: 'user', content: text });
-
-        const bubble = this.appendCatBubble('assistant', '喵…');
-        const body = document.getElementById('catChatBody');
-
-        try {
-            const res = await fetch('/api/ai', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    messages: [
-                        { role: 'system', content: this.catPrompt },
-                        ...this.catMessages.slice(-12),
-                    ],
-                }),
-            });
-
-            if (!res.ok) {
-                const err = await res.json().catch(() => ({}));
-                throw new Error(err.message || ('HTTP ' + res.status));
+        const onUp = (e) => {
+            if (!dragging) return;
+            dragging = false;
+            pet.classList.remove('is-dragging');
+            try { body.releasePointerCapture(e.pointerId); } catch (err) { /* 忽略 */ }
+            if (moved) {
+                this.savePetPos();
+                return;
             }
-
-            let reply = '';
-            const ctype = (res.headers.get('content-type') || '').toLowerCase();
-
-            if (!ctype.includes('text/event-stream')) {
-                const data = await res.json().catch(() => null);
-                const t = data && data.choices && data.choices[0] &&
-                    ((data.choices[0].message && data.choices[0].message.content) ||
-                        (data.choices[0].delta && data.choices[0].delta.content));
-                reply = t || '喵？没听清…';
-                if (bubble) bubble.textContent = reply;
-            } else {
-                const reader = res.body.getReader();
-                const decoder = new TextDecoder('utf-8');
-                let buffer = '';
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-                    buffer += decoder.decode(value, { stream: true });
-                    const lines = buffer.split('\n');
-                    buffer = lines.pop();
-                    for (const line of lines) {
-                        const trimmed = line.trim();
-                        if (!trimmed.startsWith('data:')) continue;
-                        const payload = trimmed.slice(5).trim();
-                        if (payload === '[DONE]') continue;
-                        try {
-                            const json = JSON.parse(payload);
-                            const delta = json.choices && json.choices[0] && json.choices[0].delta && json.choices[0].delta.content;
-                            if (delta) {
-                                reply += delta;
-                                if (bubble) {
-                                    bubble.textContent = reply;
-                                    if (body) body.scrollTop = body.scrollHeight;
-                                }
-                            }
-                        } catch (e) { /* 跳过不完整分片 */ }
-                    }
-                }
+            const now = Date.now();
+            if (now - lastTap < 320) {
+                lastTap = 0;
+                this.togglePetSleep();
+                return;
             }
+            lastTap = now;
+            this.petReact();
+        };
 
-            if (!reply) reply = '喵…今天有点卡住了，稍后再问我一次吧。';
-            if (bubble) bubble.textContent = reply;
-            this.catMessages.push({ role: 'assistant', content: reply });
-        } catch (err) {
-            if (bubble) bubble.textContent = '喵…暂时连不上大脑（' + String(err.message || err).slice(0, 40) + '）';
-        } finally {
-            this.catBusy = false;
-            if (hint) hint.textContent = '点我聊天喵';
-            if (body) body.scrollTop = body.scrollHeight;
+        body.addEventListener('pointerdown', onDown);
+        body.addEventListener('pointermove', onMove);
+        body.addEventListener('pointerup', onUp);
+        body.addEventListener('pointercancel', onUp);
+        body.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                this.petReact();
+            }
+        });
+
+        // 眼睛跟着鼠标：只有鼠标设备才需要
+        if (window.matchMedia('(pointer: fine)').matches) {
+            document.addEventListener('mousemove', (e) => this.aimPetEyes(e.clientX, e.clientY), { passive: true });
         }
+
+        this.startPetIdle();
+        window.addEventListener('resize', () => {
+            const rect = pet.getBoundingClientRect();
+            if (rect.left > window.innerWidth - 40 || rect.top > window.innerHeight - 40) {
+                pet.style.left = '';
+                pet.style.top = '';
+                pet.style.right = '';
+                pet.style.bottom = '';
+            }
+        });
+    },
+
+    // 把宠物定位到视口内（留出边距）
+    movePet(x, y) {
+        const pet = document.getElementById('deskPet');
+        if (!pet) return;
+        const w = pet.offsetWidth || 92;
+        const h = pet.offsetHeight || 120;
+        const maxX = Math.max(8, window.innerWidth - w - 8);
+        const maxY = Math.max(8, window.innerHeight - h - 8);
+        pet.style.left = Math.round(Math.min(Math.max(x, 8), maxX)) + 'px';
+        pet.style.top = Math.round(Math.min(Math.max(y, 8), maxY)) + 'px';
+        pet.style.right = 'auto';
+        pet.style.bottom = 'auto';
+        this.placePetBubble();
+    },
+
+    savePetPos() {
+        const pet = document.getElementById('deskPet');
+        if (!pet) return;
+        try {
+            localStorage.setItem('deskpet_pos', JSON.stringify({
+                x: pet.offsetLeft,
+                y: pet.offsetTop,
+            }));
+        } catch (e) { /* 隐私模式忽略 */ }
+    },
+
+    restorePetPos() {
+        const pet = document.getElementById('deskPet');
+        if (!pet) return;
+        let pos = null;
+        try {
+            pos = JSON.parse(localStorage.getItem('deskpet_pos') || 'null');
+        } catch (e) { pos = null; }
+        if (!pos || typeof pos.x !== 'number' || typeof pos.y !== 'number') return;
+        this.movePet(pos.x, pos.y);
+    },
+
+    // 点一下：跳一下 + 说一句话
+    petReact() {
+        const pet = document.getElementById('deskPet');
+        if (!pet) return;
+        if (this.petSleeping) {
+            this.togglePetSleep(false);
+            this.petSay('喵…醒了');
+            return;
+        }
+        pet.classList.remove('is-hop');
+        void pet.offsetWidth;
+        pet.classList.add('is-hop');
+        const lines = this.petLines;
+        this.petSay(lines[Math.floor(Math.random() * lines.length)]);
+    },
+
+    petSay(text, ms = 3400) {
+        const bubble = document.getElementById('deskPetBubble');
+        if (!bubble) return;
+        bubble.textContent = text;
+        bubble.classList.remove('is-below');
+        bubble.classList.add('is-show');
+        this.placePetBubble();
+        clearTimeout(this.petSayTimer);
+        this.petSayTimer = setTimeout(() => bubble.classList.remove('is-show'), ms);
+    },
+
+    // 气泡贴在宠物上方（放不下就翻到下方），并夹在视口内
+    placePetBubble() {
+        const bubble = document.getElementById('deskPetBubble');
+        const pet = document.getElementById('deskPet');
+        if (!bubble || !pet || !bubble.classList.contains('is-show')) return;
+        const rect = pet.getBoundingClientRect();
+        const bw = bubble.offsetWidth;
+        const bh = bubble.offsetHeight;
+        const cx = Math.min(
+            Math.max(rect.left + rect.width / 2, bw / 2 + 10),
+            window.innerWidth - bw / 2 - 10
+        );
+        let top = rect.top - bh - 12;
+        const below = top < 10;
+        if (below) top = rect.bottom + 12;
+        bubble.classList.toggle('is-below', below);
+        bubble.style.left = Math.round(cx) + 'px';
+        bubble.style.top = Math.round(top) + 'px';
+    },
+
+    togglePetSleep(force) {
+        const pet = document.getElementById('deskPet');
+        if (!pet) return;
+        this.petSleeping = force === undefined ? !this.petSleeping : !!force;
+        pet.dataset.state = this.petSleeping ? 'sleep' : 'awake';
+        if (this.petSleeping) {
+            clearInterval(this.petIdleTimer);
+            this.petIdleTimer = null;
+        } else {
+            this.startPetIdle();
+        }
+    },
+
+    // 自己待着的时候，偶尔动一动
+    startPetIdle() {
+        clearInterval(this.petIdleTimer);
+        this.petIdleTimer = setInterval(() => {
+            const pet = document.getElementById('deskPet');
+            if (!pet || document.hidden || this.petSleeping) return;
+            pet.classList.remove('is-hop');
+            void pet.offsetWidth;
+            pet.classList.add('is-hop');
+        }, 46000);
+    },
+
+    // 眼睛看向鼠标（限制位移，看起来像在看你）
+    aimPetEyes(mouseX, mouseY) {
+        const eyes = document.getElementById('dpEyes');
+        const pet = document.getElementById('deskPet');
+        if (!eyes || !pet || pet.dataset.state === 'sleep') return;
+        const rect = pet.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height * 0.62;
+        const dx = Math.max(-1, Math.min(1, (mouseX - cx) / 260));
+        const dy = Math.max(-1, Math.min(1, (mouseY - cy) / 260));
+        eyes.style.transform = `translate(${(dx * 3).toFixed(2)}px, ${(dy * 2.4).toFixed(2)}px)`;
     },
 
     // 主页入口：切到指定视图（可选再按内容形态筛选）

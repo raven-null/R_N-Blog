@@ -5859,7 +5859,6 @@ html.reader-focus .article-content {
 .view-home .home-theme-box { grid-area: theme; }
 .view-home .home-photos { grid-area: photos; }
 .view-home .home-news { grid-area: news; }
-.view-home .home-cybercat { grid-area: cat; }
 .view-home .home-life { grid-area: life; }
 .view-home .home-journal-box { grid-area: journal; }
 .view-home .dash-bottom { grid-area: about; }
@@ -5874,311 +5873,6 @@ html.reader-focus .article-content {
 /* 第二 / 第三行的组合：项目 + 主题按钮 与 文章 / 图片 高度对齐 */
 .view-home .home-theme-box {
     min-height: 64px;
-}
-
-/* 赛博猫娘盒：图片铺满 + 底部标签 */
-.view-home .home-cybercat {
-    position: relative;
-    overflow: hidden;
-    min-height: 180px;
-    padding: 0;
-}
-
-.cybercat-img {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    opacity: 0.9;
-    transition: opacity 0.3s;
-}
-
-.cybercat-label {
-    position: absolute;
-    left: 12px;
-    bottom: 10px;
-    padding: 4px 10px;
-    border-radius: 999px;
-    background: rgba(0, 0, 0, 0.45);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-    color: #fff;
-    font-size: 11px;
-    letter-spacing: 1px;
-    z-index: 2;
-}
-
-/* 手机：单列堆叠 */
-@media (max-width: 900px) {
-    .view-home .dashboard {
-        grid-template-columns: minmax(0, 1fr);
-        grid-template-areas:
-            "profile"
-            "clock"
-            "calendar"
-            "post"
-            "photos"
-            "projects"
-            "theme"
-            "news"
-            "cat"
-            "life"
-            "journal"
-            "about";
-        gap: 14px;
-    }
-}
-
-/* ===== 赛博猫娘：SVG 形象 + 对话浮层 ===== */
-.home-cybercat {
-    position: relative;
-    overflow: hidden;
-    min-height: 220px;
-    padding: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.cat-stage {
-    position: relative;
-    width: 100%;
-    height: 100%;
-    min-height: 200px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    cursor: pointer;
-    background:
-        radial-gradient(circle at 50% 35%, rgba(120, 90, 255, 0.18), transparent 62%),
-        radial-gradient(circle at 50% 90%, rgba(0, 220, 255, 0.12), transparent 60%);
-}
-
-.cat-art {
-    width: 62%;
-    max-width: 240px;
-    height: auto;
-    filter: drop-shadow(0 0 14px rgba(140, 110, 255, 0.5));
-    animation: catFloat 4.5s ease-in-out infinite;
-}
-
-@keyframes catFloat {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-6px); }
-}
-
-.cat-ear,
-.cat-head,
-.cat-tail {
-    fill: rgba(28, 24, 48, 0.95);
-    stroke: #8f7bff;
-    stroke-width: 3;
-    stroke-linejoin: round;
-}
-
-.cat-ear-inner {
-    fill: #ff8fc8;
-    opacity: 0.55;
-}
-
-.cat-visor {
-    fill: rgba(10, 12, 24, 0.9);
-    stroke: #37e6ff;
-    stroke-width: 2.5;
-}
-
-.cat-eye {
-    fill: #37e6ff;
-    animation: catBlink 3.4s ease-in-out infinite;
-}
-
-@keyframes catBlink {
-    0%, 92%, 100% { opacity: 1; }
-    95% { opacity: 0.15; }
-}
-
-.cat-mouth,
-.cat-whisker {
-    fill: none;
-    stroke: #b9a6ff;
-    stroke-width: 2.5;
-    stroke-linecap: round;
-}
-
-.cat-hint {
-    font-size: 12px;
-    letter-spacing: 2px;
-    color: var(--text-secondary);
-    padding: 3px 12px;
-    border: 1px solid var(--border);
-    border-radius: 999px;
-    background: rgba(0, 0, 0, 0.25);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-}
-
-/* 对话浮层 */
-.cat-chat {
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    height: 78%;
-    display: flex;
-    flex-direction: column;
-    transform: translateY(105%);
-    transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
-    background: rgba(12, 12, 20, 0.88);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    border-top: 1px solid var(--border);
-    z-index: 4;
-}
-
-.cat-chat.is-open {
-    transform: translateY(0);
-}
-
-.cat-chat-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 8px 10px;
-    border-bottom: 1px solid var(--border);
-}
-
-.cat-chat-title {
-    font-size: 12px;
-    letter-spacing: 1px;
-    color: #b9a6ff;
-}
-
-.cat-chat-close {
-    width: 20px;
-    height: 20px;
-    padding: 0;
-    border: 0;
-    background: transparent;
-    color: var(--text-muted);
-    font-size: 14px;
-    line-height: 1;
-    cursor: pointer;
-}
-
-.cat-chat-close:hover {
-    color: var(--text-primary);
-}
-
-.cat-chat-body {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
-    padding: 10px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.cat-msg {
-    max-width: 88%;
-    padding: 7px 10px;
-    border-radius: 12px;
-    font-size: 12px;
-    line-height: 1.65;
-    white-space: pre-wrap;
-    word-break: break-word;
-}
-
-.cat-msg-user {
-    align-self: flex-end;
-    background: rgba(143, 123, 255, 0.25);
-    border: 1px solid rgba(143, 123, 255, 0.4);
-    color: var(--text-primary);
-}
-
-.cat-msg-assistant {
-    align-self: flex-start;
-    background: rgba(55, 230, 255, 0.1);
-    border: 1px solid rgba(55, 230, 255, 0.25);
-    color: var(--text-secondary);
-}
-
-.cat-chat-form {
-    display: flex;
-    gap: 6px;
-    padding: 8px 10px 10px;
-    border-top: 1px solid var(--border);
-}
-
-.cat-chat-form input {
-    flex: 1;
-    min-width: 0;
-    height: 28px;
-    padding: 0 10px;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.06);
-    color: var(--text-primary);
-    font-family: inherit;
-    font-size: 12px;
-}
-
-.cat-chat-form input:focus {
-    outline: none;
-    border-color: #8f7bff;
-}
-
-.cat-chat-form button {
-    height: 28px;
-    padding: 0 12px;
-    border: 1px solid #8f7bff;
-    border-radius: 8px;
-    background: #8f7bff;
-    color: #0a0a14;
-    font-family: inherit;
-    font-size: 12px;
-    letter-spacing: 1px;
-    cursor: pointer;
-}
-
-@media (max-width: 900px) {
-    .home-cybercat {
-        min-height: 260px;
-    }
-
-    .cat-art {
-        width: 50%;
-    }
-}
-
-/* ===== 移除「关于」区域（网格去掉最后一行） ===== */
-.view-home .dashboard {
-    grid-template-areas:
-        "profile clock calendar"
-        "post projects photos"
-        "post theme photos"
-        "news news cat"
-        "life journal cat";
-}
-
-@media (max-width: 900px) {
-    .view-home .dashboard {
-        grid-template-areas:
-            "profile"
-            "clock"
-            "calendar"
-            "post"
-            "photos"
-            "projects"
-            "theme"
-            "news"
-            "cat"
-            "life"
-            "journal";
-    }
 }
 
 /* ===== 盒子放大改为「真正占位变大」：span 2×2，其他盒子被推开 ===== */
@@ -6202,7 +5896,6 @@ html.reader-focus .article-content {
 .view-home .home-theme-box,
 .view-home .home-photos,
 .view-home .home-news,
-.view-home .home-cybercat,
 .view-home .home-life,
 .view-home .home-journal-box {
     grid-area: auto;
@@ -6211,8 +5904,7 @@ html.reader-focus .article-content {
 /* 设计图的跨格关系 */
 .view-home .home-post { grid-row: span 2; }
 .view-home .home-photos { grid-row: span 2; }
-.view-home .home-news { grid-column: span 2; }
-.view-home .home-cybercat { grid-row: span 2; }
+.view-home .home-news { grid-column: span 3; }
 
 /* 放大：占 2×2，真正挤压邻居（不再 transform 缩放） */
 .view-home .free-box.is-zoomed {
@@ -6230,8 +5922,7 @@ html.reader-focus .article-content {
     }
 
     .view-home .home-post,
-    .view-home .home-photos,
-    .view-home .home-cybercat { grid-row: span 1; }
+    .view-home .home-photos { grid-row: span 1; }
 
     .view-home .home-news { grid-column: span 1; }
 
@@ -6255,6 +5946,230 @@ html.reader-focus .article-content {
 .view-home .home-photos { order: 6; }
 .view-home .home-theme-box { order: 7; }
 .view-home .home-news { order: 8; }
-.view-home .home-cybercat { order: 9; }
-.view-home .home-life { order: 10; }
-.view-home .home-journal-box { order: 11; }
+.view-home .home-life { order: 9; }
+.view-home .home-journal-box { order: 10; }
+
+/* ===== 桌面宠物：右下角的小幽灵猫 ===== */
+.deskpet {
+    position: fixed;
+    right: 24px;
+    bottom: 22px;
+    z-index: 70;
+    width: 96px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.deskpet-body {
+    position: relative;
+    width: 96px;
+    height: 106px;
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: grab;
+    filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.3));
+    animation: dpFloat 4.2s ease-in-out infinite;
+}
+
+.deskpet.is-dragging .deskpet-body {
+    cursor: grabbing;
+    animation: none;
+}
+
+.deskpet.is-hop .deskpet-body {
+    animation: dpHop 0.52s cubic-bezier(0.28, 0.84, 0.42, 1);
+}
+
+.deskpet-body:focus-visible {
+    outline: 2px solid var(--accent, #6c8cff);
+    outline-offset: 6px;
+    border-radius: 20px;
+}
+
+.deskpet-art {
+    width: 100%;
+    height: 100%;
+    display: block;
+    overflow: visible;
+}
+
+/* 身体与五官 */
+.dp-body {
+    fill: rgba(250, 250, 255, 0.96);
+    stroke: rgba(120, 128, 220, 0.75);
+    stroke-width: 2.4;
+    stroke-linejoin: round;
+}
+
+.dp-ear {
+    fill: rgba(250, 250, 255, 0.96);
+    stroke: rgba(120, 128, 220, 0.75);
+    stroke-width: 2.4;
+    stroke-linejoin: round;
+}
+
+.dp-ear-in {
+    fill: rgba(255, 150, 200, 0.65);
+}
+
+.dp-eye {
+    fill: #2b2f45;
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: dpBlink 4.6s ease-in-out infinite;
+}
+
+.dp-shine {
+    fill: #ffffff;
+}
+
+.dp-mouth {
+    fill: none;
+    stroke: #4a4a63;
+    stroke-width: 2;
+    stroke-linecap: round;
+}
+
+.dp-cheek {
+    fill: rgba(255, 150, 190, 0.45);
+}
+
+.dp-shadow {
+    fill: rgba(30, 30, 50, 0.16);
+}
+
+.dp-eyes {
+    transition: transform 0.18s ease-out;
+}
+
+/* 睡觉：闭眼 + zZz */
+.deskpet[data-state="sleep"] .dp-eye {
+    animation: none;
+    transform: scaleY(0.1);
+}
+
+.deskpet[data-state="sleep"] .dp-mouth {
+    d: path("M56 89.5 h8");
+}
+
+.deskpet[data-state="sleep"] .deskpet-art {
+    animation: none;
+}
+
+.deskpet-zzz {
+    position: absolute;
+    top: 2px;
+    right: 6px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+}
+
+.deskpet[data-state="sleep"] .deskpet-zzz {
+    opacity: 0.85;
+    animation: dpZzz 2.6s ease-in-out infinite;
+}
+
+/* 气泡：独立定位，由 JS 夹在视口内 */
+.deskpet-bubble {
+    position: fixed;
+    left: 0;
+    top: 0;
+    transform: translate(-50%, 4px);
+    width: max-content;
+    max-width: min(230px, calc(100vw - 32px));
+    padding: 8px 12px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--card-bg, rgba(20, 20, 34, 0.92));
+    color: var(--text);
+    font-size: 12.5px;
+    line-height: 1.5;
+    text-align: center;
+    box-shadow: 0 10px 26px var(--shadow);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.22s, transform 0.22s;
+    z-index: 2;
+}
+
+.deskpet-bubble.is-show {
+    opacity: 1;
+    transform: translate(-50%, 0);
+}
+
+.deskpet-bubble::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: -5px;
+    border: 5px solid transparent;
+    border-top-color: var(--card-bg, rgba(20, 20, 34, 0.92));
+}
+
+/* 气泡被顶到宠物下方时，箭头翻到上方 */
+.deskpet-bubble.is-below::after {
+    top: auto;
+    bottom: 100%;
+    border-top-color: transparent;
+    border-bottom-color: var(--card-bg, rgba(20, 20, 34, 0.92));
+}
+
+@keyframes dpFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-7px); }
+}
+
+@keyframes dpHop {
+    0% { transform: translateY(0) scale(1, 1); }
+    35% { transform: translateY(-14px) scale(0.96, 1.05); }
+    70% { transform: translateY(0) scale(1.05, 0.95); }
+    100% { transform: translateY(0) scale(1, 1); }
+}
+
+@keyframes dpBlink {
+    0%, 90%, 100% { transform: scaleY(1); }
+    94% { transform: scaleY(0.08); }
+}
+
+@keyframes dpZzz {
+    0%, 100% { opacity: 0.3; transform: translateY(0) scale(0.9); }
+    50% { opacity: 0.9; transform: translateY(-4px) scale(1.05); }
+}
+
+/* 手机：缩小并避开底部区域 */
+@media (max-width: 900px) {
+    .deskpet {
+        right: 10px;
+        bottom: 84px;
+        width: 74px;
+    }
+
+    .deskpet-body {
+        width: 74px;
+        height: 82px;
+    }
+
+    .deskpet-bubble {
+        max-width: 168px;
+        font-size: 12px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .deskpet-body,
+    .deskpet.is-hop .deskpet-body,
+    .deskpet[data-state="sleep"] .deskpet-zzz {
+        animation: none;
+    }
+}

@@ -13,7 +13,7 @@
     <script src="/js/site-icon.js?v=1.0.0" defer></script>
 
     <!-- Styles -->
-    <link rel="stylesheet" href="css/style.css?v=3.68.0">
+    <link rel="stylesheet" href="css/style.css?v=3.70.0">
     <link rel="stylesheet" href="css/glass.css?v=1.0.14">
     <link rel="stylesheet" href="css/wheel.css?v=1.0.0">
 
@@ -296,42 +296,6 @@
                         </div>
                     </div>
 
-                    <!-- 博客赛博猫娘：点猫娘可以对话（接站内 AI） -->
-                    <div class="dash-panel home-cybercat" id="homeCybercat">
-                        <div class="cat-stage" id="catStage" title="点我聊天喵">
-                            <svg class="cat-art" viewBox="0 0 200 200" aria-hidden="true">
-                                <path class="cat-ear" d="M52 80 L38 30 L88 58 Z"></path>
-                                <path class="cat-ear" d="M148 80 L162 30 L112 58 Z"></path>
-                                <path class="cat-ear-inner" d="M56 74 L48 44 L78 60 Z"></path>
-                                <path class="cat-ear-inner" d="M144 74 L152 44 L122 60 Z"></path>
-                                <ellipse class="cat-head" cx="100" cy="114" rx="54" ry="48"></ellipse>
-                                <rect class="cat-visor" x="60" y="96" width="80" height="28" rx="14"></rect>
-                                <circle class="cat-eye" cx="84" cy="110" r="6"></circle>
-                                <circle class="cat-eye" cx="116" cy="110" r="6"></circle>
-                                <path class="cat-mouth" d="M92 134 q8 9 16 0"></path>
-                                <path class="cat-whisker" d="M44 122 h-18"></path>
-                                <path class="cat-whisker" d="M44 133 h-16"></path>
-                                <path class="cat-whisker" d="M156 122 h18"></path>
-                                <path class="cat-whisker" d="M156 133 h16"></path>
-                                <path class="cat-tail" d="M150 168 q34 6 30 -30 q-3 -22 -24 -20"></path>
-                            </svg>
-                            <div class="cat-hint" id="catHint">点我聊天喵</div>
-                        </div>
-
-                        <!-- 对话浮层 -->
-                        <div class="cat-chat" id="catChat">
-                            <div class="cat-chat-head">
-                                <span class="cat-chat-title">赛博猫娘</span>
-                                <button class="cat-chat-close" id="catChatClose" type="button" title="收起">×</button>
-                            </div>
-                            <div class="cat-chat-body" id="catChatBody"></div>
-                            <form class="cat-chat-form" id="catChatForm">
-                                <input type="text" id="catChatInput" placeholder="和猫娘说点什么…" maxlength="500" autocomplete="off">
-                                <button type="submit" title="发送">喵</button>
-                            </form>
-                        </div>
-                    </div>
-
                     <!-- 我的项目（GitHub 仓库） -->
                     <div class="dash-panel home-projects" id="homeProjects">
                         <div class="dash-panel-title">我的项目
@@ -374,6 +338,31 @@
     <button class="gallery-tag-btn" id="galleryTagBtn" title="图库分类" onclick="BlogApp.toggleGalleryTagPanel()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg></button>
     <div class="gallery-tag-float-panel" id="galleryTagFloatPanel">
         <div class="gallery-tag-list" id="galleryTagFloatList"></div>
+    </div>
+
+    <!-- 桌面宠物：会飘会眨眼，点一下说话，双击睡觉，可以拖着走 -->
+    <div class="deskpet" id="deskPet" data-state="awake">
+        <div class="deskpet-bubble" id="deskPetBubble" role="status" aria-live="polite"></div>
+        <button class="deskpet-body" id="deskPetBody" type="button" aria-label="摸摸桌宠">
+            <svg class="deskpet-art" viewBox="0 0 120 132" aria-hidden="true">
+                <ellipse class="dp-shadow" cx="60" cy="126" rx="24" ry="4.5"></ellipse>
+                <path class="dp-ear" d="M31 47 L27 17 L52 34 Z"></path>
+                <path class="dp-ear" d="M89 47 L93 17 L68 34 Z"></path>
+                <path class="dp-ear-in" d="M34 43 L31 25 L46 35 Z"></path>
+                <path class="dp-ear-in" d="M86 43 L89 25 L74 35 Z"></path>
+                <path class="dp-body" d="M60 30 C87 30 100 52 100 75 C100 92 92 104 84 110 C78 115 74 118 68 118 C62 118 62 112 56 112 C50 112 50 118 44 118 C38 118 34 114 28 108 C21 100 20 90 20 75 C20 52 33 30 60 30 Z"></path>
+                <g class="dp-eyes" id="dpEyes">
+                    <ellipse class="dp-eye" cx="47" cy="72" rx="6.8" ry="8.4"></ellipse>
+                    <ellipse class="dp-eye" cx="73" cy="72" rx="6.8" ry="8.4"></ellipse>
+                    <circle class="dp-shine" cx="49.2" cy="68.6" r="2.4"></circle>
+                    <circle class="dp-shine" cx="75.2" cy="68.6" r="2.4"></circle>
+                </g>
+                <path class="dp-mouth" d="M55 87 q5 5.5 10 0"></path>
+                <ellipse class="dp-cheek" cx="35" cy="84" rx="5.6" ry="3.4"></ellipse>
+                <ellipse class="dp-cheek" cx="85" cy="84" rx="5.6" ry="3.4"></ellipse>
+            </svg>
+            <span class="deskpet-zzz" aria-hidden="true">z</span>
+        </button>
     </div>
 
     <!-- 移动端轮盘菜单：右侧半圆按钮 → 环形选项 -->
@@ -451,7 +440,7 @@
 
     <!-- Scripts -->
     <script src="js/theme.js?v=3.16.0" defer></script>
-    <script src="js/app.js?v=3.78.0" defer></script>
+    <script src="js/app.js?v=3.80.0" defer></script>
     <script src="js/animations.js?v=3.14.0" defer></script>
 
     <script>
