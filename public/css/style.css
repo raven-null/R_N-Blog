@@ -4882,3 +4882,54 @@ html.reader-focus .article-content {
         align-items: stretch;
     }
 }
+
+/* ===== 日历盒子里的「当天任务」面板（点日期后切换显示） ===== */
+.home-day-panel {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.day-panel-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.day-back-btn {
+    height: 24px;
+    padding: 0 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg-card);
+    color: var(--text-secondary);
+    font-family: inherit;
+    font-size: 11px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: border-color 0.2s, color 0.2s;
+}
+
+.day-back-btn:hover {
+    border-color: var(--accent);
+    color: var(--text-primary);
+}
+
+.day-label {
+    font-size: 12px;
+    letter-spacing: 1px;
+    color: var(--text-secondary);
+}
+
+#dayTaskList {
+    max-height: 118px;
+    overflow-y: auto;
+}
+
+@media (max-width: 900px) {
+    #dayTaskList {
+        max-height: 150px;
+    }
+}

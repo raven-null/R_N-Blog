@@ -1595,25 +1595,27 @@ const BlogApp = {
     },
 
     renderLifeTasks() {
-        const list = document.getElementById('lifeTaskList');
         const countEl = document.getElementById('lifeTaskCount');
-        if (!list) return;
         const tasks = (this.lifeState.tasks || []).filter(t => t.date === this.lifeState.date);
         if (countEl) {
             const done = tasks.filter(t => t.done).length;
             countEl.textContent = tasks.length ? `${done}/${tasks.length}` : '';
         }
-        if (!tasks.length) {
-            list.innerHTML = '<div class="home-empty">这一天还没有任务</div>';
-            return;
-        }
-        list.innerHTML = tasks.map(t => `
-            <div class="life-task${t.done ? ' is-done' : ''}" data-id="${this.escAttr(t.id)}">
-                <button class="life-task-check" type="button" title="切换完成">${t.done ? '✓' : ''}</button>
-                <span class="life-task-title">${this.esc(t.title)}</span>
-                <button class="life-task-del" type="button" title="删除">×</button>
-            </div>
-        `).join('');
+        const html = tasks.length
+            ? tasks.map(t => `
+                <div class="life-task${t.done ? ' is-done' : ''}" data-id="${this.escAttr(t.id)}">
+                    <button class="life-task-check" type="button" title="切换完成">${t.done ? '✓' : ''}</button>
+                    <span class="life-task-title">${this.esc(t.title)}</span>
+                    <button class="life-task-del" type="button" title="删除">×</button>
+                </div>
+            `).join('')
+            : '<div class="home-empty">这一天还没有任务</div>';
+
+        // 任务卡片与日历盒子里的当天面板同步渲染
+        ['lifeTaskList', 'dayTaskList'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.innerHTML = html;
+        });
     },
 
     renderLifeJournal() {
@@ -1625,19 +1627,91 @@ const BlogApp = {
         if (status) status.textContent = entry ? '已保存' : '';
     },
 
-    // 选择日期（日历点击）
+    // 选择日期（日历点击）：日历盒子切换成「当天任务」面板
     selectLifeDate(date) {
         if (!date) return;
         const month = date.slice(0, 7);
         this.lifeState.date = date;
         if (month !== this.lifeState.month) {
-            this.loadLifeMonth(month);
+            this.loadLifeMonth(month).then(ok => { if (ok) this.showDayPanel(); });
             return;
         }
         this.renderLife();
-        document.querySelectorAll('#homeCalendar .cal-day').forEach(el => {
-            el.classList.toggle('is-selected', el.dataset.date === date);
-        });
+        this.showDayPanel();
+    },
+
+    // 切换到当天任务面板（日历暂时隐藏）
+    showDayPanel() {
+        const cal = document.getElementById('homeCalendar');
+        const panel = document.getElementById('homeDayPanel');
+        if (!cal || !panel) return;
+        cal.style.display = 'none';
+        panel.style.display = '';
+        const label = document.getElementById('dayPanelLabel');
+        if (label) label.textContent = this.formatDateLabel(this.lifeState.date);
+        this.renderLifeTasks();
+        const input = document.getElementById('dayTaskInput');
+        if (input) setTimeout(() => input.focus(), 60);
+    },
+
+    // 回到日历
+    hideDayPanel() {
+        const cal = document.getElementById('homeCalendar');
+        const panel = document.getElementById('homeDayPanel');
+        if (cal) cal.style.display = '';
+        if (panel) panel.style.display = 'none';
+        if (typeof window.renderCalendar === 'function') window.renderCalendar(this.lifeState.month);
+    },
+
+    // 添加任务（日历盒子里的输入框）
+    async addLifeTask(inputId) {
+        const input = document.getElementById(inputId);
+        if (!input) return;
+        const title = (input.value || '').trim();
+        if (!title) return;
+        input.value = '';
+        try {
+            const data = await this.lifeApi('', {
+                method: 'POST',
+                body: JSON.stringify({ type: 'task', date: this.lifeState.date, title }),
+            });
+            if (data && data.task) {
+                this.lifeState.tasks.push(data.task);
+                this.renderLifeTasks();
+            }
+        } catch (err) {
+            input.value = title;
+        }
+    },
+
+    // 任务列表的完成 / 删除（两个列表共用）
+    async onLifeTaskClick(e) {
+        const row = e.target.closest('.life-task');
+        if (!row) return;
+        const id = row.dataset.id;
+        const task = this.lifeState.tasks.find(t => t.id === id);
+        if (!task) return;
+
+        if (e.target.closest('.life-task-del')) {
+            try {
+                await this.lifeApi(`?type=task&date=${task.date}&id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+                this.lifeState.tasks = this.lifeState.tasks.filter(t => t.id !== id);
+                this.renderLifeTasks();
+            } catch (err) { /* 忽略 */ }
+            return;
+        }
+
+        if (e.target.closest('.life-task-check')) {
+            const done = !task.done;
+            try {
+                await this.lifeApi('', {
+                    method: 'POST',
+                    body: JSON.stringify({ type: 'task', id, date: task.date, done }),
+                });
+                task.done = done;
+                this.renderLifeTasks();
+            } catch (err) { /* 忽略 */ }
+        }
     },
 
     // 切换月份浏览归档
@@ -1656,56 +1730,18 @@ const BlogApp = {
         if (!box || box.dataset.bound) return;
         box.dataset.bound = '1';
 
-        // 添加任务
-        document.getElementById('lifeTaskForm')?.addEventListener('submit', async (e) => {
+        // 日历盒子里的当天面板：添加任务
+        document.getElementById('dayTaskForm')?.addEventListener('submit', (e) => {
             e.preventDefault();
-            const input = document.getElementById('lifeTaskInput');
-            const title = (input.value || '').trim();
-            if (!title) return;
-            input.value = '';
-            try {
-                const data = await this.lifeApi('', {
-                    method: 'POST',
-                    body: JSON.stringify({ type: 'task', date: this.lifeState.date, title }),
-                });
-                if (data && data.task) {
-                    this.lifeState.tasks.push(data.task);
-                    this.renderLifeTasks();
-                }
-            } catch (err) {
-                input.value = title;
-            }
+            this.addLifeTask('dayTaskInput');
         });
 
-        // 完成 / 删除
-        document.getElementById('lifeTaskList')?.addEventListener('click', async (e) => {
-            const row = e.target.closest('.life-task');
-            if (!row) return;
-            const id = row.dataset.id;
-            const task = this.lifeState.tasks.find(t => t.id === id);
-            if (!task) return;
+        // 两个任务列表共用同一套完成 / 删除逻辑
+        document.getElementById('dayTaskList')?.addEventListener('click', (e) => this.onLifeTaskClick(e));
+        document.getElementById('lifeTaskList')?.addEventListener('click', (e) => this.onLifeTaskClick(e));
 
-            if (e.target.closest('.life-task-del')) {
-                try {
-                    await this.lifeApi(`?type=task&date=${task.date}&id=${encodeURIComponent(id)}`, { method: 'DELETE' });
-                    this.lifeState.tasks = this.lifeState.tasks.filter(t => t.id !== id);
-                    this.renderLifeTasks();
-                } catch (err) { /* 忽略 */ }
-                return;
-            }
-
-            if (e.target.closest('.life-task-check')) {
-                const done = !task.done;
-                try {
-                    await this.lifeApi('', {
-                        method: 'POST',
-                        body: JSON.stringify({ type: 'task', id, date: task.date, done }),
-                    });
-                    task.done = done;
-                    this.renderLifeTasks();
-                } catch (err) { /* 忽略 */ }
-            }
-        });
+        // 返回日历
+        document.getElementById('dayBackBtn')?.addEventListener('click', () => this.hideDayPanel());
 
         // 日记自动保存（停止输入 1.2 秒后）
         document.getElementById('lifeJournal')?.addEventListener('input', () => {

@@ -13,7 +13,7 @@
     <script src="/js/site-icon.js?v=1.0.0" defer></script>
 
     <!-- Styles -->
-    <link rel="stylesheet" href="css/style.css?v=3.45.0">
+    <link rel="stylesheet" href="css/style.css?v=3.46.0">
     <link rel="stylesheet" href="css/glass.css?v=1.0.14">
     <link rel="stylesheet" href="css/wheel.css?v=1.0.0">
 
@@ -194,6 +194,21 @@
                                 <div class="dash-clock-time" id="dashClockTime"></div>
                             </div>
                             <div class="home-calendar" id="homeCalendar"></div>
+
+                            <!-- 点日期后切换到的「当天任务」盒子 -->
+                            <div class="home-day-panel" id="homeDayPanel" style="display:none;">
+                                <div class="day-panel-head">
+                                    <button class="day-back-btn" id="dayBackBtn" type="button" title="返回日历">‹ 日历</button>
+                                    <span class="day-label" id="dayPanelLabel"></span>
+                                </div>
+                                <form class="life-task-form" id="dayTaskForm">
+                                    <input type="text" id="dayTaskInput" placeholder="添加任务，回车保存" maxlength="120" autocomplete="off">
+                                    <button type="submit" title="添加">+</button>
+                                </form>
+                                <div class="life-task-list" id="dayTaskList">
+                                    <div class="home-empty">这一天还没有任务</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -211,10 +226,6 @@
                         <div class="home-life-body">
                             <div class="life-col">
                                 <div class="life-col-head">任务 <span class="life-count" id="lifeTaskCount"></span></div>
-                                <form class="life-task-form" id="lifeTaskForm">
-                                    <input type="text" id="lifeTaskInput" placeholder="添加任务，回车保存" maxlength="120" autocomplete="off">
-                                    <button type="submit" title="添加">+</button>
-                                </form>
                                 <div class="life-task-list" id="lifeTaskList">
                                     <div class="home-empty">加载中...</div>
                                 </div>
@@ -398,7 +409,7 @@
 
     <!-- Scripts -->
     <script src="js/theme.js?v=3.16.0" defer></script>
-    <script src="js/app.js?v=3.64.0" defer></script>
+    <script src="js/app.js?v=3.65.0" defer></script>
     <script src="js/animations.js?v=3.14.0" defer></script>
 
     <script>
