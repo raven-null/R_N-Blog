@@ -318,3 +318,57 @@ html[data-period="night"] {
     height: 34%;
     opacity: 0.72;
 }
+
+/* ============================================================
+   夜里自动转浅色文字
+   ------------------------------------------------------------
+   静夜时背景压暗，主题里的黑字会糊在画面上。
+   这里在夜段覆盖文字与玻璃色：字变浅、卡片变深，
+   白天再自己变回来（切换有 CSS 过渡）。
+   ============================================================ */
+html[data-period="night"] {
+    --text: #eef0f7 !important;
+    --text-secondary: #b9bfcd !important;
+    --text-muted: #8d94a6 !important;
+    --text-primary: #eef0f7 !important;
+
+    --glass-card: rgba(20, 24, 37, 0.72) !important;
+    --glass-card-strong: rgba(20, 24, 37, 0.88) !important;
+    --glass-line: rgba(255, 255, 255, 0.12) !important;
+
+    --surface: #161b29 !important;
+    --surface-2: #1b2130 !important;
+    --surface-3: #232a3b !important;
+    --bg-card: #161b29 !important;
+}
+
+/* 卡片外的文字（区块标题、更多、简介）也一并变浅 */
+html[data-period="night"] .hv-name,
+html[data-period="night"] .hv-bio,
+html[data-period="night"] .hv-block-title,
+html[data-period="night"] .hv-more,
+html[data-period="night"] .hv-block-sub,
+html[data-period="night"] .hv-clock-time,
+html[data-period="night"] .hv-clock-date {
+    color: var(--text) !important;
+}
+
+html[data-period="night"] .hv-bio,
+html[data-period="night"] .hv-block-sub,
+html[data-period="night"] .hv-clock-date,
+html[data-period="night"] .hv-more {
+    color: var(--text-muted) !important;
+}
+
+/* 夜里插画别压太死，留点细节 */
+html[data-period="night"] .sky-art {
+    filter: brightness(var(--art-brightness, 0.5)) saturate(0.92);
+}
+
+/* 文字过渡，别硬跳 */
+html[data-period] .hv-name,
+html[data-period] .hv-bio,
+html[data-period] .hv-block-title,
+html[data-period] .hv-clock-time {
+    transition: color 1.4s linear;
+}

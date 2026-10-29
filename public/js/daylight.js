@@ -95,7 +95,7 @@
       dawn: { brightness: 0.94, tint: 0.62 },
       day: { brightness: 1.04, tint: 0.4 },
       dusk: { brightness: 0.88, tint: 0.66 },
-      night: { brightness: 0.4, tint: 0.72 },
+      night: { brightness: 0.52, tint: 0.72 },
     };
     const tone = ART_TONE[period.key] || ART_TONE.day;
 
