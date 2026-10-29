@@ -2291,6 +2291,8 @@ const BlogApp = {
     canvasInertia: 0,
     canvasMq: null,
     canvasUserMoved: false,
+    canvasCapsuleRaf: 0,
+    canvasCapsuleZone: '',
     photoWallPhotos: [],
     photoWallLoading: false,
     photoWallBatch: 0,
@@ -2341,14 +2343,16 @@ const BlogApp = {
             else if (act === 'zoom-out') this.canvasZoomCenter(1 / 1.2);
         });
 
-        document.getElementById('photoWallShuffle')?.addEventListener('click', (e) => {
+        // 底部胶囊：按当前聚焦的区域显示对应功能
+        document.getElementById('canvasCapsule')?.addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-cap]');
+            if (!btn) return;
             e.stopPropagation();
-            this.wallShuffle();
-        });
-
-        document.getElementById('photoWallView')?.addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.wallSetView(this.photoWallView === 'grid' ? 'masonry' : 'grid');
+            const act = btn.dataset.cap;
+            if (act === 'view') this.wallSetView(this.photoWallView === 'grid' ? 'masonry' : 'grid');
+            else if (act === 'shuffle') this.wallShuffle();
+            else if (act === 'posts') this.goView('blog');
+            this.syncCanvasCapsule(true);
         });
 
         this.bindPhotoWall();
@@ -2428,6 +2432,70 @@ const BlogApp = {
         const plane = document.getElementById('canvasPlane');
         if (!plane) return;
         plane.style.transform = `translate3d(${this.canvasX}px, ${this.canvasY}px, 0) scale(${this.canvasS})`;
+        if (this.canvasCapsuleRaf) cancelAnimationFrame(this.canvasCapsuleRaf);
+        this.canvasCapsuleRaf = requestAnimationFrame(() => {
+            this.canvasCapsuleRaf = 0;
+            this.syncCanvasCapsule();
+        });
+    },
+
+    // 视角中心落在哪块区域，就在底部弹出那块的胶囊
+    syncCanvasCapsule(force) {
+        const canvas = document.getElementById('homeCanvas');
+        const capsule = document.getElementById('canvasCapsule');
+        if (!canvas || !capsule) return;
+        if (!this.canvasOn) {
+            capsule.classList.remove('is-show');
+            this.canvasCapsuleZone = '';
+            return;
+        }
+        const cr = canvas.getBoundingClientRect();
+        const cx = cr.left + cr.width / 2;
+        const cy = cr.top + cr.height / 2;
+        const inside = (el) => {
+            if (!el) return false;
+            const r = el.getBoundingClientRect();
+            return r.width > 0 && cx >= r.left && cx <= r.right && cy >= r.top && cy <= r.bottom;
+        };
+
+        let zone = '';
+        if (inside(document.getElementById('canvasPhotoWall'))) zone = 'photos';
+        else if (inside(document.getElementById('canvasPostWall'))) zone = 'posts';
+        else if (inside(document.getElementById('canvasCore'))) zone = 'home';
+
+        if (!force && zone === this.canvasCapsuleZone) {
+            if (zone === 'photos' || zone === 'posts') this.fillCanvasCapsule(zone);
+            return;
+        }
+        this.canvasCapsuleZone = zone;
+
+        if (zone === 'photos' || zone === 'posts') {
+            this.fillCanvasCapsule(zone);
+            capsule.classList.add('is-show');
+        } else {
+            capsule.classList.remove('is-show');
+        }
+    },
+
+    fillCanvasCapsule(zone) {
+        const capsule = document.getElementById('canvasCapsule');
+        if (!capsule) return;
+        const count = this.photoWallPool.length;
+        const posts = Array.isArray(this.posts) ? this.posts.length : 0;
+        const html = zone === 'photos'
+            ? `<span class="capsule-label">图片墙</span>`
+              + `<span class="capsule-sub">${count} 张</span>`
+              + `<span class="capsule-divider"></span>`
+              + `<button type="button" class="capsule-btn" data-cap="view">${this.photoWallView === 'grid' ? '瀑布流' : '方格'}</button>`
+              + `<button type="button" class="capsule-btn" data-cap="shuffle">换一批</button>`
+            : `<span class="capsule-label">文章墙</span>`
+              + `<span class="capsule-sub">${posts} 篇</span>`
+              + `<span class="capsule-divider"></span>`
+              + `<button type="button" class="capsule-btn" data-cap="posts">去文章页</button>`;
+        if (capsule.dataset.htm !== html) {
+            capsule.innerHTML = html;
+            capsule.dataset.htm = html;
+        }
     },
 
     canvasZoomAt(px, py, factor) {
@@ -2635,6 +2703,7 @@ const BlogApp = {
         if (render) this.wallRender();
         const sub = document.getElementById('photoWallSub');
         if (sub) sub.textContent = `${this.photoWallPool.length} 张`;
+        this.syncCanvasCapsule(true);
     },
 
     wallSetView(view) {
@@ -2649,10 +2718,8 @@ const BlogApp = {
     },
 
     syncWallViewBtn() {
-        const btn = document.getElementById('photoWallView');
-        if (!btn) return;
-        btn.textContent = this.photoWallView === 'grid' ? '瀑布流' : '方格';
-        btn.title = this.photoWallView === 'grid' ? '切换成瀑布流' : '切换成方格';
+        // 现在按钮在底部胶囊里，直接刷新胶囊内容即可
+        if (this.canvasCapsuleZone === 'photos') this.fillCanvasCapsule('photos');
     },
 
     // 确定性小随机（mulberry32）：重排时其它随机放大不会乱跳
