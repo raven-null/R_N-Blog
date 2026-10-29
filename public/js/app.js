@@ -1889,15 +1889,10 @@ const BlogApp = {
 
     // 收集所有盒子并装上交互手柄（同时标记为正方形网格卡片）
     refreshFreeBoxes() {
-        // 先把「堆叠容器」也算作一个网格项
-        const stackWrap = document.querySelector('.view-home .home-media');
-        if (stackWrap) stackWrap.classList.add('grid-card');
-
         const boxes = document.querySelectorAll('.view-home .dash-panel, .view-home .home-hero-row .home-hero');
         boxes.forEach(el => {
             if (el.dataset.freeHandles) return;
-            if (el.classList.contains('home-editor')) return;      // 编写盒子不加手柄
-            if (el.classList.contains('stack-card')) return;       // 堆叠里的两张卡由容器统一处理
+            if (el.classList.contains('home-editor')) return; // 编写盒子不加手柄
             el.dataset.freeHandles = '1';
             el.classList.add('free-box', 'grid-card');
 

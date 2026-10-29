@@ -13,7 +13,7 @@
     <script src="/js/site-icon.js?v=1.0.0" defer></script>
 
     <!-- Styles -->
-    <link rel="stylesheet" href="css/style.css?v=3.62.0">
+    <link rel="stylesheet" href="css/style.css?v=3.63.0">
     <link rel="stylesheet" href="css/glass.css?v=1.0.14">
     <link rel="stylesheet" href="css/wheel.css?v=1.0.0">
 
@@ -276,14 +276,14 @@
                             </div>
                         </div>
 
-                        <!-- 图库与文章封面叠成「堆叠文件」，点一下换到上面 -->
-                        <div class="home-media home-stack" id="homeStack">
-                            <div class="dash-panel home-photos stack-card" id="homePhotos">
+                        <!-- 图库与文章封面各占一个正方形（不再重叠） -->
+                        <div class="home-media" id="homeStack">
+                            <div class="dash-panel home-photos" id="homePhotos">
                                 <div class="home-slideshow is-loading" id="homeSlideshow"></div>
                             </div>
 
                             <!-- 博客文章封面轮播：封面铺满，底部毛玻璃遮罩放标题与标签 -->
-                            <a class="dash-panel home-post stack-card" id="homePostStage" href="article.html" aria-label="博客文章">
+                            <a class="dash-panel home-post" id="homePostStage" href="article.html" aria-label="博客文章">
                                 <div class="home-post-media">
                                     <img class="home-post-img" id="homePostImg" alt="" decoding="async" referrerpolicy="no-referrer">
                                     <span class="home-post-badge" id="homePostBadge"></span>
@@ -427,7 +427,7 @@
 
     <!-- Scripts -->
     <script src="js/theme.js?v=3.16.0" defer></script>
-    <script src="js/app.js?v=3.74.0" defer></script>
+    <script src="js/app.js?v=3.75.0" defer></script>
     <script src="js/animations.js?v=3.14.0" defer></script>
 
     <script>

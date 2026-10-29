@@ -5788,3 +5788,48 @@ html.reader-focus .article-content {
         gap: 14px;
     }
 }
+
+/* ===== 图库 / 文章两卡解除重叠，各占一个正方形 ===== */
+.view-home .home-media {
+    display: contents !important;
+    aspect-ratio: auto !important;
+    padding: 0 !important;
+    min-height: 0 !important;
+}
+
+.view-home .home-photos,
+.view-home .home-post {
+    position: relative;
+    aspect-ratio: 1 / 1;
+    width: 100%;
+    height: auto !important;
+    transform: none !important;
+    opacity: 1 !important;
+    overflow: hidden;
+}
+
+.view-home .home-photos .home-slideshow {
+    position: absolute;
+    inset: 0;
+    height: auto;
+    width: auto;
+}
+
+.view-home .home-photos .home-slide,
+.view-home .home-photos .home-slide-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* 文章卡的封面上层也要跟着正方形走 */
+.view-home .home-post .home-post-media,
+.view-home .home-post .home-post-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
