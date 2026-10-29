@@ -71,9 +71,15 @@
   }
 
   // 某个格子是否是大图锚点（2×2）
+  // 锚点必须落在「行列都隔开」的格子上，这样任意两个大图占的 2×2 区域不会相交：
+  //   行：只取偶数行（0,2,4…），一个大图占 r 和 r+1，下一个最早从 r+2 开始
+  //   列：只取 3k+1 列（1,4,7…），一个大图占 c 和 c+1，下一个最早从 c+3 开始
+  // 在这个稀疏网格里再用哈希挑一部分，看起来随机但绝不重叠。
   function isBigAnchor(c, r, cols) {
-    if (mod(c, 7) === 6) return false;              // 让大图不跨到右边界外太乱
-    return hash32(c, r) % 9 === 0;
+    if (mod(r, 2) !== 0) return false;
+    if (mod(c - 1, 3) !== 0) return false;
+    if (c + 1 >= cols) return false;                 // 别跨出右边界
+    return hash32(c, r) % 3 === 0;                   // 稀疏网格里约 1/3 变大图
   }
 
   // 格子 (c,r) 是否被某个大图覆盖
@@ -159,13 +165,33 @@
       const r1 = Math.ceil(wy1 / g.stepY) + 1;
       const n = S.pool.length;
 
+      // 先决定这片区域里每个格子归谁：大图锚点占 2×2，其余 1×1
+      const ownerMap = new Map();
       for (let r = r0; r <= r1; r++) {
         for (let c = c0; c <= c1; c++) {
-          // 被大图盖住的格子跳过（由锚点画）
           const owner = bigOwner(c, r, g.cols);
-          if (owner && (owner.c !== c || owner.r !== r)) continue;
+          if (owner) ownerMap.set(c + ',' + r, owner);
+        }
+      }
 
-          const big = owner && owner.c === c && owner.r === r;
+      for (let r = r0; r <= r1; r++) {
+        for (let c = c0; c <= c1; c++) {
+          const owner = ownerMap.get(c + ',' + r);
+          // 被别人的大图罩住的格子不画
+          if (owner && (owner.c !== c || owner.r !== r)) continue;
+          // 自己的大图要确认 2×2 的四个格子都归自己（边缘处降级成普通格）
+          let big = false;
+          if (owner && owner.c === c && owner.r === r) {
+            let ok = true;
+            for (let dr = 0; dr < 2 && ok; dr++) {
+              for (let dc = 0; dc < 2 && ok; dc++) {
+                const o2 = ownerMap.get((c + dc) + ',' + (r + dr));
+                if (!o2 || o2.c !== c || o2.r !== r) ok = false;
+              }
+            }
+            big = ok;
+          }
+
           const idx = mod(r * g.cols + c, n);
           const p = S.pool[idx];
           const key = 'g' + c + ',' + r;
