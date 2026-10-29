@@ -6173,3 +6173,349 @@ html.reader-focus .article-content {
         animation: none;
     }
 }
+
+/* ===== 主页：无限画布 =====
+   只在桌面（>=901px）开启：body.canvas-on。中心是主页本体，
+   左边一块图片墙，右边一块文章墙，上下留白待开发。 */
+
+body.canvas-on #scrollArea {
+    overflow: hidden;
+}
+
+body.canvas-on .main-content {
+    padding: 0;
+    height: 100%;
+    max-width: 100%;
+}
+
+body.canvas-on .view-home {
+    height: 100%;
+    min-height: 0;
+}
+
+body.canvas-on .footer-home,
+body.canvas-on .back-to-top,
+body.canvas-on .reading-progress {
+    display: none !important;
+}
+
+.home-canvas {
+    position: relative;
+    height: 100%;
+    overflow: hidden;
+    cursor: grab;
+    touch-action: none;
+    background:
+        radial-gradient(circle at 30% 20%, rgba(120, 100, 255, 0.06), transparent 55%),
+        radial-gradient(circle at 75% 80%, rgba(0, 200, 255, 0.05), transparent 55%),
+        var(--bg);
+}
+
+.home-canvas.is-dragging {
+    cursor: grabbing;
+}
+
+.canvas-plane {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 0;
+    height: 0;
+    transform-origin: 0 0;
+    will-change: transform;
+}
+
+/* 无限点阵背景（跟着画布一起缩放平移） */
+.canvas-plane::before {
+    content: '';
+    position: absolute;
+    left: -30000px;
+    top: -30000px;
+    width: 60000px;
+    height: 60000px;
+    background-image: radial-gradient(circle, var(--border) 1px, transparent 1.6px);
+    background-size: 56px 56px;
+    opacity: 0.55;
+    pointer-events: none;
+    z-index: -1;
+}
+
+.canvas-node {
+    position: absolute;
+}
+
+/* 中心：主页本体 */
+.canvas-core {
+    width: 1280px;
+    left: 0;
+    top: 0;
+}
+
+.canvas-core .dashboard {
+    width: 100%;
+    margin: 0;
+}
+
+/* 左右两块墙 */
+.canvas-wall {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 18px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    background: var(--card-bg, rgba(20, 20, 34, 0.72));
+    box-shadow: 0 20px 60px var(--shadow);
+    overflow: hidden;
+}
+
+.canvas-wall-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: none;
+}
+
+.canvas-wall-title {
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    color: var(--text);
+}
+
+.canvas-wall-sub {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.canvas-wall-btn {
+    margin-left: auto;
+    padding: 5px 12px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: color 0.2s, border-color 0.2s, background 0.2s;
+}
+
+.canvas-wall-btn:hover {
+    color: var(--text);
+    border-color: var(--accent, #6c8cff);
+    background: rgba(108, 140, 255, 0.1);
+}
+
+.canvas-wall-body {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.canvas-wall-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+/* 图片墙：等格平铺 */
+.photo-wall-grid {
+    display: grid;
+    grid-template-columns: repeat(11, 1fr);
+    grid-template-rows: repeat(8, 1fr);
+    gap: 12px;
+}
+
+.photo-wall-item {
+    position: relative;
+    padding: 0;
+    border: 0;
+    border-radius: 10px;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.04);
+    cursor: pointer;
+    transition: transform 0.22s ease, box-shadow 0.22s ease;
+}
+
+.photo-wall-item img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.photo-wall-item:hover {
+    transform: scale(1.04);
+    box-shadow: 0 12px 28px var(--shadow);
+    z-index: 2;
+}
+
+/* 文章墙：竖向卡片 */
+.post-wall-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+.post-wall-item {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-areas:
+        'title title'
+        'date tags';
+    gap: 6px 10px;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.03);
+    text-decoration: none;
+    transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+
+.post-wall-item:hover {
+    transform: translateX(4px);
+    border-color: var(--accent, #6c8cff);
+    background: rgba(108, 140, 255, 0.08);
+}
+
+.post-wall-title {
+    grid-area: title;
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.45;
+    color: var(--text);
+}
+
+.post-wall-date {
+    grid-area: date;
+    font-size: 11.5px;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+}
+
+.post-wall-tags {
+    grid-area: tags;
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.post-wall-tag {
+    font-size: 11px;
+    padding: 1px 8px;
+    border-radius: 999px;
+    color: var(--text-secondary);
+    background: rgba(255, 255, 255, 0.06);
+}
+
+/* 上下待开发区域 */
+.canvas-hold {
+    width: 1280px;
+    height: 460px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px dashed var(--border);
+    border-radius: 24px;
+    background: rgba(255, 255, 255, 0.015);
+}
+
+.canvas-hold-text {
+    font-size: 15px;
+    letter-spacing: 3px;
+    color: var(--text-muted);
+    opacity: 0.8;
+}
+
+/* 画布控制条 */
+.canvas-hud {
+    position: absolute;
+    left: 24px;
+    bottom: 22px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--card-bg, rgba(20, 20, 34, 0.8));
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: 0 10px 30px var(--shadow);
+    z-index: 12;
+}
+
+.canvas-hud button {
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    display: grid;
+    place-items: center;
+    font-size: 16px;
+    line-height: 1;
+    color: var(--text-secondary);
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 50%;
+    cursor: pointer;
+    font-family: inherit;
+    transition: color 0.18s, background 0.18s, border-color 0.18s;
+}
+
+.canvas-hud button:hover {
+    color: var(--text);
+    background: rgba(255, 255, 255, 0.08);
+    border-color: var(--border);
+}
+
+.canvas-hud-tip {
+    font-size: 11.5px;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+    padding-right: 4px;
+}
+
+/* 窄屏不启用画布，恢复原来的流式主页 */
+@media (max-width: 900px) {
+    .home-canvas {
+        height: auto;
+        overflow: visible;
+        cursor: auto;
+        touch-action: auto;
+    }
+
+    .canvas-plane,
+    .canvas-plane::before {
+        position: static;
+        width: auto;
+        height: auto;
+        background: none;
+        transform: none !important;
+    }
+
+    .canvas-node {
+        position: static;
+        width: auto !important;
+        height: auto !important;
+        left: auto !important;
+        top: auto !important;
+    }
+
+    .canvas-core {
+        width: 100%;
+    }
+
+    .canvas-wall,
+    .canvas-hold,
+    .canvas-hud {
+        display: none;
+    }
+}

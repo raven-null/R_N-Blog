@@ -29,6 +29,7 @@ const BlogApp = {
         ThemeManager.init();
         ThemeManager.createThemeToggle();
         await this.loadPosts();
+        this.renderPostWall();
         this.render();
         // 主页为默认视图时，渲染统计概览与最新文章
         if (this.currentView === 'home') this.renderHome();
@@ -45,6 +46,7 @@ const BlogApp = {
         this.bindBoxPlay();
         // 赛博猫娘对话
         this.initDeskPet();
+        this.initHomeCanvas();
         // 后台退出登录联动：admin_key / gallery_key 被清除时，前台图库 R18 恢复锁定
         window.addEventListener('storage', (e) => {
             if ((e.key === 'admin_key' || e.key === 'gallery_key') && !e.newValue) {
@@ -262,6 +264,7 @@ const BlogApp = {
 
         const postsHTML = this.filteredPosts.map(post => this.renderPostCard(post)).join('');
         postsContainer.innerHTML = `<div class="waterfall">${postsHTML}</div>`;
+        if (typeof this.renderPostWall === 'function') this.renderPostWall();
     },
 
     // 根据作者名字返回对应头像（站长使用设置中的头像，其他用默认）
@@ -2268,6 +2271,384 @@ const BlogApp = {
         const dx = Math.max(-1, Math.min(1, (mouseX - cx) / 260));
         const dy = Math.max(-1, Math.min(1, (mouseY - cy) / 260));
         eyes.style.transform = `translate(${(dx * 3).toFixed(2)}px, ${(dy * 2.4).toFixed(2)}px)`;
+    },
+
+    // ===================== 主页：无限画布 =====================
+    // 世界坐标：主页本体左上角 (0,0)，宽 1280；左 = 图片墙，右 = 文章墙，上 / 下留白待开发。
+
+    CANVAS_CORE_W: 1280,
+    CANVAS_MIN_S: 0.26,
+    CANVAS_MAX_S: 2.2,
+
+    canvasOn: false,
+    canvasX: 0,
+    canvasY: 0,
+    canvasS: 1,
+    canvasDragging: false,
+    canvasMoved: 0,
+    canvasVelX: 0,
+    canvasVelY: 0,
+    canvasInertia: 0,
+    canvasMq: null,
+    canvasUserMoved: false,
+    photoWallPhotos: [],
+    photoWallLoading: false,
+    photoWallBatch: 0,
+
+    initHomeCanvas() {
+        const canvas = document.getElementById('homeCanvas');
+        const plane = document.getElementById('canvasPlane');
+        if (!canvas || !plane || canvas.dataset.bound) return;
+        canvas.dataset.bound = '1';
+
+        this.canvasMq = window.matchMedia('(min-width: 901px)');
+        const applyMode = () => {
+            this.canvasOn = this.canvasMq.matches;
+            document.body.classList.toggle('canvas-on', this.canvasOn);
+            if (this.canvasOn) {
+                this.layoutCanvasNodes();
+                this.fitCanvas();
+            } else {
+                plane.style.transform = '';
+            }
+        };
+        applyMode();
+        if (this.canvasMq.addEventListener) this.canvasMq.addEventListener('change', applyMode);
+
+        this.bindCanvasDrag(canvas);
+        this.bindCanvasZoom(canvas);
+
+        canvas.addEventListener('dblclick', (e) => {
+            if (!this.canvasOn) return;
+            if (e.target.closest('.canvas-core, .canvas-wall')) return;
+            this.fitCanvas();
+        });
+
+        window.addEventListener('resize', () => {
+            if (!this.canvasOn) return;
+            this.layoutCanvasNodes();
+            this.applyCanvas();
+        });
+
+        document.getElementById('canvasHud')?.addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-canvas-act]');
+            if (!btn) return;
+            const act = btn.dataset.canvasAct;
+            if (act === 'reset') { this.canvasUserMoved = false; this.fitCanvas(); }
+            else if (act === 'zoom-in') this.canvasZoomCenter(1.2);
+            else if (act === 'zoom-out') this.canvasZoomCenter(1 / 1.2);
+        });
+
+        document.getElementById('photoWallShuffle')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const list = this.photoWallPhotos.slice();
+            if (!list.length) return;
+            for (let i = list.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [list[i], list[j]] = [list[j], list[i]];
+            }
+            this.renderPhotoWall(list);
+        });
+
+        this.renderPostWall();
+        this.loadPhotoWall();
+        // 卡片、新闻渲染完主页会变高，等数据落地后再对一次焦（用户没动过才动）
+        [600, 1800, 3200].forEach((ms) => setTimeout(() => {
+            if (this.canvasOn && !this.canvasUserMoved) {
+                this.layoutCanvasNodes();
+                this.fitCanvas();
+            }
+        }, ms));
+    },
+
+    // 各节点在世界坐标里的位置（下占位依赖主页实际高度，每次重排）
+    layoutCanvasNodes() {
+        const core = document.getElementById('canvasCore');
+        const photoWall = document.getElementById('canvasPhotoWall');
+        const postWall = document.getElementById('canvasPostWall');
+        const north = document.getElementById('canvasHoldNorth');
+        const south = document.getElementById('canvasHoldSouth');
+        if (!core) return;
+
+        const coreH = core.offsetHeight || 1080;
+        const PHOTO_W = 2400;
+        const PHOTO_H = 1700;
+        const POST_W = 1080;
+        const POST_H = 1500;
+        const GAP_X = 320;
+        const GAP_Y = 240;
+
+        core.style.left = '0px';
+        core.style.top = '0px';
+
+        if (photoWall) {
+            photoWall.style.width = PHOTO_W + 'px';
+            photoWall.style.height = PHOTO_H + 'px';
+            photoWall.style.left = (-GAP_X - PHOTO_W) + 'px';
+            photoWall.style.top = Math.round(coreH / 2 - PHOTO_H / 2) + 'px';
+        }
+        if (postWall) {
+            postWall.style.width = POST_W + 'px';
+            postWall.style.height = POST_H + 'px';
+            postWall.style.left = (this.CANVAS_CORE_W + GAP_X) + 'px';
+            postWall.style.top = '-120px';
+        }
+        if (north) {
+            north.style.left = '0px';
+            north.style.top = (-GAP_Y - 460) + 'px';
+        }
+        if (south) {
+            south.style.left = '0px';
+            south.style.top = (coreH + GAP_Y) + 'px';
+        }
+    },
+
+    // 让主页本体整块落在视野中央
+    fitCanvas() {
+        const canvas = document.getElementById('homeCanvas');
+        const core = document.getElementById('canvasCore');
+        if (!canvas || !core) return;
+        const vw = canvas.clientWidth || window.innerWidth;
+        const vh = canvas.clientHeight || window.innerHeight;
+        const coreH = core.offsetHeight || 1080;
+        const s = Math.max(
+            this.CANVAS_MIN_S,
+            Math.min((vw - 96) / this.CANVAS_CORE_W, (vh - 72) / coreH, 1)
+        );
+        this.canvasS = s;
+        this.canvasX = Math.round((vw - this.CANVAS_CORE_W * s) / 2);
+        this.canvasY = Math.round((vh - coreH * s) / 2);
+        this.applyCanvas();
+    },
+
+    applyCanvas() {
+        const plane = document.getElementById('canvasPlane');
+        if (!plane) return;
+        plane.style.transform = `translate3d(${this.canvasX}px, ${this.canvasY}px, 0) scale(${this.canvasS})`;
+    },
+
+    canvasZoomAt(px, py, factor) {
+        const next = Math.min(this.CANVAS_MAX_S, Math.max(this.CANVAS_MIN_S, this.canvasS * factor));
+        if (Math.abs(next - this.canvasS) < 1e-4) return;
+        this.canvasX = px - ((px - this.canvasX) / this.canvasS) * next;
+        this.canvasY = py - ((py - this.canvasY) / this.canvasS) * next;
+        this.canvasS = next;
+        this.applyCanvas();
+    },
+
+    canvasZoomCenter(factor) {
+        const canvas = document.getElementById('homeCanvas');
+        if (!canvas) return;
+        this.canvasZoomAt(canvas.clientWidth / 2, canvas.clientHeight / 2, factor);
+    },
+
+    bindCanvasDrag(canvas) {
+        // 这些元素自己要用鼠标：拖把手、横向滚动条、新闻列表等，别抢
+        const SKIP = 'button, a, input, textarea, select, label, .free-box-drag, .free-box-zoom, .home-news-list, .home-projects-grid, .life-task-list, .post-wall-item, .photo-wall-item';
+        let startX = 0;
+        let startY = 0;
+        let origX = 0;
+        let origY = 0;
+        let lastX = 0;
+        let lastY = 0;
+        let lastT = 0;
+
+        const down = (e) => {
+            if (!this.canvasOn) return;
+            if (e.button !== undefined && e.button !== 0) return;
+            if (e.target.closest(SKIP)) return;
+            this.stopCanvasInertia();
+            this.canvasUserMoved = true;
+            this.canvasDragging = true;
+            this.canvasMoved = 0;
+            startX = e.clientX;
+            startY = e.clientY;
+            origX = this.canvasX;
+            origY = this.canvasY;
+            lastX = e.clientX;
+            lastY = e.clientY;
+            lastT = Date.now();
+            this.canvasVelX = 0;
+            this.canvasVelY = 0;
+            canvas.classList.add('is-dragging');
+        };
+
+        const move = (e) => {
+            if (!this.canvasDragging) return;
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+            this.canvasMoved = Math.max(this.canvasMoved, Math.abs(dx) + Math.abs(dy));
+            this.canvasX = origX + dx;
+            this.canvasY = origY + dy;
+            const now = Date.now();
+            const dt = Math.max(1, now - lastT);
+            this.canvasVelX = (e.clientX - lastX) / dt;
+            this.canvasVelY = (e.clientY - lastY) / dt;
+            lastX = e.clientX;
+            lastY = e.clientY;
+            lastT = now;
+            this.applyCanvas();
+        };
+
+        const up = () => {
+            if (!this.canvasDragging) return;
+            this.canvasDragging = false;
+            canvas.classList.remove('is-dragging');
+            if (Math.hypot(this.canvasVelX, this.canvasVelY) > 0.15) this.startCanvasInertia();
+        };
+
+        canvas.addEventListener('pointerdown', down);
+        window.addEventListener('pointermove', move);
+        window.addEventListener('pointerup', up);
+        window.addEventListener('pointercancel', up);
+        canvas.addEventListener('dragstart', (e) => e.preventDefault());
+    },
+
+    startCanvasInertia() {
+        const step = () => {
+            this.canvasInertia = 0;
+            if (this.canvasDragging) return;
+            this.canvasVelX *= 0.94;
+            this.canvasVelY *= 0.94;
+            if (Math.abs(this.canvasVelX) < 0.02 && Math.abs(this.canvasVelY) < 0.02) return;
+            this.canvasX += this.canvasVelX * 16;
+            this.canvasY += this.canvasVelY * 16;
+            this.applyCanvas();
+            this.canvasInertia = requestAnimationFrame(step);
+        };
+        this.canvasInertia = requestAnimationFrame(step);
+    },
+
+    stopCanvasInertia() {
+        if (this.canvasInertia) {
+            cancelAnimationFrame(this.canvasInertia);
+            this.canvasInertia = 0;
+        }
+    },
+
+    bindCanvasZoom(canvas) {
+        const SCROLLY = '.home-news-list, .life-task-list, .home-projects-grid, .dash-panel-body';
+        canvas.addEventListener('wheel', (e) => {
+            if (!this.canvasOn) return;
+            if (e.target.closest(SCROLLY)) return;      // 列表自己滚
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            this.canvasZoomAt(
+                e.clientX - rect.left,
+                e.clientY - rect.top,
+                Math.max(0.72, Math.min(1.38, Math.exp(-e.deltaY * 0.0012)))
+            );
+        }, { passive: false });
+
+        let pinch = null;
+        const dist = (a, b) => Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+        canvas.addEventListener('touchstart', (e) => {
+            if (!this.canvasOn || e.touches.length !== 2) return;
+            this.stopCanvasInertia();
+            this.canvasDragging = false;
+            const [a, b] = e.touches;
+            pinch = {
+                d0: Math.max(1, dist(a, b)),
+                s0: this.canvasS,
+                x0: this.canvasX,
+                y0: this.canvasY,
+                mx: (a.clientX + b.clientX) / 2,
+                my: (a.clientY + b.clientY) / 2,
+            };
+        }, { passive: true });
+        canvas.addEventListener('touchmove', (e) => {
+            if (!this.canvasOn || !pinch || e.touches.length !== 2) return;
+            const [a, b] = e.touches;
+            const next = Math.min(this.CANVAS_MAX_S, Math.max(this.CANVAS_MIN_S, pinch.s0 * (dist(a, b) / pinch.d0)));
+            const k = next / pinch.s0;
+            this.canvasS = next;
+            this.canvasX = (a.clientX + b.clientX) / 2 - (pinch.mx - pinch.x0) * k;
+            this.canvasY = (a.clientY + b.clientY) / 2 - (pinch.my - pinch.y0) * k;
+            this.applyCanvas();
+        }, { passive: true });
+        canvas.addEventListener('touchend', () => { pinch = null; });
+        canvas.addEventListener('touchcancel', () => { pinch = null; });
+    },
+
+    // ---------- 左：图片墙 ----------
+
+    async loadPhotoWall() {
+        if (this.photoWallLoading) return;
+        if (this.photoWallPhotos.length) {
+            this.renderPhotoWall(this.photoWallPhotos);
+            return;
+        }
+        this.photoWallLoading = true;
+        const sub = document.getElementById('photoWallSub');
+        if (sub) sub.textContent = '加载中…';
+        try {
+            const list = await Promise.race([
+                this.loadGalleryImages(),
+                new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 15000)),
+            ]);
+            this.photoWallPhotos = (list || []).filter((p) => p && (p.thumb || p.url) && !this.isR18Image(p));
+            this.renderPhotoWall(this.photoWallPhotos);
+        } catch (e) {
+            if (sub) sub.textContent = '图片没加载出来';
+        } finally {
+            this.photoWallLoading = false;
+        }
+    },
+
+    renderPhotoWall(photos) {
+        const body = document.getElementById('photoWallBody');
+        const sub = document.getElementById('photoWallSub');
+        if (!body) return;
+        const COLS = 11;
+        const ROWS = 8;
+        const cells = COLS * ROWS;
+        const pool = photos || [];
+        if (!pool.length) {
+            body.innerHTML = '<div class="canvas-wall-empty">暂时没有照片</div>';
+            if (sub) sub.textContent = '';
+            return;
+        }
+        // 以「批次偏移」取一圈连续照片，保证每次换一批都是不一样的一段
+        const offset = this.photoWallBatch++ * cells;
+        let html = '';
+        for (let i = 0; i < cells; i++) {
+            const p = pool[(offset + i) % pool.length];
+            const src = p.thumb || p.url;
+            const safeSrc = String(src).replace(/"/g, '&quot;');
+            html += `<button type="button" class="photo-wall-item" title="看图库">`
+                + `<img src="${safeSrc}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.style.visibility='hidden'">`
+                + `</button>`;
+        }
+        body.innerHTML = html;
+        if (sub) sub.textContent = `${pool.length} 张`;
+    },
+
+    // ---------- 右：文章墙 ----------
+
+    renderPostWall() {
+        const body = document.getElementById('postWallBody');
+        const sub = document.getElementById('postWallSub');
+        if (!body) return;
+        const posts = Array.isArray(this.posts) ? this.posts : [];
+        if (!posts.length) {
+            body.innerHTML = '<div class="canvas-wall-empty">文章还在路上…</div>';
+            if (sub) sub.textContent = '';
+            return;
+        }
+        const list = posts.slice(0, 60).map((post) => {
+            const title = this.escHtml ? this.escHtml(post.title || '无标题') : (post.title || '无标题');
+            const date = this.formatDate ? this.formatDate(post.date) : (post.date || '');
+            const tags = (post.tags || []).slice(0, 2).map((t) => `<span class="post-wall-tag">${t}</span>`).join('');
+            const href = `article.html?post=${encodeURIComponent(post.filename || '')}`;
+            return `<a class="post-wall-item" href="${href}">`
+                + `<span class="post-wall-date">${date}</span>`
+                + `<span class="post-wall-title">${title}</span>`
+                + (tags ? `<span class="post-wall-tags">${tags}</span>` : '')
+                + `</a>`;
+        }).join('');
+        body.innerHTML = list;
+        if (sub) sub.textContent = `${posts.length} 篇`;
+        this.layoutCanvasNodes();
     },
 
     // 主页入口：切到指定视图（可选再按内容形态筛选）

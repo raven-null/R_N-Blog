@@ -13,7 +13,7 @@
     <script src="/js/site-icon.js?v=1.0.0" defer></script>
 
     <!-- Styles -->
-    <link rel="stylesheet" href="css/style.css?v=3.70.0">
+    <link rel="stylesheet" href="css/style.css?v=3.72.0">
     <link rel="stylesheet" href="css/glass.css?v=1.0.14">
     <link rel="stylesheet" href="css/wheel.css?v=1.0.0">
 
@@ -159,8 +159,28 @@
                     </div>
                 </section>
 
-            <!-- 视图：主页 -->
+            <!-- 视图：主页（无限画布：中心是主页，左边图片墙，右边文章墙） -->
             <section class="view view-home" id="view-home">
+                <div class="home-canvas" id="homeCanvas">
+                    <div class="canvas-plane" id="canvasPlane">
+
+                        <!-- 上：待开发 -->
+                        <div class="canvas-node canvas-hold canvas-hold-north" id="canvasHoldNorth">
+                            <span class="canvas-hold-text">这块还没想好 · 以后再来</span>
+                        </div>
+
+                        <!-- 左：图片墙 -->
+                        <section class="canvas-node canvas-wall canvas-wall-photos" id="canvasPhotoWall">
+                            <header class="canvas-wall-head">
+                                <span class="canvas-wall-title">图片墙</span>
+                                <span class="canvas-wall-sub" id="photoWallSub"></span>
+                                <button class="canvas-wall-btn" id="photoWallShuffle" type="button">换一批</button>
+                            </header>
+                            <div class="canvas-wall-body photo-wall-grid" id="photoWallBody"></div>
+                        </section>
+
+                        <!-- 中心：主页本体 -->
+                        <div class="canvas-node canvas-core" id="canvasCore">
                 <div class="dashboard">
 
                     <!-- 欢迎区：左 = 个人信息，右 = 时间 + 日历 -->
@@ -307,6 +327,32 @@
                     </div>
 
                 </div>
+                        </div>
+
+                        <!-- 右：文章墙 -->
+                        <section class="canvas-node canvas-wall canvas-wall-posts" id="canvasPostWall">
+                            <header class="canvas-wall-head">
+                                <span class="canvas-wall-title">文章墙</span>
+                                <span class="canvas-wall-sub" id="postWallSub"></span>
+                            </header>
+                            <div class="canvas-wall-body post-wall-list" id="postWallBody"></div>
+                        </section>
+
+                        <!-- 下：待开发 -->
+                        <div class="canvas-node canvas-hold canvas-hold-south" id="canvasHoldSouth">
+                            <span class="canvas-hold-text">这块还没想好 · 以后再来</span>
+                        </div>
+
+                    </div>
+
+                    <!-- 画布控制 -->
+                    <div class="canvas-hud" id="canvasHud">
+                        <button type="button" data-canvas-act="zoom-out" title="缩小">−</button>
+                        <button type="button" data-canvas-act="zoom-in" title="放大">+</button>
+                        <button type="button" data-canvas-act="reset" title="回到主页">⌂</button>
+                        <span class="canvas-hud-tip">拖动浏览 · 滚轮缩放 · 左边图片墙，右边文章墙</span>
+                    </div>
+                </div>
             </section>
             </main>
 
@@ -440,7 +486,7 @@
 
     <!-- Scripts -->
     <script src="js/theme.js?v=3.16.0" defer></script>
-    <script src="js/app.js?v=3.80.0" defer></script>
+    <script src="js/app.js?v=3.83.0" defer></script>
     <script src="js/animations.js?v=3.14.0" defer></script>
 
     <script>
