@@ -131,3 +131,39 @@ html[data-tone="dark"] select {
     color: var(--text) !important;
     border-color: var(--border) !important;
 }
+
+/* ============================================================
+   后台的玻璃色（前台由 sky.css 提供，后台没引那个文件，这里补一份）
+   ============================================================ */
+:root {
+    --glass-card: rgba(255, 253, 248, 0.78);
+    --glass-card-strong: rgba(255, 253, 248, 0.92);
+    --glass-line: rgba(66, 54, 32, 0.12);
+}
+
+[data-theme="dark"] {
+    --glass-card: rgba(20, 24, 37, 0.72);
+    --glass-card-strong: rgba(20, 24, 37, 0.88);
+    --glass-line: rgba(255, 255, 255, 0.12);
+}
+
+html[data-tone="dark"] {
+    --glass-card: rgba(20, 24, 37, 0.72);
+    --glass-card-strong: rgba(20, 24, 37, 0.88);
+    --glass-line: rgba(255, 255, 255, 0.12);
+}
+
+html[data-tone="light"] {
+    --glass-card: rgba(255, 253, 248, 0.78);
+    --glass-card-strong: rgba(255, 253, 248, 0.92);
+    --glass-line: rgba(66, 54, 32, 0.12);
+}
+
+/* 侧栏、头部、移动端标签栏统一用玻璃色 */
+.sidebar,
+.admin-header,
+.mobile-tabs {
+    background: var(--glass-card) !important;
+    color: var(--text) !important;
+    border-color: var(--glass-line) !important;
+}

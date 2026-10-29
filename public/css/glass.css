@@ -320,18 +320,20 @@ body:not(.home-layout) .article-layout,
 
 /* —— 管理后台 —— */
 .login-page {
-    background: radial-gradient(ellipse at 30% 40%, rgba(13, 21, 32, 0.55), rgba(8, 8, 8, 0.82)) !important;
+    background: var(--bg, #fbf8f1) !important;
 }
 
 .login-box,
 .admin-header,
 .sidebar,
 .mobile-tabs {
-    background: rgba(18, 18, 22, 0.6) !important;
+    /* 改用主题玻璃色（浅色主题是白玻璃，深色主题是深玻璃） */
+    background: var(--glass-card, rgba(255, 253, 248, 0.78)) !important;
     backdrop-filter: var(--glass-blur) !important;
     -webkit-backdrop-filter: var(--glass-blur) !important;
-    border: 1px solid var(--glass-border) !important;
+    border: 1px solid var(--glass-line, var(--glass-border)) !important;
     box-shadow: var(--glass-shadow);
+    color: var(--text) !important;
 }
 
 .admin-header,

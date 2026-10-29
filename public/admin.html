@@ -22,7 +22,18 @@
          首屏没必要为它下 289KB JS + 43KB CSS）。其余语言/绘图子包由 Vditor 自身按需拉取。 -->
     <style>
         *{margin:0;padding:0;box-sizing:border-box}
-        :root{--bg:#080808;--bg-card:#111;--bg-input:#1a1a1a;--bg-hover:#1c1c1c;--bg-active:#1a2a3a;--text:#fff;--text-muted:rgba(255,255,255,.85);--accent:#4fc3f7;--accent-dim:rgba(79,195,247,.1);--border:#252525;--border-light:#333;--danger:#ef5350;--success:#66bb6a;--warning:#ffa726;--radius:10px;--radius-sm:6px;--shadow:0 8px 32px rgba(0,0,0,.5);--sidebar-w:220px;--sidebar-collapsed:52px}
+        :root{
+  /* 颜色全部来自 css/tokens.css，深浅主题由 data-theme / data-tone 决定 */
+  --bg-input: var(--surface-2);
+  --bg-hover: var(--surface-2);
+  --bg-active: var(--accent-soft);
+  --warning: var(--warn);
+  --radius: var(--r-lg);
+  --radius-sm: var(--r-md);
+  /* 后台自己的尺寸变量 */
+  --sidebar-w:220px;
+  --sidebar-collapsed:52px;
+}
         body{font-family:-apple-system,'Segoe UI','PingFang SC',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
         /* 已登录时跳过登录页，改为显示一个门帘，等密钥验完再进后台（见 head 里的内联脚本） */
         html.has-admin-key #loginPage{display:none!important}
@@ -627,7 +638,7 @@
             border-top:1px solid var(--glass-border);
         }
     </style>
-    <link rel="stylesheet" href="css/glass.css?v=1.0.14">
+    <link rel="stylesheet" href="css/glass.css?v=1.0.15">
     <link rel="stylesheet" href="/css/scrollbar.css?v=1.0.1">
     <link rel="stylesheet" href="/css/responsive.css?v=1.0.0">
     <link rel="stylesheet" href="/css/mobile.css?v=1.0.0">
@@ -639,8 +650,8 @@
     <link rel="stylesheet" href="/css/drawer.css?v=1.0.1">
     <!-- 下拉框统一深色（黑底白字 + 自绘箭头），见文件头注释 -->
     <link rel="stylesheet" href="/css/forms.css?v=1.0.0">
-    <link rel="stylesheet" href="/css/tokens.css?v=1.4.1">
-    <link rel="stylesheet" href="/css/admin-skin.css?v=1.1.0">
+    <link rel="stylesheet" href="/css/tokens.css?v=1.4.2">
+    <link rel="stylesheet" href="/css/admin-skin.css?v=1.2.0">
     <script src="/js/tone.js?v=1.0.0" defer></script>
 </head>
 <body>
