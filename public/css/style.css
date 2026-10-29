@@ -9117,3 +9117,54 @@ html.glass-ready .stack-box > [data-reveal].in-view {
         height: 200px !important;
     }
 }
+
+/* 文章卡最终形态：360×360 正方形 */
+.hv-car-track > * {
+    flex: 0 0 360px !important;
+    max-width: 360px !important;
+}
+
+.hv-car-item {
+    width: 360px !important;
+    height: 360px !important;
+    aspect-ratio: 1 / 1 !important;
+    border-radius: 22px !important;
+    min-height: 0 !important;
+}
+
+.hv-car-cover {
+    height: 205px !important;
+    flex: none !important;
+    border-radius: 22px 22px 0 0 !important;
+}
+
+.hv-car-body {
+    flex: 1 !important;
+    padding: 14px 18px 16px !important;
+    justify-content: center !important;
+    gap: 6px !important;
+}
+
+.hv-car-title {
+    font-size: 18px !important;
+    line-height: 1.45 !important;
+    -webkit-line-clamp: 2 !important;
+    line-clamp: 2 !important;
+}
+
+@media (max-width: 900px) {
+    .hv-car-track > * {
+        flex: 0 0 min(300px, calc(100vw - 48px)) !important;
+        max-width: none !important;
+    }
+
+    .hv-car-item {
+        width: 100% !important;
+        height: auto !important;
+        min-height: 300px !important;
+    }
+
+    .hv-car-cover {
+        height: 168px !important;
+    }
+}
