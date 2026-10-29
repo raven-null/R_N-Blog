@@ -45,6 +45,12 @@ const BlogApp = {
         // 主页盒子的自由交互：堆叠切换 / 缩放 / 交换
         this.bindBoxPlay();
         // 赛博猫娘对话
+        // 首页手写开关（时钟旁第二个小圆钮）
+        document.getElementById('hvHandBtn')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.applyHandBody(!document.documentElement.classList.contains('hand-body'));
+        });
+
         // 首页主题切换（时钟旁的小圆钮）
         document.getElementById('hvThemeBtn')?.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -1066,6 +1072,7 @@ const BlogApp = {
             this.bindNewsInfiniteScroll(list);
             this.fillNewsIfShort(list);
             this.bindNewsHoverScroll();
+            this.initNewsStack();
         } catch (e) {
             console.error('资讯加载失败:', e);
             list.innerHTML = '<div class="home-empty">资讯加载失败，稍后再试</div>';
@@ -1655,6 +1662,8 @@ const BlogApp = {
                 + `<img src="${src}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.style.visibility='hidden'">`
                 + `</button>`;
         }).join('');
+
+        this.initPhotoStack();
 
         box.addEventListener('click', (e) => {
             const btn = e.target.closest('.hv-photo');
@@ -4199,6 +4208,159 @@ const BlogApp = {
         const month = String(date.getMonth() + 1).padStart(2, '0');
         const day = String(date.getDate()).padStart(2, '0');
         return `${year}.${month}.${day}`;
+    },
+    // ===================== 卡片堆叠（参考「文件堆叠」设计稿） =====================
+    // 多张卡重叠，各带旋转与偏移；滚轮切换最上面那张，点小圆点横向展开。
+    stackCards: new Map(),
+
+    initStackBox(box, opts = {}) {
+        if (!box || box.dataset.stackBound) return;
+        box.dataset.stackBound = '1';
+
+        const items = [...box.children].filter((el) => el.nodeType === 1);
+        if (!items.length) return;
+
+        const state = {
+            active: 0,
+            expanded: false,
+            wheelAt: 0,
+            hoverTimer: 0,
+        };
+        this.stackCards.set(box, state);
+
+        // 摘掉入场动画标记：它会给元素写内联 transform，把堆叠位置盖掉
+        items.forEach((el) => {
+            el.removeAttribute('data-reveal');
+            el.classList.remove('in-view');
+            el.style.opacity = '';
+            el.style.transform = '';
+        });
+
+        // 每张卡右上角加序号角标
+        items.forEach((el, i) => {
+            if (el.querySelector('.stack-badge')) return;
+            const badge = document.createElement('span');
+            badge.className = 'stack-badge';
+            badge.textContent = (i + 1) + ' / ' + items.length;
+            el.appendChild(badge);
+        });
+
+        // 滚轮切换（只接管滚轮，不拦页面滚动到不了的地方）
+        box.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const now = Date.now();
+            if (now - state.wheelAt < 260) return;
+            state.wheelAt = now;
+            const dir = Math.sign(e.deltaY) || 1;
+            state.active = (state.active + dir + items.length) % items.length;
+            this.paintStack(box);
+        }, { passive: false });
+
+        // 悬停时自动轮换
+        const startAuto = () => {
+            clearInterval(state.hoverTimer);
+            state.hoverTimer = setInterval(() => {
+                state.active = (state.active + 1) % items.length;
+                this.paintStack(box);
+            }, opts.autoMs || 3600);
+        };
+        const stopAuto = () => clearInterval(state.hoverTimer);
+        box.addEventListener('mouseenter', startAuto);
+        box.addEventListener('mouseleave', stopAuto);
+        box.addEventListener('pointerdown', stopAuto);
+        box.addEventListener('pointerup', startAuto);
+
+        this.paintStack(box);
+    },
+
+    // 按当前 active 计算每张卡的层叠位置
+    paintStack(box) {
+        const state = this.stackCards.get(box);
+        if (!state) return;
+        const items = [...box.children].filter((el) => el.classList.contains('news-item') || el.classList.contains('hv-photo'));
+        const n = items.length;
+        if (!n) return;
+
+        // 每次都摘掉滚动 reveal 标记 —— 它会写 transform: translateY(0) 压住堆叠位置
+        items.forEach((el) => {
+            if (el.hasAttribute('data-reveal')) el.removeAttribute('data-reveal');
+            if (el.classList.contains('in-view')) el.classList.remove('in-view');
+            el.style.setProperty('filter', 'none', 'important');
+        });
+
+        // 层叠参数：越靠后转得越多、偏得越远、越淡
+        const LAYERS = [
+            { rot: -2, x: 0, y: 0, z: 40, opacity: 1, scale: 1 },
+            { rot: 1.5, x: 7, y: 7, z: 30, opacity: 0.94, scale: 0.985 },
+            { rot: 3.5, x: 14, y: 14, z: 20, opacity: 0.86, scale: 0.97 },
+            { rot: 5.5, x: 21, y: 20, z: 10, opacity: 0.72, scale: 0.955 },
+        ];
+
+        items.forEach((el, i) => {
+            const pos = (i - state.active + n) % n;      // 0 = 最上面
+            const layer = LAYERS[pos];
+            // 位置通过 CSS 变量传递，transform 由样式表用 !important 组合出来
+            // —— 这样滚动 reveal 往元素上写的内联 transform 压不住它
+            if (!layer) {
+                el.style.setProperty('--stack-rot', '7deg');
+                el.style.setProperty('--stack-x', '26px');
+                el.style.setProperty('--stack-y', '24px');
+                el.style.setProperty('--stack-s', '0.94');
+                el.style.setProperty('--stack-o', '0');
+                el.style.setProperty('z-index', '1');
+                el.style.setProperty('pointer-events', 'none');
+                return;
+            }
+            el.style.setProperty('--stack-rot', layer.rot + 'deg');
+            el.style.setProperty('--stack-x', layer.x + 'px');
+            el.style.setProperty('--stack-y', layer.y + 'px');
+            el.style.setProperty('--stack-s', String(layer.scale));
+            el.style.setProperty('--stack-o', String(layer.opacity));
+            el.style.setProperty('z-index', String(layer.z));
+            el.style.setProperty('pointer-events', pos === 0 ? 'auto' : 'none');
+        });
+    },
+
+    // 把简报列表初始化成堆叠
+    initNewsStack() {
+        const list = document.getElementById('newsList');
+        if (!list || list.dataset.stackInit === '1') return;
+        list.dataset.stackInit = '1';
+        list.classList.add('stack-box');
+        this.initStackBox(list, { autoMs: 3800 });
+    },
+
+    // 把首页照片初始化成堆叠
+    initPhotoStack() {
+        const box = document.getElementById('hvPhotos');
+        if (!box || box.dataset.stackInit === '1') return;
+        box.dataset.stackInit = '1';
+        box.classList.add('stack-box', 'stack-photos');
+        this.initStackBox(box, { autoMs: 3200 });
+    },
+
+    // 正文手写体开关：默认开启（只有明确存了 '0' 才关）
+    applyHandBody(on) {
+        if (on === undefined) {
+            let raw = '1';
+            try { raw = localStorage.getItem('blog-hand-body') ?? '1'; } catch (e) { raw = '1'; }
+            on = raw !== '0';
+        } else {
+            try { localStorage.setItem('blog-hand-body', on ? '1' : '0'); } catch (e) { /* 忽略 */ }
+        }
+        document.documentElement.classList.toggle('hand-body', !!on);
+        const btn = document.getElementById('hvHandBtn');
+        if (btn) btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+        return !!on;
+    },
+    // 首页时钟旁的主题图标同步
+    syncHvThemeIcon() {
+        const icon = document.getElementById('hvThemeIcon');
+        const btn = document.getElementById('hvThemeBtn');
+        if (!icon || !window.ThemeManager) return;
+        const t = ThemeManager.getCurrentTheme();
+        if (t && t.icon) icon.textContent = t.icon;
+        if (btn && t && t.name) btn.title = '当前：' + t.name + '（点击切换）';
     }
 };
 

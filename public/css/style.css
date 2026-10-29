@@ -7917,110 +7917,245 @@ body.view-gallery-active .footer-home {
 }
 
 /* ============================================================
-   今日简报：正方形卡片，纵向堆叠，悬停自动滚动
+   正文手写开关
    ============================================================ */
-.hv-news-block .home-news-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-    padding: 10px 12px 16px;
-    max-height: 440px;
-    overflow-y: auto;
-    scroll-behavior: auto;
-    perspective: 900px;
+html.hand-body .article-content,
+html.hand-body .article-content p,
+html.hand-body .article-content li,
+html.hand-body .article-content td,
+html.hand-body .article-content th,
+html.hand-body .article-content blockquote,
+html.hand-body .hv-post-title,
+html.hand-body .hv-bio,
+html.hand-body .news-item-title {
+    font-family: var(--font-hand);
+    letter-spacing: 0.02em;
 }
 
-.hv-news-block .news-item {
+html.hand-body .hv-stat-label,
+html.hand-body .hv-block-sub,
+html.hand-body .hv-more,
+html.hand-body .hv-card-title,
+html.hand-body .news-item-cat,
+html.hand-body .news-item-meta,
+html.hand-body .article-meta,
+html.hand-body .toc-list a {
+    font-family: var(--font-hand);
+}
+
+html.hand-body .article-content {
+    font-size: 17px;
+    line-height: 1.95;
+}
+
+html.hand-body .article-content p {
+    font-size: 17px;
+}
+
+/* 时钟下方一排小按钮（主题 / 手写） */
+.hv-clock-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 6px;
+    margin-top: 6px;
+}
+
+.hv-theme-mini[aria-pressed="true"] {
+    color: var(--accent-strong);
+    border-color: var(--accent);
+    opacity: 1;
+}
+
+/* ============================================================
+   卡片堆叠（参考「文件堆叠」设计稿）
+   ------------------------------------------------------------
+   多张卡片重叠在一起，各带轻微旋转与偏移；滚轮切换最上面那张，
+   点右下小圆点横向展开。简报和首页照片共用这套。
+   ============================================================ */
+.stack-box {
     position: relative;
+    height: 360px;
+    perspective: 1000px;
+    user-select: none;
+}
+
+.stack-box > * {
+    position: absolute;
+    inset: 0;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
     gap: 12px;
-    flex: 0 0 auto;
-    width: 100%;
-    aspect-ratio: 1 / 1;
-    padding: 22px 24px;
-    margin-top: -58%;                  /* 大幅重叠，形成一叠卡片 */
-    border-radius: 18px;
-    background: var(--glass-card-strong, #fffdf8);
+    padding: 22px 24px 20px;
+    border-radius: 20px;
+    background: var(--glass-card-strong, rgba(255, 253, 248, 0.9));
     border: 1px solid var(--glass-line, var(--border));
-    box-shadow: 0 -8px 24px rgba(20, 26, 44, 0.10);
-    transition: margin-top 0.34s cubic-bezier(0.22, 1, 0.36, 1),
-        transform 0.28s ease, box-shadow 0.28s ease;
+    box-shadow: 0 8px 32px rgba(20, 26, 44, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+    backdrop-filter: blur(20px) saturate(1.2);
+    -webkit-backdrop-filter: blur(20px) saturate(1.2);
+    transform-origin: center bottom;
+    transition: transform 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+        opacity 0.35s ease, box-shadow 0.35s ease;
     text-decoration: none;
+    color: var(--text);
+    overflow: hidden;
+    will-change: transform;
 }
 
-.hv-news-block .news-item:first-child {
-    margin-top: 0;
+/* 顶部一道内高光 */
+.stack-box > *::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
 }
 
-/* 悬停：卡片散开一点，露出的标题更完整 */
-.hv-news-block .home-news-list:hover .news-item {
-    margin-top: -34%;
-    box-shadow: 0 -10px 30px rgba(20, 26, 44, 0.14);
+.stack-box > *:hover {
+    box-shadow: 0 20px 60px rgba(20, 26, 44, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
-.hv-news-block .home-news-list:hover .news-item:first-child {
-    margin-top: 0;
-}
 
-.hv-news-block .news-item:hover {
-    transform: translateY(-4px) scale(1.012);
-    z-index: 3;
-}
-
-.hv-news-block .news-item-cat {
+/* ---- 简报卡内容 ---- */
+.stack-box .news-item-cat {
     font-family: var(--font-hand);
     font-size: 15px;
     color: var(--accent-strong, var(--accent));
     letter-spacing: 0.04em;
 }
 
-.hv-news-block .news-item-title {
+.stack-box .news-item-title {
     font-family: var(--font-hand);
-    font-size: 21px;
+    font-size: 22px;
     line-height: 1.5;
     color: var(--text);
     display: -webkit-box;
-    -webkit-line-clamp: 3;
-    line-clamp: 3;
+    -webkit-line-clamp: 4;
+    line-clamp: 4;
     -webkit-box-orient: vertical;
     overflow: hidden;
 }
 
-.hv-news-block .news-item-meta {
+.stack-box .news-item-meta {
+    margin-top: auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     font-family: var(--font-hand);
     font-size: 13px;
     color: var(--text-muted);
-    letter-spacing: 0.03em;
+}
+
+/* 堆叠角标：右上角显示第几张 */
+.stack-badge {
+    position: absolute;
+    top: 16px;
+    right: 18px;
+    padding: 2px 9px;
+    font-family: var(--font-hand);
+    font-size: 12px;
+    color: var(--text-muted);
+    background: var(--surface-2, rgba(0, 0, 0, 0.06));
+    border-radius: 999px;
+}
+
+
+/* ---- 照片堆叠 ---- */
+.stack-box.stack-photos > .hv-photo {
+    padding: 0;
+    display: block;
+    border: 4px solid var(--surface, #fff);
+    border-radius: 18px;
+}
+
+.stack-box.stack-photos > .hv-photo img {
+    border-radius: 14px;
+    object-fit: cover;
+    width: 100%;
+    height: 100%;
 }
 
 /* 深色主题下卡片阴影别太重 */
-html[data-tone="dark"] .hv-news-block .news-item {
-    box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.38);
+html[data-tone="dark"] .stack-box > * {
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
-/* ============================================================
-   正文手写开关
-   ============================================================ */
-body.hand-body .article-content,
-body.hand-body .article-content p,
-body.hand-body .article-content li,
-body.hand-body .article-content td,
-body.hand-body .article-content th,
-body.hand-body .article-content blockquote,
-body.hand-body .hv-post-title,
-body.hand-body .hv-bio,
-body.hand-body .news-item-title {
-    font-family: var(--font-hand);
-    letter-spacing: 0.02em;
+@media (max-width: 900px) {
+    .stack-box {
+        height: 300px;
+    }
+
+    .stack-box .news-item-title {
+        font-size: 19px;
+    }
 }
 
-body.hand-body .article-content {
-    font-size: 17px;
-    line-height: 1.95;
+/* ---------- 堆叠容器本身不该有卡片样式 ---------- */
+.hv-news-block .home-news-list.stack-box,
+.hv-photos.stack-box {
+    display: block !important;
+    position: relative !important;
+    height: 360px !important;
+    max-height: none !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    gap: 0 !important;
+    grid-auto-flow: row !important;
+    grid-template-columns: none !important;
+    background: none !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
 }
 
-body.hand-body .article-content p {
-    font-size: 17px;
+/* 堆叠里的新闻卡：内边距与文字排版 */
+.hv-news-block .home-news-list.stack-box > .news-item {
+    padding: 24px 26px 22px;
+}
+
+/* 堆叠里的照片卡：白边相纸 */
+.hv-photos.stack-box > .hv-photo {
+    padding: 6px;
+    background: var(--surface, #fff);
+    border: 0;
+    border-radius: 20px;
+    cursor: pointer;
+}
+
+.hv-photos.stack-box > .hv-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 14px;
+    display: block;
+}
+
+.hv-news-block .home-news-list.stack-box > *,
+.hv-photos.stack-box > * {
+    cursor: pointer;
+}
+
+/* 堆叠里禁用滚动 reveal（它会把 transform 设成 translateY(0)） */
+html.glass-ready .stack-box > *,
+html.glass-ready .stack-box > [data-reveal],
+html.glass-ready .stack-box > [data-reveal].in-view {
+    opacity: 1;
+    filter: none;
+    transition: transform 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+        opacity 0.35s ease !important;
+    will-change: transform;
+}
+
+/* 堆叠卡的真实位置：由 JS 写的 CSS 变量组合，!important 压过滚动动画的内联 transform */
+.stack-box > * {
+    transform:
+        rotate(var(--stack-rot, 0deg))
+        translate(var(--stack-x, 0px), var(--stack-y, 0px))
+        scale(var(--stack-s, 1)) !important;
+    opacity: var(--stack-o, 1) !important;
+    filter: none !important;
+    transition: transform 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+        opacity 0.35s ease !important;
 }
