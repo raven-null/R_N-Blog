@@ -31,6 +31,12 @@
   to = "/.netlify/functions/gallery"
   status = 200
 
+# 任务 + 日记（仅后台登录可用，按月归档）
+[[redirects]]
+  from = "/api/life"
+  to = "/.netlify/functions/life"
+  status = 200
+
 [[redirects]]
   from = "/api/comments"
   to = "/.netlify/functions/comments"

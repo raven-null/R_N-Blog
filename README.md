@@ -133,6 +133,16 @@ node scripts/build-gallery.js
 - 本地生成：`node scripts/update-news.js`（`--dry` 预览不落盘）
 - 校验：`node scripts/check-recommendations.js`（`--check` 追加链接体检）
 
+## 🗒️ 任务与日记（仅后台登录可见）
+
+首页的「任务 / 日记」卡片只有在**后台登录后**才会出现（前台用 `localStorage.admin_key` 判断，接口用 `X-Admin-Key` 校验，凭据无效则整块隐藏）：
+
+- **任务**：按天记录，勾选完成、悬停删除；标题最多 120 字
+- **日记**：按天写，停止输入 1.2 秒自动保存；最多 20000 字
+- **归档**：数据按月分片存进 Netlify Blobs（`tasks/YYYY-MM`、`journals/YYYY-MM`），用卡片右上角 ‹ › 按月翻看，日历会同步切换到该月
+- **日历联动**：点日历任意一天，任务与日记切到那天（选中的格子有描边）
+- **接口**：`/api/life` —— `GET ?month=YYYY-MM` 读该月、`GET ?months=1` 列出归档月份、`POST {type:'task'|'journal'}` 增改、`DELETE ?type=task&date=&id=` 删任务；全部需要管理员凭据
+
 ## 🗂️ 项目页
 
 顶栏「项目」视图分两块：

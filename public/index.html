@@ -13,7 +13,7 @@
     <script src="/js/site-icon.js?v=1.0.0" defer></script>
 
     <!-- Styles -->
-    <link rel="stylesheet" href="css/style.css?v=3.42.0">
+    <link rel="stylesheet" href="css/style.css?v=3.43.0">
     <link rel="stylesheet" href="css/glass.css?v=1.0.14">
     <link rel="stylesheet" href="css/wheel.css?v=1.0.0">
 
@@ -197,6 +197,36 @@
                         </div>
                     </div>
 
+                    <!-- 任务 + 日记（仅后台登录后显示） -->
+                    <div class="dash-panel home-life" id="homeLife" style="display:none;">
+                        <div class="dash-panel-title home-life-head">
+                            <span id="lifeDateLabel">今天</span>
+                            <span class="life-month-nav">
+                                <button class="life-nav-btn" id="lifePrevMonth" type="button" title="上一月">‹</button>
+                                <span class="life-month" id="lifeMonthLabel"></span>
+                                <button class="life-nav-btn" id="lifeNextMonth" type="button" title="下一月">›</button>
+                            </span>
+                        </div>
+
+                        <div class="home-life-body">
+                            <div class="life-col">
+                                <div class="life-col-head">任务 <span class="life-count" id="lifeTaskCount"></span></div>
+                                <form class="life-task-form" id="lifeTaskForm">
+                                    <input type="text" id="lifeTaskInput" placeholder="添加任务，回车保存" maxlength="120" autocomplete="off">
+                                    <button type="submit" title="添加">+</button>
+                                </form>
+                                <div class="life-task-list" id="lifeTaskList">
+                                    <div class="home-empty">加载中...</div>
+                                </div>
+                            </div>
+
+                            <div class="life-col">
+                                <div class="life-col-head">日记 <span class="life-status" id="lifeJournalStatus"></span></div>
+                                <textarea class="life-journal" id="lifeJournal" placeholder="今天写点什么…（自动保存）" maxlength="20000"></textarea>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- 内容区：简报（右侧有主题盒子）+ 图库 / 文章封面并排 -->
                     <div class="home-articles">
                         <div class="home-top-row">
@@ -368,7 +398,7 @@
 
     <!-- Scripts -->
     <script src="js/theme.js?v=3.16.0" defer></script>
-    <script src="js/app.js?v=3.61.0" defer></script>
+    <script src="js/app.js?v=3.63.0" defer></script>
     <script src="js/animations.js?v=3.14.0" defer></script>
 
     <script>
@@ -691,29 +721,43 @@
             timeEl.textContent = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
         }
 
-        // ===== 月历（周一为一周开始，高亮今天） =====
-        function renderCalendar() {
+        // ===== 月历（周一为一周开始，高亮今天；可指定月份用于归档浏览） =====
+        function renderCalendar(monthKey) {
             const box = document.getElementById('homeCalendar');
             if (!box) return;
             const now = new Date();
-            const year = now.getFullYear();
-            const month = now.getMonth();
-            const today = now.getDate();
+            let year = now.getFullYear();
+            let month = now.getMonth();
+            if (typeof monthKey === 'string' && /^\d{4}-\d{2}$/.test(monthKey)) {
+                year = Number(monthKey.slice(0, 4));
+                month = Number(monthKey.slice(5, 7)) - 1;
+            }
+            const isCurrentMonth = year === now.getFullYear() && month === now.getMonth();
+            const today = isCurrentMonth ? now.getDate() : 0;
             const firstWeekday = new Date(year, month, 1).getDay(); // 0 = 周日
             const daysInMonth = new Date(year, month + 1, 0).getDate();
             const offset = (firstWeekday + 6) % 7; // 转成周一开头
+            const pad = n => String(n).padStart(2, '0');
+            const key = `${year}-${pad(month + 1)}`;
+            const selected = (window.BlogApp && BlogApp.lifeState && BlogApp.lifeState.date) || '';
 
             const weekLabels = ['一', '二', '三', '四', '五', '六', '日'];
-            let html = `<div class="cal-head"><span class="cal-title">${year} 年 ${month + 1} 月</span><span class="cal-today">今天 ${today}</span></div>`;
+            const hint = isCurrentMonth ? `今天 ${now.getDate()}` : '归档';
+            let html = `<div class="cal-head"><span class="cal-title">${year} 年 ${month + 1} 月</span><span class="cal-today">${hint}</span></div>`;
             html += '<div class="cal-grid">';
             html += weekLabels.map(w => `<span class="cal-week">${w}</span>`).join('');
             for (let i = 0; i < offset; i++) html += '<span class="cal-day is-empty"></span>';
             for (let d = 1; d <= daysInMonth; d++) {
-                html += `<span class="cal-day${d === today ? ' is-today' : ''}">${d}</span>`;
+                const dateKey = `${key}-${pad(d)}`;
+                const cls = ['cal-day', d === today ? 'is-today' : '', dateKey === selected ? 'is-selected' : '']
+                    .filter(Boolean).join(' ');
+                html += `<span class="${cls}" data-date="${dateKey}">${d}</span>`;
             }
             html += '</div>';
             box.innerHTML = html;
         }
+        // 供 app.js 在切换归档月份时重建日历
+        window.renderCalendar = renderCalendar;
 
         // ===== 页脚：本站运行时长（起始时间按需修改） =====
         function initSiteRuntime() {

@@ -4565,3 +4565,235 @@ html.reader-focus .article-content {
         font-size: 18px;
     }
 }
+
+/* ===== 任务 + 日记（仅后台登录后显示） ===== */
+.home-life {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.home-life-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.life-month-nav {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.life-month {
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 1px;
+}
+
+.life-nav-btn {
+    width: 24px;
+    height: 24px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg-card);
+    color: var(--text-secondary);
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+    transition: border-color 0.2s, color 0.2s;
+}
+
+.life-nav-btn:hover {
+    border-color: var(--accent);
+    color: var(--text-primary);
+}
+
+.home-life-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+    gap: 20px;
+}
+
+.life-col {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+}
+
+.life-col-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    letter-spacing: 1px;
+    color: var(--text-secondary);
+}
+
+.life-count,
+.life-status {
+    font-size: 10px;
+    color: var(--text-muted);
+}
+
+/* 添加任务 */
+.life-task-form {
+    display: flex;
+    gap: 8px;
+}
+
+.life-task-form input {
+    flex: 1;
+    min-width: 0;
+    height: 34px;
+    padding: 0 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--bg-card);
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 13px;
+}
+
+.life-task-form input:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+.life-task-form button {
+    width: 34px;
+    height: 34px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--accent);
+    color: var(--bg-primary);
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+/* 任务列表 */
+.life-task-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+.life-task {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--bg-card);
+    transition: border-color 0.2s;
+}
+
+.life-task:hover {
+    border-color: var(--border-light);
+}
+
+.life-task-check {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    border: 1px solid var(--border-light);
+    border-radius: 6px;
+    background: transparent;
+    color: var(--accent);
+    font-size: 12px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.life-task.is-done .life-task-check {
+    background: var(--accent);
+    color: var(--bg-primary);
+    border-color: var(--accent);
+}
+
+.life-task-title {
+    flex: 1;
+    min-width: 0;
+    font-size: 13px;
+    color: var(--text-primary);
+    word-break: break-word;
+}
+
+.life-task.is-done .life-task-title {
+    color: var(--text-muted);
+    text-decoration: line-through;
+}
+
+.life-task-del {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    border: 0;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s, color 0.2s;
+}
+
+.life-task:hover .life-task-del {
+    opacity: 1;
+}
+
+.life-task-del:hover {
+    color: var(--text-primary);
+}
+
+/* 日记 */
+.life-journal {
+    flex: 1;
+    min-height: 180px;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--bg-card);
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 13px;
+    line-height: 1.7;
+    resize: vertical;
+}
+
+.life-journal:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+/* 日历选中态 */
+.cal-day {
+    cursor: pointer;
+}
+
+.cal-day.is-selected {
+    border: 1px solid var(--accent);
+    color: var(--text-primary);
+}
+
+.cal-day.is-today.is-selected {
+    background: var(--accent);
+    color: var(--bg-primary);
+}
+
+@media (max-width: 900px) {
+    .home-life-body {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .life-journal {
+        min-height: 140px;
+    }
+}

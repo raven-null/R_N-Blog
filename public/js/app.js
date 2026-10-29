@@ -39,6 +39,8 @@ const BlogApp = {
         this.bindPagePrefetch();
         this.handleRoute();
         this.startAutoRefresh();
+        // 任务 + 日记：仅后台登录后显示
+        this.initLife();
         // 后台退出登录联动：admin_key / gallery_key 被清除时，前台图库 R18 恢复锁定
         window.addEventListener('storage', (e) => {
             if ((e.key === 'admin_key' || e.key === 'gallery_key') && !e.newValue) {
@@ -1468,6 +1470,252 @@ const BlogApp = {
         if (this.homeSlideTimer) {
             clearInterval(this.homeSlideTimer);
             this.homeSlideTimer = null;
+        }
+    },
+
+    // ===================== 任务 + 日记（仅后台登录可见） =====================
+
+    lifeState: { month: '', date: '', tasks: [], journals: [], journalTimer: null },
+
+    // 后台登录凭据（后台登录后写入 localStorage）
+    lifeAdminKey() {
+        try { return localStorage.getItem('admin_key') || ''; } catch (e) { return ''; }
+    },
+
+    formatDateKey(d) {
+        const pad = n => String(n).padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    },
+
+    // 初始化：没登录就整块隐藏
+    async initLife() {
+        const box = document.getElementById('homeLife');
+        if (!box) return;
+        if (!this.lifeAdminKey()) {
+            box.style.display = 'none';
+            return;
+        }
+
+        const today = this.formatDateKey(new Date());
+        this.lifeState.date = today;
+        this.lifeState.month = today.slice(0, 7);
+        this.bindLifeEvents();
+
+        const ok = await this.loadLifeMonth(this.lifeState.month);
+        if (!ok) {
+            box.style.display = 'none';
+            return;
+        }
+        box.style.display = '';
+    },
+
+    // 统一请求（自动带 X-Admin-Key）
+    async lifeApi(path, options = {}) {
+        const headers = { 'X-Admin-Key': this.lifeAdminKey(), ...(options.headers || {}) };
+        if (options.body) headers['Content-Type'] = 'application/json';
+        const res = await fetch(`${this.config.apiBase}/api/life${path}`, {
+            ...options,
+            headers,
+            cache: 'no-store',
+        });
+        if (res.status === 401) return { unauthorized: true };
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+    },
+
+    // 加载某个月（按月归档）
+    async loadLifeMonth(month) {
+        try {
+            const data = await this.lifeApi(`?month=${encodeURIComponent(month)}`);
+            if (!data || data.unauthorized) return false;
+            this.lifeState.month = month;
+            this.lifeState.tasks = Array.isArray(data.tasks) ? data.tasks : [];
+            this.lifeState.journals = Array.isArray(data.journals) ? data.journals : [];
+            this.renderLife();
+            // 日历跟随归档月份重建（选中态用 lifeState.date）
+            if (typeof window.renderCalendar === 'function') window.renderCalendar(month);
+            return true;
+        } catch (e) {
+            const list = document.getElementById('lifeTaskList');
+            if (list) list.innerHTML = '<div class="home-empty">加载失败，稍后再试</div>';
+            return false;
+        }
+    },
+
+    renderLife() {
+        const dateEl = document.getElementById('lifeDateLabel');
+        const monthEl = document.getElementById('lifeMonthLabel');
+        if (dateEl) dateEl.textContent = this.formatDateLabel(this.lifeState.date);
+        if (monthEl) {
+            const [y, m] = this.lifeState.month.split('-');
+            monthEl.textContent = `${y} 年 ${Number(m)} 月`;
+        }
+        this.renderLifeTasks();
+        this.renderLifeJournal();
+    },
+
+    formatDateLabel(date) {
+        if (!date) return '';
+        const [y, m, d] = date.split('-');
+        const weekday = new Date(`${date}T00:00:00`).getDay();
+        const names = ['日', '一', '二', '三', '四', '五', '六'];
+        return `${Number(m)} 月 ${Number(d)} 日 · 周${names[weekday]}`;
+    },
+
+    renderLifeTasks() {
+        const list = document.getElementById('lifeTaskList');
+        const countEl = document.getElementById('lifeTaskCount');
+        if (!list) return;
+        const tasks = (this.lifeState.tasks || []).filter(t => t.date === this.lifeState.date);
+        if (countEl) {
+            const done = tasks.filter(t => t.done).length;
+            countEl.textContent = tasks.length ? `${done}/${tasks.length}` : '';
+        }
+        if (!tasks.length) {
+            list.innerHTML = '<div class="home-empty">这一天还没有任务</div>';
+            return;
+        }
+        list.innerHTML = tasks.map(t => `
+            <div class="life-task${t.done ? ' is-done' : ''}" data-id="${this.escAttr(t.id)}">
+                <button class="life-task-check" type="button" title="切换完成">${t.done ? '✓' : ''}</button>
+                <span class="life-task-title">${this.esc(t.title)}</span>
+                <button class="life-task-del" type="button" title="删除">×</button>
+            </div>
+        `).join('');
+    },
+
+    renderLifeJournal() {
+        const ta = document.getElementById('lifeJournal');
+        const status = document.getElementById('lifeJournalStatus');
+        if (!ta) return;
+        const entry = (this.lifeState.journals || []).find(j => j.date === this.lifeState.date);
+        ta.value = entry ? entry.content : '';
+        if (status) status.textContent = entry ? '已保存' : '';
+    },
+
+    // 选择日期（日历点击）
+    selectLifeDate(date) {
+        if (!date) return;
+        const month = date.slice(0, 7);
+        this.lifeState.date = date;
+        if (month !== this.lifeState.month) {
+            this.loadLifeMonth(month);
+            return;
+        }
+        this.renderLife();
+        document.querySelectorAll('#homeCalendar .cal-day').forEach(el => {
+            el.classList.toggle('is-selected', el.dataset.date === date);
+        });
+    },
+
+    // 切换月份浏览归档
+    async changeLifeMonth(delta) {
+        const [y, m] = this.lifeState.month.split('-').map(Number);
+        const d = new Date(y, m - 1 + delta, 1);
+        const month = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        const today = this.formatDateKey(new Date());
+        this.lifeState.date = month === today.slice(0, 7) ? today : `${month}-01`;
+        await this.loadLifeMonth(month);
+    },
+
+    bindLifeEvents() {
+        const box = document.getElementById('homeLife');
+        if (!box || box.dataset.bound) return;
+        box.dataset.bound = '1';
+
+        // 添加任务
+        document.getElementById('lifeTaskForm')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const input = document.getElementById('lifeTaskInput');
+            const title = (input.value || '').trim();
+            if (!title) return;
+            input.value = '';
+            try {
+                const data = await this.lifeApi('', {
+                    method: 'POST',
+                    body: JSON.stringify({ type: 'task', date: this.lifeState.date, title }),
+                });
+                if (data && data.task) {
+                    this.lifeState.tasks.push(data.task);
+                    this.renderLifeTasks();
+                }
+            } catch (err) {
+                input.value = title;
+            }
+        });
+
+        // 完成 / 删除
+        document.getElementById('lifeTaskList')?.addEventListener('click', async (e) => {
+            const row = e.target.closest('.life-task');
+            if (!row) return;
+            const id = row.dataset.id;
+            const task = this.lifeState.tasks.find(t => t.id === id);
+            if (!task) return;
+
+            if (e.target.closest('.life-task-del')) {
+                try {
+                    await this.lifeApi(`?type=task&date=${task.date}&id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+                    this.lifeState.tasks = this.lifeState.tasks.filter(t => t.id !== id);
+                    this.renderLifeTasks();
+                } catch (err) { /* 忽略 */ }
+                return;
+            }
+
+            if (e.target.closest('.life-task-check')) {
+                const done = !task.done;
+                try {
+                    await this.lifeApi('', {
+                        method: 'POST',
+                        body: JSON.stringify({ type: 'task', id, date: task.date, done }),
+                    });
+                    task.done = done;
+                    this.renderLifeTasks();
+                } catch (err) { /* 忽略 */ }
+            }
+        });
+
+        // 日记自动保存（停止输入 1.2 秒后）
+        document.getElementById('lifeJournal')?.addEventListener('input', () => {
+            const status = document.getElementById('lifeJournalStatus');
+            if (status) status.textContent = '编辑中…';
+            clearTimeout(this.lifeState.journalTimer);
+            this.lifeState.journalTimer = setTimeout(() => this.saveJournal(), 1200);
+        });
+
+        // 归档月份切换
+        document.getElementById('lifePrevMonth')?.addEventListener('click', () => this.changeLifeMonth(-1));
+        document.getElementById('lifeNextMonth')?.addEventListener('click', () => this.changeLifeMonth(1));
+
+        // 日历点击联动（日历会重建，用事件委托）
+        document.getElementById('homeCalendar')?.addEventListener('click', (e) => {
+            const cell = e.target.closest('.cal-day');
+            if (!cell || !cell.dataset.date) return;
+            this.selectLifeDate(cell.dataset.date);
+        });
+    },
+
+    async saveJournal() {
+        const ta = document.getElementById('lifeJournal');
+        const status = document.getElementById('lifeJournalStatus');
+        if (!ta) return;
+        const content = ta.value;
+        try {
+            const data = await this.lifeApi('', {
+                method: 'POST',
+                body: JSON.stringify({ type: 'journal', date: this.lifeState.date, content }),
+            });
+            if (!data || data.unauthorized) return;
+            const list = this.lifeState.journals;
+            const idx = list.findIndex(j => j.date === this.lifeState.date);
+            if (data.journal) {
+                if (idx >= 0) list[idx] = data.journal;
+                else list.push(data.journal);
+            } else if (idx >= 0) {
+                list.splice(idx, 1);
+            }
+            if (status) status.textContent = content ? '已保存' : '';
+        } catch (e) {
+            if (status) status.textContent = '保存失败';
         }
     },
 
