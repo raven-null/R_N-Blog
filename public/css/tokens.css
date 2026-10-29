@@ -19,20 +19,20 @@
    ============================================================ */
 
 :root {
-    /* ---------- 中性骨架（浅色，冷灰 slate） ---------- */
-    --bg: #f8fafc;
-    --bg-subtle: #f1f5f9;
-    --surface: #ffffff;
-    --surface-2: #f8fafc;
-    --surface-3: #eef2f7;
+    /* ---------- 中性骨架（浅色，日光纸白：白里带一点黄，不是棕色） ---------- */
+    --bg: #fbf8f1;
+    --bg-subtle: #f6f2e8;
+    --surface: #fffefb;
+    --surface-2: #fbf7ef;
+    --surface-3: #f3eee1;
 
-    --border: rgba(15, 23, 42, 0.09);
-    --border-strong: rgba(15, 23, 42, 0.17);
+    --border: rgba(66, 54, 32, 0.1);
+    --border-strong: rgba(66, 54, 32, 0.18);
     --border-focus: var(--accent);
 
-    --text: #0f172a;
-    --text-secondary: #475569;
-    --text-muted: #7c8798;
+    --text: #1c1a16;
+    --text-secondary: #56514a;
+    --text-muted: #8a8479;
 
     /* ---------- 强调色（默认阳光金，填充 + 文字两档） ---------- */
     --accent: #f0a20c;
@@ -96,11 +96,11 @@
     --font-serif: "Songti SC", "Source Han Serif SC", "Noto Serif SC", Georgia, serif;
     --font-mono: "SF Mono", "JetBrains Mono", "Cascadia Code", Consolas, monospace;
 
-    /* ---------- 阴影（冷灰，三级，都很淡） ---------- */
-    --shadow-1: 0 1px 2px rgba(15, 23, 42, 0.06);
-    --shadow-2: 0 4px 14px rgba(15, 23, 42, 0.08);
-    --shadow-3: 0 16px 44px rgba(15, 23, 42, 0.14);
-    --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    /* ---------- 阴影（暖灰，三级，都很淡） ---------- */
+    --shadow-1: 0 1px 2px rgba(66, 54, 32, 0.07);
+    --shadow-2: 0 4px 14px rgba(66, 54, 32, 0.09);
+    --shadow-3: 0 16px 44px rgba(66, 54, 32, 0.15);
+    --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.7);
     --shadow-accent: 0 6px 18px rgba(240, 162, 12, 0.26);
 
     /* ---------- 动效（无弹跳，位移 4–8px） ---------- */
@@ -119,9 +119,9 @@
     --gap-block: 20px;
 
     /* ---------- 氛围层（可选，默认极轻） ---------- */
-    --glass-bg: rgba(255, 255, 255, 0.74);
+    --glass-bg: rgba(255, 253, 246, 0.78);
     --glass-blur: 14px;
-    --dot-color: rgba(15, 23, 42, 0.07);
+    --dot-color: rgba(66, 54, 32, 0.075);
     --dot-size: 56px;
     /* 阳光感：只在需要的地方铺一层极淡暖光（默认透明） */
     --sun-glow: radial-gradient(120% 70% at 50% -12%, rgba(251, 191, 36, 0.16), transparent 62%);
