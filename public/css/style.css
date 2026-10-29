@@ -9168,3 +9168,175 @@ html.glass-ready .stack-box > [data-reveal].in-view {
         height: 168px !important;
     }
 }
+
+/* ============================================================
+   首页网格：按设计图排
+   ┌──────────────────────────┐
+   │        个人信息           │
+   ├────────────┬─────────────┤
+   │            │    日历      │
+   │  文章轮播   ├─────────────┤
+   │            │    简报      │
+   ├────────────┼─────────────┤
+   │   图片      │    项目      │
+   └────────────┴─────────────┘
+   ============================================================ */
+.hv {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+    grid-template-areas:
+        "profile  profile"
+        "posts    calendar"
+        "posts    news"
+        "photos   projects"
+        "side     side";
+    gap: 18px !important;
+    align-items: stretch;
+}
+
+.hv-hero { grid-area: profile; }
+
+.hv-carousel-box { grid-area: posts; }
+
+.hv-cal-card { grid-area: calendar; }
+
+.hv-news-box { grid-area: news; }
+
+.hv-photo-box { grid-area: photos; }
+
+.hv-projects-box,
+.hv-block.hv-projects-box { grid-area: projects; }
+
+.hv-side-row { grid-area: side; }
+
+/* 中间那层包裹用 display:contents 拆掉，让子元素直接进网格 */
+.hv-media-row,
+.hv-right-col {
+    display: contents !important;
+}
+
+/* ---------- 各格子的尺寸 ---------- */
+.hv-carousel-box {
+    display: flex;
+    flex-direction: column;
+    min-height: 420px;
+}
+
+.hv-carousel-box .hv-carousel {
+    flex: 1;
+    display: flex;
+    min-height: 0;
+}
+
+.hv-carousel-box .hv-car-track {
+    flex: 1;
+    min-height: 0;
+}
+
+/* 文章卡：一次一张，填满整个格子 */
+.hv-carousel-box .hv-car-track > * {
+    flex: 0 0 100% !important;
+    max-width: none !important;
+}
+
+.hv-carousel-box .hv-car-item {
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 380px;
+    aspect-ratio: auto !important;
+    border-radius: 22px !important;
+}
+
+.hv-carousel-box .hv-car-cover {
+    flex: 1 1 auto;
+    height: auto !important;
+    min-height: 0;
+}
+
+.hv-carousel-box .hv-car-body {
+    flex: 0 0 auto;
+    padding: 16px 20px 18px !important;
+}
+
+.hv-carousel-box .hv-car-title {
+    font-size: 20px !important;
+}
+
+/* 日历格子 */
+.hv-cal-card {
+    height: 100%;
+    padding: 14px;
+    border-radius: 18px;
+    background: var(--glass-card-strong, rgba(255, 253, 248, 0.9));
+    border: 1px solid var(--glass-line, var(--border));
+    box-shadow: 0 6px 20px rgba(20, 26, 44, 0.1);
+}
+
+/* 简报格子 */
+.hv-news-box {
+    height: 100%;
+    min-height: 150px;
+}
+
+.hv-news-box .stack-box {
+    height: 100% !important;
+}
+
+/* 图片格子 */
+.hv-photo-box {
+    min-height: 300px;
+}
+
+.hv-photo-box .stack-box {
+    height: 100% !important;
+}
+
+/* 项目格子 */
+.hv-projects-box {
+    min-height: 300px;
+    display: flex;
+    align-items: center;
+}
+
+.hv-projects-box .hv-projects.stack-box {
+    height: 100% !important;
+    min-height: 260px;
+    width: 100%;
+}
+
+.hv-projects-box .hv-projects.stack-box > .home-project {
+    width: min(420px, 92%) !important;
+}
+
+/* 任务 / 日记留在最底一行 */
+.hv-side-row .hv-side {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px;
+}
+
+@media (max-width: 900px) {
+    .hv {
+        grid-template-columns: minmax(0, 1fr) !important;
+        grid-template-areas:
+            "profile"
+            "posts"
+            "calendar"
+            "news"
+            "photos"
+            "projects"
+            "side";
+    }
+
+    .hv-carousel-box {
+        min-height: 300px;
+    }
+
+    .hv-carousel-box .hv-car-item {
+        min-height: 300px;
+    }
+
+    .hv-projects-box {
+        min-height: 240px;
+    }
+}
