@@ -90,7 +90,17 @@
     const arc = arcFor(hour);
     const period = periodFor(hour);
 
+    // 插画背景的明暗与染色：夜里压暗、晨曦黄昏加暖
+    const ART_TONE = {
+      dawn: { brightness: 0.94, tint: 0.62 },
+      day: { brightness: 1.04, tint: 0.4 },
+      dusk: { brightness: 0.88, tint: 0.66 },
+      night: { brightness: 0.4, tint: 0.72 },
+    };
+    const tone = ART_TONE[period.key] || ART_TONE.day;
+
     return {
+      tone,
       hour,
       period,
       daylight,
@@ -116,6 +126,9 @@
     root.style.setProperty('--sun-x', L.arc.x.toFixed(2) + '%');
     root.style.setProperty('--sun-y', L.arc.y.toFixed(2) + '%');
     root.setAttribute('data-period', L.period.key);
+    const dark = root.getAttribute('data-theme') === 'dark';
+    root.style.setProperty('--art-brightness', (dark ? L.tone.brightness * 0.55 : L.tone.brightness).toFixed(3));
+    root.style.setProperty('--art-tint', L.tone.tint.toFixed(3));
     const nameEl = document.getElementById('skyPeriodName');
     if (nameEl && nameEl.textContent !== L.period.name) nameEl.textContent = L.period.name;
     if (typeof L.warmth === 'number') {

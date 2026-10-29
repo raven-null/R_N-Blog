@@ -27,7 +27,7 @@ const BlogApp = {
     // 初始化应用
     async init() {
         ThemeManager.init();
-        ThemeManager.createThemeToggle();
+        // 浮动主题圆钮已移除：主题切换在主页身份区（#homeThemeBtn）和文章页侧栏
         await this.loadPosts();
         this.renderPostWall();
         this.render();
@@ -1291,6 +1291,28 @@ const BlogApp = {
         }
     },
 
+    // 主页身份区：头像 / 名字 / 简介跟随博客设置
+    renderHomeIdentity() {
+        const settings = this.getBlogSettings && this.getBlogSettings();
+        const nameEl = document.querySelector('.hv-name');
+        const bioEl = document.querySelector('.hv-bio');
+        const avatarEl = document.querySelector('.hv-avatar');
+        const name = (settings && (settings.authorName || settings.name)) || "博主";
+        if (nameEl && nameEl.textContent !== name) {
+            nameEl.textContent = name;
+            document.title = name + " · 个人博客";
+        }
+        if (bioEl) {
+            const bio = (settings && (settings.bio || settings.description || settings.tagline)) || "欢迎来到我的博客";
+            if (bioEl.textContent !== bio) bioEl.textContent = bio;
+        }
+        if (avatarEl) {
+            const src = (settings && settings.avatar) || "images/Default/profile -picture.webp";
+            if (avatarEl.getAttribute("src") !== src) avatarEl.src = src;
+            avatarEl.alt = name;
+        }
+    },
+
     // ---------- 主页仪表盘：精选文章 / 照片带 ----------
 
     // 精选文章：取最新三篇，有封面的优先
@@ -1375,7 +1397,9 @@ const BlogApp = {
 
     // 渲染主页（入口数字 + 今日简报 + 图库轮播 + 文章封面轮播 + 项目）
     async renderHome(force = false) {
-        // 仪表盘：数字 / 精选文章 / 照片带 / 简报 / 项目
+        // 仪表盘：身份 / 数字 / 精选文章 / 照片带 / 简报 / 项目
+        this.renderHomeIdentity();
+        setTimeout(function () { BlogApp.renderHomeIdentity(); }, 1200);
         this.renderHomeNews();
         this.renderHvPosts();
         this.renderHvPhotos();

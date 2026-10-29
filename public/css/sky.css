@@ -271,3 +271,50 @@ html[data-period="night"] {
     --accent-soft: rgba(138, 166, 232, 0.16) !important;
     --text-on-accent: #0d1524 !important;
 }
+
+/* ---------- 插画背景层 ---------- */
+.sky-art {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center 30%;
+    filter: brightness(var(--art-brightness, 1)) saturate(1.05);
+    transition: filter 2s linear;
+    user-select: none;
+    -webkit-user-drag: none;
+}
+
+/* 时间色调：叠在画面上做柔和染色，保留细节 */
+.sky-tint {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, var(--sky-top, #cfdff5) 0%, var(--sky-bottom, #fbf8f1) 100%);
+    mix-blend-mode: soft-light;
+    opacity: var(--art-tint, 0.45);
+    transition: background 2s linear, opacity 2s linear;
+}
+
+/* 太阳/月光斜着打在画面上 */
+.sky::before {
+    mix-blend-mode: screen;
+}
+
+/* 内容卡片再厚一点，压在插画上也要看清字 */
+:root {
+    --glass-card: rgba(255, 253, 248, 0.78);
+    --glass-card-strong: rgba(255, 253, 248, 0.9);
+    --glass-blur-card: 20px;
+}
+
+[data-theme="dark"] {
+    --glass-card: rgba(20, 24, 36, 0.68);
+    --glass-card-strong: rgba(20, 24, 36, 0.84);
+}
+
+/* 页面底部渐隐到卡片色，避免插画边缘生硬切断 */
+.sky::after {
+    height: 34%;
+    opacity: 0.72;
+}
