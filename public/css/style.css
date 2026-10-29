@@ -7367,10 +7367,27 @@ body.canvas-on .reading-progress {
     box-shadow: var(--shadow-2);
 }
 
-/* ---------- 日历弹窗（沿用原位置，浮在卡片上） ---------- */
-.hv .home-editor-pop {
+/* ---------- 日历弹窗：挂在日历卡片下方浮出 ---------- */
+.hv-cal-card {
     position: relative;
+}
+
+.hv .home-editor-pop {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    right: auto;
     width: 100%;
+    max-width: 100%;
+    z-index: 60;
+}
+
+/* 弹窗里的编辑器卡片跟侧栏同宽同色 */
+.hv .home-editor-pop .home-editor {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-3);
 }
 
 /* ---------- 窄屏 ---------- */

@@ -13,7 +13,7 @@
     <script src="/js/site-icon.js?v=1.0.0" defer></script>
 
     <!-- Styles -->
-    <link rel="stylesheet" href="css/style.css?v=3.86.0">
+    <link rel="stylesheet" href="css/style.css?v=3.87.0">
     <link rel="stylesheet" href="css/glass.css?v=1.0.14">
     <link rel="stylesheet" href="css/wheel.css?v=1.0.0">
 
@@ -229,6 +229,37 @@
                         <aside class="hv-side">
                             <div class="hv-card hv-cal-card">
                                 <div class="home-calendar" id="homeCalendar"></div>
+
+                        <!-- 点日期后从日历下方浮出的编写弹窗 -->
+                        <div class="home-editor-pop" id="homeEditorWrap">
+                        <div class="home-editor-inner">
+                        <div class="dash-panel home-editor" id="homeEditor">
+                        <!-- 第一步：选择写任务还是日记 -->
+                        <div class="editor-choice" id="editorChoice">
+                        <span class="editor-date" id="editorDateLabel"></span>
+                        <button class="editor-choice-btn" type="button" data-kind="task">任务</button>
+                        <button class="editor-choice-btn" type="button" data-kind="journal">日记</button>
+                        <button class="editor-close" type="button" data-close="1" title="关闭">×</button>
+                        </div>
+                        
+                        <!-- 第二步：任务编写 -->
+                        <form class="editor-form" id="editorTaskForm" style="display:none;">
+                        <input type="text" id="editorTaskInput" placeholder="写下一个任务，回车或点提交保存" maxlength="120" autocomplete="off">
+                        <button class="editor-submit" type="submit">提交</button>
+                        <button class="editor-close" type="button" data-close="1" title="关闭">×</button>
+                        </form>
+                        
+                        <!-- 第二步：日记编写 -->
+                        <form class="editor-form editor-form-journal" id="editorJournalForm" style="display:none;">
+                        <textarea id="editorJournalInput" placeholder="写下今天的日记…" maxlength="20000"></textarea>
+                        <div class="editor-form-actions">
+                        <button class="editor-submit" type="submit">提交</button>
+                        <button class="editor-close" type="button" data-close="1" title="关闭">×</button>
+                        </div>
+                        </form>
+                        </div>
+                        </div>
+                        </div>
                             </div>
 
                             <div class="hv-card home-life" id="homeLife">
@@ -256,36 +287,6 @@
                         </div>
                         <div class="hv-projects home-projects-grid" id="homeProjectsGrid"></div>
                     </section>
-
-                                    <div class="home-editor-pop" id="homeEditorWrap">
-                <div class="home-editor-inner">
-                <div class="dash-panel home-editor" id="homeEditor">
-                    <!-- 第一步：选择写任务还是日记 -->
-                    <div class="editor-choice" id="editorChoice">
-                        <span class="editor-date" id="editorDateLabel"></span>
-                        <button class="editor-choice-btn" type="button" data-kind="task">任务</button>
-                        <button class="editor-choice-btn" type="button" data-kind="journal">日记</button>
-                        <button class="editor-close" type="button" data-close="1" title="关闭">×</button>
-                    </div>
-                
-                    <!-- 第二步：任务编写 -->
-                    <form class="editor-form" id="editorTaskForm" style="display:none;">
-                        <input type="text" id="editorTaskInput" placeholder="写下一个任务，回车或点提交保存" maxlength="120" autocomplete="off">
-                        <button class="editor-submit" type="submit">提交</button>
-                        <button class="editor-close" type="button" data-close="1" title="关闭">×</button>
-                    </form>
-                
-                    <!-- 第二步：日记编写 -->
-                    <form class="editor-form editor-form-journal" id="editorJournalForm" style="display:none;">
-                        <textarea id="editorJournalInput" placeholder="写下今天的日记…" maxlength="20000"></textarea>
-                        <div class="editor-form-actions">
-                            <button class="editor-submit" type="submit">提交</button>
-                            <button class="editor-close" type="button" data-close="1" title="关闭">×</button>
-                        </div>
-                    </form>
-                </div>
-                </div>
-                </div>
 
                 </div>
             </section>
