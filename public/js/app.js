@@ -1072,15 +1072,8 @@ const BlogApp = {
             this.bindNewsInfiniteScroll(list);
             this.fillNewsIfShort(list);
             this.bindNewsHoverScroll();
-            // 简报也做无限滚动（内容复制一份）
-            setTimeout(() => {
-                const list = document.getElementById('newsList');
-                if (list && !list.dataset.loopCloned && list.children.length) {
-                    list.dataset.loopCloned = '1';
-                    list.innerHTML += list.innerHTML;
-                    this.makeLoopScroll(list);
-                }
-            }, 600);
+            // 简报改成堆叠卡片 + 滚轮切换（循环即无限）
+            setTimeout(() => this.initNewsStack(), 500);
             this.initNewsStack();
         } catch (e) {
             console.error('资讯加载失败:', e);
@@ -1716,8 +1709,9 @@ const BlogApp = {
                 + '<img src="' + src + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.style.visibility=\'hidden\'">'
                 + '</button>';
         };
-        // 复制一份，滚到底接回开头 → 视觉无缝，不需要进度条
-        box.innerHTML = pick.map(tile).join('') + pick.map(tile).join('');
+        box.innerHTML = pick.map(tile).join('');
+
+        this.initPhotoStack();
 
         box.addEventListener('click', (e) => {
             const btn = e.target.closest('.hv-photo');

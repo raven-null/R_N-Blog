@@ -8615,3 +8615,81 @@ html.glass-ready .stack-box > [data-reveal].in-view {
 .hv-block > .hv-carousel {
     margin-top: 0;
 }
+
+/* ============================================================
+   照片盒子 / 简报盒子 里的堆叠卡（滚轮切换）
+   ============================================================ */
+/* 两个盒子本身是外壳，内部 stack-box 负责叠放 */
+.hv-photo-box .stack-box,
+.hv-news-box .stack-box {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    grid-template-rows: 1fr !important;
+    place-items: center;
+    height: 100% !important;
+    overflow: visible !important;
+    padding: 14px !important;
+    gap: 0 !important;
+}
+
+/* 照片：一张方相纸居中 */
+.hv-photo-box .stack-box > .hv-photo {
+    grid-area: 1 / 1 / 2 / 2 !important;
+    position: relative !important;
+    inset: auto !important;
+    width: min(420px, 88%) !important;
+    aspect-ratio: 1 / 1;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 10px;
+    background: var(--surface, #fff);
+    border: 0;
+    border-radius: 18px;
+    box-shadow: 0 12px 34px rgba(20, 26, 44, 0.22);
+    cursor: pointer;
+    transform-origin: center center;
+    transition: transform 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+        opacity 0.35s ease !important;
+}
+
+.hv-photo-box .stack-box > .hv-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 12px;
+    display: block;
+}
+
+/* 简报：窄卡居中，字换行 */
+.hv-news-box .stack-box > .news-item {
+    grid-area: 1 / 1 / 2 / 2 !important;
+    position: relative !important;
+    inset: auto !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 20px 20px 18px;
+    border-radius: 16px;
+    background: var(--surface-2, rgba(0, 0, 0, 0.04));
+    transform-origin: center center;
+    transition: transform 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+        opacity 0.35s ease !important;
+}
+
+/* 堆叠角度：统一用变量 */
+.hv-photo-box .stack-box > *,
+.hv-news-box .stack-box > * {
+    transform:
+        rotate(var(--stack-rot, 0deg))
+        translate(var(--stack-x, 0px), var(--stack-y, 0px))
+        scale(var(--stack-s, 1)) !important;
+    opacity: var(--stack-o, 1) !important;
+}
+
+/* 当前这张用醒目一点的字号 */
+.hv-news-box .stack-box > .news-item .news-item-title {
+    font-size: 16px;
+    line-height: 1.6;
+    word-break: break-word;
+}
