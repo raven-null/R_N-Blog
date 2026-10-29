@@ -571,7 +571,10 @@ const BlogApp = {
 
         // 首次进入渲染内容
         if (view === 'home') this.renderHome();
-        if (view === 'gallery') this.initGalleryWall();
+        if (view === 'gallery') {
+            if (window.GalleryWall) window.GalleryWall.open();
+            else this.initGalleryWall();
+        }
         if (view === 'projects') this.renderProjects();
 
         // 入场动画
