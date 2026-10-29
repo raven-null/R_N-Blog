@@ -1,0 +1,59 @@
+/* ============================================================
+   后台统一皮肤
+   ------------------------------------------------------------
+   后台的几个 CSS（login / forms / editor-write / capsule / drawer）
+   各自定义过一批变量，还有写死的深色。
+   这一层把它们全部接到 css/tokens.css 的令牌上，
+   于是前后台共用同一套配色，切主题一起变。
+
+   加载顺序要求：style/tokens.css → 本文件 → 后台自己的样式
+   （实际上放最后也没问题：同名变量由后加载者胜出）
+   ============================================================ */
+
+:root,
+[data-theme] {
+    /* editor-write.css 自己那套（深色写死）改由令牌驱动 */
+    --bg-input: var(--surface-2);
+    --editor-bg: var(--bg);
+    --editor-text: var(--text);
+    --editor-pre-bg: var(--surface-2);
+
+    /* 白板 / 导图页的 --mm-* */
+    --mm-bg: var(--bg);
+    --mm-panel: var(--surface);
+    --mm-border: var(--border);
+    --mm-text: var(--text);
+    --mm-dim: var(--text-muted);
+    --mm-accent: var(--accent);
+
+    /* 圆角跟令牌走 */
+    --radius: var(--r-lg);
+    --radius-sm: var(--r-md);
+}
+
+/* glass.css 的玻璃层跟着骨架深浅走 */
+[data-theme="light"] {
+    --glass-bg: linear-gradient(145deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.42));
+    --glass-border: rgba(66, 54, 32, 0.12);
+    --glass-hi: rgba(255, 255, 255, 0.85);
+    --glass-shadow: 0 18px 44px rgba(66, 54, 32, 0.14);
+}
+
+[data-theme="dark"] {
+    --glass-bg: linear-gradient(145deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.035));
+    --glass-border: rgba(255, 245, 232, 0.12);
+    --glass-hi: rgba(255, 255, 255, 0.08);
+    --glass-shadow: 0 18px 44px rgba(0, 0, 0, 0.5);
+}
+
+/* 后台输入框沿用旧变量名，但取新令牌的色 */
+input,
+textarea,
+select {
+    color: var(--text);
+}
+
+input::placeholder,
+textarea::placeholder {
+    color: var(--text-muted);
+}

@@ -5952,10 +5952,10 @@ html.reader-focus .article-content {
 /* ===== 桌面宠物：右下角的小幽灵猫 ===== */
 .deskpet {
     position: fixed;
-    right: 24px;
-    bottom: 22px;
+    right: 22px;
+    bottom: 20px;
     z-index: 70;
-    width: 96px;
+    width: 68px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -5967,8 +5967,8 @@ html.reader-focus .article-content {
 
 .deskpet-body {
     position: relative;
-    width: 96px;
-    height: 106px;
+    width: 68px;
+    height: 74px;
     padding: 0;
     border: 0;
     background: none;
@@ -6086,6 +6086,7 @@ html.reader-focus .article-content {
     top: 0;
     transform: translate(-50%, 4px);
     width: max-content;
+    font-size: 12px;
     max-width: min(230px, calc(100vw - 32px));
     padding: 8px 12px;
     border-radius: 12px;
@@ -6152,12 +6153,12 @@ html.reader-focus .article-content {
     .deskpet {
         right: 10px;
         bottom: 84px;
-        width: 74px;
+        width: 56px;
     }
 
     .deskpet-body {
-        width: 74px;
-        height: 82px;
+        width: 56px;
+        height: 62px;
     }
 
     .deskpet-bubble {

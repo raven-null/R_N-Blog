@@ -51,8 +51,8 @@
     "Microsoft YaHei", "Microsoft YaHei UI", sans-serif;
   font-size: 16px;
   line-height: 1.5;
-  color: #1a1a2e;
-  background: #1a1a2e;
+  color: var(--text);
+  background: var(--text);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -78,7 +78,7 @@
   gap: 20px;
   padding: 40px 48px;
   overflow: hidden;
-  background: linear-gradient(135deg, #d4d0dc 0%, #c8c4d0 50%, #bbb7c5 100%);
+  background: linear-gradient(135deg, var(--surface-2) 0%, var(--surface-3) 50%, var(--border-strong) 100%);
 }
 
 /* 装饰性模糊光斑（原来是 .left-panel::before / ::after） */
@@ -115,7 +115,7 @@
   gap: 10px;
   font-size: 16px;
   font-weight: 600;
-  color: #fff;
+  color: var(--text-on-accent);
 }
 
 #loginPage .lg-logo svg {
@@ -192,7 +192,7 @@
   width: 170px;
   height: 370px;
   border-radius: 10px 10px 0 0;
-  background: #6c3ff5;
+  background: var(--accent);
 }
 
 /* 黑色矩形 */
@@ -202,7 +202,7 @@
   width: 115px;
   height: 290px;
   border-radius: 8px 8px 0 0;
-  background: #2d2d2d;
+  background: var(--text);
 }
 
 /* 橙色半圆 */
@@ -212,7 +212,7 @@
   width: 230px;
   height: 190px;
   border-radius: 115px 115px 0 0;
-  background: #ff9b6b;
+  background: var(--accent);
 }
 
 /* 黄色圆角矩形 */
@@ -222,7 +222,7 @@
   width: 135px;
   height: 215px;
   border-radius: 68px 68px 0 0;
-  background: #e8d754;
+  background: var(--accent-soft);
 }
 
 #loginPage .lg-eyes {
@@ -243,7 +243,7 @@
 
 #loginPage .lg-pupil {
   border-radius: 50%;
-  background: #2d2d2d;
+  background: var(--text);
   transition: transform 0.1s ease-out;
 }
 
@@ -251,7 +251,7 @@
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  background: #2d2d2d;
+  background: var(--text);
   transition: transform 0.7s ease-in-out;
 }
 
@@ -260,7 +260,7 @@
   width: 50px;
   height: 4px;
   border-radius: 2px;
-  background: #2d2d2d;
+  background: var(--text);
   transition: left 0.7s ease-in-out, top 0.7s ease-in-out, transform 0.7s ease-in-out;
 }
 
@@ -269,7 +269,7 @@
   position: absolute;
   width: 28px;
   height: 14px;
-  border: 3px solid #2d2d2d;
+  border: 3px solid var(--text);
   border-top: none;
   border-radius: 0 0 14px 14px;
   opacity: 0;
@@ -368,7 +368,7 @@
   font-size: 28px;
   font-weight: 700;
   letter-spacing: -0.5px;
-  color: #1a1a2e;
+  color: var(--text);
 }
 
 #loginPage .lg-form-header p {
@@ -397,11 +397,11 @@
   height: 48px;
   padding: 0 40px 0 0; /* 右侧留出显示/隐藏按钮的位置 */
   border: none;
-  border-bottom: 1.5px solid #e0e0e0;
+  border-bottom: 1.5px solid var(--border);
   background: transparent;
   font-family: inherit;
   font-size: 15px;
-  color: #1a1a2e;
+  color: var(--text);
   outline: none;
   transition: border-color 0.3s;
   -webkit-appearance: none;
@@ -409,7 +409,7 @@
 }
 
 #loginPage .lg-input-wrapper input:focus {
-  border-bottom-color: #5b21b6;
+  border-bottom-color: var(--accent-strong);
 }
 
 #loginPage .lg-input-wrapper input::placeholder {
@@ -450,7 +450,7 @@
 
 #loginPage .lg-toggle-password:focus-visible {
   border-radius: 4px;
-  outline: 2px solid #5b21b6;
+  outline: 2px solid var(--accent-strong);
   outline-offset: 2px;
 }
 
@@ -470,7 +470,7 @@
   background: rgba(220, 38, 38, 0.08);
   font-size: 13px;
   line-height: 1.5;
-  color: #dc2626;
+  color: var(--danger);
 }
 
 #loginError:not(:empty) {
@@ -486,10 +486,10 @@
   width: 100%;
   height: 50px;
   overflow: hidden;
-  border: 1.5px solid #1a1a2e;
+  border: 1.5px solid var(--text);
   border-radius: 25px;
-  background: #1a1a2e;
-  color: #fff;
+  background: var(--text);
+  color: var(--text-on-accent);
   font-family: inherit;
   font-size: 15px;
   font-weight: 600;
@@ -510,8 +510,8 @@
   justify-content: center;
   gap: 8px;
   border-radius: 25px;
-  background: #5b21b6;
-  color: #fff;
+  background: var(--accent-strong);
+  color: var(--text-on-accent);
   opacity: 0;
   transition: opacity 0.3s;
 }
@@ -526,7 +526,7 @@
 }
 
 #loginPage .lg-btn-login:focus-visible {
-  outline: 2px solid #5b21b6;
+  outline: 2px solid var(--accent-strong);
   outline-offset: 3px;
 }
 
@@ -542,14 +542,14 @@
 }
 
 #loginPage .lg-signup-link a {
-  color: #1a1a2e;
+  color: var(--text);
   font-weight: 600;
   text-decoration: none;
   transition: color 0.2s;
 }
 
 #loginPage .lg-signup-link a:hover {
-  color: #5b21b6;
+  color: var(--accent-strong);
   text-decoration: underline;
 }
 
