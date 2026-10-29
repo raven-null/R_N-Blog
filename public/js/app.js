@@ -1702,7 +1702,7 @@ const BlogApp = {
             return;
         }
 
-        const pick = photos.slice(0, 30);
+        const pick = photos;   // 全部渲染，交给无限滚动
         const tile = (p, i) => {
             const src = String(p.thumb || p.url).replace(/"/g, '&quot;');
             return '<button type="button" class="hv-photo" data-idx="' + i + '" title="看图">'
@@ -1711,7 +1711,7 @@ const BlogApp = {
         };
         box.innerHTML = pick.map(tile).join('');
 
-        this.initPhotoStack();
+        this.initLoopScroll(box);
 
         box.addEventListener('click', (e) => {
             const btn = e.target.closest('.hv-photo');
@@ -1725,7 +1725,6 @@ const BlogApp = {
             }
         });
 
-        this.makeLoopScroll(box);
     },
 
     // 无限滚动：滚过一半时悄悄把位置减回去，看起来永远滚不完
@@ -1951,6 +1950,8 @@ const BlogApp = {
         if (!this.lifeAdminKey()) {
             box.style.display = 'none';
             if (journalBox) journalBox.style.display = 'none';
+            const row = box.closest('.hv-side-row');
+            if (row) row.style.display = 'none';
             return;
         }
 
@@ -4390,31 +4391,106 @@ const BlogApp = {
         });
     },
 
-    // 把简报列表初始化成堆叠
+    // 简报列表：全部渲染 + 无限滚动
     initNewsStack() {
         const list = document.getElementById('newsList');
-        if (!list || list.dataset.stackInit === '1') return;
-        list.dataset.stackInit = '1';
-        list.classList.add('stack-box');
-        this.initStackBox(list, { autoMs: 3800 });
+        if (!list || list.dataset.loopInit === '1') return;
+        list.classList.remove('stack-box', 'stack-news');
+        list.classList.add('loop-box', 'loop-news');
+        this.initLoopScroll(list, { auto: true });
     },
 
-    // 把项目列表初始化成堆叠
+    // 项目列表：全部渲染 + 无限滚动
     initProjectStack() {
         const box = document.getElementById('homeProjectsGrid');
-        if (!box || box.dataset.stackInit === '1') return;
-        box.dataset.stackInit = '1';
-        box.classList.add('stack-box', 'stack-projects');
-        this.initStackBox(box, { autoMs: 4200 });
+        if (!box || box.dataset.loopInit === '1') return;
+        box.classList.remove('stack-box', 'stack-projects');
+        box.classList.add('loop-box', 'loop-projects');
+        this.initLoopScroll(box, { auto: true });
     },
 
-    // 把首页照片初始化成堆叠
+    // 首页照片：全部渲染 + 无限滚动
     initPhotoStack() {
         const box = document.getElementById('hvPhotos');
-        if (!box || box.dataset.stackInit === '1') return;
-        box.dataset.stackInit = '1';
-        box.classList.add('stack-box', 'stack-photos');
-        this.initStackBox(box, { autoMs: 3200 });
+        if (!box || box.dataset.loopInit === '1') return;
+        box.classList.remove('stack-box', 'stack-photos');
+        box.classList.add('loop-box', 'loop-photos');
+        this.initLoopScroll(box, { auto: true });
+    },
+
+    // ===================== 无限滚动 =====================
+    // 全部内容照常渲染，容器自己滚；内容复制一份接在后面，
+    // 滚过中点就把位置减回去，看起来永远滚不到头。
+    initLoopScroll(el, opts = {}) {
+        if (!el || el.dataset.loopInit === '1') return;
+        el.dataset.loopInit = '1';
+        el.classList.add('loop-box');
+        el.classList.remove('stack-box');
+
+        const kids = [...el.children].filter((k) => k.nodeType === 1);
+        if (!kids.length) return;
+
+        kids.forEach((k) => {
+            k.removeAttribute('data-reveal');
+            k.classList.remove('in-view');
+            k.style.removeProperty('transform');
+            k.style.removeProperty('opacity');
+            k.style.removeProperty('filter');
+            k.style.removeProperty('pointer-events');
+            ['--stack-rot', '--stack-x', '--stack-y', '--stack-s', '--stack-o', 'z-index']
+                .forEach((p) => k.style.removeProperty(p));
+        });
+
+        // 补一份副本：列表短就复制，长列表 500 张不再复制
+        let doubled = false;
+        const need = kids.length <= 60 || el.scrollHeight < el.clientHeight * 2.2;
+        if (need) {
+            doubled = true;
+            const frag = document.createDocumentFragment();
+            kids.forEach((k) => frag.appendChild(k.cloneNode(true)));
+            el.appendChild(frag);
+        }
+
+        // 回卷：有副本就滚过半减半，没副本就到底回顶部
+        const wrap = () => {
+            if (doubled) {
+                const half = el.scrollHeight / 2;
+                if (half <= el.clientHeight + 4) return;
+                const gap = 2;
+                if (el.scrollTop >= half - gap) el.scrollTop -= half - gap;
+                else if (el.scrollTop <= 0) el.scrollTop += half - gap;
+            } else if (el.scrollTop >= el.scrollHeight - el.clientHeight - 1) {
+                el.scrollTop = 0;
+            }
+        };
+        el.addEventListener('scroll', wrap, { passive: true });
+
+        // 自己能滚时先把滚轮吃掉，不让页面跟着动
+        el.addEventListener('wheel', (e) => {
+            const canDown = el.scrollTop + el.clientHeight < el.scrollHeight - 2;
+            const canUp = el.scrollTop > 2;
+            if ((e.deltaY > 0 && canDown) || (e.deltaY < 0 && canUp)) e.stopPropagation();
+        }, { passive: true });
+
+        // 慢慢自动往下滚
+        if (opts.auto !== false) {
+            let acc = 0;
+            const speed = opts.speed || 0.5;
+            setInterval(() => {
+                if (document.hidden) return;
+                if (el.matches(':hover') || el.dataset.paused === '1') return;
+                acc += speed;
+                if (acc >= 1) {
+                    const step = Math.floor(acc);
+                    acc -= step;
+                    el.scrollTop += step;
+                    wrap();
+                }
+            }, 32);
+            el.addEventListener('pointerdown', () => { el.dataset.paused = '1'; });
+            el.addEventListener('pointerup', () => { delete el.dataset.paused; });
+            el.addEventListener('pointerleave', () => { delete el.dataset.paused; });
+        }
     },
 
     // 正文手写体开关：默认开启（只有明确存了 '0' 才关）

@@ -13,7 +13,7 @@
     <script src="/js/site-icon.js?v=1.0.0" defer></script>
 
     <!-- Styles -->
-    <link rel="stylesheet" href="css/style.css?v=4.22.0">
+    <link rel="stylesheet" href="css/style.css?v=4.24.0">
     <link rel="stylesheet" href="css/glass.css?v=1.0.15">
     <link rel="stylesheet" href="css/wheel.css?v=1.0.0">
 
@@ -236,8 +236,10 @@
                         </div>
                     </header>
 
-                    <!-- ② 文章轮播（全部文章） -->
-                    <section class="hv-block hv-carousel-box">
+                                        <!-- 两列流式：左「文章 + 图片」，右「日历 + 简报 + 项目」 -->
+                    <div class="hv-flow">
+                        <div class="hv-col hv-col-left">
+                            <section class="hv-block hv-carousel-box">
                         <div class="hv-carousel" id="hvCarousel">
                             <div class="hv-car-track" id="hvCarTrack">
                                 <div class="hv-skeleton"></div>
@@ -248,20 +250,12 @@
                             <button class="hv-car-btn hv-car-next" type="button" data-car-dir="1" aria-label="下一张">›</button>
                         </div>
                     </section>
-
-                    <!-- ③ 照片 + 简报 + 日历：网格排布 -->
-                    <div class="hv-media-row">
-                        <section class="hv-photo-box">
+                            <section class="hv-photo-box">
                             <div class="hv-photo-scroll stack-box" id="hvPhotos"></div>
                         </section>
-
-                        <div class="hv-right-col">
-                            <section class="hv-news-box">
-                                <div class="home-news-list news-list stack-box" id="newsList"></div>
-                            </section>
-
-                            <!-- 日历 -->
-                        <div class="hv-card hv-cal-card">
+                        </div>
+                        <div class="hv-col hv-col-right">
+                            <div class="hv-card hv-cal-card">
                         <div class="home-calendar" id="homeCalendar"></div>
                         
                         <!-- 点日期后从日历下方浮出的编写弹窗 -->
@@ -295,10 +289,15 @@
                         </div>
                         </div>
                         </div>
+                            <section class="hv-news-box">
+                                <div class="home-news-list news-list stack-box" id="newsList"></div>
+                            </section>
+                            <section class="hv-block hv-projects-box">
+                        <div class="hv-projects home-projects-grid" id="homeProjectsGrid"></div>
+                    </section>
                         </div>
                     </div>
 
-                    <!-- ④ 日历 / 任务 / 日记 -->
                     <div class="hv-side-row">
                         <aside class="hv-side">
 
@@ -318,11 +317,6 @@
                             </div>
                         </aside>
                     </div>
-
-                    <!-- ⑤ 项目 -->
-                    <section class="hv-block hv-projects-box">
-                        <div class="hv-projects home-projects-grid" id="homeProjectsGrid"></div>
-                    </section>
 
                 </div>
             </section>
@@ -468,7 +462,7 @@
     <script src="vendor/grok/eyes.js?v=1.0.0" defer></script>
     <script src="vendor/grok/character.js?v=1.0.0" defer></script>
 
-    <script src="js/app.js?v=4.22.0" defer></script>
+    <script src="js/app.js?v=4.24.0" defer></script>
     <script src="js/gallery-wall.js?v=1.3.0" defer></script>
     <script src="js/pet-mind.js?v=1.0.2" defer></script>
     <script src="js/pet-boot.js?v=1.0.0" defer></script>

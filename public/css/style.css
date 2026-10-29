@@ -9340,3 +9340,447 @@ html.glass-ready .stack-box > [data-reveal].in-view {
         min-height: 240px;
     }
 }
+
+/* ============================================================
+   无限滚动流：照片 / 简报 / 项目全部渲染，容器自己滚，滚不到头
+   旧的 stack-box 类已被 JS 摘掉，这里只负责 loop-box
+   ============================================================ */
+
+/* 行高交给每个格子自己的固定高度，这样某一行隐藏时不留空 */
+.hv {
+    grid-template-rows: repeat(5, auto) !important;
+}
+
+/* 每个格子写死高度：内容再多也只在格子里滚 */
+.hv-carousel-box { min-height: 538px; }
+.hv-cal-card { height: 320px; }
+.hv-news-box { height: 200px !important; max-height: 200px !important; }
+.hv-photo-box { height: 380px !important; max-height: 380px !important; }
+.hv-projects-box { height: 380px !important; max-height: 380px !important; }
+
+.hv-carousel-box,
+.hv-cal-card,
+.hv-news-box,
+.hv-photo-box,
+.hv-projects-box {
+    min-height: 0 !important;
+    overflow: hidden;
+}
+
+/* 任务 / 日记那一行不受固定行高约束 */
+.hv-side-row {
+    min-height: 0;
+    overflow: visible;
+}
+
+.hv-side-row .hv-side {
+    height: auto;
+}
+
+/* 项目 / 报告的滚动容器撑满整个格子 */
+.hv-projects-box .loop-box,
+.hv-news-box .loop-box,
+.hv-photo-box .loop-box {
+    width: 100% !important;
+    flex: 1 1 auto;
+}
+
+/* 覆盖旧规则里写死的 460px / 320px */
+.hv-photo-box,
+.hv-news-box {
+    height: 100% !important;
+    width: auto !important;
+    align-self: stretch !important;
+}
+
+/* ---------- 通用滚动容器 ---------- */
+.loop-box {
+    display: block !important;
+    position: relative !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    overscroll-behavior: contain;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none;
+    scroll-behavior: auto;
+}
+
+.loop-box::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+}
+
+/* 里面的卡片一律回到普通文档流：不旋转、不堆叠、不透明 */
+.loop-box > * {
+    position: static !important;
+    inset: auto !important;
+    transform: none !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    box-shadow: none;
+}
+
+/* ---------- 照片：两列方格流 ---------- */
+.loop-box.loop-photos,
+.hv-photo-box .loop-box,
+.stack-box.loop-photos {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    grid-auto-rows: auto !important;
+    align-content: start !important;
+    gap: 10px !important;
+    padding: 0 2px 10px !important;
+}
+
+.loop-box.loop-photos > .hv-photo {
+    width: 100% !important;
+    height: auto !important;
+    aspect-ratio: 1 / 1 !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    border-radius: 14px !important;
+    overflow: hidden;
+    transform: none !important;
+    content-visibility: auto;
+    contain-intrinsic-size: 240px 240px;
+}
+
+.loop-box.loop-photos > .hv-photo img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    border-radius: 14px !important;
+    transform: none !important;
+    transition: transform 0.35s ease;
+}
+
+.loop-box.loop-photos > .hv-photo:hover img {
+    transform: scale(1.06) !important;
+}
+
+/* ---------- 简报：单列列表 ---------- */
+.loop-box.loop-news,
+.hv-news-box .loop-box {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    padding: 0 2px 8px !important;
+}
+
+.loop-box.loop-news > .news-item {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 10px 14px !important;
+    border-radius: 14px !important;
+    border: 1px solid var(--glass-line, var(--border));
+    background: var(--glass-card, rgba(255, 253, 248, 0.78));
+    transform: none !important;
+    min-height: 0 !important;
+}
+
+.loop-box.loop-news > .news-item .news-item-title {
+    font-family: var(--font-hand);
+    font-size: 15px !important;
+    line-height: 1.6 !important;
+    -webkit-line-clamp: 2 !important;
+    line-clamp: 2;
+}
+
+/* ---------- 项目：单列卡片 ---------- */
+.loop-box.loop-projects,
+.hv-projects-box .loop-box {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+    padding: 0 2px 10px !important;
+}
+
+.loop-box.loop-projects > .home-project {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 14px 16px !important;
+    border-radius: 16px !important;
+    transform: none !important;
+    min-height: 0 !important;
+}
+
+.loop-box.loop-projects > .home-project .home-project-name {
+    font-family: var(--font-hand);
+    font-size: 16px !important;
+}
+
+/* 深色主题下的卡片底色 */
+html[data-tone="dark"] .loop-box.loop-news > .news-item {
+    background: var(--glass-card, rgba(28, 31, 40, 0.72)) !important;
+    border-color: var(--glass-line, rgba(255, 255, 255, 0.12)) !important;
+}
+
+/* 滚动提示：上下淡出遮罩 */
+.hv-photo-box,
+.hv-news-box,
+.hv-projects-box {
+    position: relative;
+}
+
+.hv-photo-box::after,
+.hv-news-box::after,
+.hv-projects-box::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 26px;
+    pointer-events: none;
+    background: linear-gradient(to bottom, transparent, var(--bg, #fbf8f1) 85%);
+    opacity: 0.55;
+    border-radius: 0 0 16px 16px;
+}
+
+@media (max-width: 900px) {
+    .hv {
+        grid-template-rows: repeat(7, auto) !important;
+    }
+
+    .hv-carousel-box { height: 300px; min-height: 0; }
+    .hv-cal-card { height: 300px; }
+    .hv-news-box { height: 190px !important; max-height: 190px !important; }
+    .hv-photo-box,
+    .hv-projects-box { height: 340px !important; max-height: 340px !important; }
+
+    .loop-box.loop-photos {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+}
+
+
+/* ============================================================
+   两列流式布局（最终）
+   ┌──────────────────────────────┐
+   │           个人信息             │
+   ├──────────────┬───────────────┤
+   │  文章（正方形） │     日历       │
+   ├──────────────┼───────────────┤
+   │              │     简报       │
+   │     图片      ├───────────────┤
+   │              │     项目       │
+   └──────────────┴───────────────┘
+   两列各自向上流动，不强行等高
+   ============================================================ */
+
+/* 外层不再是网格 */
+.hv {
+    display: block !important;
+    grid-template-columns: none !important;
+    grid-template-areas: none !important;
+    grid-template-rows: none !important;
+}
+
+/* 中间那层包裹彻底失效 */
+.hv-media-row,
+.hv-right-col {
+    display: contents !important;
+}
+
+.hv-flow {
+    display: flex;
+    align-items: flex-start;
+    gap: 18px;
+    margin-top: 18px;
+}
+
+.hv-col {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    min-width: 0;
+}
+
+.hv-col-left {
+    flex: 1 1 0;
+}
+
+.hv-col-right {
+    flex: 1 1 0;
+}
+
+/* ---------- 文章：恒定正方形，一屏一张 ---------- */
+.hv-carousel-box {
+    width: 100% !important;
+    min-height: 0 !important;
+    height: auto !important;
+    display: block !important;
+}
+
+.hv-carousel-box .hv-carousel {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    height: auto;
+    display: block;
+    position: relative;
+}
+
+.hv-carousel-box .hv-car-track {
+    display: flex !important;
+    width: 100%;
+    height: 100%;
+    padding: 0 !important;
+    gap: 0 !important;
+    overflow: hidden;
+    border-radius: 22px;
+}
+
+.hv-carousel-box .hv-car-track > * {
+    flex: 0 0 100% !important;
+    max-width: 100% !important;
+    width: 100% !important;
+}
+
+.hv-carousel-box .hv-car-item {
+    width: 100% !important;
+    height: 100% !important;
+    aspect-ratio: 1 / 1 !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden;
+}
+
+.hv-carousel-box .hv-car-cover {
+    flex: 1 1 auto !important;
+    height: auto !important;
+    min-height: 0 !important;
+}
+
+.hv-carousel-box .hv-car-body {
+    flex: 0 0 auto !important;
+    padding: 16px 20px 18px !important;
+}
+
+.hv-carousel-box .hv-car-title {
+    font-size: 20px !important;
+    line-height: 1.45 !important;
+    -webkit-line-clamp: 2 !important;
+    line-clamp: 2 !important;
+}
+
+/* ---------- 左列图片：两列方格，格子里滚 ---------- */
+.hv-col-left .hv-photo-box {
+    width: 100% !important;
+    height: 400px !important;
+    max-height: 400px !important;
+    align-self: stretch !important;
+}
+
+/* ---------- 右列：日历自然高，简报/项目固定高里滚 ---------- */
+.hv-col-right .hv-cal-card {
+    width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+}
+
+.hv-col-right .hv-news-box {
+    width: 100% !important;
+    height: 220px !important;
+    max-height: 220px !important;
+}
+
+.hv-col-right .hv-projects-box {
+    width: 100% !important;
+    height: 450px !important;
+    max-height: 450px !important;
+    display: block !important;
+    align-items: stretch !important;
+}
+
+.hv-col-right .hv-projects-box .loop-box,
+.hv-col-right .hv-news-box .loop-box,
+.hv-col-left .hv-photo-box .loop-box {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+/* ---------- 任务 / 日记整行 ---------- */
+.hv-side-row {
+    margin-top: 18px;
+    display: block;
+}
+
+.hv-side-row .hv-side {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px;
+    align-items: start;
+}
+
+/* 给两列盒子统一的圆角与底色（图片/简报/项目只留卡片本身） */
+.hv-photo-box,
+.hv-news-box,
+.hv-projects-box {
+    position: relative;
+    border-radius: 18px;
+    background: none !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    overflow: hidden;
+    padding: 0 !important;
+}
+
+/* 底部渐隐提示还能往下滚 */
+.hv-photo-box::after,
+.hv-news-box::after,
+.hv-projects-box::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 30px;
+    pointer-events: none;
+    background: linear-gradient(to bottom, transparent, var(--bg, #fbf8f1) 88%);
+    opacity: 0.6;
+}
+
+html[data-tone="dark"] .hv-photo-box::after,
+html[data-tone="dark"] .hv-news-box::after,
+html[data-tone="dark"] .hv-projects-box::after {
+    background: linear-gradient(to bottom, transparent, var(--bg, #14161c) 88%);
+    opacity: 0.75;
+}
+
+@media (max-width: 900px) {
+    .hv-flow {
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .hv-col {
+        width: 100%;
+        gap: 16px;
+    }
+
+    .hv-col-left .hv-photo-box {
+        height: 360px !important;
+        max-height: 360px !important;
+    }
+
+    .hv-col-right .hv-news-box {
+        height: 200px !important;
+        max-height: 200px !important;
+    }
+
+    .hv-col-right .hv-projects-box {
+        height: 360px !important;
+        max-height: 360px !important;
+    }
+
+    .hv-carousel-box .hv-car-title {
+        font-size: 17px !important;
+    }
+}
