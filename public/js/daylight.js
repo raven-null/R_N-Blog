@@ -129,8 +129,6 @@
     const dark = root.getAttribute('data-theme') === 'dark';
     root.style.setProperty('--art-brightness', (dark ? L.tone.brightness * 0.55 : L.tone.brightness).toFixed(3));
     root.style.setProperty('--art-tint', L.tone.tint.toFixed(3));
-    const nameEl = document.getElementById('skyPeriodName');
-    if (nameEl && nameEl.textContent !== L.period.name) nameEl.textContent = L.period.name;
     if (typeof L.warmth === 'number') {
       root.style.setProperty('--sky-warmth', L.warmth.toFixed(3));
     }

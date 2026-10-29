@@ -151,45 +151,7 @@ nav.navbar {
     }
 }
 
-/* ---------- 天色控制条（可选，右下角小圆点提示当前时段） ---------- */
-.sky-badge {
-    position: fixed;
-    right: 22px;
-    bottom: 74px;
-    z-index: 60;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 5px 11px;
-    font-size: 11.5px;
-    color: var(--text-secondary);
-    background: var(--glass-card);
-    border: 1px solid var(--glass-line);
-    border-radius: 999px;
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    pointer-events: none;
-    opacity: 0.75;
-}
-
-.sky-badge .sky-dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: var(--sky-glow, #ffe6ad);
-    box-shadow: 0 0 8px var(--sky-glow, #ffe6ad);
-}
-
-[data-period="night"] .sky-badge .sky-dot {
-    background: #cfd9f2;
-    box-shadow: 0 0 8px #cfd9f2;
-}
-
-@media (max-width: 900px) {
-    .sky-badge {
-        display: none;
-    }
-}
+/* 时段徽标已移除 */
 
 /* ============================================================
    强调色跟着天色走
