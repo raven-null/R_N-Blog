@@ -8273,8 +8273,8 @@ html.glass-ready .stack-box > [data-reveal].in-view {
 
 .hv-news-block .home-news-list.stack-box > .news-item {
     grid-area: 1 / 1 / 2 / 2 !important;
-    position: relative !important;
-    inset: auto !important;
+    position: absolute !important;
+    inset: 50% auto auto 50% !important;
     top: auto !important;
     left: auto !important;
     right: auto !important;
@@ -8294,8 +8294,8 @@ html.glass-ready .stack-box > [data-reveal].in-view {
 
 .hv-photos.stack-box > .hv-photo {
     grid-area: 1 / 1 / 2 / 2 !important;
-    position: relative !important;
-    inset: auto !important;
+    position: absolute !important;
+    inset: 50% auto auto 50% !important;
     top: auto !important;
     left: auto !important;
     width: min(400px, 82%) !important;
@@ -8635,8 +8635,8 @@ html.glass-ready .stack-box > [data-reveal].in-view {
 /* 照片：一张方相纸居中 */
 .hv-photo-box .stack-box > .hv-photo {
     grid-area: 1 / 1 / 2 / 2 !important;
-    position: relative !important;
-    inset: auto !important;
+    position: absolute !important;
+    inset: 50% auto auto 50% !important;
     width: min(420px, 88%) !important;
     aspect-ratio: 1 / 1;
     height: auto !important;
@@ -8663,8 +8663,8 @@ html.glass-ready .stack-box > [data-reveal].in-view {
 /* 简报：窄卡居中，字换行 */
 .hv-news-box .stack-box > .news-item {
     grid-area: 1 / 1 / 2 / 2 !important;
-    position: relative !important;
-    inset: auto !important;
+    position: absolute !important;
+    inset: 50% auto auto 50% !important;
     width: 100% !important;
     height: auto !important;
     min-height: 0 !important;
@@ -9081,8 +9081,8 @@ html.glass-ready .stack-box > [data-reveal].in-view {
 
 .hv-projects.stack-box > .home-project {
     grid-area: 1 / 1 / 2 / 2 !important;
-    position: relative !important;
-    inset: auto !important;
+    position: absolute !important;
+    inset: 50% auto auto 50% !important;
     width: min(420px, 100%) !important;
     height: auto !important;
     margin: 0 !important;
@@ -9889,12 +9889,8 @@ html[data-tone="dark"] .hv-projects-box::after {
 
 .stack-box > * {
     position: absolute !important;
-    top: 50% !important;
-    left: 50% !important;
-    right: auto !important;
-    bottom: auto !important;
+    inset: 50% auto auto 50% !important;   /* 别写 inset:auto，会把 50% 清掉 */
     margin: 0 !important;
-    inset: auto !important;
     transform-origin: center center;
     transform:
         translate(-50%, -50%)
@@ -9934,8 +9930,6 @@ html[data-tone="dark"] .stack-box > *[style*="--stack-o: 1"] {
     overflow: hidden !important;
     background: var(--glass-card-strong, rgba(255, 253, 248, 0.9)) !important;
     border: 1px solid var(--glass-line, rgba(255, 255, 255, 0.2)) !important;
-    backdrop-filter: blur(18px);
-    -webkit-backdrop-filter: blur(18px);
 }
 
 .stack-box.stack-photos > .hv-photo img {
@@ -10102,11 +10096,7 @@ html[data-tone="dark"] .stack-box.stack-photos > .hv-photo {
 .hv-news-box #newsList > .news-item,
 .hv-projects-box #homeProjectsGrid > .home-project {
     position: absolute !important;
-    top: 50% !important;
-    left: 50% !important;
-    right: auto !important;
-    bottom: auto !important;
-    inset: auto !important;
+    inset: 50% auto auto 50% !important;   /* top 50% / right auto / bottom auto / left 50% */
     grid-area: auto !important;
     flex: 0 0 auto !important;
     margin: 0 !important;
@@ -10139,8 +10129,6 @@ html[data-tone="dark"] .stack-box.stack-photos > .hv-photo {
     overflow: hidden !important;
     background: var(--glass-card-strong, rgba(255, 253, 248, 0.92)) !important;
     border: 1px solid var(--glass-line, rgba(255, 255, 255, 0.2)) !important;
-    backdrop-filter: blur(18px);
-    -webkit-backdrop-filter: blur(18px);
 }
 
 /* 简报卡尺寸 */
@@ -10160,8 +10148,6 @@ html[data-tone="dark"] .stack-box.stack-photos > .hv-photo {
     background: var(--glass-card-strong, rgba(255, 253, 248, 0.94)) !important;
     border: 1px solid var(--glass-line, rgba(255, 255, 255, 0.2)) !important;
     overflow: hidden !important;
-    backdrop-filter: blur(18px);
-    -webkit-backdrop-filter: blur(18px);
 }
 
 /* 项目卡尺寸 */
@@ -10181,8 +10167,6 @@ html[data-tone="dark"] .stack-box.stack-photos > .hv-photo {
     background: var(--glass-card-strong, rgba(255, 253, 248, 0.94)) !important;
     border: 1px solid var(--glass-line, rgba(255, 255, 255, 0.2)) !important;
     overflow: hidden !important;
-    backdrop-filter: blur(18px);
-    -webkit-backdrop-filter: blur(18px);
 }
 
 /* 最上层那张的投影 */
@@ -10233,4 +10217,36 @@ html[data-tone="dark"] .hv-photo-box #hvPhotos > .hv-photo {
 html[data-tone="dark"] .stack-pin {
     background: rgba(255, 255, 255, 0.16);
     border-color: rgba(255, 255, 255, 0.26);
+}
+
+/* ============================================================
+   堆叠性能：只有最上面那张做玻璃模糊，其余几百张跳过
+   （506 张卡都算 backdrop-filter 会直接把主线程压死）
+   ============================================================ */
+.stack-box > * {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+.hv-photo-box .stack-box > *[style*="--stack-o: 1"],
+.hv-news-box .stack-box > *[style*="--stack-o: 1"],
+.hv-projects-box .stack-box > *[style*="--stack-o: 1"] {
+    backdrop-filter: blur(18px) !important;
+    -webkit-backdrop-filter: blur(18px) !important;
+}
+
+/* 压在最下面的（JS 已设 visibility:hidden）彻底不参与渲染 */
+.stack-box > *[style*="visibility: hidden"] {
+    content-visibility: hidden;
+    contain: strict;
+}
+
+/* 别给每一张都开合成层 */
+.stack-box > * {
+    will-change: auto !important;
+}
+
+.stack-box > *[style*="--stack-o: 1"],
+.stack-box > *[style*="--stack-o: 0.95"] {
+    will-change: transform, opacity;
 }
