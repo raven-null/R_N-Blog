@@ -43,6 +43,8 @@ const BlogApp = {
         this.initLife();
         // 主页盒子的自由交互：堆叠切换 / 缩放 / 交换
         this.bindBoxPlay();
+        // 赛博猫娘对话
+        this.initCatChat();
         // 后台退出登录联动：admin_key / gallery_key 被清除时，前台图库 R18 恢复锁定
         window.addEventListener('storage', (e) => {
             if ((e.key === 'admin_key' || e.key === 'gallery_key') && !e.newValue) {
@@ -2023,6 +2025,154 @@ const BlogApp = {
             const pick = (list || []).filter(p => !this.isR18Image(p))[0];
             if (pick && (pick.thumb || pick.url)) img.src = pick.thumb || pick.url;
         } catch (e) { /* 用默认图 */ }
+    },
+
+    // ===================== 赛博猫娘对话（接站内 /api/ai） =====================
+
+    catMessages: [],
+    catBusy: false,
+
+    catPrompt: [
+        '你是这个博客站里的「赛博猫娘」，一只住在服务器里的猫耳少女。',
+        '说话简短活泼，句尾常带「喵」，偶尔用颜文字，但不要每句都卖萌。',
+        '你熟悉前端、AI 与这个博客的功能（主页/文章/图库/项目/任务日记/主题切换），能帮访客解决疑问。',
+        '被问到身份时，说自己是博客的赛博猫娘，不要说自己是某个语言模型。',
+        '回答控制在 3 行以内，除非对方要求详细解释。',
+    ].join('\n'),
+
+    initCatChat() {
+        const stage = document.getElementById('catStage');
+        const chat = document.getElementById('catChat');
+        const form = document.getElementById('catChatForm');
+        const closeBtn = document.getElementById('catChatClose');
+        if (!stage || !chat || chat.dataset.bound) return;
+        chat.dataset.bound = '1';
+
+        stage.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.openCatChat();
+        });
+        closeBtn?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.closeCatChat();
+        });
+        form?.addEventListener('submit', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const input = document.getElementById('catChatInput');
+            const text = (input && input.value ? input.value : '').trim();
+            if (!text) return;
+            input.value = '';
+            this.sendCatMessage(text);
+        });
+    },
+
+    openCatChat() {
+        const chat = document.getElementById('catChat');
+        if (!chat) return;
+        chat.classList.add('is-open');
+        if (!this.catMessages.length) {
+            this.appendCatBubble('assistant', '喵～我是这只博客的赛博猫娘，有什么想问的吗？（可以问文章、图库、项目，也可以单纯聊天喵）');
+        }
+        setTimeout(() => document.getElementById('catChatInput')?.focus(), 80);
+    },
+
+    closeCatChat() {
+        document.getElementById('catChat')?.classList.remove('is-open');
+    },
+
+    // 往对话区追加气泡。返回可继续更新的元素（流式用）
+    appendCatBubble(role, text) {
+        const body = document.getElementById('catChatBody');
+        if (!body) return null;
+        const el = document.createElement('div');
+        el.className = `cat-msg cat-msg-${role}`;
+        el.textContent = text;
+        body.appendChild(el);
+        body.scrollTop = body.scrollHeight;
+        return el;
+    },
+
+    // 发送消息：走 /api/ai 流式，逐字填充
+    async sendCatMessage(text) {
+        if (this.catBusy) return;
+        this.catBusy = true;
+        const hint = document.getElementById('catHint');
+        if (hint) hint.textContent = '思考中…';
+
+        this.appendCatBubble('user', text);
+        this.catMessages.push({ role: 'user', content: text });
+
+        const bubble = this.appendCatBubble('assistant', '喵…');
+        const body = document.getElementById('catChatBody');
+
+        try {
+            const res = await fetch('/api/ai', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    messages: [
+                        { role: 'system', content: this.catPrompt },
+                        ...this.catMessages.slice(-12),
+                    ],
+                }),
+            });
+
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.message || ('HTTP ' + res.status));
+            }
+
+            let reply = '';
+            const ctype = (res.headers.get('content-type') || '').toLowerCase();
+
+            if (!ctype.includes('text/event-stream')) {
+                const data = await res.json().catch(() => null);
+                const t = data && data.choices && data.choices[0] &&
+                    ((data.choices[0].message && data.choices[0].message.content) ||
+                        (data.choices[0].delta && data.choices[0].delta.content));
+                reply = t || '喵？没听清…';
+                if (bubble) bubble.textContent = reply;
+            } else {
+                const reader = res.body.getReader();
+                const decoder = new TextDecoder('utf-8');
+                let buffer = '';
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop();
+                    for (const line of lines) {
+                        const trimmed = line.trim();
+                        if (!trimmed.startsWith('data:')) continue;
+                        const payload = trimmed.slice(5).trim();
+                        if (payload === '[DONE]') continue;
+                        try {
+                            const json = JSON.parse(payload);
+                            const delta = json.choices && json.choices[0] && json.choices[0].delta && json.choices[0].delta.content;
+                            if (delta) {
+                                reply += delta;
+                                if (bubble) {
+                                    bubble.textContent = reply;
+                                    if (body) body.scrollTop = body.scrollHeight;
+                                }
+                            }
+                        } catch (e) { /* 跳过不完整分片 */ }
+                    }
+                }
+            }
+
+            if (!reply) reply = '喵…今天有点卡住了，稍后再问我一次吧。';
+            if (bubble) bubble.textContent = reply;
+            this.catMessages.push({ role: 'assistant', content: reply });
+        } catch (err) {
+            if (bubble) bubble.textContent = '喵…暂时连不上大脑（' + String(err.message || err).slice(0, 40) + '）';
+        } finally {
+            this.catBusy = false;
+            if (hint) hint.textContent = '点我聊天喵';
+            if (body) body.scrollTop = body.scrollHeight;
+        }
     },
 
     // 主页入口：切到指定视图（可选再按内容形态筛选）
