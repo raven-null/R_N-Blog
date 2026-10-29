@@ -5660,3 +5660,131 @@ html.reader-focus .article-content {
         margin-left: 0;
     }
 }
+
+/* ===== 编写盒子改成小弹窗：浮在日历下方，不撑开页面 ===== */
+.home-cal-box {
+    position: relative;
+}
+
+.home-editor-pop {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    width: 100%;
+    max-width: 100%;
+    z-index: 60;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-6px) scale(0.97);
+    transform-origin: top right;
+    transition: opacity 0.2s ease, transform 0.26s cubic-bezier(0.22, 1, 0.36, 1), visibility 0.2s;
+    pointer-events: none;
+}
+
+.home-editor-pop.is-open {
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+    pointer-events: auto;
+}
+
+.home-editor-pop .home-editor {
+    box-shadow: 0 22px 60px var(--shadow), 0 0 0 1px var(--border);
+    background: var(--bg-card);
+}
+
+/* 弹窗不要撑高父级，内容自适应 */
+.home-editor-pop .home-editor-inner {
+    display: block;
+    min-height: 0;
+    overflow: visible;
+}
+
+/* 被弹窗遮住时日历仍可点（弹窗只在打开时接收事件） */
+.home-editor-pop .editor-form-journal textarea {
+    min-height: 70px;
+}
+
+@media (max-width: 900px) {
+    .home-editor-pop {
+        width: 100%;
+        right: 0;
+    }
+}
+
+/* ===== 所有盒子做成正方形（网格卡片） ===== */
+.view-home .dashboard {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 20px;
+    align-items: start;
+}
+
+/* 中间的容器不再产生盒子，子盒子直接排进网格 */
+.view-home .home-hero-row,
+.view-home .home-side,
+.view-home .home-articles,
+.view-home .home-top-row,
+.view-home .dash-bottom {
+    display: contents;
+}
+
+/* 每个盒子都是正方形 */
+.view-home .grid-card {
+    aspect-ratio: 1 / 1;
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+}
+
+/* 内部内容在正方形里自适应 */
+.view-home .grid-card .home-calendar {
+    flex: 1;
+    min-height: 0;
+}
+
+.view-home .grid-card .cal-grid {
+    grid-auto-rows: 1fr;
+}
+
+.view-home .grid-card .news-list,
+.view-home .grid-card .life-task-list,
+.view-home .grid-card .projects-grid,
+.view-home .grid-card .home-projects-grid {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+.view-home .grid-card .home-news {
+    display: flex;
+    flex-direction: column;
+}
+
+/* 堆叠区：图片/文章两卡在这个正方形里重叠 */
+.view-home .home-media {
+    position: relative;
+    aspect-ratio: 1 / 1;
+}
+
+.view-home .home-media .stack-card {
+    position: absolute;
+    inset: 0 14px 14px 0;
+}
+
+/* 时间盒内容居中 */
+.view-home .grid-card.home-clock-box {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+
+@media (max-width: 900px) {
+    .view-home .dashboard {
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        gap: 14px;
+    }
+}

@@ -1678,28 +1678,8 @@ const BlogApp = {
         if (journalForm) journalForm.style.display = 'none';
         if (label) label.textContent = this.formatDateLabel(this.lifeState.date);
 
-        // 宽度对齐日历盒子，不超出它的尺寸
-        this.syncEditorWidth();
+        // 小弹窗：绝对定位浮在日历下方，不参与布局
         wrap.classList.add('is-open');
-        if (!this._editorResizeBound) {
-            this._editorResizeBound = true;
-            window.addEventListener('resize', () => {
-                // 等一帧再量，避免拿到旧的布局尺寸
-                requestAnimationFrame(() => {
-                    const w = document.getElementById('homeEditorWrap');
-                    if (w && w.classList.contains('is-open')) this.syncEditorWidth();
-                });
-            }, { passive: true });
-        }
-    },
-
-    // 让编写盒子的宽度 = 日历盒子宽度，并与它右对齐
-    syncEditorWidth() {
-        const wrap = document.getElementById('homeEditorWrap');
-        const cal = document.querySelector('.home-cal-box');
-        if (!wrap || !cal) return;
-        const w = cal.getBoundingClientRect().width;
-        if (w > 0) wrap.style.setProperty('--editor-w', Math.round(w) + 'px');
     },
 
     // 点「任务 / 日记」→ 选择层隐藏，换成对应编写表单
@@ -1907,14 +1887,19 @@ const BlogApp = {
         if (dash) observer.observe(dash, { childList: true, subtree: true, attributes: true, attributeFilter: ['style'] });
     },
 
-    // 收集所有盒子并装上交互手柄
+    // 收集所有盒子并装上交互手柄（同时标记为正方形网格卡片）
     refreshFreeBoxes() {
+        // 先把「堆叠容器」也算作一个网格项
+        const stackWrap = document.querySelector('.view-home .home-media');
+        if (stackWrap) stackWrap.classList.add('grid-card');
+
         const boxes = document.querySelectorAll('.view-home .dash-panel, .view-home .home-hero-row .home-hero');
         boxes.forEach(el => {
             if (el.dataset.freeHandles) return;
-            if (el.classList.contains('home-editor')) return; // 编写盒子不加手柄，避免干扰输入
+            if (el.classList.contains('home-editor')) return;      // 编写盒子不加手柄
+            if (el.classList.contains('stack-card')) return;       // 堆叠里的两张卡由容器统一处理
             el.dataset.freeHandles = '1';
-            el.classList.add('free-box');
+            el.classList.add('free-box', 'grid-card');
 
             const zoom = document.createElement('button');
             zoom.type = 'button';
