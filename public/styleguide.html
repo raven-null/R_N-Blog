@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="zh-CN" data-theme="light" data-accent="blue" data-density="cozy">
+<html lang="zh-CN" data-theme="light" data-accent="terracotta" data-density="cozy">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>UI 样张 · Quiet Neutral</title>
-<link rel="stylesheet" href="css/tokens.css?v=1.0.0">
-<link rel="stylesheet" href="css/ui.css?v=1.0.0">
+<link rel="stylesheet" href="css/tokens.css?v=1.1.0">
+<link rel="stylesheet" href="css/ui.css?v=1.1.0">
 <style>
     /* 样张页自己的排版，只用到令牌，不引第三方 */
     body { background: var(--bg); }
@@ -219,12 +219,12 @@
             </div>
 
             <div class="sg-swatches" id="accentSwatches" role="group" aria-label="强调色">
-                <button class="sg-swatch" type="button" data-accent-set="blue" aria-pressed="true" title="蓝" style="background:#3b62f6"></button>
-                <button class="sg-swatch" type="button" data-accent-set="violet" aria-pressed="false" title="紫" style="background:#7c5cf5"></button>
-                <button class="sg-swatch" type="button" data-accent-set="cyan" aria-pressed="false" title="青" style="background:#0d8fa8"></button>
-                <button class="sg-swatch" type="button" data-accent-set="green" aria-pressed="false" title="绿" style="background:#17864b"></button>
-                <button class="sg-swatch" type="button" data-accent-set="orange" aria-pressed="false" title="橙" style="background:#d1651a"></button>
-                <button class="sg-swatch" type="button" data-accent-set="pink" aria-pressed="false" title="粉" style="background:#d3407f"></button>
+                <button class="sg-swatch" type="button" data-accent-set="terracotta" aria-pressed="true" title="赤陶（默认）" style="background:#c2592f"></button>
+                <button class="sg-swatch" type="button" data-accent-set="amber" aria-pressed="false" title="琥珀" style="background:#b3800f"></button>
+                <button class="sg-swatch" type="button" data-accent-set="olive" aria-pressed="false" title="橄榄" style="background:#6f7f28"></button>
+                <button class="sg-swatch" type="button" data-accent-set="rose" aria-pressed="false" title="玫瑰" style="background:#b24362"></button>
+                <button class="sg-swatch" type="button" data-accent-set="clay" aria-pressed="false" title="陶土" style="background:#8a6242"></button>
+                <button class="sg-swatch" type="button" data-accent-set="mist" aria-pressed="false" title="雾蓝" style="background:#4d6a86"></button>
             </div>
         </div>
 
@@ -615,10 +615,13 @@
         });
 
         // 记住上次选择，刷新不用重来
+        const ACCENTS = ['terracotta', 'amber', 'olive', 'rose', 'clay', 'mist'];
         try {
             const saved = JSON.parse(localStorage.getItem('sg-prefs') || '{}');
             if (saved.theme) { html.setAttribute('data-theme', saved.theme); press('themeSeg', 'data-theme-set', saved.theme); }
-            if (saved.accent) { html.setAttribute('data-accent', saved.accent); press('accentSwatches', 'data-accent-set', saved.accent); }
+            const accent = ACCENTS.indexOf(saved.accent) >= 0 ? saved.accent : 'terracotta';
+            html.setAttribute('data-accent', accent);
+            press('accentSwatches', 'data-accent-set', accent);
             if (saved.density) { html.setAttribute('data-density', saved.density); press('densitySeg', 'data-density', saved.density); }
         } catch (err) { /* 忽略 */ }
 
