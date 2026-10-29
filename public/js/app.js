@@ -571,7 +571,7 @@ const BlogApp = {
 
         // 首次进入渲染内容
         if (view === 'home') this.renderHome();
-        if (view === 'gallery') this.renderGallery();
+        if (view === 'gallery') this.initGalleryWall();
         if (view === 'projects') this.renderProjects();
 
         // 入场动画
@@ -1342,6 +1342,194 @@ const BlogApp = {
             const src = (settings && settings.avatar) || "images/Default/profile -picture.webp";
             if (avatarEl.getAttribute("src") !== src) avatarEl.src = src;
             avatarEl.alt = name;
+        }
+    },
+
+    // ---------- 图库图片墙：平移 / 缩放 / 工具条 ----------
+
+    gw: { x: 0, y: 0, s: 1, dragging: false, moved: 0, vx: 0, vy: 0, raf: 0, inertia: 0, inited: false },
+
+    get gwMinS() { return 0.18; },
+    get gwMaxS() { return 2.4; },
+
+    initGalleryWall() {
+        const wall = document.getElementById('galleryWall');
+        if (!wall) return;
+
+        if (!this.gw.inited) {
+            this.gw.inited = true;
+            this.bindGalleryWallEvents(wall);
+
+            // 工具条
+            document.getElementById('gwHud')?.addEventListener('click', (e) => {
+                const btn = e.target.closest('[data-gw]');
+                if (!btn) return;
+                e.stopPropagation();
+                const act = btn.dataset.gw;
+                if (act === 'view') {
+                    this.wallSetView(this.photoWallView === 'grid' ? 'masonry' : 'grid');
+                    this.syncWallViewBtn();
+                    this.gwFit();
+                } else if (act === 'shuffle') {
+                    this.wallShuffle();
+                    this.gwFit();
+                } else if (act === 'fit') {
+                    this.gwFit();
+                } else if (act === 'all') {
+                    this.gwFitAll();
+                }
+            });
+
+            this.bindPhotoWall();
+            this.syncWallViewBtn();
+
+            // 提示 4.5 秒后淡出
+            setTimeout(() => document.getElementById('gwHint')?.classList.add('gone'), 4500);
+        }
+
+        // 加载照片 → 布局 → 渲染 → 适应屏幕
+        this.loadPhotoWall().then(() => {
+            this.wallComputeLayout();
+            this.wallRender();
+            this.gwFit();
+        });
+    },
+
+    bindGalleryWallEvents(wall) {
+        let startX = 0;
+        let startY = 0;
+        let originX = 0;
+        let originY = 0;
+        let lastX = 0;
+        let lastY = 0;
+        let lastT = 0;
+
+        const down = (e) => {
+            if (e.button !== undefined && e.button !== 0) return;
+            if (e.target.closest('.gw-hud, button, a, input, .gw-hint')) return;
+            this.stopGwInertia();
+            this.gw.dragging = true;
+            this.gw.moved = 0;
+            startX = e.clientX;
+            startY = e.clientY;
+            originX = this.gw.x;
+            originY = this.gw.y;
+            lastX = e.clientX;
+            lastY = e.clientY;
+            lastT = Date.now();
+            this.gw.vx = 0;
+            this.gw.vy = 0;
+            wall.classList.add('is-dragging');
+        };
+
+        const move = (e) => {
+            if (!this.gw.dragging) return;
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+            this.gw.moved = Math.max(this.gw.moved, Math.abs(dx) + Math.abs(dy));
+            this.gw.x = originX + dx;
+            this.gw.y = originY + dy;
+            const now = Date.now();
+            const dt = Math.max(1, now - lastT);
+            this.gw.vx = (e.clientX - lastX) / dt;
+            this.gw.vy = (e.clientY - lastY) / dt;
+            lastX = e.clientX;
+            lastY = e.clientY;
+            lastT = now;
+            this.gwApply();
+        };
+
+        const up = () => {
+            if (!this.gw.dragging) return;
+            this.gw.dragging = false;
+            wall.classList.remove('is-dragging');
+            if (Math.hypot(this.gw.vx, this.gw.vy) > 0.15) this.startGwInertia();
+        };
+
+        wall.addEventListener('pointerdown', down);
+        window.addEventListener('pointermove', move);
+        window.addEventListener('pointerup', up);
+        window.addEventListener('pointercancel', up);
+
+        // 滚轮缩放（以指针为中心）
+        wall.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const rect = wall.getBoundingClientRect();
+            this.gwZoomAt(
+                e.clientX - rect.left,
+                e.clientY - rect.top,
+                Math.max(0.7, Math.min(1.4, Math.exp(-e.deltaY * 0.0012)))
+            );
+        }, { passive: false });
+
+        // 双击空白回到整墙视角
+        wall.addEventListener('dblclick', (e) => {
+            if (e.target.closest('.gw-tile')) return;
+            this.gwFit();
+        });
+    },
+
+    gwApply() {
+        const plane = document.getElementById('gwPlane');
+        if (!plane) return;
+        plane.style.transform = 'translate3d(' + this.gw.x + 'px, ' + this.gw.y + 'px, 0) scale(' + this.gw.s + ')';
+    },
+
+    gwZoomAt(px, py, factor) {
+        const next = Math.min(this.gwMaxS, Math.max(this.gwMinS, this.gw.s * factor));
+        if (Math.abs(next - this.gw.s) < 1e-4) return;
+        this.gw.x = px - ((px - this.gw.x) / this.gw.s) * next;
+        this.gw.y = py - ((py - this.gw.y) / this.gw.s) * next;
+        this.gw.s = next;
+        this.gwApply();
+    },
+
+    // 适应宽度（默认视角）：整排照片刚好铺满屏幕宽，从顶上开始看
+    gwFit() {
+        const wall = document.getElementById('galleryWall');
+        const layout = this.photoWallLayout;
+        if (!wall || !layout) return;
+        const vw = wall.clientWidth || window.innerWidth;
+        const s = Math.min(1.4, (vw - 48) / Math.max(1, layout.blockW));
+        this.gw.s = Math.max(this.gwMinS, s);
+        this.gw.x = Math.round((vw - layout.blockW * this.gw.s) / 2);
+        this.gw.y = 32;
+        this.gwApply();
+    },
+
+    // 看全墙：整面墙塞进屏幕（会很小，用来瞄一眼总量）
+    gwFitAll() {
+        const wall = document.getElementById('galleryWall');
+        const layout = this.photoWallLayout;
+        if (!wall || !layout) return;
+        const vw = wall.clientWidth || window.innerWidth;
+        const vh = wall.clientHeight || window.innerHeight;
+        const s = Math.min((vw - 48) / Math.max(1, layout.blockW), (vh - 48) / Math.max(1, layout.blockH));
+        this.gw.s = Math.max(this.gwMinS, s);
+        this.gw.x = Math.round((vw - layout.blockW * this.gw.s) / 2);
+        this.gw.y = Math.round((vh - layout.blockH * this.gw.s) / 2);
+        this.gwApply();
+    },
+
+    startGwInertia() {
+        const step = () => {
+            this.gw.inertia = 0;
+            if (this.gw.dragging) return;
+            this.gw.vx *= 0.94;
+            this.gw.vy *= 0.94;
+            if (Math.abs(this.gw.vx) < 0.02 && Math.abs(this.gw.vy) < 0.02) return;
+            this.gw.x += this.gw.vx * 16;
+            this.gw.y += this.gw.vy * 16;
+            this.gwApply();
+            this.gw.inertia = requestAnimationFrame(step);
+        };
+        this.gw.inertia = requestAnimationFrame(step);
+    },
+
+    stopGwInertia() {
+        if (this.gw.inertia) {
+            cancelAnimationFrame(this.gw.inertia);
+            this.gw.inertia = 0;
         }
     },
 
@@ -2849,7 +3037,7 @@ const BlogApp = {
             return;
         }
         this.photoWallLoading = true;
-        const sub = document.getElementById('photoWallSub');
+        const sub = document.getElementById('gwCount');
         if (sub) sub.textContent = '加载中…';
         try {
             const list = await Promise.race([
@@ -2878,9 +3066,8 @@ const BlogApp = {
         this.photoWallShrunk.clear();
         this.wallComputeLayout();
         if (render) this.wallRender();
-        const sub = document.getElementById('photoWallSub');
+        const sub = document.getElementById('gwCount');
         if (sub) sub.textContent = `${this.photoWallPool.length} 张`;
-        this.syncCanvasCapsule(true);
     },
 
     wallSetView(view) {
@@ -2895,8 +3082,8 @@ const BlogApp = {
     },
 
     syncWallViewBtn() {
-        // 现在按钮在底部胶囊里，直接刷新胶囊内容即可
-        if (this.canvasCapsuleZone === 'photos') this.fillCanvasCapsule('photos');
+        const btn = document.querySelector('[data-gw="view"]');
+        if (btn) btn.textContent = this.photoWallView === 'grid' ? '瀑布流' : '方格';
     },
 
     // 确定性小随机（mulberry32）：重排时其它随机放大不会乱跳
@@ -2922,7 +3109,7 @@ const BlogApp = {
     },
 
     wallComputeLayout() {
-        const body = document.getElementById('photoWallBody');
+        const body = document.getElementById('gwBody');
         const pool = this.photoWallPool;
         if (!body || !pool.length) {
             this.photoWallLayout = null;
@@ -2931,9 +3118,12 @@ const BlogApp = {
         const W = body.clientWidth || 2400;
         if (this.photoWallView === 'masonry') this.wallComputeMasonry(W);
         else this.wallComputeGrid(W);
-        // 照片全排完墙会很长：把算出来的高度交给墙容器，再让画布重排位置
-        this.photoWallContentH = Math.round(this.photoWallLayout.blockH) + 44;
-        this.layoutCanvasNodes();
+        // 给墙内容容器一个实际尺寸（tile 绝对定位，容器本身要有大小）
+        const gwBody = document.getElementById('gwBody');
+        if (gwBody && this.photoWallLayout) {
+            gwBody.style.width = Math.round(this.photoWallLayout.blockW) + 'px';
+            gwBody.style.height = Math.round(this.photoWallLayout.blockH) + 'px';
+        }
     },
 
     /* 方格：把整池照片全部铺开（不再只铺一块），随机放大照旧，
@@ -3121,7 +3311,7 @@ const BlogApp = {
     },
 
     wallRender() {
-        const body = document.getElementById('photoWallBody');
+        const body = document.getElementById('gwBody');
         const layout = this.photoWallLayout;
         if (!body || !layout) return;
         body.classList.toggle('is-masonry', this.photoWallView === 'masonry');
@@ -3133,7 +3323,7 @@ const BlogApp = {
             if (!el) {
                 el = document.createElement('button');
                 el.type = 'button';
-                el.className = 'photo-wall-tile';
+                el.className = 'gw-tile';
                 el.dataset.key = it.key;
                 el.dataset.id = it.id;
                 const img = document.createElement('img');
@@ -3184,15 +3374,15 @@ const BlogApp = {
     },
 
     bindPhotoWall() {
-        const body = document.getElementById('photoWallBody');
+        const body = document.getElementById('gwBody');
         if (!body || body.dataset.bound) return;
         body.dataset.bound = '1';
 
         // 单击：就地放大 / 收回（等 260ms 确认不是双击）
         body.addEventListener('click', (e) => {
-            const tile = e.target.closest('.photo-wall-tile');
+            const tile = e.target.closest('.gw-tile');
             if (!tile) return;
-            if (this.canvasMoved > 6) return;      // 刚拖过画布，不算点击
+            if (this.gwMoved > 6) return;          // 刚拖过墙，不算点击
             const id = tile.dataset.id;
             clearTimeout(this.photoWallClickTimer);
             this.photoWallClickTimer = setTimeout(() => this.wallToggleBig(id), 260);
@@ -3200,7 +3390,7 @@ const BlogApp = {
 
         // 双击：进灯箱
         body.addEventListener('dblclick', (e) => {
-            const tile = e.target.closest('.photo-wall-tile');
+            const tile = e.target.closest('.gw-tile');
             if (!tile) return;
             clearTimeout(this.photoWallClickTimer);
             this.wallOpenLightbox(tile.dataset.id);

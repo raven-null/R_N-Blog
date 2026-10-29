@@ -13,7 +13,7 @@
     <script src="/js/site-icon.js?v=1.0.0" defer></script>
 
     <!-- Styles -->
-    <link rel="stylesheet" href="css/style.css?v=3.90.0">
+    <link rel="stylesheet" href="css/style.css?v=3.91.0">
     <link rel="stylesheet" href="css/glass.css?v=1.0.14">
     <link rel="stylesheet" href="css/wheel.css?v=1.0.0">
 
@@ -138,9 +138,24 @@
                     </div>
                 </section>
 
-                <!-- 视图：图库 -->
+                <!-- 视图：图库（图片墙：可平移缩放，单击放大，双击看大图） -->
                 <section class="view view-gallery" id="view-gallery" style="display:none;">
-                    <div class="gallery-grid" id="galleryGrid"></div>
+                    <div class="gallery-wall" id="galleryWall">
+                        <div class="gw-plane" id="gwPlane">
+                            <div class="gw-body" id="gwBody"></div>
+                        </div>
+
+                        <div class="gw-hud" id="gwHud">
+                            <span class="gw-count" id="gwCount">加载中…</span>
+                            <span class="gw-sep"></span>
+                            <button type="button" data-gw="view" title="切换排布">瀑布流</button>
+                            <button type="button" data-gw="shuffle" title="换一批">换一批</button>
+                            <button type="button" data-gw="fit" title="适应屏幕宽度">适应宽度</button>
+                            <button type="button" data-gw="all" title="整面墙缩到一屏">看全墙</button>
+                        </div>
+
+                        <div class="gw-hint" id="gwHint">拖动平移 · 滚轮缩放 · 单击放大 · 双击看大图</div>
+                    </div>
                 </section>
 
                 <!-- 视图：项目 -->
@@ -442,7 +457,7 @@
     <script src="vendor/grok/eyes.js?v=1.0.0" defer></script>
     <script src="vendor/grok/character.js?v=1.0.0" defer></script>
 
-    <script src="js/app.js?v=3.99.0" defer></script>
+    <script src="js/app.js?v=4.00.0" defer></script>
     <script src="js/pet-mind.js?v=1.0.2" defer></script>
     <script src="js/pet-boot.js?v=1.0.0" defer></script>
     <script src="js/animations.js?v=3.14.0" defer></script>
