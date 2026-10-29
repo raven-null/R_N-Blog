@@ -4456,3 +4456,112 @@ html.reader-focus .article-content {
         max-height: 140px;
     }
 }
+
+/* ===== 欢迎区：左个人信息 / 右时间 + 日历 ===== */
+.home-hero-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
+    gap: 20px;
+    align-items: stretch;
+}
+
+.home-hero-row .home-hero {
+    min-width: 0;
+}
+
+/* 右侧时间 + 日历卡片 */
+.home-side {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 0;
+}
+
+.home-side .dash-clock {
+    margin-left: 0;
+    text-align: left;
+}
+
+.home-side .dash-clock-date {
+    font-size: 11px;
+}
+
+.home-side .dash-clock-time {
+    font-size: 22px;
+    line-height: 1.1;
+}
+
+/* 月历 */
+.home-calendar {
+    margin-top: auto;
+}
+
+.cal-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.cal-title {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: var(--text-secondary);
+}
+
+.cal-today {
+    font-size: 10px;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+}
+
+.cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 3px;
+}
+
+.cal-week {
+    text-align: center;
+    font-size: 10px;
+    color: var(--text-muted);
+    padding-bottom: 2px;
+}
+
+.cal-day {
+    text-align: center;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    line-height: 20px;
+    height: 20px;
+    border-radius: 6px;
+    color: var(--text-secondary);
+}
+
+.cal-day.is-empty {
+    visibility: hidden;
+}
+
+.cal-day.is-today {
+    background: var(--accent);
+    color: var(--bg-primary);
+    font-weight: 700;
+}
+
+@media (max-width: 900px) {
+    .home-hero-row {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .home-side .dash-clock {
+        display: flex;
+        align-items: baseline;
+        gap: 12px;
+    }
+
+    .home-side .dash-clock-time {
+        font-size: 18px;
+    }
+}

@@ -13,7 +13,7 @@
     <script src="/js/site-icon.js?v=1.0.0" defer></script>
 
     <!-- Styles -->
-    <link rel="stylesheet" href="css/style.css?v=3.41.0">
+    <link rel="stylesheet" href="css/style.css?v=3.42.0">
     <link rel="stylesheet" href="css/glass.css?v=1.0.14">
     <link rel="stylesheet" href="css/wheel.css?v=1.0.0">
 
@@ -163,30 +163,37 @@
             <section class="view view-home" id="view-home">
                 <div class="dashboard">
 
-                    <!-- 欢迎区：身份 + 入口按钮 + 时间 -->
-                    <div class="dash-hero home-hero">
-                        <img class="dash-avatar" src="images/Default/profile -picture.webp" alt="博主">
-                        <div class="dash-identity">
-                            <div class="dash-name">博主</div>
-                            <div class="dash-bio">欢迎来到我的博客</div>
-                            <div class="home-cta">
-                                <button class="home-cta-item" onclick="BlogApp.goView('blog')">
-                                    <b class="home-cta-big" id="homeCtaPosts">—</b>
-                                    <span class="home-cta-sub">文章</span>
-                                </button>
-                                <button class="home-cta-item" onclick="BlogApp.goView('gallery')">
-                                    <b class="home-cta-big is-violet" id="homeCtaPhotos">—</b>
-                                    <span class="home-cta-sub">照片</span>
-                                </button>
-                                <button class="home-cta-item" onclick="BlogApp.goView('projects')">
-                                    <b class="home-cta-big is-pink" id="homeCtaProjects">—</b>
-                                    <span class="home-cta-sub">项目</span>
-                                </button>
+                    <!-- 欢迎区：左 = 个人信息，右 = 时间 + 日历 -->
+                    <div class="home-hero-row">
+                        <div class="dash-hero home-hero">
+                            <img class="dash-avatar" src="images/Default/profile -picture.webp" alt="博主">
+                            <div class="dash-identity">
+                                <div class="dash-name">博主</div>
+                                <div class="dash-bio">欢迎来到我的博客</div>
+                                <div class="home-cta">
+                                    <button class="home-cta-item" onclick="BlogApp.goView('blog')">
+                                        <b class="home-cta-big" id="homeCtaPosts">—</b>
+                                        <span class="home-cta-sub">文章</span>
+                                    </button>
+                                    <button class="home-cta-item" onclick="BlogApp.goView('gallery')">
+                                        <b class="home-cta-big is-violet" id="homeCtaPhotos">—</b>
+                                        <span class="home-cta-sub">照片</span>
+                                    </button>
+                                    <button class="home-cta-item" onclick="BlogApp.goView('projects')">
+                                        <b class="home-cta-big is-pink" id="homeCtaProjects">—</b>
+                                        <span class="home-cta-sub">项目</span>
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                        <div class="dash-clock" id="dashClock">
-                            <div class="dash-clock-date" id="dashClockDate"></div>
-                            <div class="dash-clock-time" id="dashClockTime"></div>
+
+                        <!-- 时间 + 日历 -->
+                        <div class="dash-panel home-side">
+                            <div class="dash-clock" id="dashClock">
+                                <div class="dash-clock-date" id="dashClockDate"></div>
+                                <div class="dash-clock-time" id="dashClockTime"></div>
+                            </div>
+                            <div class="home-calendar" id="homeCalendar"></div>
                         </div>
                     </div>
 
@@ -684,6 +691,30 @@
             timeEl.textContent = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
         }
 
+        // ===== 月历（周一为一周开始，高亮今天） =====
+        function renderCalendar() {
+            const box = document.getElementById('homeCalendar');
+            if (!box) return;
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = now.getMonth();
+            const today = now.getDate();
+            const firstWeekday = new Date(year, month, 1).getDay(); // 0 = 周日
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const offset = (firstWeekday + 6) % 7; // 转成周一开头
+
+            const weekLabels = ['一', '二', '三', '四', '五', '六', '日'];
+            let html = `<div class="cal-head"><span class="cal-title">${year} 年 ${month + 1} 月</span><span class="cal-today">今天 ${today}</span></div>`;
+            html += '<div class="cal-grid">';
+            html += weekLabels.map(w => `<span class="cal-week">${w}</span>`).join('');
+            for (let i = 0; i < offset; i++) html += '<span class="cal-day is-empty"></span>';
+            for (let d = 1; d <= daysInMonth; d++) {
+                html += `<span class="cal-day${d === today ? ' is-today' : ''}">${d}</span>`;
+            }
+            html += '</div>';
+            box.innerHTML = html;
+        }
+
         // ===== 页脚：本站运行时长（起始时间按需修改） =====
         function initSiteRuntime() {
             const el = document.getElementById('footerRuntime');
@@ -711,6 +742,10 @@
             // 欢迎区日期时间（每秒更新）
             updateDashClock();
             setInterval(updateDashClock, 1000);
+
+            // 月历（跨天时重建一次）
+            renderCalendar();
+            setInterval(renderCalendar, 60 * 60 * 1000);
 
             // 页脚运行时长（每秒更新）
             initSiteRuntime();
