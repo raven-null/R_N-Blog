@@ -168,18 +168,27 @@
       }
     } else {
       const band = buildMasonryBand();
+      const pad = 300;
+      // 带子既是纵向重复，也横向平铺 —— 两个方向都无限
+      const bandW = band.blockW + GAP;
+      const h0 = Math.floor(wx0 / bandW) - 1;
+      const h1 = Math.ceil(wx1 / bandW) + 1;
       const b0 = Math.floor(wy0 / band.bandH) - 1;
       const b1 = Math.ceil(wy1 / band.bandH) + 1;
-      for (let b = b0; b <= b1; b++) {
-        const offsetY = b * band.bandH;
-        const pad = 260;
-        for (const it of band.items) {
-          const yAbs = it.y + offsetY;
-          if (yAbs > wy1 + pad) continue;
-          if (yAbs + it.h < wy0 - pad) continue;
-          const key = 'm' + b + '/' + it.id + '/' + Math.round(it.x) + ',' + Math.round(it.y);
-          need.add(key);
-          placeTile(body, key, byId(it.id), it.x, it.y + offsetY, it.w, it.h, it.big);
+
+      for (let hx = h0; hx <= h1; hx++) {
+        const offsetX = hx * bandW;
+        for (let b = b0; b <= b1; b++) {
+          const offsetY = b * band.bandH;
+          for (const it of band.items) {
+            const xAbs = it.x + offsetX;
+            const yAbs = it.y + offsetY;
+            if (xAbs > wx1 + pad || xAbs + it.w < wx0 - pad) continue;
+            if (yAbs > wy1 + pad || yAbs + it.h < wy0 - pad) continue;
+            const key = 'm' + hx + '/' + b + '/' + it.id + '/' + Math.round(it.x);
+            need.add(key);
+            placeTile(body, key, byId(it.id), xAbs, yAbs, it.w, it.h, it.big);
+          }
         }
       }
     }

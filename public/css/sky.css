@@ -334,3 +334,59 @@ html[data-period] .hv-block-title,
 html[data-period] .hv-clock-time {
     transition: color 1.4s linear;
 }
+
+/* ============================================================
+   暗色下的所有盒子：统一用深色玻璃
+   ------------------------------------------------------------
+   之前只覆盖了首页仪表盘的 .hv-*，项目页 / 卡片列表还是亮的。
+   这里按 data-tone="dark"（深色主题 或 静夜时段）统一接管。
+   ============================================================ */
+html[data-tone="dark"] .dash-panel,
+html[data-tone="dark"] .project-card,
+html[data-tone="dark"] .home-project,
+html[data-tone="dark"] .card,
+html[data-tone="dark"] .projects-grid > *,
+html[data-tone="dark"] .deployed-card,
+html[data-tone="dark"] .settings-group,
+html[data-tone="dark"] .admin-panel,
+html[data-tone="dark"] .comment-item,
+html[data-tone="dark"] .news-feed .news-item,
+html[data-tone="dark"] .article-aside-card,
+html[data-tone="dark"] .toc-box {
+    background: var(--glass-card, rgba(20, 24, 37, 0.72)) !important;
+    border-color: var(--glass-line, rgba(255, 255, 255, 0.12)) !important;
+    color: var(--text) !important;
+}
+
+/* 卡片里的次要文字也跟着走 */
+html[data-tone="dark"] .dash-panel-title,
+html[data-tone="dark"] .project-card .project-name,
+html[data-tone="dark"] .home-project .project-name,
+html[data-tone="dark"] .card-title {
+    color: var(--text) !important;
+}
+
+html[data-tone="dark"] .project-card p,
+html[data-tone="dark"] .home-project p,
+html[data-tone="dark"] .card-excerpt,
+html[data-tone="dark"] .dash-panel-sub {
+    color: var(--text-secondary) !important;
+}
+
+/* 悬停态别又变亮 */
+html[data-tone="dark"] .project-card:hover,
+html[data-tone="dark"] .home-project:hover,
+html[data-tone="dark"] .card:hover {
+    background: var(--glass-card-strong, rgba(20, 24, 37, 0.86)) !important;
+}
+
+/* 后台登录页：左半是反色块，深浅主题各自反一次 */
+html[data-tone="light"] #loginPage {
+    background: var(--text) !important;      /* 浅色主题：深底 */
+    color: var(--surface) !important;        /* 配浅字 */
+}
+
+html[data-tone="dark"] #loginPage {
+    background: var(--surface) !important;   /* 深色主题：暗底，不再是一大块浅色 */
+    color: var(--text) !important;           /* 配浅字 */
+}

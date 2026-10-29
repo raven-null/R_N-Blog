@@ -80,3 +80,54 @@ body > canvas,
 #graph {
     background: transparent;
 }
+
+/* ============================================================
+   后台：暗色下的盒子统一深色
+   ------------------------------------------------------------
+   data-tone 由 js/tone.js 维护（深色主题 或 静夜时段）。
+   ============================================================ */
+html[data-tone="dark"] #loginPage {
+    background: var(--surface) !important;
+    color: var(--text) !important;
+}
+
+html[data-tone="light"] #loginPage {
+    background: var(--text) !important;
+    color: var(--surface) !important;
+}
+
+html[data-tone="dark"] .dash-panel,
+html[data-tone="dark"] .settings-group,
+html[data-tone="dark"] .admin-panel,
+html[data-tone="dark"] .comment-item,
+html[data-tone="dark"] .admin-card,
+html[data-tone="dark"] .article-row,
+html[data-tone="dark"] .list-row,
+html[data-tone="dark"] .editor-shell,
+html[data-tone="dark"] .ee-panel {
+    background: var(--glass-card, rgba(20, 24, 37, 0.72)) !important;
+    border-color: var(--glass-line, rgba(255, 255, 255, 0.12)) !important;
+    color: var(--text) !important;
+}
+
+/* 登录页右侧表单面板 & 文件预览面板：跟表面色走 */
+html[data-tone] #loginPage .lg-right-panel,
+html[data-tone] #fpDrawer .fp-body {
+    background: var(--surface) !important;
+    color: var(--text) !important;
+}
+
+/* 登录页左侧那堆放大的色块（装饰插画）保留原色，只把文字调顺 */
+html[data-tone="dark"] #loginPage .lg-footer-links a,
+html[data-tone="dark"] #loginPage .lg-logo span {
+    color: var(--surface) !important;
+}
+
+/* 后台里写死的白底输入/按钮兜底 */
+html[data-tone="dark"] input:not([type="checkbox"]):not([type="radio"]),
+html[data-tone="dark"] textarea,
+html[data-tone="dark"] select {
+    background: var(--surface-2) !important;
+    color: var(--text) !important;
+    border-color: var(--border) !important;
+}
