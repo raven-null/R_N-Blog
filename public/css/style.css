@@ -5833,3 +5833,99 @@ html.reader-focus .article-content {
     height: 100%;
     object-fit: cover;
 }
+
+/* ===== 主页结构（按设计图）：3 列网格 + 命名区域 ===== */
+.view-home .dashboard {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-areas:
+        "profile clock calendar"
+        "post projects photos"
+        "post theme photos"
+        "news news cat"
+        "life journal cat"
+        "about about about";
+    grid-auto-rows: auto;
+    gap: 20px;
+    align-items: stretch;
+}
+
+/* 区域分配 */
+.view-home .home-hero { grid-area: profile; }
+.view-home .home-clock-box { grid-area: clock; }
+.view-home .home-cal-box { grid-area: calendar; }
+.view-home .home-post { grid-area: post; }
+.view-home .home-projects { grid-area: projects; }
+.view-home .home-theme-box { grid-area: theme; }
+.view-home .home-photos { grid-area: photos; }
+.view-home .home-news { grid-area: news; }
+.view-home .home-cybercat { grid-area: cat; }
+.view-home .home-life { grid-area: life; }
+.view-home .home-journal-box { grid-area: journal; }
+.view-home .dash-bottom { grid-area: about; }
+
+/* 这一版按设计图排矩形，不再强制正方形 */
+.view-home .grid-card {
+    aspect-ratio: auto;
+    height: auto;
+    min-height: 0;
+}
+
+/* 第二 / 第三行的组合：项目 + 主题按钮 与 文章 / 图片 高度对齐 */
+.view-home .home-theme-box {
+    min-height: 64px;
+}
+
+/* 赛博猫娘盒：图片铺满 + 底部标签 */
+.view-home .home-cybercat {
+    position: relative;
+    overflow: hidden;
+    min-height: 180px;
+    padding: 0;
+}
+
+.cybercat-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0.9;
+    transition: opacity 0.3s;
+}
+
+.cybercat-label {
+    position: absolute;
+    left: 12px;
+    bottom: 10px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    color: #fff;
+    font-size: 11px;
+    letter-spacing: 1px;
+    z-index: 2;
+}
+
+/* 手机：单列堆叠 */
+@media (max-width: 900px) {
+    .view-home .dashboard {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-areas:
+            "profile"
+            "clock"
+            "calendar"
+            "post"
+            "photos"
+            "projects"
+            "theme"
+            "news"
+            "cat"
+            "life"
+            "journal"
+            "about";
+        gap: 14px;
+    }
+}

@@ -1292,6 +1292,7 @@ const BlogApp = {
         this.renderHomePhotos();
         this.renderHomePostStage();
         this.renderHomeProjects();
+        this.renderHomeCybercat();
         this.renderHomeCta(force);
 
         // 入场动效（Anime.js）
@@ -2006,6 +2007,22 @@ const BlogApp = {
         const swapped = stack.classList.contains('is-swapped');
         const isPhotos = card.id === 'homePhotos';
         return swapped ? isPhotos : !isPhotos;
+    },
+
+    // 赛博猫娘占位插画：优先用图库第一张（观光安全），失败用默认图
+    async renderHomeCybercat() {
+        const img = document.getElementById('cybercatImg');
+        if (!img || img.dataset.rendered) return;
+        img.dataset.rendered = '1';
+        img.src = 'images/Default/web-logo.webp';
+        try {
+            const list = await Promise.race([
+                this.loadGalleryImages(),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('图库接口超时')), 15000)),
+            ]);
+            const pick = (list || []).filter(p => !this.isR18Image(p))[0];
+            if (pick && (pick.thumb || pick.url)) img.src = pick.thumb || pick.url;
+        } catch (e) { /* 用默认图 */ }
     },
 
     // 主页入口：切到指定视图（可选再按内容形态筛选）
