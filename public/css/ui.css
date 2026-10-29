@@ -79,6 +79,7 @@ body {
     color: var(--text-on-accent);
     background: var(--accent);
     border-color: transparent;
+    box-shadow: var(--shadow-accent);
 }
 
 .ui-btn-primary:hover {
@@ -337,7 +338,7 @@ body {
 }
 
 .ui-tag-accent {
-    color: var(--accent);
+    color: var(--accent-strong);
     background: var(--accent-soft);
     border-color: transparent;
 }

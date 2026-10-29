@@ -1,14 +1,23 @@
 <!DOCTYPE html>
-<html lang="zh-CN" data-theme="light" data-accent="terracotta" data-density="cozy">
+<html lang="zh-CN" data-theme="light" data-accent="sun" data-density="cozy">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>UI 样张 · Quiet Neutral</title>
-<link rel="stylesheet" href="css/tokens.css?v=1.1.0">
-<link rel="stylesheet" href="css/ui.css?v=1.1.0">
+<link rel="stylesheet" href="css/tokens.css?v=1.2.0">
+<link rel="stylesheet" href="css/ui.css?v=1.2.0">
 <style>
     /* 样张页自己的排版，只用到令牌，不引第三方 */
     body { background: var(--bg); }
+    body::before {
+        content: "";
+        position: fixed;
+        inset: 0 0 auto 0;
+        height: 420px;
+        background: var(--sun-glow);
+        pointer-events: none;
+        z-index: 0;
+    }
 
     .sg-shell {
         display: grid;
@@ -219,12 +228,12 @@
             </div>
 
             <div class="sg-swatches" id="accentSwatches" role="group" aria-label="强调色">
-                <button class="sg-swatch" type="button" data-accent-set="terracotta" aria-pressed="true" title="赤陶（默认）" style="background:#c2592f"></button>
-                <button class="sg-swatch" type="button" data-accent-set="amber" aria-pressed="false" title="琥珀" style="background:#b3800f"></button>
-                <button class="sg-swatch" type="button" data-accent-set="olive" aria-pressed="false" title="橄榄" style="background:#6f7f28"></button>
-                <button class="sg-swatch" type="button" data-accent-set="rose" aria-pressed="false" title="玫瑰" style="background:#b24362"></button>
-                <button class="sg-swatch" type="button" data-accent-set="clay" aria-pressed="false" title="陶土" style="background:#8a6242"></button>
-                <button class="sg-swatch" type="button" data-accent-set="mist" aria-pressed="false" title="雾蓝" style="background:#4d6a86"></button>
+                <button class="sg-swatch" type="button" data-accent-set="sun" aria-pressed="true" title="阳光（默认）" style="background:#f0a20c"></button>
+                <button class="sg-swatch" type="button" data-accent-set="amber" aria-pressed="false" title="琥珀" style="background:#f59e0b"></button>
+                <button class="sg-swatch" type="button" data-accent-set="gold" aria-pressed="false" title="金" style="background:#d4af37"></button>
+                <button class="sg-swatch" type="button" data-accent-set="sand" aria-pressed="false" title="沙金" style="background:#e0af68"></button>
+                <button class="sg-swatch" type="button" data-accent-set="ember" aria-pressed="false" title="余烬橙" style="background:#f97316"></button>
+                <button class="sg-swatch" type="button" data-accent-set="indigo" aria-pressed="false" title="靛蓝（冷）" style="background:#6366f1"></button>
             </div>
         </div>
 
@@ -615,11 +624,11 @@
         });
 
         // 记住上次选择，刷新不用重来
-        const ACCENTS = ['terracotta', 'amber', 'olive', 'rose', 'clay', 'mist'];
+        const ACCENTS = ['sun', 'amber', 'gold', 'sand', 'ember', 'indigo'];
         try {
             const saved = JSON.parse(localStorage.getItem('sg-prefs') || '{}');
             if (saved.theme) { html.setAttribute('data-theme', saved.theme); press('themeSeg', 'data-theme-set', saved.theme); }
-            const accent = ACCENTS.indexOf(saved.accent) >= 0 ? saved.accent : 'terracotta';
+            const accent = ACCENTS.indexOf(saved.accent) >= 0 ? saved.accent : 'sun';
             html.setAttribute('data-accent', accent);
             press('accentSwatches', 'data-accent-set', accent);
             if (saved.density) { html.setAttribute('data-density', saved.density); press('densitySeg', 'data-density', saved.density); }
