@@ -5043,3 +5043,56 @@ html.reader-focus .article-content {
         height: auto;
     }
 }
+
+/* ===== 宽度调整：个人信息卡变窄，时间与日历变宽（高度恢复等高） ===== */
+.home-hero-row {
+    align-items: stretch;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.45fr);
+}
+
+.home-hero-row .home-hero {
+    min-height: 0;
+}
+
+/* 右侧整列不再固定高度，回到与左侧等高 */
+.home-side {
+    height: auto;
+}
+
+.home-clock-box,
+.home-cal-box {
+    height: auto;
+}
+
+/* 时间盒子加宽 */
+.home-clock-box {
+    flex: 0 0 auto;
+    min-width: 210px;
+}
+
+/* 日历吃掉剩余宽度 */
+.home-cal-box {
+    flex: 1;
+    min-width: 0;
+}
+
+@media (max-width: 900px) {
+    .home-hero-row {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .home-side {
+        height: auto;
+    }
+
+    .home-clock-box {
+        flex: none;
+        min-width: 0;
+        height: auto;
+    }
+
+    .home-cal-box {
+        flex: none;
+        height: 280px;
+    }
+}
