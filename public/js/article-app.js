@@ -172,7 +172,7 @@ const ArticleApp = {
                 document.title = `${this.currentPost.title} - 我的博客`;
             },
 
-            // ===== 长文章分章按需加载（首章秒开，向下滚动自动加载后续章节） =====
+            // ===== 长文章分块加载（首块秒开，向下滚动自动续上；读者看不到「分章」） =====
             async loadChunkedArticle(d, filename) {
                 this._chunk = { id: d.id, total: d.chunkCount || 0, loaded: -1, chapters: [], loading: false };
                 try {
@@ -181,13 +181,12 @@ const ArticleApp = {
                         this._chunk.total = r.data.total || this._chunk.total;
                         this._chunk.chapters = r.data.chapters || [];
                     }
-                } catch (e) { /* 目录拉取失败不影响阅读 */ }
+                } catch (e) { /* 分块信息取不到也不影响阅读 */ }
                 const first = await this.fetchChunk(d.id, 0);
                 this.applyBlobArticle(Object.assign({}, d, { content: (first && first.content) || '' }), filename);
                 this._chunk.loaded = 0;
                 this._chunk.current = 0;
                 this.setupChunkLoader();
-                this.renderChunkToc();
                 this.prefetchChunk(d.id, 1);
             },
             async fetchChunk(id, i) {
@@ -207,40 +206,9 @@ const ArticleApp = {
                 if (st.cache && st.cache[i]) return;
                 await this.fetchChunk(id, i);
             },
-            // 右侧目录：列出全部章节，点击跳章（未加载的会依次加载）
-            renderChunkToc() {
-                const st = this._chunk;
-                const box = document.getElementById('tocChapters');
-                if (!st || !box || !st.chapters || !st.chapters.length) return;
-                box.style.display = '';
-                box.innerHTML = '<div class="toc-chapters-title">章节 · 共 ' + st.total + ' 章</div>' +
-                    st.chapters.map(ch => {
-                        const active = ch.i === st.current;
-                        const loaded = ch.i <= st.loaded;
-                        return '<button class="toc-chapter-item' + (active ? ' active' : '') + (loaded ? ' loaded' : '') +
-                            '" onclick="ArticleApp.jumpToChapter(' + ch.i + ')">' +
-                            '<span class="ci-idx">' + (ch.i + 1) + '</span>' +
-                            '<span class="ci-title">' + this.esc(ch.title || '') + '</span>' +
-                            '<span class="ci-words">' + Math.max(1, Math.round((ch.words || 0) / 1000)) + 'k</span>' +
-                            '</button>';
-                    }).join('');
-            },
-            async jumpToChapter(i) {
-                const st = this._chunk;
-                if (!st) return;
-                if (i > st.loaded) {
-                    for (let k = st.loaded + 1; k <= i; k++) {
-                        const ok = await this.loadNextChunk();
-                        if (!ok) break;
-                    }
-                }
-                st.current = i;
-                const target = i === 0
-                    ? document.getElementById('article-content')
-                    : document.querySelector('.article-chunk[data-chunk="' + i + '"]');
-                if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                this.renderChunkToc();
-            },
+            // 分章只是「传输分块」，读者不该看见（v3.50.0）：
+            //   1) 目录里不列章节，只列正文里真实的 h2/h3（随加载逐步长出）；
+            //   2) 正文里不插章节标题，前一章末尾直接接后一章开头。
             setupChunkLoader() {
                 const st = this._chunk;
                 if (!st) return;
@@ -263,7 +231,19 @@ const ArticleApp = {
                     }, { rootMargin: '800px 0px' });
                     st.io.observe(sentinel);
                 }
+                // 观察哨只在「进入 / 离开」时回调一次：文章很短时它一直待在视野里，
+                // 加载完一块后不会有新回调，后面的块就卡住不加载了（实测）。
+                // 所以每次加载完 / 每次滚动都主动补一次判断。
+                window.addEventListener('scroll', this.chunkNeedMore, { passive: true });
                 this.renderChunkProgress();
+            },
+            /** 底部哨兵还在视野附近就继续加载下一块（补 IntersectionObserver 的一次性回调） */
+            chunkNeedMore() {
+                const st = this._chunk;
+                if (!st || st.loading || !st.sentinel) return;
+                if (st.loaded + 1 >= st.total) return;
+                const r = st.sentinel.getBoundingClientRect();
+                if (r.top < window.innerHeight + 800) setTimeout(() => this.loadNextChunk(), 30);
             },
             renderChunkProgress() {
                 const st = this._chunk;
@@ -271,20 +251,23 @@ const ArticleApp = {
                 if (!st || !bar) return;
                 bar.querySelectorAll('.chunk-text,.chunk-actions').forEach(el => el.remove());
                 const loaded = st.loaded + 1;
-                const done = loaded >= st.total;
+                // 全部加载完就把这条提示整个收掉：读者不需要知道背后分了块
+                if (loaded >= st.total) {
+                    bar.hidden = true;
+                    return;
+                }
+                bar.hidden = false;
                 const text = document.createElement('div');
                 text.className = 'chunk-text';
-                text.textContent = done ? ('已加载全部 ' + st.total + ' 章')
-                    : ('已加载 ' + loaded + ' / ' + st.total + ' 章 · 继续向下滚动会自动加载');
+                // 不提「章」：读者看到的是一篇文章，只是还没加载完而已
+                text.textContent = '内容较长，继续向下滚动会自动加载余下部分';
                 const actions = document.createElement('div');
                 actions.className = 'chunk-actions';
-                if (!done) {
-                    const btn = document.createElement('button');
-                    btn.className = 'chunk-btn';
-                    btn.textContent = '加载下一章';
-                    btn.onclick = () => this.loadNextChunk();
-                    actions.appendChild(btn);
-                }
+                const btn = document.createElement('button');
+                btn.className = 'chunk-btn';
+                btn.textContent = '继续加载';
+                btn.onclick = () => this.loadNextChunk();
+                actions.appendChild(btn);
                 const top = document.createElement('button');
                 top.className = 'chunk-btn';
                 top.textContent = '回到顶部';
@@ -306,16 +289,16 @@ const ArticleApp = {
                     const host = document.getElementById('article-content');
                     if (!host) return false;
                     const html = await MarkdownParser.parseMarkdownAsync(ch.content);
+                    // 不再插章节标题、也不再画分隔线：正文首尾直接相接（v3.50.0）
                     const wrap = document.createElement('section');
                     wrap.className = 'article-chunk';
                     wrap.dataset.chunk = String(next);
-                    const title = ch.title || ('第 ' + (next + 1) + ' 章');
-                    wrap.innerHTML = '<h2 class="chunk-title">' + title + '</h2>' + html;
+                    wrap.innerHTML = html;
                     host.appendChild(wrap);
                     st.loaded = next;
                     st.current = next;
                     ok = true;
-                    // 分章：本批标题 id 可能与前面章节撞名，先做全局去重（锚点才能跳对）
+                    // 本批标题 id 可能与前面已加载的撞名，先做全局去重（锚点才能跳对）
                     Array.prototype.forEach.call(wrap.querySelectorAll('h1,h2,h3,h4,h5,h6'), function (h, i) {
                         uniqueHeadingId(h, i);
                     });
@@ -323,14 +306,16 @@ const ArticleApp = {
                     requestAnimationFrame(() => this.highlightVisibleBlocks(wrap));
                     this.highlightRemainingBlocks(wrap);
                     this.mountEmbeds(wrap);
-                    // 术语回链：逐章扫描（词条已由首章设置，这里只补本批次的链接）
+                    // 术语回链：逐块扫描（词条已由首次设置，这里只补本批次的链接）
                     this.applyTermLinks(wrap, false);
+                    // 目录只用真实标题：新加载的 h2/h3 直接并进现有目录
                     requestAnimationFrame(() => this.generateTableOfContents());
                 } finally {
                     st.loading = false;
                     this.renderChunkProgress();
-                    this.renderChunkToc();
                 }
+                // 接着往下补：哨兵还在视野里就立刻再拉一块
+                if (ok) this.chunkNeedMore();
                 this.prefetchChunk(st.id, next + 1);
                 return ok;
             },
@@ -417,7 +402,9 @@ const ArticleApp = {
                         try {
                             const parsed = JSON.parse(homepageCache);
                             const posts = Array.isArray(parsed) ? parsed : (Array.isArray(parsed.posts) ? parsed.posts : []);
-                            this.allPosts = posts.map(p => ({
+                            // 过滤空条目：缓存里混进过 null（老版本写下的脏数据），
+                            // 带进 renderNavigation 就会整块导航不渲染
+                            this.allPosts = posts.filter(p => p && (p.filename || p.id)).map(p => ({
                                 filename: p.filename,
                                 title: p.title,
                                 date: p.date,
@@ -432,7 +419,8 @@ const ArticleApp = {
                     // 回退：检查文章页独立缓存
                     const cachedData = sessionStorage.getItem('blog-posts-cache-v3');
                     if (cachedData) {
-                        this.allPosts = JSON.parse(cachedData);
+                        const list = JSON.parse(cachedData);
+                        this.allPosts = (Array.isArray(list) ? list : []).filter(p => p && (p.filename || p.id));
                         return;
                     }
 
@@ -1342,13 +1330,20 @@ const ArticleApp = {
             // 渲染上下篇导航
             renderNavigation() {
                 const navigation = document.getElementById('article-navigation');
+                if (!navigation) return;
+                // 文章还没载入完（currentPost 为 null）就先不算：原来这里直接读
+                // this.currentPost.filename，页面首次渲染时必然抛
+                // 「Cannot read properties of null (reading 'filename')」，
+                // 整块「上一篇 / 下一篇」就再也不会出现（线上实测）。
+                if (!this.currentPost) return;
 
-                if (this.allPosts.length === 0) {
+                if (!Array.isArray(this.allPosts) || this.allPosts.length === 0) {
                     navigation.style.display = 'none';
                     return;
                 }
 
-                const currentIndex = this.allPosts.findIndex(post => post.filename === this.currentPost.filename);
+                // 再兜一层：列表里只要混进一条 null 也会抛同款错误
+                const currentIndex = this.allPosts.findIndex(post => post && post.filename === this.currentPost.filename);
 
                 let prevPost = null;
                 let nextPost = null;

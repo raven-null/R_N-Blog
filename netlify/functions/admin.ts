@@ -365,14 +365,19 @@ async function readArticleContent(store: ReturnType<typeof getBlobStore>, id: st
 }
 
 // ===================== 长文章分章 =====================
+// 分章只是「存储与传输」的分块手段，读者不该看见它（v3.50.0）：
+//   - 阅读页不渲染任何章节标题、目录里也不列章节，正文首尾相接；
+//   - 章名只给编辑器那个下拉用，因此**不许造词** —— 以前单章过大时按段落再切，
+//     会写出「开篇（续 6）」这种读者看得见、作者也看不懂的标签，现在一律沿用
+//     该段自己的标题（没有标题就叫「正文」），靠下拉里的序号区分。
 
-/** 按 # / ## 标题切章；单章过大时按段落再切，保证每章体积可控 */
+/** 按 # / ## 标题切章；单章过大时按段落再切，保证每块体积可控 */
 function splitChapters(md: string): { title: string; content: string }[] {
   const MAX = CHUNK_THRESHOLD
   const lines = (md || "").split(/\r?\n/)
   const out: { title: string; content: string }[] = []
   let cur: string[] = []
-  let title = "开篇"
+  let title = "正文"
 
   const flush = () => {
     if (!cur.length) return
@@ -386,18 +391,16 @@ function splitChapters(md: string): { title: string; content: string }[] {
     const parts = body.split(/\n{2,}/)
     let buf: string[] = []
     let size = 0
-    let seq = 1
     for (const part of parts) {
       if (size + part.length > MAX && buf.length) {
-        out.push({ title: seq === 1 ? title : `${title}（续 ${seq}）`, content: buf.join("\n\n") })
+        out.push({ title, content: buf.join("\n\n") })
         buf = []
         size = 0
-        seq++
       }
       buf.push(part)
       size += part.length + 2
     }
-    if (buf.length) out.push({ title: seq === 1 ? title : `${title}（续 ${seq}）`, content: buf.join("\n\n") })
+    if (buf.length) out.push({ title, content: buf.join("\n\n") })
   }
 
   for (const line of lines) {
@@ -410,6 +413,14 @@ function splitChapters(md: string): { title: string; content: string }[] {
   }
   flush()
   return out.length ? out : [{ title: "正文", content: md }]
+}
+
+/** 清理分块标题：去掉历史数据里的「（续 N）」，空标题 / 「开篇」统一叫「正文」 */
+function cleanChunkTitle(title: unknown, i: number): string {
+  let t = String(title || "").trim()
+  t = t.replace(/[（(]\s*续\s*\d*\s*[)）]\s*$/, "").trim()
+  if (!t || t === "开篇") t = "正文"
+  return t.slice(0, 40) || `第 ${i + 1} 部分`
 }
 
 /** 清理某篇文章的全部分块（重新分章或改回短文章时调用） */
@@ -457,7 +468,16 @@ export default async (req: Request) => {
     if (path === "article-toc") {
       const raw = await chunkStore.get(`${id}/index`, { type: "text" })
       if (!raw) return json(404, { status: "error", message: "该文章未分章" }, req)
-      return json(200, { status: "success", data: JSON.parse(raw) }, req, { "Cache-Control": cacheHeader })
+      const idx = JSON.parse(raw)
+      // 老数据里存着「开篇（续 6）」这种自动生成的名字，返回前统一洗干净：
+      // 去掉「（续 N）」后缀，纯「开篇」也叫「正文」。
+      if (Array.isArray(idx.chapters)) {
+        idx.chapters = idx.chapters.map((ch: any, i: number) => ({
+          ...ch,
+          title: cleanChunkTitle(ch && ch.title, i),
+        }))
+      }
+      return json(200, { status: "success", data: idx }, req, { "Cache-Control": cacheHeader })
     }
 
     if (path === "article-chunk") {

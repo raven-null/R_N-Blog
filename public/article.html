@@ -1896,15 +1896,18 @@
     </style>
     <link rel="stylesheet" href="/css/scrollbar.css?v=1.0.2">
     <style>
-        /* ===== 长文章分章阅读 ===== */
-        .article-chunk { margin-top: 48px; padding-top: 28px; border-top: 1px dashed rgba(255,255,255,.14); }
-        .article-chunk .chunk-title { font-size: 20px; line-height: 1.4; margin: 0 0 18px; color: #8ab4ff; font-weight: 600; }
+        /* ===== 长文章分块加载（v3.50.0：分块只是传输手段，读者看不见）=====
+           续上的部分不加分隔线、不加章节标题，正文首尾直接相接；
+           只有「还没加载完」时底部那条提示露出来，加载完就隐藏。 */
+        /* display:contents = 这一层盒子不参与布局，续上的块和首块共享同一套正文排版 */
+        .article-chunk { display: contents; }
         .chunk-progress {
             margin: 36px auto 24px; max-width: 760px; padding: 12px 16px; border-radius: 12px;
             background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.1);
             display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
             font-size: 12.5px; color: rgba(255,255,255,.66);
         }
+        .chunk-progress[hidden] { display: none !important; }
         .chunk-actions { display: flex; gap: 8px; margin-left: auto; }
         .chunk-btn {
             padding: 6px 14px; border-radius: 999px; cursor: pointer; font-family: inherit;
@@ -1913,17 +1916,6 @@
         }
         .chunk-btn:hover { background: rgba(255,255,255,.16); }
         .chunk-sentinel { height: 1px; width: 100%; }
-    </style>
-    <style>
-        /* ===== 章节目录（长文分章） ===== */
-        .toc-chapters { margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px dashed rgba(255,255,255,.12); max-height: 40vh; overflow-y: auto; }
-        .toc-chapters-title { font-size: 11.5px; color: rgba(255,255,255,.5); padding: 2px 6px 6px; letter-spacing: .04em; }
-        .toc-chapter-item { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; padding: 6px 8px; border: 0; border-radius: 8px; background: transparent; color: rgba(255,255,255,.72); font-size: 12.5px; cursor: pointer; font-family: inherit; }
-        .toc-chapter-item:hover { background: rgba(255,255,255,.08); color: #fff; }
-        .toc-chapter-item.active { background: rgba(115,170,255,.16); color: #cfe2ff; }
-        .toc-chapter-item .ci-idx { flex: none; width: 20px; color: rgba(255,255,255,.4); font-size: 11.5px; }
-        .toc-chapter-item .ci-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .toc-chapter-item .ci-words { flex: none; font-size: 11px; color: rgba(255,255,255,.4); }
     </style>
     <style>
         /* ===== 相关文章（v3.36.0）=====
@@ -2221,9 +2213,8 @@
                     </div>
                 </div>
                 <div class="toc-list-wrapper">
-                    <div class="toc-chapters" id="tocChapters" style="display:none"></div>
                         <ul class="toc-list" id="toc-list">
-                        <!-- 由 JavaScript 动态生成 -->
+                        <!-- 由 JavaScript 动态生成（只用正文里的真实标题，不列分块/章节） -->
                     </ul>
                 </div>
             </div>
@@ -2351,7 +2342,7 @@
     <script src="js/reader.js?v=3.13.7" defer></script>
     <script src="js/animations.js?v=3.14.0" defer></script>
 
-    <script src="js/article-app.js?v=2.3.0" defer></script>
+    <script src="js/article-app.js?v=2.4.0" defer></script>
 
 </body>
 </html>
