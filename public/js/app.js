@@ -265,6 +265,7 @@ const BlogApp = {
         const postsHTML = this.filteredPosts.map(post => this.renderPostCard(post)).join('');
         postsContainer.innerHTML = `<div class="waterfall">${postsHTML}</div>`;
         if (typeof this.renderPostWall === 'function') this.renderPostWall();
+        if (typeof this.renderHvPosts === 'function') this.renderHvPosts();
     },
 
     // 根据作者名字返回对应头像（站长使用设置中的头像，其他用默认）
@@ -1290,25 +1291,98 @@ const BlogApp = {
         }
     },
 
+    // ---------- 主页仪表盘：精选文章 / 照片带 ----------
+
+    // 精选文章：取最新三篇，有封面的优先
+    renderHvPosts() {
+        const box = document.getElementById('hvPosts');
+        if (!box) return;
+        const posts = Array.isArray(this.posts) ? this.posts.slice() : [];
+        if (!posts.length) {
+            if (!box.dataset.empty) {
+                box.innerHTML = '<div class="home-empty">还没有文章</div>';
+                box.dataset.empty = '1';
+            }
+            return;
+        }
+        box.dataset.empty = '';
+        const withCover = posts.filter((p) => p.image);
+        const pick = (withCover.length >= 3 ? withCover : posts).slice(0, 3);
+
+        box.innerHTML = pick.map((post) => {
+            const href = `article.html?post=${encodeURIComponent(post.filename || '')}`;
+            const title = this.esc(post.title || '无标题');
+            const date = this.formatDate ? this.formatDate(post.date) : (post.date || '');
+            const tag = (post.tags && post.tags[0]) ? `<span class="hv-post-tag">${this.esc(post.tags[0])}</span>` : '';
+            const cover = post.image
+                ? `<span class="hv-post-cover"><img src="${this.escAttr(post.image)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.parentNode.remove()"></span>`
+                : '';
+            return `<a class="hv-post" href="${href}">`
+                + cover
+                + `<span class="hv-post-body">`
+                + `<span class="hv-post-title">${title}</span>`
+                + `<span class="hv-post-meta"><span>${date}</span>${tag}</span>`
+                + `</span>`
+                + `</a>`;
+        }).join('');
+    },
+
+    // 照片带：图库前 12 张，点开走灯箱
+    async renderHvPhotos() {
+        const box = document.getElementById('hvPhotos');
+        if (!box || box.dataset.loaded) return;
+        box.dataset.loaded = '1';
+
+        let photos = [];
+        try {
+            const list = await Promise.race([
+                this.loadGalleryImages(),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 15000)),
+            ]);
+            photos = (list || []).filter((p) => p && (p.thumb || p.url) && !this.isR18Image(p));
+        } catch (e) {
+            photos = [];
+        }
+
+        if (!photos.length) {
+            const block = box.closest('.hv-block');
+            if (block) block.style.display = 'none';
+            return;
+        }
+
+        const pick = photos.slice(0, 12);
+        box.innerHTML = pick.map((p, i) => {
+            const src = String(p.thumb || p.url).replace(/"/g, '&quot;');
+            return `<button type="button" class="hv-photo" data-idx="${i}" title="看图">`
+                + `<img src="${src}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.style.visibility='hidden'">`
+                + `</button>`;
+        }).join('');
+
+        box.addEventListener('click', (e) => {
+            const btn = e.target.closest('.hv-photo');
+            if (!btn) return;
+            const idx = Number(btn.dataset.idx) || 0;
+            const photo = pick[idx];
+            if (!photo) return;
+            window.__galleryImages = pick;
+            if (typeof window.openGalleryLightbox === 'function') {
+                window.openGalleryLightbox(photo.url || photo.thumb, idx);
+            } else {
+                this.goView('gallery');
+            }
+        });
+    },
+
     // 渲染主页（入口数字 + 今日简报 + 图库轮播 + 文章封面轮播 + 项目）
     async renderHome(force = false) {
-        // 内容区不依赖图库接口的部分先渲染，避免主页整块空白
+        // 仪表盘：数字 / 精选文章 / 照片带 / 简报 / 项目
         this.renderHomeNews();
-        this.renderHomePhotos();
-        this.renderHomePostStage();
+        this.renderHvPosts();
+        this.renderHvPhotos();
         this.renderHomeProjects();
         this.renderHomeCta(force);
 
-        // 入场动效（Anime.js）
-        if (typeof anime !== 'undefined') {
-            anime.animate('.view-home .dash-hero, .view-home .home-articles > *, .view-home .home-news, .view-home .dash-bottom', {
-                opacity: [0, 1],
-                translateY: [16, 0],
-                duration: 500,
-                delay: anime.stagger(60),
-                ease: 'out(2)'
-            });
-        }
+
     },
 
     // 首页入口数字：文章数 / 图库照片数 / GitHub 项目数（接口慢或离线时显示占位）

@@ -6905,3 +6905,511 @@ body.canvas-on .reading-progress {
 #grokPet {
     filter: drop-shadow(0 1px 3px rgba(12, 16, 36, 0.2));
 }
+
+/* ===== 主页：仪表盘（单页滚动，信息优先） =====
+   取代原来的无限画布版。所有尺寸/颜色取自 tokens.css。 */
+
+.view-home {
+    padding-top: 4px;
+}
+
+.hv {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 4px 0 72px;
+    display: flex;
+    flex-direction: column;
+    gap: 44px;
+}
+
+/* ---------- ① 身份 ---------- */
+.hv-hero {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    padding-top: 6px;
+}
+
+.hv-hero-main {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.hv-avatar {
+    width: 60px;
+    height: 60px;
+    flex: none;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-1);
+}
+
+.hv-identity {
+    flex: 1;
+    min-width: 0;
+}
+
+.hv-name {
+    margin: 0;
+    font-size: var(--fs-2xl);
+    font-weight: var(--fw-semibold);
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+    color: var(--text);
+}
+
+.hv-bio {
+    margin: 4px 0 0;
+    font-size: var(--fs-md);
+    color: var(--text-secondary);
+}
+
+.hv-theme {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 34px;
+    padding: 0 14px;
+    font-family: inherit;
+    font-size: var(--fs-sm);
+    color: var(--text-secondary);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-full);
+    cursor: pointer;
+    transition: color var(--dur-2) var(--ease), border-color var(--dur-2) var(--ease),
+        background var(--dur-2) var(--ease);
+}
+
+.hv-theme:hover {
+    color: var(--text);
+    border-color: var(--accent);
+    background: var(--accent-soft);
+}
+
+.home-theme-icon {
+    font-size: 15px;
+    line-height: 1;
+    color: var(--accent-strong);
+}
+
+/* 三个数字 */
+.hv-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.hv-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 16px 20px 14px;
+    text-align: left;
+    font-family: inherit;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    cursor: pointer;
+    transition: transform var(--dur-2) var(--ease), border-color var(--dur-2) var(--ease),
+        box-shadow var(--dur-2) var(--ease);
+}
+
+.hv-stat:hover {
+    transform: translateY(-2px);
+    border-color: var(--accent);
+    box-shadow: var(--shadow-2);
+}
+
+.hv-stat-num {
+    font-size: 30px;
+    font-weight: var(--fw-semibold);
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+    transition: color var(--dur-2) var(--ease);
+}
+
+.hv-stat:hover .hv-stat-num {
+    color: var(--accent-strong);
+}
+
+.hv-stat-label {
+    font-size: var(--fs-sm);
+    color: var(--text-muted);
+}
+
+/* ---------- 区块通用 ---------- */
+.hv-block {
+    min-width: 0;
+}
+
+.hv-block-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.hv-block-title {
+    margin: 0;
+    font-size: var(--fs-lg);
+    font-weight: var(--fw-semibold);
+    letter-spacing: -0.01em;
+    color: var(--text);
+}
+
+.hv-block-sub {
+    font-size: var(--fs-xs);
+    color: var(--text-muted);
+}
+
+.hv-more {
+    padding: 0;
+    font-family: inherit;
+    font-size: var(--fs-sm);
+    color: var(--text-muted);
+    background: none;
+    border: 0;
+    cursor: pointer;
+    transition: color var(--dur-2) var(--ease);
+}
+
+.hv-more:hover {
+    color: var(--accent-strong);
+}
+
+/* ---------- ② 精选文章 ---------- */
+.hv-posts {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.hv-post {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    text-decoration: none;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    transition: transform var(--dur-2) var(--ease), box-shadow var(--dur-2) var(--ease),
+        border-color var(--dur-2) var(--ease);
+}
+
+.hv-post:hover {
+    transform: translateY(-3px);
+    border-color: var(--accent);
+    box-shadow: var(--shadow-2);
+}
+
+.hv-post-cover {
+    aspect-ratio: 16 / 10;
+    overflow: hidden;
+    background: var(--surface-3);
+}
+
+.hv-post-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.5s var(--ease);
+}
+
+.hv-post:hover .hv-post-cover img {
+    transform: scale(1.04);
+}
+
+.hv-post-body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 14px 16px 16px;
+}
+
+.hv-post-title {
+    font-size: var(--fs-md);
+    font-weight: var(--fw-semibold);
+    line-height: 1.45;
+    color: var(--text);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.hv-post-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: var(--fs-xs);
+    color: var(--text-muted);
+}
+
+.hv-post-tag {
+    padding: 1px 8px;
+    border-radius: var(--r-full);
+    background: var(--accent-soft);
+    color: var(--accent-strong);
+    font-size: var(--fs-xs);
+}
+
+.hv-skeleton {
+    height: 220px;
+    border-radius: var(--r-lg);
+    background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface-3) 37%, var(--surface-2) 63%);
+    background-size: 400% 100%;
+    animation: hv-shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes hv-shimmer {
+    0% { background-position: 100% 0; }
+    100% { background-position: 0 0; }
+}
+
+/* ---------- ③ 照片带 ---------- */
+.hv-photos {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 172px;
+    gap: 12px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 8px;
+    scroll-snap-type: x proximity;
+}
+
+.hv-photo {
+    position: relative;
+    aspect-ratio: 1;
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    overflow: hidden;
+    cursor: pointer;
+    background: var(--surface-3);
+    scroll-snap-align: start;
+    transition: transform var(--dur-2) var(--ease), border-color var(--dur-2) var(--ease);
+}
+
+.hv-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.45s var(--ease);
+}
+
+.hv-photo:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+}
+
+.hv-photo:hover img {
+    transform: scale(1.06);
+}
+
+/* ---------- ④ 简报 + 侧栏 ---------- */
+.hv-split {
+    display: grid;
+    grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+    gap: 26px;
+    align-items: start;
+}
+
+.hv-news-block .home-news-list {
+    max-height: 372px;
+    overflow-y: auto;
+    padding-right: 4px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    background: var(--surface);
+}
+
+.hv-news-block .news-item {
+    display: block;
+    padding: 12px 16px;
+    text-decoration: none;
+    color: inherit;
+    border-bottom: 1px solid var(--border);
+    transition: background var(--dur-2) var(--ease);
+}
+
+.hv-news-block .news-item:last-child {
+    border-bottom: 0;
+}
+
+.hv-news-block .news-item:hover {
+    background: var(--surface-2);
+}
+
+.hv-side {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
+}
+
+.hv-card {
+    padding: 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+}
+
+.hv-card-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.hv-card-title {
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-semibold);
+    letter-spacing: 0.02em;
+    color: var(--text-secondary);
+}
+
+.hv-card-sub {
+    font-size: var(--fs-xs);
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+/* 日历：小尺寸，够用就行 */
+.hv-cal-card {
+    padding: 12px 12px 8px;
+}
+
+.hv-cal-card .home-calendar {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    box-shadow: none;
+    border-radius: 0;
+}
+
+/* 任务 */
+.home-life .life-task-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.home-life .life-task {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    border-radius: var(--r-sm);
+    background: var(--surface-2);
+    font-size: var(--fs-sm);
+}
+
+.home-life .life-task.is-done .life-task-title {
+    text-decoration: line-through;
+    color: var(--text-muted);
+}
+
+/* 日记 */
+.home-journal-box .journal-body {
+    max-height: 220px;
+    overflow-y: auto;
+    font-size: var(--fs-sm);
+    line-height: var(--lh-relaxed);
+    color: var(--text-secondary);
+}
+
+.home-journal-box .journal-body p {
+    margin: 0 0 6px;
+}
+
+/* ---------- ⑤ 项目 ---------- */
+.hv-projects {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 268px;
+    gap: 14px;
+    overflow-x: auto;
+    padding-bottom: 8px;
+}
+
+.hv-projects > * {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    padding: 16px;
+    text-decoration: none;
+    color: inherit;
+    transition: transform var(--dur-2) var(--ease), border-color var(--dur-2) var(--ease),
+        box-shadow var(--dur-2) var(--ease);
+}
+
+.hv-projects > *:hover {
+    transform: translateY(-2px);
+    border-color: var(--accent);
+    box-shadow: var(--shadow-2);
+}
+
+/* ---------- 日历弹窗（沿用原位置，浮在卡片上） ---------- */
+.hv .home-editor-pop {
+    position: relative;
+    width: 100%;
+}
+
+/* ---------- 窄屏 ---------- */
+@media (max-width: 900px) {
+    .hv {
+        gap: 34px;
+        padding-bottom: 48px;
+    }
+
+    .hv-name {
+        font-size: var(--fs-xl);
+    }
+
+    .hv-stats {
+        gap: 10px;
+    }
+
+    .hv-stat {
+        padding: 12px 14px;
+    }
+
+    .hv-stat-num {
+        font-size: 24px;
+    }
+
+    .hv-posts {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .hv-photos {
+        grid-auto-columns: 132px;
+    }
+
+    .hv-split {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 20px;
+    }
+
+    .hv-projects {
+        grid-auto-columns: 236px;
+    }
+}

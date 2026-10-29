@@ -13,7 +13,7 @@
     <script src="/js/site-icon.js?v=1.0.0" defer></script>
 
     <!-- Styles -->
-    <link rel="stylesheet" href="css/style.css?v=3.84.0">
+    <link rel="stylesheet" href="css/style.css?v=3.86.0">
     <link rel="stylesheet" href="css/glass.css?v=1.0.14">
     <link rel="stylesheet" href="css/wheel.css?v=1.0.0">
 
@@ -162,201 +162,131 @@
 
             <!-- 视图：主页（无限画布：中心是主页，左边图片墙，右边文章墙） -->
             <section class="view view-home" id="view-home">
-                <div class="home-canvas" id="homeCanvas">
-                    <div class="canvas-plane" id="canvasPlane">
+                <div class="hv">
 
-                        <!-- 上：待开发 -->
-                        <div class="canvas-node canvas-hold canvas-hold-north" id="canvasHoldNorth">
-                            <span class="canvas-hold-text">这块还没想好 · 以后再来</span>
+                    <!-- ① 身份 + 三个数字 -->
+                    <header class="hv-hero">
+                        <div class="hv-hero-main">
+                            <img class="hv-avatar" src="images/Default/profile -picture.webp" alt="博主">
+                            <div class="hv-identity">
+                                <h1 class="hv-name">博主</h1>
+                                <p class="hv-bio">欢迎来到我的博客</p>
+                            </div>
+                            <button class="hv-theme" id="homeThemeBtn" type="button" onclick="ThemeManager.nextTheme()">
+                                <span class="home-theme-icon">○</span>
+                                <span class="home-theme-name">日光</span>
+                            </button>
                         </div>
 
-                        <!-- 左：图片墙 -->
-                        <section class="canvas-node canvas-wall canvas-wall-photos" id="canvasPhotoWall">
-                            <header class="canvas-wall-head">
-                                <span class="canvas-wall-title">图片墙</span>
-                                <span class="canvas-wall-sub" id="photoWallSub"></span>
-                            </header>
-                            <div class="canvas-wall-body photo-wall-inner" id="photoWallBody"></div>
+                        <div class="hv-stats">
+                            <button class="hv-stat" type="button" onclick="BlogApp.goView('blog')">
+                                <b class="hv-stat-num" id="homeCtaPosts">—</b>
+                                <span class="hv-stat-label">文章</span>
+                            </button>
+                            <button class="hv-stat" type="button" onclick="BlogApp.goView('gallery')">
+                                <b class="hv-stat-num" id="homeCtaPhotos">—</b>
+                                <span class="hv-stat-label">照片</span>
+                            </button>
+                            <button class="hv-stat" type="button" onclick="BlogApp.goView('projects')">
+                                <b class="hv-stat-num" id="homeCtaProjects">—</b>
+                                <span class="hv-stat-label">项目</span>
+                            </button>
+                        </div>
+                    </header>
+
+                    <!-- ② 精选文章 -->
+                    <section class="hv-block">
+                        <div class="hv-block-head">
+                            <h2 class="hv-block-title">精选文章</h2>
+                            <button class="hv-more" type="button" onclick="BlogApp.goView('blog')">全部 ›</button>
+                        </div>
+                        <div class="hv-posts" id="hvPosts">
+                            <div class="hv-skeleton"></div>
+                            <div class="hv-skeleton"></div>
+                            <div class="hv-skeleton"></div>
+                        </div>
+                    </section>
+
+                    <!-- ③ 照片带 -->
+                    <section class="hv-block">
+                        <div class="hv-block-head">
+                            <h2 class="hv-block-title">照片</h2>
+                            <button class="hv-more" type="button" onclick="BlogApp.goView('gallery')">进图库 ›</button>
+                        </div>
+                        <div class="hv-photos" id="hvPhotos"></div>
+                    </section>
+
+                    <!-- ④ 今日简报 + 侧栏（日历 / 任务 / 日记） -->
+                    <div class="hv-split">
+                        <section class="hv-block hv-news-block">
+                            <div class="hv-block-head">
+                                <h2 class="hv-block-title">今日简报</h2>
+                                <span class="hv-block-sub">往下滚还有</span>
+                            </div>
+                            <div class="home-news-list news-list" id="newsList"></div>
                         </section>
 
-                        <!-- 中心：主页本体 -->
-                        <div class="canvas-node canvas-core" id="canvasCore">
-                <div class="dashboard">
-
-                    <!-- 欢迎区：左 = 个人信息，右 = 时间 + 日历 -->
-                    <div class="home-hero-row">
-                        <div class="dash-hero home-hero">
-                            <img class="dash-avatar" src="images/Default/profile -picture.webp" alt="博主">
-                            <div class="dash-identity">
-                                <div class="dash-name">博主</div>
-                                <div class="dash-bio">欢迎来到我的博客</div>
-                                <div class="home-cta">
-                                    <button class="home-cta-item" onclick="BlogApp.goView('blog')">
-                                        <b class="home-cta-big" id="homeCtaPosts">—</b>
-                                        <span class="home-cta-sub">文章</span>
-                                    </button>
-                                    <button class="home-cta-item" onclick="BlogApp.goView('gallery')">
-                                        <b class="home-cta-big is-violet" id="homeCtaPhotos">—</b>
-                                        <span class="home-cta-sub">照片</span>
-                                    </button>
-                                    <button class="home-cta-item" onclick="BlogApp.goView('projects')">
-                                        <b class="home-cta-big is-pink" id="homeCtaProjects">—</b>
-                                        <span class="home-cta-sub">项目</span>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- 时间 + 日历：两个独立盒子（所有盒子都可拖动换位 / 缩放） -->
-                        <div class="home-side" id="homeSide">
-                            <div class="dash-panel home-clock-box">
-                                <div class="dash-clock" id="dashClock">
-                                    <div class="dash-clock-date" id="dashClockDate"></div>
-                                    <div class="dash-clock-time" id="dashClockTime"></div>
-                                </div>
-                            </div>
-
-                            <div class="dash-panel home-cal-box">
+                        <aside class="hv-side">
+                            <div class="hv-card hv-cal-card">
                                 <div class="home-calendar" id="homeCalendar"></div>
-
-                                <!-- 点日期后从日历下方浮出的小弹窗（不占布局、不撑开页面） -->
-                                <div class="home-editor-pop" id="homeEditorWrap">
-                                    <div class="home-editor-inner">
-                                        <div class="dash-panel home-editor" id="homeEditor">
-                                            <!-- 第一步：选择写任务还是日记 -->
-                                            <div class="editor-choice" id="editorChoice">
-                                                <span class="editor-date" id="editorDateLabel"></span>
-                                                <button class="editor-choice-btn" type="button" data-kind="task">任务</button>
-                                                <button class="editor-choice-btn" type="button" data-kind="journal">日记</button>
-                                                <button class="editor-close" type="button" data-close="1" title="关闭">×</button>
-                                            </div>
-
-                                            <!-- 第二步：任务编写 -->
-                                            <form class="editor-form" id="editorTaskForm" style="display:none;">
-                                                <input type="text" id="editorTaskInput" placeholder="写下一个任务，回车或点提交保存" maxlength="120" autocomplete="off">
-                                                <button class="editor-submit" type="submit">提交</button>
-                                                <button class="editor-close" type="button" data-close="1" title="关闭">×</button>
-                                            </form>
-
-                                            <!-- 第二步：日记编写 -->
-                                            <form class="editor-form editor-form-journal" id="editorJournalForm" style="display:none;">
-                                                <textarea id="editorJournalInput" placeholder="写下今天的日记…" maxlength="20000"></textarea>
-                                                <div class="editor-form-actions">
-                                                    <button class="editor-submit" type="submit">提交</button>
-                                                    <button class="editor-close" type="button" data-close="1" title="关闭">×</button>
-                                                </div>
-                                            </form>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 任务展示（没有任务时整块折叠） -->
-                    <div class="dash-panel home-life" id="homeLife" style="display:none;">
-                        <div class="dash-panel-title home-life-head">
-                            <span>任务 <span class="life-count" id="lifeTaskCount"></span></span>
-                            <span class="life-month-nav">
-                                <button class="life-nav-btn" id="lifePrevMonth" type="button" title="上一月">‹</button>
-                                <span class="life-month" id="lifeMonthLabel"></span>
-                                <button class="life-nav-btn" id="lifeNextMonth" type="button" title="下一月">›</button>
-                            </span>
-                        </div>
-                        <div class="life-task-list" id="lifeTaskList"></div>
-                    </div>
-
-                    <!-- 日记展示（宽度与简报一致） -->
-                    <div class="dash-panel home-journal-box" id="homeJournalBox" style="display:none;">
-                        <div class="dash-panel-title home-journal-head">
-                            <span>日记 <span class="life-month" id="journalDateLabel"></span></span>
-                            <button class="journal-del-btn" id="journalDeleteBtn" type="button" title="删除当天日记">×</button>
-                        </div>
-                        <div class="journal-body" id="journalBody"></div>
-                    </div>
-
-                    <!-- 内容区：简报（右侧有主题盒子）+ 图库 / 文章封面并排 -->
-                    <div class="home-articles">
-                        <div class="home-top-row">
-                            <div class="dash-panel home-news" id="homeNews">
-                                <div class="dash-panel-title home-news-title">今日简报
-                                    <span class="home-news-hint">聚合热榜 · 每日更新</span>
-                                </div>
-                                <div class="news-list" id="newsList">
-                                    <div class="home-empty">加载中...</div>
-                                </div>
                             </div>
 
-                            <!-- 简报右侧的盒子：放主题切换按钮 -->
-                            <div class="dash-panel home-theme-box">
-                                <div class="dash-panel-title">主题</div>
-                                <button class="home-theme-btn" id="homeThemeBtn" type="button" onclick="ThemeManager.nextTheme()">
-                                    <span class="home-theme-icon">◐</span><span class="home-theme-name">主题</span>
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- 图库与文章封面各占一个正方形（不再重叠） -->
-                        <div class="home-media" id="homeStack">
-                            <div class="dash-panel home-photos" id="homePhotos">
-                                <div class="home-slideshow is-loading" id="homeSlideshow"></div>
+                            <div class="hv-card home-life" id="homeLife">
+                                <div class="hv-card-head">
+                                    <span class="hv-card-title">正在做</span>
+                                    <span class="hv-card-sub" id="lifeTaskCount"></span>
+                                </div>
+                                <div class="life-task-list" id="lifeTaskList"></div>
                             </div>
 
-                            <!-- 博客文章封面轮播：封面铺满，底部毛玻璃遮罩放标题与标签 -->
-                            <a class="dash-panel home-post" id="homePostStage" href="article.html" aria-label="博客文章">
-                                <div class="home-post-media">
-                                    <img class="home-post-img" id="homePostImg" alt="" decoding="async" referrerpolicy="no-referrer">
-                                    <span class="home-post-badge" id="homePostBadge"></span>
+                            <div class="hv-card home-journal-box" id="homeJournalBox">
+                                <div class="hv-card-head">
+                                    <span class="hv-card-title">日记</span>
                                 </div>
-                                <div class="home-post-mask">
-                                    <div class="home-post-title" id="homePostTitle">加载中...</div>
-                                    <div class="home-post-tags" id="homePostTags"></div>
-                                </div>
-                            </a>
-                        </div>
+                                <div class="journal-body" id="journalBody"></div>
+                            </div>
+                        </aside>
                     </div>
 
-                    <!-- 我的项目（GitHub 仓库） -->
-                    <div class="dash-panel home-projects" id="homeProjects">
-                        <div class="dash-panel-title">我的项目
-                            <span class="home-more" onclick="BlogApp.goView('projects')">全部项目 ›</span>
+                    <!-- ⑤ 项目 -->
+                    <section class="hv-block">
+                        <div class="hv-block-head">
+                            <h2 class="hv-block-title">我的项目</h2>
+                            <button class="hv-more" type="button" onclick="BlogApp.goView('projects')">全部 ›</button>
                         </div>
-                        <div class="home-projects-grid" id="homeProjectsGrid">
-                            <div class="home-empty">加载中...</div>
-                        </div>
-                    </div>
+                        <div class="hv-projects home-projects-grid" id="homeProjectsGrid"></div>
+                    </section>
 
+                                    <div class="home-editor-pop" id="homeEditorWrap">
+                <div class="home-editor-inner">
+                <div class="dash-panel home-editor" id="homeEditor">
+                    <!-- 第一步：选择写任务还是日记 -->
+                    <div class="editor-choice" id="editorChoice">
+                        <span class="editor-date" id="editorDateLabel"></span>
+                        <button class="editor-choice-btn" type="button" data-kind="task">任务</button>
+                        <button class="editor-choice-btn" type="button" data-kind="journal">日记</button>
+                        <button class="editor-close" type="button" data-close="1" title="关闭">×</button>
+                    </div>
+                
+                    <!-- 第二步：任务编写 -->
+                    <form class="editor-form" id="editorTaskForm" style="display:none;">
+                        <input type="text" id="editorTaskInput" placeholder="写下一个任务，回车或点提交保存" maxlength="120" autocomplete="off">
+                        <button class="editor-submit" type="submit">提交</button>
+                        <button class="editor-close" type="button" data-close="1" title="关闭">×</button>
+                    </form>
+                
+                    <!-- 第二步：日记编写 -->
+                    <form class="editor-form editor-form-journal" id="editorJournalForm" style="display:none;">
+                        <textarea id="editorJournalInput" placeholder="写下今天的日记…" maxlength="20000"></textarea>
+                        <div class="editor-form-actions">
+                            <button class="editor-submit" type="submit">提交</button>
+                            <button class="editor-close" type="button" data-close="1" title="关闭">×</button>
+                        </div>
+                    </form>
                 </div>
-                        </div>
+                </div>
+                </div>
 
-                        <!-- 右：文章墙 -->
-                        <section class="canvas-node canvas-wall canvas-wall-posts" id="canvasPostWall">
-                            <header class="canvas-wall-head">
-                                <span class="canvas-wall-title">文章墙</span>
-                                <span class="canvas-wall-sub" id="postWallSub"></span>
-                            </header>
-                            <div class="canvas-wall-body">
-                                <div class="post-wall-list" id="postWallBody"></div>
-                            </div>
-                        </section>
-
-                        <!-- 下：待开发 -->
-                        <div class="canvas-node canvas-hold canvas-hold-south" id="canvasHoldSouth">
-                            <span class="canvas-hold-text">这块还没想好 · 以后再来</span>
-                        </div>
-
-                    </div>
-
-                    <!-- 视角进入某块区域时，底部弹出的功能胶囊 -->
-                    <div class="canvas-capsule" id="canvasCapsule" aria-live="polite"></div>
-
-                    <!-- 画布控制 -->
-                    <div class="canvas-hud" id="canvasHud">
-                        <button type="button" data-canvas-act="zoom-out" title="缩小">−</button>
-                        <button type="button" data-canvas-act="zoom-in" title="放大">+</button>
-                        <button type="button" data-canvas-act="reset" title="回到主页">⌂</button>
-                        <span class="canvas-hud-tip">拖动浏览 · 滚轮缩放 · 左边图片墙，右边文章墙</span>
-                    </div>
                 </div>
             </section>
             </main>
@@ -486,7 +416,7 @@
     <script src="vendor/grok/eyes.js?v=1.0.0" defer></script>
     <script src="vendor/grok/character.js?v=1.0.0" defer></script>
 
-    <script src="js/app.js?v=3.93.0" defer></script>
+    <script src="js/app.js?v=3.95.0" defer></script>
     <script src="js/animations.js?v=3.14.0" defer></script>
 
     <script>
