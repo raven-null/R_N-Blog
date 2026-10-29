@@ -1902,14 +1902,12 @@ const BlogApp = {
             const zoom = document.createElement('button');
             zoom.type = 'button';
             zoom.className = 'free-box-btn free-box-zoom';
-            zoom.title = '放大 / 还原';
+            zoom.title = '放大 / 还原（会挤压其他盒子）';
             zoom.textContent = '⤢';
             zoom.addEventListener('click', (e) => {
                 e.stopPropagation();
                 e.preventDefault();
-                el.classList.toggle('is-zoomed');
-                const btn = el.querySelector('.free-box-zoom');
-                if (btn) btn.textContent = el.classList.contains('is-zoomed') ? '⤡' : '⤢';
+                this.toggleBoxZoom(el, zoom);
             });
 
             const drag = document.createElement('button');
@@ -1999,6 +1997,37 @@ const BlogApp = {
                 [{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'translate(0, 0)' }],
                 { duration: 380, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' },
             );
+        });
+    },
+
+    // 放大 / 还原：真实改变网格占位（2×2），并让邻居平滑让位
+    toggleBoxZoom(el, btn) {
+        const dash = document.querySelector('.view-home .dashboard');
+        const boxes = dash ? [...dash.children] : [];
+        // 记录变化前的位置，用于 FLIP
+        const before = new Map(boxes.map(b => [b, b.getBoundingClientRect()]));
+
+        el.classList.toggle('is-zoomed');
+        if (btn) btn.textContent = el.classList.contains('is-zoomed') ? '⤡' : '⤢';
+
+        // 下一帧再量一次，播放位移动画
+        requestAnimationFrame(() => {
+            boxes.forEach(b => {
+                const b0 = before.get(b);
+                if (!b0) return;
+                const b1 = b.getBoundingClientRect();
+                const dx = b0.left - b1.left;
+                const dy = b0.top - b1.top;
+                const dw = b0.width - b1.width;
+                if (Math.abs(dx) < 2 && Math.abs(dy) < 2 && Math.abs(dw) < 2) return;
+                b.animate(
+                    [
+                        { transform: `translate(${dx}px, ${dy}px)`, width: b0.width + 'px' },
+                        { transform: 'translate(0, 0)', width: b1.width + 'px' },
+                    ],
+                    { duration: 320, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' },
+                );
+            });
         });
     },
 
