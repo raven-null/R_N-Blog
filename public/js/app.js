@@ -1963,6 +1963,16 @@ const BlogApp = {
         let front = 0;
         let cur = -1;
 
+        // 尺寸算出来之前先把盒子藏住，避免用兜底比例先闪一下"大空框"
+        stage.style.visibility = 'hidden';
+        let revealed = false;
+        const revealBox = () => {
+            if (revealed) return;
+            revealed = true;
+            stage.style.visibility = '';
+        };
+        setTimeout(revealBox, 6000);
+
         // 盒子宽高严格等于当前图的真实像素比例（不 clamp ratio，否则会裁掉一边）：
         // 在列宽与高度上限内尽量放大，放不下就等比缩小 —— 图永远完整可见
         const fitShotBox = (img) => {
@@ -1984,7 +1994,10 @@ const BlogApp = {
                 w = Math.round(h * ratio);
             }
             if (h < 60 || w < 60) return;
-            if (w === Number(stage.dataset.w) && h === Number(stage.dataset.h)) return;
+            if (w === Number(stage.dataset.w) && h === Number(stage.dataset.h)) {
+                revealBox();
+                return;
+            }
 
             stage.style.setProperty('--shot-w', w + 'px');
             stage.style.setProperty('--shot-h', h + 'px');
@@ -1992,6 +2005,7 @@ const BlogApp = {
             stage.style.setProperty('--shot-ar', String(Math.round(ratio * 10000) / 10000));
             stage.dataset.w = String(w);
             stage.dataset.h = String(h);
+            revealBox();
         };
 
         const show = (idx) => {
