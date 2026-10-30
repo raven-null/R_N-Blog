@@ -438,20 +438,21 @@
     margin-inline: auto;
     border-radius: 18px;
     overflow: hidden;
-    background: var(--surface-2, #f3eee1);
+    /* 不设底色：盒子尺寸 = 图片比例，cover 铺满后看不到任何背景 */
+    background: transparent;
     cursor: zoom-in;
     isolation: isolate;
     box-shadow: 0 10px 30px rgba(16, 20, 32, .12);
     transition: width .45s cubic-bezier(.2, .7, .3, 1), height .45s cubic-bezier(.2, .7, .3, 1);
 }
 
-/* 盒子比例已跟图一致，cover 即完整显示；兜底用 contain 防极端裁切 */
+/* 盒子宽高 = 图片真实像素比例，cover 铺满（比例一致即完整显示、无缝隙） */
 .hv3-shot-img {
     position: absolute;
     inset: 0;
     width: 100%;
     height: 100%;
-    object-fit: contain;
+    object-fit: cover;
     opacity: 0;
     transform: scale(1.05);
     transition: opacity .9s ease, transform 7s linear;
@@ -573,8 +574,8 @@
     inset: 4px 10px 10px 6px;
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    padding: 16px 18px;
+    gap: 4px;
+    padding: 12px 14px;
     border-radius: 16px;
     text-decoration: none;
     color: inherit;
@@ -607,11 +608,12 @@
     display: flex;
     align-items: baseline;
     justify-content: space-between;
-    gap: 10px;
+    gap: 8px;
+    line-height: 1.35;
 }
 
 .hv3-project-name {
-    font-size: 15px;
+    font-size: 13.5px;
     font-weight: 650;
     color: var(--text);
     white-space: nowrap;
@@ -619,11 +621,11 @@
     text-overflow: ellipsis;
 }
 
-/* 封面截图：撑满卡片上沿（卡片有 16/18 内边距，负边距抵消） */
+/* 封面截图：撑满卡片上沿（卡片有 12/14 内边距，负边距抵消） */
 .hv3-project-cover {
     flex: none;
-    margin: -16px -18px 2px;
-    height: 108px;
+    margin: -12px -14px 0;
+    height: 100px;
     overflow: hidden;
     background: var(--surface-3, #f3eee1);
     border-bottom: 1px solid var(--border, rgba(66, 54, 32, .1));
@@ -654,33 +656,36 @@
     flex: 0 0 auto;
 }
 
+/* 信息区刚好两行：第 1 行名称+标签，第 2 行描述+域名同排 */
 .hv3-project-desc {
-    font-size: 12.5px;
-    line-height: 1.5;
+    font-size: 12px;
+    line-height: 1.45;
     color: var(--text-secondary);
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    line-clamp: 3;
-    -webkit-box-orient: vertical;
+    white-space: nowrap;
     overflow: hidden;
+    text-overflow: ellipsis;
     flex: 1 1 auto;
-    min-height: 0;
+    min-width: 0;
 }
 
 .hv3-project-foot {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    font-size: 11px;
+    gap: 8px;
+    font-size: 10.5px;
     color: var(--text-muted);
-    margin-top: auto;
+    margin-top: 0;
+    line-height: 1.35;
+    min-width: 0;
 }
 
 .hv3-project-host {
+    flex: none;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    max-width: 42%;
+    opacity: .85;
 }
 
 .hv3-project-lang {

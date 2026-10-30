@@ -1312,8 +1312,8 @@ const BlogApp = {
             // 高度 = 按真实宽高比算出来的高度，不再夹取区间：卡片多长都行
             const height = Math.max(80, Math.round(cardW * h / w));
             box.style.height = height + 'px';
-            // 图完整填充容器（宽高比已经对齐，所以既不留白也不裁切）
-            img.style.objectFit = 'fill';
+            // 宽高比已对齐，cover 即完整显示；resize 后也不会像 fill 那样被拉伸变形
+            img.style.objectFit = 'cover';
         } catch (e) { /* 兜底异常忽略 */ }
     },
 
@@ -4095,7 +4095,7 @@ const BlogApp = {
         this.initFileStack(box, { autoMs: 4200 });
     },
 
-    // 首页已上线项目卡片：封面截图 + 名称 / 标签 / 描述 / 域名
+    // 首页已上线项目卡片：封面截图 + 两行信息（名称+标签 / 描述+域名）
     hv3DeployedCard(p) {
         const cover = p.cover
             ? `<div class="hv3-project-cover"><img src="${this.escAttr(p.cover)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.closest('.hv3-project-cover')?.remove()"></div>`
@@ -4108,8 +4108,8 @@ const BlogApp = {
                     <span class="hv3-project-name">${this.esc(p.name)}</span>
                     ${tag}
                 </div>
-                <div class="hv3-project-desc">${this.esc(p.desc || '')}</div>
                 <div class="hv3-project-foot">
+                    <span class="hv3-project-desc">${this.esc(p.desc || '')}</span>
                     <span class="hv3-project-host">${this.esc(p.host || '')}</span>
                 </div>
             </a>

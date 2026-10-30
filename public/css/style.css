@@ -462,7 +462,8 @@ body.home-layout {
 .main-content {
     max-width: 100%;
     margin: 0 auto;
-    padding: 40px 48px 80px;
+    /* 左右只留少量空隙，文章尽量铺满 */
+    padding: 24px 20px 64px;
 }
 
 /* ===== 视图切换（文章 / 图库 / 每日新闻 / 我的） ===== */
@@ -1183,8 +1184,9 @@ body.home-layout {
 .card-img .img-placeholder {
     width: 100%;
     height: 100%;
-    /* 高度由 app.js 按封面真实比例设好，所以这里直接铺满：不留白、不裁切 */
-    object-fit: fill;
+    /* 高度由 app.js 按封面真实比例设好（内联 height），cover 时比例一致即完整显示；
+       极端比例被 clamp 后用 contain 兜底，绝不拉伸变形 */
+    object-fit: cover;
     object-position: center;
     transition: transform 0.4s;
 }
@@ -1549,7 +1551,7 @@ body.view-gallery-active .gallery-tag-btn {
 /* Extra large screens - 4 columns */
 @media (min-width: 1401px) {
     .main-content {
-        padding: 40px 64px 80px;
+        padding: 24px 28px 64px;
     }
 }
 
@@ -1557,7 +1559,7 @@ body.view-gallery-active .gallery-tag-btn {
 @media (max-width: 1400px) {
     .main-content {
         max-width: 100%;
-        padding: 40px 32px 80px;
+        padding: 24px 18px 64px;
     }
 
     .waterfall {
@@ -1569,7 +1571,7 @@ body.view-gallery-active .gallery-tag-btn {
 @media (max-width: 1200px) {
     .main-content {
         max-width: 100%;
-        padding: 32px 24px 60px;
+        padding: 20px 14px 56px;
     }
 
     .waterfall {
@@ -7653,14 +7655,14 @@ body.canvas-on .reading-progress {
     }
 }
 
-/* ===== 图库：图片墙（可平移缩放） ===== */
+/* ===== 图库：图片墙（可平移缩放），铺满整屏 ===== */
 .view-gallery {
     padding: 0;
     margin: 0;
     max-width: none;
 }
 
-/* 进入图库时停掉页面滚动，把整屏交给墙 */
+/* 进入图库时停掉页面滚动，把整屏交给墙；main-content 零内边距 */
 body.view-gallery-active .scroll-area {
     overflow: hidden;
 }
@@ -7668,6 +7670,7 @@ body.view-gallery-active .scroll-area {
 body.view-gallery-active .main-content {
     padding: 0;
     height: 100%;
+    max-width: none;
 }
 
 body.view-gallery-active .footer-home {
@@ -7676,7 +7679,9 @@ body.view-gallery-active .footer-home {
 
 .gallery-wall {
     position: relative;
-    height: calc(100vh - 64px);
+    /* 铺满剩余视口：顶栏 56 + nav-bar ≈ 48，不再上下留空 */
+    height: calc(100dvh - 56px);
+    width: 100%;
     overflow: hidden;
     cursor: grab;
     background: transparent;
