@@ -1813,11 +1813,59 @@ body.view-blog-active .nav-bar {
     bottom: 22px;
     display: flex;
     justify-content: space-between;
+    align-items: center;
     font-size: 11px;
     letter-spacing: .16em;
     color: #ddd8cc;
     text-shadow: 0 2px 12px rgba(0, 0, 0, .5);
     opacity: .55;
+}
+
+/* 底部右侧那组：退出 + 状态文字 */
+.ss-bottom-right {
+    display: inline-flex;
+    align-items: center;
+    gap: 14px;
+}
+
+/* 退出按钮：跟底部状态条同一套字型，不再单独做胶囊 */
+.screensaver-exit {
+    padding: 0;
+    font-family: inherit;
+    font-size: 11px;
+    letter-spacing: .16em;
+    color: inherit;
+    background: none;
+    border: 0;
+    cursor: pointer;
+    opacity: .8;
+    transition: opacity .2s ease;
+}
+
+.screensaver-exit:hover {
+    opacity: 1;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+/* 降级模式：按钮就排在「沉浸」左边 */
+.ss-bottom-right .screensaver-exit {
+    position: static;
+}
+
+/* 原版模式：fallback 整块隐藏，按钮固定到原版底部「沉浸」左侧 */
+.screensaver > .screensaver-exit {
+    position: absolute;
+    right: 128px;
+    bottom: 18px;
+    z-index: 4;
+    color: #ddd8cc;
+    text-shadow: 0 2px 12px rgba(0, 0, 0, .5);
+    opacity: .55;
+}
+
+.screensaver > .screensaver-exit:hover {
+    opacity: .95;
 }
 
 /* 纯图模式：关掉天色、柔光、花瓣和呼吸，只剩原图 */
@@ -1834,30 +1882,6 @@ body.view-blog-active .nav-bar {
 
 .screensaver.is-pure .screensaver-eyes {
     display: none;
-}
-
-.screensaver-exit {
-    position: fixed;
-    right: 18px;
-    bottom: 18px;
-    z-index: 2;
-    padding: 6px 14px;
-    font-family: inherit;
-    font-size: 12px;
-    letter-spacing: .08em;
-    color: #f2f2f7;
-    background: rgba(255, 255, 255, .12);
-    border: 1px solid rgba(255, 255, 255, .25);
-    border-radius: 999px;
-    cursor: pointer;
-    opacity: .18;
-    transition: opacity .2s ease, background .2s ease;
-}
-
-.screensaver:hover .screensaver-exit,
-.screensaver-exit:focus-visible {
-    opacity: 1;
-    background: rgba(255, 255, 255, .2);
 }
 
 body.screensaver-on {

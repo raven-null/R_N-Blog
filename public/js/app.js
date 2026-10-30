@@ -5399,6 +5399,7 @@ const BlogApp = {
         document.body.classList.toggle('screensaver-on', next);
 
         if (next) this.probeNativeScreensaver();
+        this.placeScreenSaverExit();
 
         // 原版可用：只让 iframe 跑，自带那套动画/光照全部停掉
         if (this.screenSaverNative()) {
@@ -5473,12 +5474,26 @@ const BlogApp = {
                 this.stopScreenSaverPetals();
                 this.stopScreenSaverBlink();
                 document.getElementById('screenSaverPanel')?.classList.add('is-hidden');
+                this.placeScreenSaverExit();
             })
             .catch(() => { wrap.dataset.mode = 'fallback'; });
     },
 
     screenSaverNative() {
         return document.getElementById('screenSaver')?.dataset.mode === 'native';
+    },
+
+    // 退出按钮放哪：降级模式排到底部「沉浸」左边，原版模式固定到底部同一行
+    placeScreenSaverExit() {
+        const btn = document.getElementById('screenSaverExit');
+        const slot = document.getElementById('ssBottomRight');
+        const wrap = document.getElementById('screenSaver');
+        if (!btn || !slot || !wrap) return;
+        if (this.screenSaverNative()) {
+            if (btn.parentElement !== wrap) wrap.appendChild(btn);
+        } else if (btn.parentElement !== slot) {
+            slot.appendChild(btn);
+        }
     },
 
     // 屏保状态（延续到下次进入，不写 localStorage）
