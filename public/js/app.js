@@ -333,14 +333,59 @@ const BlogApp = {
             input.addEventListener('input', () => this.searchPosts(input.value));
         }
 
-        // 点「更多」外面自动收起标签下拉（只绑一次）
+        const moreBtn = document.getElementById('blogMoreBtn');
+        if (moreBtn && !moreBtn.dataset.bound) {
+            moreBtn.dataset.bound = '1';
+            moreBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.toggleBlogTagPanel();
+            });
+        }
+
+        // 点「更多」外面自动收起（只绑一次）
         if (!document.body.dataset.tagsOutsideBound) {
             document.body.dataset.tagsOutsideBound = '1';
             document.addEventListener('click', (e) => {
-                const panel = document.getElementById('tagsDropdown');
-                if (!panel || !panel.classList.contains('show')) return;
-                if (e.target.closest('#tagsDropdown') || e.target.closest('.blog-bar-more')) return;
-                this.closeTagsPanel();
+                const panel = document.getElementById('blogTagPanel');
+                if (!panel || panel.hidden) return;
+                if (e.target.closest('#blogTagPanel') || e.target.closest('#blogMoreBtn')) return;
+                this.toggleBlogTagPanel(false);
+            });
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') this.toggleBlogTagPanel(false);
+            });
+        }
+    },
+
+    // 文章页「更多 ▾」：展开 / 收起全部标签面板
+    toggleBlogTagPanel(force) {
+        const panel = document.getElementById('blogTagPanel');
+        const btn = document.getElementById('blogMoreBtn');
+        if (!panel) return;
+        const open = force === undefined ? panel.hidden : !!force;
+        panel.hidden = !open;
+        if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+        if (open) this.renderBlogTagPanel();
+    },
+
+    // 全部标签（带文章数），点一个就筛选并收起面板
+    renderBlogTagPanel() {
+        const list = document.getElementById('blogTagPanelList');
+        if (!list) return;
+        const counts = new Map();
+        (this.posts || []).forEach(p => (p.tags || []).forEach(t => counts.set(t, (counts.get(t) || 0) + 1)));
+        const tags = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+        const chip = (tag, label, extra, on) =>
+            `<button class="blog-tag${on ? ' is-on' : ''}" type="button" data-blog-tag="${this.escAttr(tag)}">${this.esc(label)}${extra ? `<span class="blog-tag-count">${extra}</span>` : ''}</button>`;
+        list.innerHTML = chip('', '全部', '', !this.currentTag)
+            + tags.map(([t, c]) => chip(t, t, c, this.currentTag === t)).join('');
+        if (!list.dataset.bound) {
+            list.dataset.bound = '1';
+            list.addEventListener('click', (e) => {
+                const btn = e.target.closest('[data-blog-tag]');
+                if (!btn) return;
+                this.toggleBlogTagPanel(false);
+                this.filterByTag(btn.dataset.blogTag || null);
             });
         }
     },

@@ -15,7 +15,7 @@
     <meta property="og:image" content="https://ravennull.work/images/Default/web-logo.webp">
     <meta property="og:locale" content="zh_CN">
     <meta name="twitter:card" content="summary">
-    <link rel="stylesheet" href="css/bundle.css?v=fdec099b63">
+    <link rel="stylesheet" href="css/bundle.css?v=50afea4df1">
     <title>渡鸦 NULL · 日光与暮色之间</title>
     <link rel="icon" id="siteFavicon" href="/images/Default/web-logo.webp" type="image/webp">
     <link rel="apple-touch-icon" href="/images/Default/web-logo.webp">
@@ -145,10 +145,10 @@
                         </div>
                         <div class="blog-bar-right">
                             <div class="blog-bar-tags" id="blogBarTags"></div>
-                            <button class="blog-bar-more" type="button" onclick="BlogApp.toggleTagsPanel()" title="全部标签">更多 <span aria-hidden="true">▾</span></button>
-                            <div class="tags-dropdown" id="tagsDropdown">
-                                <div class="tags-dropdown-title" id="tagsDropdownTitle">全部标签</div>
-                                <div class="tags-dropdown-list" id="tagsDropdownList"></div>
+                            <button class="blog-bar-more" type="button" id="blogMoreBtn" aria-expanded="false" title="全部标签">更多 <span aria-hidden="true">▾</span></button>
+                            <div class="blog-tag-panel" id="blogTagPanel" hidden>
+                                <div class="blog-tag-panel-title">全部标签</div>
+                                <div class="blog-tag-panel-list" id="blogTagPanelList"></div>
                             </div>
                             <label class="blog-bar-search">
                                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -497,7 +497,7 @@
     <script src="js/theme.js?v=20261030c" defer></script>
     <!-- 桌宠动效引擎（spring-driven character，见 public/vendor/grok/README.md） -->
 
-    <script src="js/app.js?v=20261101p" defer></script>
+    <script src="js/app.js?v=20261101q" defer></script>
     <script src="js/animations.js?v=3.14.0" defer></script>
 
     <script>
