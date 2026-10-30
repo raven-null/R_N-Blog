@@ -179,6 +179,37 @@
   to = "/screensaver/_next/:splat"
   status = 200
 
+# 素材已压成 webp（PNG 10.2MB → 1.46MB），保持原版 .png 路径不变、换实际文件
+[[redirects]]
+  from = "/art/kumeng-albedo.png"
+  to = "/screensaver/art/kumeng-albedo.webp"
+  status = 200
+
+[[redirects]]
+  from = "/art/kumeng-closed-eyes.png"
+  to = "/screensaver/art/kumeng-closed-eyes.webp"
+  status = 200
+
+[[redirects]]
+  from = "/art/kumeng-normal-v3.png"
+  to = "/screensaver/art/kumeng-normal-v3.webp"
+  status = 200
+
+[[redirects]]
+  from = "/art/kumeng-normal.png"
+  to = "/screensaver/art/kumeng-normal.webp"
+  status = 200
+
+[[redirects]]
+  from = "/art/petal.png"
+  to = "/screensaver/art/petal.webp"
+  status = 200
+
+[[redirects]]
+  from = "/art/white-rose-petal.png"
+  to = "/screensaver/art/white-rose-petal.webp"
+  status = 200
+
 [[redirects]]
   from = "/art/*"
   to = "/screensaver/art/:splat"
