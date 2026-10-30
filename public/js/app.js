@@ -581,6 +581,8 @@ const BlogApp = {
 
         // 图库分类按钮仅在图库视图显示
         document.body.classList.toggle('view-gallery-active', view === 'gallery');
+        // 文章页铺满左右：首页那条 1200px 限宽（renewal.css）只该管首页
+        document.body.classList.toggle('view-blog-active', view === 'blog');
         // 切换视图时隐藏分类面板
         const tagPanel = document.getElementById('galleryTagFloatPanel');
         if (tagPanel) tagPanel.classList.remove('show');

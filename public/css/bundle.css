@@ -13601,3 +13601,26 @@ html[data-theme="dark"] .hv3-shot {
     .hv3-projects { min-height: 280px; }
     .hv3-item-title { font-size: 16px; }
 }
+
+/* ============================================================
+   文章页：内容铺满左右
+   renewal.css 里 `body.home-layout .main-content{max-width:1200px}` 本是给首页的，
+   但 <body> 一直带着 home-layout，文章页也被卡在 1200px、两侧留大片空白。
+   这里按视图解除限宽；瀑布流改成「列宽驱动」，窗口越宽列越多，不会被拉成巨卡。
+   ============================================================ */
+body.view-blog-active .main-content {
+    max-width: none !important;
+    width: 100% !important;
+    padding: 24px 28px 64px !important;
+}
+
+body.view-blog-active .waterfall {
+    column-count: auto;
+    column-width: 300px;
+}
+
+@media (max-width: 760px) {
+    body.view-blog-active .main-content {
+        padding: 20px 16px 60px !important;
+    }
+}
