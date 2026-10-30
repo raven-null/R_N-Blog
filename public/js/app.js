@@ -1059,7 +1059,7 @@ const BlogApp = {
 
     // 渲染主页「今日简报」（无限下滑：初始一批，滚到底继续追加）
     async renderHomeNews() {
-        const list = document.getElementById('newsList');
+        const list = document.getElementById('hv3News');
         if (!list || list.dataset.rendered) return;
         list.dataset.rendered = '1';
         try {
@@ -1070,7 +1070,7 @@ const BlogApp = {
             this.startNewsTicker(list, items);
         } catch (e) {
             console.error('资讯加载失败:', e);
-            list.innerHTML = '<div class="home-empty">资讯加载失败，稍后再试</div>';
+            list.innerHTML = '<div class="hv3-empty">资讯加载失败，稍后再试</div>';
         }
     },
 
@@ -1079,12 +1079,12 @@ const BlogApp = {
         if (!list) return;
         const pool = (items || []).filter((it) => it && it.title);
         if (!pool.length) {
-            list.innerHTML = '<div class="home-empty">暂无资讯</div>';
+            list.innerHTML = '<div class="hv3-empty">暂无资讯</div>';
             return;
         }
-        const html = pool.map((it) => this.newsItemHTML(it)).join('');
+        const html = pool.map((it) => this.hv3NewsItemHTML(it)).join('');
         // 复制两份：内容比盒子高多少都能一直滚下去
-        list.innerHTML = '<div class="hv-ticker-track">' + html + html + '</div>';
+        list.innerHTML = '<div class="hv3-ticker-track">' + html + html + '</div>';
         const track = list.firstElementChild;
         if (!track) return;
         // 时长跟条目数走（一条约 3.2s，最短 24s），读起来不快不慢
@@ -1104,6 +1104,15 @@ const BlogApp = {
                 track.style.animation = 'none';
             }
         });
+    },
+
+    // 首页简报条目的 HTML（hv3 结构，与新闻视图的 news-item 互不影响）
+    hv3NewsItemHTML(it) {
+        return '<a class="hv3-news-item" href="' + this.escAttr(it.url || '#') + '" target="_blank" rel="noopener">'
+            + '<span class="hv3-news-cat">' + this.esc(it.source || it.category || '资讯') + '</span>'
+            + '<span class="hv3-news-title">' + this.esc(it.title) + '</span>'
+            + '<span class="hv3-news-meta">' + this.esc(it.source || '') + (it.date ? ' · ' + this.formatDate(it.date) : '') + '</span>'
+            + '</a>';
     },
 
     // 简报：鼠标悬停时自动缓慢滚动（来回走，不会卡在底）
@@ -1416,9 +1425,9 @@ const BlogApp = {
     // 主页身份区：头像 / 名字 / 简介跟随博客设置
     renderHomeIdentity() {
         const settings = this.getBlogSettings && this.getBlogSettings();
-        const nameEl = document.querySelector('.hv-name');
-        const bioEl = document.querySelector('.hv-bio');
-        const avatarEl = document.querySelector('.hv-avatar');
+        const nameEl = document.querySelector('.hv3-name');
+        const bioEl = document.querySelector('.hv3-bio');
+        const avatarEl = document.querySelector('.hv3-avatar');
         const name = (settings && (settings.authorName || settings.name)) || "博主";
         if (nameEl && nameEl.textContent !== name) {
             nameEl.textContent = name;
@@ -1625,14 +1634,14 @@ const BlogApp = {
 
     // ---------- 主页仪表盘：精选文章 / 照片带 ----------
 
-    // 文章轮播：全部文章都在里面，自动切换 + 左右按钮
+    // 文章轮播：全部文章都在里面，自动切换 + 左右按钮（home.css 的 hv3-* 结构）
     renderHvPosts() {
-        const track = document.getElementById('hvCarTrack');
+        const track = document.getElementById('hv3Track');
         if (!track) return;
         const posts = Array.isArray(this.posts) ? this.posts : [];
         if (!posts.length) {
             if (!track.dataset.empty) {
-                track.innerHTML = '<div class="home-empty">还没有文章</div>';
+                track.innerHTML = '<div class="hv3-empty">还没有文章</div>';
                 track.dataset.empty = '1';
             }
             return;
@@ -1643,35 +1652,35 @@ const BlogApp = {
             const href = 'article.html?post=' + encodeURIComponent(post.filename || '');
             const title = this.esc(post.title || '无标题');
             const date = this.formatDate ? this.formatDate(post.date) : (post.date || '');
-            const tag = (post.tags && post.tags[0]) ? '<span class="hv-post-tag">' + this.esc(post.tags[0]) + '</span>' : '';
+            const tag = (post.tags && post.tags[0]) ? '<span class="hv3-tag">' + this.esc(post.tags[0]) + '</span>' : '';
             const cover = post.image
-                ? '<span class="hv-car-cover"><img src="' + this.escAttr(post.image) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.parentNode.remove()"></span>'
+                ? '<span class="hv3-cover"><img src="' + this.escAttr(post.image) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.parentNode.style.display=\'none\'"></span>'
                 : '';
-            return '<a class="hv-car-item" href="' + href + '">'
+            return '<a class="hv3-item" href="' + href + '">'
                 + cover
-                + '<span class="hv-car-body">'
-                + '<span class="hv-car-title">' + title + '</span>'
-                + '<span class="hv-car-meta"><span>' + date + '</span>' + tag + '</span>'
+                + '<span class="hv3-body">'
+                + '<span class="hv3-item-title">' + title + '</span>'
+                + '<span class="hv3-item-meta"><span>' + date + '</span>' + tag + '</span>'
                 + '</span>'
                 + '</a>';
         }).join('');
 
-        // 封面图读完原始尺寸后，按比例定卡高
-        track.querySelectorAll('.hv-car-cover img').forEach((img) => {
+        // 封面图读完原始尺寸后，按比例定封面高度（盒子跟着封面变）
+        track.querySelectorAll('.hv3-cover img').forEach((img) => {
             const fix = () => {
                 const w = img.naturalWidth;
                 const h = img.naturalHeight;
                 if (!w || !h) return;
                 let ratio = w / h;
-                ratio = Math.max(0.9, Math.min(1.9, ratio));   // 别让长图把卡片拉飞
-                const item = img.closest('.hv-car-item');
+                ratio = Math.max(0.9, Math.min(1.9, ratio));   // 别让极端长图把卡片拉飞
+                const item = img.closest('.hv3-item');
                 if (item) item.style.setProperty('--cover-ratio', String(ratio));
                 this.syncCarouselHeight();
             };
             if (img.complete && img.naturalWidth) fix();
             else img.addEventListener('load', fix, { once: true });
             img.addEventListener('error', () => {
-                const cover = img.closest('.hv-car-cover');
+                const cover = img.closest('.hv3-cover');
                 if (cover) cover.style.display = 'none';
                 this.syncCarouselHeight();
             }, { once: true });
@@ -1685,10 +1694,10 @@ const BlogApp = {
 
     // 轮播容器高度跟着当前这张卡的封面走（盒子随封面比例伸缩）
     syncCarouselHeight() {
-        const carousel = document.getElementById('hvCarousel');
-        const track = document.getElementById('hvCarTrack');
+        const carousel = document.getElementById('hv3Car');
+        const track = document.getElementById('hv3Track');
         if (!carousel || !track) return;
-        const items = [...track.querySelectorAll('.hv-car-item')];
+        const items = [...track.querySelectorAll('.hv3-item')];
         if (!items.length) return;
         const w = items[0].getBoundingClientRect().width || track.clientWidth || 0;
         if (!w) return;
@@ -1705,7 +1714,7 @@ const BlogApp = {
 
     // 轮播：按钮翻页 + 自动播放
     bindCarousel() {
-        const track = document.getElementById('hvCarTrack');
+        const track = document.getElementById('hv3Track');
         if (!track || track.dataset.carBound) return;
         track.dataset.carBound = '1';
 
@@ -1721,8 +1730,8 @@ const BlogApp = {
         }, { passive: true });
 
         const step = () => {
-            const first = track.querySelector('.hv-car-item');
-            const w = first ? first.getBoundingClientRect().width + 16 : track.clientWidth / 2;
+            const first = track.querySelector('.hv3-item');
+            const w = first ? first.getBoundingClientRect().width : track.clientWidth / 2;
             return Math.max(120, w);
         };
 
@@ -1738,7 +1747,7 @@ const BlogApp = {
             setTimeout(() => this.syncCarouselHeight(), 620);
         };
 
-        document.getElementById('hvCarousel')?.addEventListener('click', (e) => {
+        document.getElementById('hv3Car')?.addEventListener('click', (e) => {
             const btn = e.target.closest('[data-car-dir]');
             if (!btn) return;
             e.preventDefault();
@@ -1753,7 +1762,7 @@ const BlogApp = {
             timer = setInterval(() => slide(1), 8000);
         };
         const restartAuto = () => startAuto();
-        const carousel = document.getElementById('hvCarousel');
+        const carousel = document.getElementById('hv3Car');
         if (carousel) {
             carousel.addEventListener('mouseenter', () => clearInterval(timer));
             carousel.addEventListener('mouseleave', startAuto);
@@ -1763,7 +1772,7 @@ const BlogApp = {
 
     // 生活切片：从整个图库里随机抽图，一直播（双层交叉淡入，点一下看大图）
     async renderHvPhotos() {
-        const stage = document.getElementById('hvPhotos');
+        const stage = document.getElementById('hv3Shots');
         if (!stage || stage.dataset.loaded) return;
         stage.dataset.loaded = '1';
 
@@ -1779,14 +1788,14 @@ const BlogApp = {
         }
 
         if (!photos.length) {
-            const wrap = stage.closest('.hv-photo-box');
+            const wrap = stage.closest('.hv3-shots');
             if (wrap) wrap.style.display = 'none';
             return;
         }
 
-        const layers = [...stage.querySelectorAll('.hv-shot-img')];
+        const layers = [...stage.querySelectorAll('.hv3-shot-img')];
         if (layers.length < 2) return;
-        const meta = document.getElementById('hvShotMeta');
+        const meta = document.getElementById('hv3ShotMeta');
         const total = photos.length;
         let front = 0;
         let cur = -1;
@@ -3876,18 +3885,40 @@ const BlogApp = {
 
     // 渲染主页「我的项目」（GitHub 仓库卡片，单行横向，可拖拽/滑动查看）
     async renderHomeProjects() {
-        const box = document.getElementById('homeProjectsGrid');
+        const box = document.getElementById('hv3Projects');
         if (!box || box.dataset.rendered) return;
         box.dataset.rendered = '1';
 
         const items = await this.loadGithubRepos();
         if (!items.length) {
-            box.innerHTML = '<div class="home-empty">项目列表暂时不可用</div>';
+            box.innerHTML = '<div class="hv3-empty">项目列表暂时不可用</div>';
             return;
         }
 
-        box.innerHTML = items.map(repo => this.githubRepoCard(repo)).join('');
+        box.innerHTML = items.map(repo => this.hv3RepoCard(repo)).join('');
         this.initFileStack(box, { autoMs: 4200 });
+    },
+
+    // 首页项目卡片（hv3 结构；项目页仍用 githubRepoCard 那套）
+    hv3RepoCard(repo) {
+        const color = this.escAttr(repo.languageColor || '#8b8b8b');
+        const lang = repo.language
+            ? `<span class="hv3-project-lang"><i style="background:${color}"></i>${this.esc(repo.language)}</span>`
+            : '';
+        const stars = Number(repo.stars) > 0 ? `<span class="hv3-project-star">★ ${Number(repo.stars)}</span>` : '';
+        return `
+            <a class="hv3-project" href="${this.escAttr(repo.htmlUrl)}" target="_blank" rel="noopener">
+                <div class="hv3-project-head">
+                    <span class="hv3-project-name">${this.esc(repo.name)}</span>
+                    ${stars}
+                </div>
+                <div class="hv3-project-desc">${this.esc(repo.description || '暂无描述')}</div>
+                <div class="hv3-project-foot">
+                    ${lang}
+                    <span class="hv3-project-time">${this.relativeTime(repo.updatedAt)}</span>
+                </div>
+            </a>
+        `;
     },
 
     // 项目横向列表：鼠标按住拖拽滚动（触屏走原生滑动，不显示滚动条）
@@ -4521,10 +4552,10 @@ const BlogApp = {
     // 项目：文件堆叠（照「文件堆叠」设计稿）——卡片带旋转偏移叠一摞，滚轮或定时换最上面那张
     initFileStack(box, opts = {}) {
         if (!box || box.dataset.stackBound) return;
-        const cards = [...box.children].filter((el) => el.nodeType === 1 && !el.classList.contains('home-empty'));
+        const cards = [...box.children].filter((el) => el.nodeType === 1 && !el.classList.contains('hv3-empty'));
         if (!cards.length) return;
         box.dataset.stackBound = '1';
-        box.classList.add('is-file-stack');
+        box.classList.add('is-stack');
 
         // 层叠参数：最上面 -1.6°，往下依次 +1.2° / +2.6° / +3.8°
         const LAYERS = [
@@ -4594,7 +4625,7 @@ const BlogApp = {
 
     // 旧入口保留：项目堆叠统一走 initFileStack
     initProjectStack() {
-        this.initFileStack(document.getElementById('homeProjectsGrid'), { autoMs: 4200 });
+        this.initFileStack(document.getElementById('hv3Projects'), { autoMs: 4200 });
     },
 
     // 照片：全部堆成一摞
