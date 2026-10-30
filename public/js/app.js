@@ -4315,7 +4315,7 @@ const BlogApp = {
         }
     },
 
-    // 渲染主页「创造与探索」：已上线站点卡片（带封面截图），文件堆叠展示
+    // 渲染主页「创造与探索」：已上线站点两列小卡（封面 + 名称 + 域名）
     async renderHomeProjects() {
         const box = document.getElementById('hv3Projects');
         if (!box || box.dataset.rendered) return;
@@ -4328,26 +4328,22 @@ const BlogApp = {
         }
 
         box.innerHTML = items.map(p => this.hv3DeployedCard(p)).join('');
-        this.initFileStack(box, { autoMs: 4200 });
     },
 
-    // 首页已上线项目卡片：封面截图 + 两行信息（名称+标签 / 描述+域名）
+    // 首页已上线项目卡片：封面截图 + 名称/标签 + 域名
     hv3DeployedCard(p) {
         const cover = p.cover
             ? `<div class="hv3-project-cover"><img src="${this.escAttr(p.cover)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.closest('.hv3-project-cover')?.remove()"></div>`
             : '';
         const tag = p.tag ? `<span class="hv3-project-tag">${this.esc(p.tag)}</span>` : '';
         return `
-            <a class="hv3-project" href="${this.escAttr(p.url)}" target="_blank" rel="noopener">
+            <a class="hv3-project" href="${this.escAttr(p.url)}" target="_blank" rel="noopener" title="${this.escAttr(p.desc || '')}">
                 ${cover}
                 <div class="hv3-project-head">
                     <span class="hv3-project-name">${this.esc(p.name)}</span>
                     ${tag}
                 </div>
-                <div class="hv3-project-foot">
-                    <span class="hv3-project-desc">${this.esc(p.desc || '')}</span>
-                    <span class="hv3-project-host">${this.esc(p.host || '')}</span>
-                </div>
+                <span class="hv3-project-host">${this.esc(p.host || '')}</span>
             </a>
         `;
     },
@@ -5075,9 +5071,9 @@ const BlogApp = {
         startAuto();
     },
 
-    // 旧入口保留：项目堆叠统一走 initFileStack
+    // 旧入口保留：项目已改成两列网格，不再叠一摞（保留空实现防旧调用报错）
     initProjectStack() {
-        this.initFileStack(document.getElementById('hv3Projects'), { autoMs: 4200 });
+        this.renderHomeProjects();
     },
 
     // 照片：全部堆成一摞

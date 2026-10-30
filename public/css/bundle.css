@@ -13043,12 +13043,12 @@ body.home-layout .hv-news-box #newsList .news-item-meta{font-family:var(--font-s
 }
 
 /* ============================================================
-   04 · 创造与探索：文件堆叠
+   04 · 创造与探索：两列小卡（封面 + 名称 + 域名）
    ============================================================ */
 .hv3-projects {
     /* 右列最后一块：有富余高度就长高，把两列底部拉齐 */
     flex: 1 1 auto;
-    min-height: 300px;
+    min-height: 240px;
 }
 
 .hv3-stack {
@@ -13058,39 +13058,37 @@ body.home-layout .hv-news-box #newsList .news-item-meta{font-family:var(--font-s
     margin: 2px 8px 10px 2px;
 }
 
+/* 项目排成 2 列网格，行高自动吃掉容器剩余高度 */
+.hv3-project-grid {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-rows: minmax(96px, 1fr);
+    gap: 10px;
+    align-content: stretch;
+}
+
 .hv3-project {
-    position: absolute;
-    inset: 4px 10px 10px 6px;
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    padding: 12px 14px;
-    border-radius: 16px;
+    gap: 3px;
+    min-width: 0;
+    padding: 9px 11px 10px;
+    border-radius: 14px;
     text-decoration: none;
     color: inherit;
     background: var(--glass-card-strong, rgba(255, 253, 248, .92));
     border: 1px solid var(--glass-line, rgba(255, 255, 255, .5));
-    box-shadow: 0 8px 22px rgba(20, 26, 44, .1);
+    box-shadow: 0 6px 18px rgba(20, 26, 44, .08);
     overflow: hidden;
-    transform-origin: 50% 55%;
-    transform:
-        rotate(var(--stack-rot, 0deg))
-        translate(var(--stack-x, 0px), var(--stack-y, 0px))
-        scale(var(--stack-s, 1));
-    opacity: var(--stack-o, 1);
-    transition:
-        transform .5s cubic-bezier(.25, .46, .45, .94),
-        opacity .35s ease,
-        box-shadow .3s ease;
-    will-change: transform;
+    transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease;
 }
 
-/* 还没开始堆叠（数据没到 / 加载失败）时按普通卡片流排 */
-.hv3-stack:not(.is-stack) > .hv3-project {
-    position: static;
-    transform: none;
-    opacity: 1;
-    inset: auto;
+.hv3-project:hover {
+    transform: translateY(-2px);
+    border-color: var(--accent);
+    box-shadow: 0 12px 26px rgba(20, 26, 44, .14);
 }
 
 .hv3-project-head {
@@ -13102,7 +13100,7 @@ body.home-layout .hv-news-box #newsList .news-item-meta{font-family:var(--font-s
 }
 
 .hv3-project-name {
-    font-size: 13.5px;
+    font-size: 13px;
     font-weight: 650;
     color: var(--text);
     white-space: nowrap;
@@ -13110,14 +13108,13 @@ body.home-layout .hv-news-box #newsList .news-item-meta{font-family:var(--font-s
     text-overflow: ellipsis;
 }
 
-/* 封面截图：撑满卡片上沿（卡片有 12/14 内边距，负边距抵消） */
+/* 封面截图：卡片上沿（负边距抵消卡片内边距），有富余高度时自己长高 */
 .hv3-project-cover {
-    flex: none;
-    margin: -12px -14px 0;
-    height: 100px;
+    flex: 1 1 auto;
+    min-height: 46px;
+    margin: -9px -11px 5px;
     overflow: hidden;
     background: var(--surface-3, #f3eee1);
-    border-bottom: 1px solid var(--border, rgba(66, 54, 32, .1));
 }
 
 .hv3-project-cover img {
@@ -13170,10 +13167,12 @@ body.home-layout .hv-news-box #newsList .news-item-meta{font-family:var(--font-s
 
 .hv3-project-host {
     flex: none;
+    font-size: 10.5px;
+    color: var(--text-muted);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 42%;
+    max-width: 100%;
     opacity: .85;
 }
 
