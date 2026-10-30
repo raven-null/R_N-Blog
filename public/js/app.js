@@ -2291,6 +2291,7 @@ const BlogApp = {
         const journalBox = document.getElementById('homeJournalBox');
         if (!box) return;
         this.bindCalendarWheel();
+        this.bindCalendarClicks();
         if (!this.lifeAdminKey()) {
             box.style.display = 'none';
             if (journalBox) journalBox.style.display = 'none';
@@ -2675,6 +2676,33 @@ const BlogApp = {
         await this.loadLifeMonth(month);
     },
 
+    // 日历点击（登录前也绑上：未登录时点日期至少给提示，别让人以为日历坏了）
+    bindCalendarClicks() {
+        const cal = document.getElementById('homeCalendar');
+        if (!cal || cal.dataset.clickBound) return;
+        cal.dataset.clickBound = '1';
+        cal.addEventListener('click', (e) => {
+            const cell = e.target.closest('.cal-day');
+            const act = e.target.closest('[data-cal-act]');
+            if (!act && (!cell || !cell.dataset.date)) return;
+            if (!this.lifeAdminKey()) {
+                if (cell) {
+                    document.querySelectorAll('#homeCalendar .cal-day').forEach(el => {
+                        el.classList.toggle('is-selected', el === cell);
+                    });
+                }
+                this.petSay('先在后台登录，才能写任务和日记～', 3800);
+                return;
+            }
+            if (act) {
+                e.preventDefault();
+                this.openLifeEditor(act.dataset.calAct);
+                return;
+            }
+            this.selectLifeDate(cell.dataset.date);
+        });
+    },
+
     bindLifeEvents() {
         const box = document.getElementById('homeLife');
         if (!box || box.dataset.bound) return;
@@ -2732,19 +2760,7 @@ const BlogApp = {
             if (e.target.closest('[data-journal-new]')) this.openLifeEditor('journal');
         });
 
-        // 日历点击联动（日历会重建，用事件委托）
-        document.getElementById('homeCalendar')?.addEventListener('click', (e) => {
-            // 日历底部的「＋任务 / ✎日记」：直接打开对应表单
-            const act = e.target.closest('[data-cal-act]');
-            if (act) {
-                e.preventDefault();
-                this.openLifeEditor(act.dataset.calAct);
-                return;
-            }
-            const cell = e.target.closest('.cal-day');
-            if (!cell || !cell.dataset.date) return;
-            this.selectLifeDate(cell.dataset.date);
-        });
+        // 日历点击联动已挪到 bindCalendarClicks（未登录也要能提示）
     },
 
     // ===================== 主页盒子的自由交互 =====================
