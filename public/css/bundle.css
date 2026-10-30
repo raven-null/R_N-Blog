@@ -14176,35 +14176,6 @@ body.view-blog-active .nav-bar {
     opacity: .45;
 }
 
-/* 左上品牌 */
-.ss-brand {
-    position: absolute;
-    left: 44px;
-    top: 32px;
-    display: flex;
-    align-items: baseline;
-    gap: 10px;
-    color: #ece7dc;
-    text-shadow: 0 2px 18px rgba(0, 0, 0, .55);
-}
-
-.ss-brand-mark {
-    font-size: 15px;
-    opacity: .85;
-}
-
-.ss-brand-name {
-    font-size: 15px;
-    letter-spacing: .34em;
-    font-weight: 500;
-}
-
-.ss-brand-en {
-    font-size: 10px;
-    letter-spacing: .34em;
-    opacity: .5;
-}
-
 /* 左侧主视觉：英文小标 + 大时钟 + 日期 + 引用 */
 .screensaver-hero {
     position: absolute;
