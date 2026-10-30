@@ -2351,8 +2351,6 @@ const BlogApp = {
             if (journalBox) journalBox.style.display = 'none';
             // 未登录：写作按钮换成「去后台登录」入口
             document.getElementById('hv3TodayPanel')?.classList.add('is-guest');
-            const guestHint = document.getElementById('todayGuestHint');
-            if (guestHint) guestHint.hidden = false;
             this.updateTodayHeader();
             return;
         }
