@@ -1921,20 +1921,26 @@ const BlogApp = {
         let front = 0;
         let cur = -1;
 
-        // 盒子高度跟着当前图走：宽由列宽定，高 = 宽 / 图片比例（竖图变高、横图变扁）
+        // 盒子宽高都跟着当前图走（与文章轮播同一套思路）：
+        // 先按可用宽定，竖图变窄变高、横图变宽变扁 —— 图完整显示，不裁切
         const fitShotBox = (img) => {
-            const w = img.naturalWidth;
-            const h = img.naturalHeight;
-            if (!w || !h) return;
-            const boxW = stage.clientWidth || stage.parentElement?.clientWidth || 0;
-            if (!boxW) return;
-            let ratio = w / h;
+            const nw = img.naturalWidth;
+            const nh = img.naturalHeight;
+            if (!nw || !nh) return;
+            const availW = stage.parentElement ? stage.parentElement.clientWidth : stage.clientWidth;
+            if (!availW) return;
+            let ratio = nw / nh;
             ratio = Math.max(0.55, Math.min(2.4, ratio));
-            let boxH = Math.round(boxW / ratio);
-            // 上下限：别把左列撑爆，也别矮成一条
+
+            // 先按高度上限摆，放不下就回退成占满可用宽（与 syncCarouselHeight 一致）
             const maxH = Math.min(window.innerHeight * 0.55, 480);
-            boxH = Math.max(140, Math.min(maxH, boxH));
-            stage.style.setProperty('--shot-h', boxH + 'px');
+            let h = maxH;
+            let w = Math.round(h * ratio);
+            if (w > availW) { w = availW; h = Math.round(w / ratio); }
+            if (h < 120 || w < 120) return;
+
+            stage.style.setProperty('--shot-w', w + 'px');
+            stage.style.setProperty('--shot-h', h + 'px');
         };
 
         const show = (idx) => {
@@ -1975,6 +1981,18 @@ const BlogApp = {
 
         nextShot();
         const timer = setInterval(() => { if (!document.hidden) nextShot(); }, 5000);
+
+        // 视口变化后可用宽度变了，尺寸要重算（与轮播 resize 一致）
+        let resizePending = false;
+        window.addEventListener('resize', () => {
+            if (resizePending) return;
+            resizePending = true;
+            requestAnimationFrame(() => {
+                resizePending = false;
+                const frontImg = layers[front];
+                if (frontImg && frontImg.naturalWidth) fitShotBox(frontImg);
+            });
+        }, { passive: true });
 
         stage.addEventListener('click', () => {
             const p = photos[cur];

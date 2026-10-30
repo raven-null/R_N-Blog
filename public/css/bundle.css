@@ -12784,7 +12784,7 @@ body.home-layout .hv-news-box #newsList .news-item-meta{font-family:var(--font-s
 }
 
 /* ============================================================
-   02 · 生活切片：图库随机播放，盒子跟当前图比例伸缩
+   02 · 生活切片：图库随机播放，宽高都跟当前图比例走（完整显示不裁切）
    ============================================================ */
 .hv3-shots {
     flex: 0 0 auto;
@@ -12792,23 +12792,27 @@ body.home-layout .hv-news-box #newsList .news-item-meta{font-family:var(--font-s
 
 .hv3-shot {
     position: relative;
-    width: 100%;
+    /* 宽高都由当前图比例算（fitShotBox 写 --shot-w / --shot-h）：
+       竖图变窄变高、横图变宽变扁，整块跟着图变大小，居中显示 */
+    width: var(--shot-w, 100%);
     height: var(--shot-h, 220px);
+    margin-inline: auto;
     border-radius: 18px;
     overflow: hidden;
     background: var(--surface-2, #f3eee1);
     cursor: zoom-in;
     isolation: isolate;
     box-shadow: 0 10px 30px rgba(16, 20, 32, .12);
-    transition: height .45s cubic-bezier(.2, .7, .3, 1);
+    transition: width .45s cubic-bezier(.2, .7, .3, 1), height .45s cubic-bezier(.2, .7, .3, 1);
 }
 
+/* 盒子比例已跟图一致，cover 即完整显示；兜底用 contain 防极端裁切 */
 .hv3-shot-img {
     position: absolute;
     inset: 0;
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
     opacity: 0;
     transform: scale(1.05);
     transition: opacity .9s ease, transform 7s linear;
