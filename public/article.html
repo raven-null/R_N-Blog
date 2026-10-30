@@ -2120,7 +2120,7 @@
     </style>
     <link rel="stylesheet" href="/css/responsive.css?v=1.0.0">
     <link rel="stylesheet" href="/css/mobile.css?v=1.0.0">
-    <link rel="stylesheet" href="/css/tokens.css?v=1.6.0">
+    <link rel="stylesheet" href="/css/tokens.css?v=1.7.0">
     <link rel="stylesheet" href="/css/sky.css?v=20261101a">
     <script src="/js/tone.js?v=20261030" defer></script>
 <script src="/js/experience.js?v=20261031b" defer></script>
@@ -2296,7 +2296,6 @@
                 <div class="reader-toolbar-group">
                     <button class="reader-btn" id="readerLineHeight" title="切换行距">行距</button>
                     <button class="reader-btn" id="readerFontFamily" title="切换字体">衬线</button>
-                    <button class="reader-btn" id="readerHand" title="正文手写体" aria-pressed="false">手写</button>
                 </div>
                 <div class="reader-toolbar-sep"></div>
                 <div class="reader-toolbar-group">
@@ -2416,26 +2415,13 @@
     </div>
 
     <script>
-        // 正文手写开关（与首页共用 html.hand-body + localStorage；CSS 规则挂在 html 上，不能加到 body）
+        // 手写体是「首页 hero 的笔形按钮」在全站总开关，文章页只跟随设置、不再自己开一个开关：
+        // 进页时把 <html> 上的 hand-body 同步成 localStorage 里的值即可（首帧由 head 里的脚本先行套用）
         (function () {
-            var KEY = 'blog-hand-body';
-            var btn = document.getElementById('readerHand');
-            var root = document.documentElement;
-            var sync = function (on) {
-                root.classList.toggle('hand-body', !!on);
-                if (btn) btn.setAttribute('aria-pressed', on ? 'true' : 'false');
-            };
-            var saved = false;
-            try { saved = localStorage.getItem(KEY) === '1'; } catch (e) {}
-            sync(saved);
-            if (btn) {
-                btn.addEventListener('click', function (e) {
-                    e.preventDefault();
-                    var on = !root.classList.contains('hand-body');
-                    sync(on);
-                    try { localStorage.setItem(KEY, on ? '1' : '0'); } catch (err) {}
-                });
-            }
+            try {
+                var on = localStorage.getItem('blog-hand-body') === '1';
+                document.documentElement.classList.toggle('hand-body', on);
+            } catch (e) { /* 读不到就按默认 */ }
         })();
     </script>
 <link rel="stylesheet" href="/css/renewal.css?v=20261030b">

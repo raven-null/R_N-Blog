@@ -345,3 +345,25 @@ html[data-tone] input::placeholder,
 html[data-tone] textarea::placeholder {
     color: var(--text-muted);
 }
+
+/* ============================================================
+   手写体（首页 hero 的笔形按钮 = 全站总开关）
+   ------------------------------------------------------------
+   打开后整个前台（首页卡片 / 文章正文 / 侧栏 / 日历 / 日记…）都换成
+   Virgil + 楷体那套手写字体；代码块和等宽内容保持原等宽字体，
+   否则代码会糊成一片。白板 / 导图在 iframe 里，各自吃自己的样式。
+   ============================================================ */
+html.hand-body,
+html.hand-body body,
+html.hand-body *:not(code):not(pre):not(kbd):not(samp):not(.hljs) {
+    font-family: var(--font-hand) !important;
+}
+
+html.hand-body code,
+html.hand-body pre,
+html.hand-body kbd,
+html.hand-body samp,
+html.hand-body .hljs,
+html.hand-body .code-block {
+    font-family: var(--font-mono) !important;
+}
