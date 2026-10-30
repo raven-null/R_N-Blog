@@ -14356,11 +14356,11 @@ body.view-blog-active .nav-bar {
     position: static;
 }
 
-/* 原版模式：fallback 整块隐藏，按钮固定到原版底部「沉浸」左侧 */
+/* 原版模式：fallback 整块隐藏，按钮对齐到原版底部「沉浸」同一行（JS 会按实际位置再精调） */
 .screensaver > .screensaver-exit {
     position: absolute;
     right: 128px;
-    bottom: 18px;
+    bottom: 46px;
     z-index: 4;
     color: #ddd8cc;
     text-shadow: 0 2px 12px rgba(0, 0, 0, .5);

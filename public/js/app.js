@@ -5491,9 +5491,42 @@ const BlogApp = {
         if (!btn || !slot || !wrap) return;
         if (this.screenSaverNative()) {
             if (btn.parentElement !== wrap) wrap.appendChild(btn);
+            // 原版是 iframe：同源，直接量它底部「沉浸」的位置来对齐
+            btn.style.left = 'auto';
+            btn.style.right = '';
+            btn.style.bottom = '';
+            btn.style.top = '';
+            this.alignScreenSaverExit();
+            setTimeout(() => this.alignScreenSaverExit(), 600);
+            setTimeout(() => this.alignScreenSaverExit(), 1800);
         } else if (btn.parentElement !== slot) {
             slot.appendChild(btn);
+            btn.style.left = '';
+            btn.style.right = '';
+            btn.style.top = '';
+            btn.style.bottom = '';
         }
+    },
+
+    // 把退出按钮对齐到 iframe 里「沉浸」那行文字的左侧
+    alignScreenSaverExit() {
+        const btn = document.getElementById('screenSaverExit');
+        const frame = document.getElementById('screenSaverFrame');
+        if (!btn || !frame || !this.screenSaverNative()) return;
+        let doc = null;
+        try { doc = frame.contentDocument; } catch (e) { return; }
+        if (!doc) return;
+        const hit = [...doc.querySelectorAll('span, div, button, a')]
+            .filter((el) => !el.children.length && /^沉浸$/.test((el.textContent || '').trim()))
+            .pop();
+        if (!hit) return;
+        const r = hit.getBoundingClientRect();
+        const btnW = btn.offsetWidth || 32;
+        const btnH = btn.offsetHeight || 14;
+        btn.style.right = 'auto';
+        btn.style.bottom = 'auto';
+        btn.style.left = `${Math.max(12, Math.round(r.left - btnW - 16))}px`;
+        btn.style.top = `${Math.round(r.top + (r.height - btnH) / 2)}px`;
     },
 
     // 屏保状态（延续到下次进入，不写 localStorage）
