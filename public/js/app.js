@@ -864,7 +864,7 @@ const BlogApp = {
         document.querySelectorAll('.gallery-tag-item').forEach(el => {
             el.classList.toggle('active', el.dataset.tag === this.galleryTag);
         });
-        // 更新悬浮按钮图标为当前标签首字（默认态显示标签 SVG）
+        // 更新悬浮按钮图标为当前标签首字（按钮已删，保留逻辑给可能的复活；null 安全）
         const btn = document.getElementById('galleryTagBtn');
         if (btn) {
             if (this.galleryTag === 'all') {

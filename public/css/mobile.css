@@ -91,8 +91,7 @@ html {
 
 /* 右下角悬浮按钮栈：让开手势条与刘海 */
 .theme-toggle,
-.back-to-top,
-.gallery-tag-btn {
+.back-to-top {
     right: max(16px, var(--safe-right));
 }
 
