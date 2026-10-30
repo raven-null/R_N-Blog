@@ -5397,9 +5397,26 @@ const BlogApp = {
         wrap.hidden = !next;
         document.body.classList.toggle('screensaver-on', next);
 
-        // 底图用项目原图（albedo），闭眼图叠在上面做眨眼
-        if (art && !art.getAttribute('src')) art.src = 'images/sky/kumeng-albedo.webp';
-        if (eyes && !eyes.getAttribute('src')) eyes.src = 'images/sky/kumeng-eyes-closed.webp';
+        // 底图：先用 71KB 的小图秒开，高清 albedo 在后台换上来；闭眼图也后台加载，加载完才开始眨眼
+        if (art && !art.dataset.srcSet) {
+            art.dataset.srcSet = '1';
+            art.src = 'images/sky/kumeng-960.webp';
+        }
+        if (art && !this._ssHiRequested) {
+            this._ssHiRequested = true;
+            const hi = new Image();
+            hi.decoding = 'async';
+            hi.onload = () => {
+                this._ssHiLoaded = true;
+                if (art) art.src = 'images/sky/kumeng-albedo.webp';
+            };
+            hi.src = 'images/sky/kumeng-albedo.webp';
+        }
+        if (eyes && !eyes.dataset.srcSet) {
+            eyes.dataset.srcSet = '1';
+            eyes.addEventListener('load', () => { eyes.dataset.ready = '1'; }, { once: true });
+            eyes.src = 'images/sky/kumeng-eyes-closed.webp';
+        }
         clearInterval(this._screenSaverTimer);
         clearInterval(this._screenSaverLightTimer);
         if (next) {
@@ -5464,6 +5481,11 @@ const BlogApp = {
         if (!eyes || this._ssBlinkTimer) return;
         const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         if (reduce) return;
+        // 闭眼图还没就绪就先不眨，免得闪出一张空白层
+        if (eyes.dataset.ready !== '1') {
+            eyes.addEventListener('load', () => this.startScreenSaverBlink(), { once: true });
+            return;
+        }
         const blinkOnce = () => {
             eyes.classList.add('is-blinking');
             setTimeout(() => eyes.classList.remove('is-blinking'), 110);
@@ -5557,9 +5579,12 @@ const BlogApp = {
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
         const dpr = Math.min(2, window.devicePixelRatio || 1);
+        // 刚进屏保那一帧布局可能还没算完，宽度取不到就用窗口尺寸兜底
         const resize = () => {
-            canvas.width = Math.max(1, Math.floor(canvas.clientWidth * dpr));
-            canvas.height = Math.max(1, Math.floor(canvas.clientHeight * dpr));
+            const w = canvas.clientWidth || window.innerWidth || 1;
+            const h = canvas.clientHeight || window.innerHeight || 1;
+            canvas.width = Math.max(1, Math.floor(w * dpr));
+            canvas.height = Math.max(1, Math.floor(h * dpr));
         };
         resize();
 
@@ -5567,7 +5592,7 @@ const BlogApp = {
         const makePetal = () => ({
             x: rand(0, canvas.width),
             y: rand(-canvas.height * 0.6, 0),
-            r: rand(5, 13) * dpr,
+            r: rand(6, 15) * dpr,
             flat: rand(0.42, 0.8),
             vx: rand(0.1, 0.5) * dpr,
             vy: rand(0.16, 0.55) * dpr,
@@ -5575,10 +5600,10 @@ const BlogApp = {
             phase: rand(0, Math.PI * 2),
             spin: rand(-0.006, 0.006),
             rot: rand(0, Math.PI * 2),
-            alpha: rand(0.26, 0.6),
+            alpha: rand(0.38, 0.78),
         });
 
-        const count = Math.max(14, Math.min(46, Math.round(canvas.clientWidth / 42)));
+        const count = Math.max(16, Math.min(52, Math.round((canvas.clientWidth || window.innerWidth) / 40)));
         const petals = Array.from({ length: count }, makePetal);
         let last = performance.now();
         const frame = (t) => {
@@ -5605,6 +5630,10 @@ const BlogApp = {
                 ctx.closePath();
                 ctx.fillStyle = `rgba(255, 252, 250, ${p.alpha})`;
                 ctx.fill();
+                // 极淡的边，浅色背景上也能看出花瓣轮廓
+                ctx.strokeStyle = `rgba(214, 202, 198, ${(p.alpha * 0.5).toFixed(3)})`;
+                ctx.lineWidth = Math.max(0.6, dpr * 0.7);
+                ctx.stroke();
                 ctx.restore();
             }
             this._ssPetals.raf = requestAnimationFrame(frame);

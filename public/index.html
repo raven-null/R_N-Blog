@@ -21,6 +21,9 @@
     <link rel="apple-touch-icon" href="/images/Default/web-logo.webp">
     <!-- 手写体 Virgil：hand-body 默认开，preload 消掉 swap 闪动 -->
     <link rel="preload" href="/fonts/Virgil.woff2" as="font" type="font/woff2" crossorigin>
+    <!-- 屏保用到的两张图：空闲时先取好，进屏保就不用等 -->
+    <link rel="prefetch" as="image" href="images/sky/kumeng-albedo.webp">
+    <link rel="prefetch" as="image" href="images/sky/kumeng-eyes-closed.webp">
     <!-- 图库图片来自独立的 r-gallery 站点：提前建连，减少首图 DNS/TLS 开销 -->
     <link rel="preconnect" href="https://r-gallery.netlify.app" crossorigin>
     <link rel="dns-prefetch" href="https://r-gallery.netlify.app">
@@ -505,7 +508,7 @@
     <script src="js/theme.js?v=20261030c" defer></script>
     <!-- 桌宠动效引擎（spring-driven character，见 public/vendor/grok/README.md） -->
 
-    <script src="js/app.js?v=20261101v" defer></script>
+    <script src="js/app.js?v=20261101w" defer></script>
     <script src="js/animations.js?v=3.14.0" defer></script>
 
     <script>
