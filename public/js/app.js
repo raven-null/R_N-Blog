@@ -1692,7 +1692,7 @@ const BlogApp = {
         setTimeout(() => this.syncCarouselHeight(), 1200);
     },
 
-    // 轮播容器高度跟着当前这张卡的封面走（盒子随封面比例伸缩）
+    // 轮播容器高度跟着当前这张卡的封面比例走（文字叠在图上，不占额外高度）
     syncCarouselHeight() {
         const carousel = document.getElementById('hv3Car');
         const track = document.getElementById('hv3Track');
@@ -1704,9 +1704,10 @@ const BlogApp = {
         const idx = Math.round(track.scrollLeft / w);
         const card = items[Math.min(items.length - 1, Math.max(0, idx))];
         if (!card) return;
-        const h = Math.round(card.getBoundingClientRect().height);
-        // 高度由「封面比例 + 文字区」算出，容器只是跟随，不再强制正方形
-        if (h > 60 && Math.abs(h - Number(carousel.dataset.h || 0)) > 1) {
+        // --cover-ratio = 宽 / 高（renderHvPosts 按封面原始尺寸写入，缺省 1.6）
+        const raw = Number((card.style.getPropertyValue('--cover-ratio') || '').trim()) || 1.6;
+        const h = Math.round(w / Math.max(0.55, Math.min(1.9, raw)));
+        if (h > 90 && Math.abs(h - Number(carousel.dataset.h || 0)) > 1) {
             carousel.style.height = h + 'px';
             carousel.dataset.h = String(h);
         }
