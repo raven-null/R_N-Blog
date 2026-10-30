@@ -2858,6 +2858,29 @@ const BlogApp = {
             if (e.key !== 'Escape') return;
             this.closeEditor();
         });
+
+        // 日记可以收起来：默认一行标题，点开才是那一摞
+        this.bindJournalToggle();
+    },
+
+    // 日记折叠开关（状态记在 localStorage，下次进来还是上次的样子）
+    bindJournalToggle() {
+        const wrap = document.getElementById('homeJournalBox');
+        const btn = document.getElementById('journalToggle');
+        if (!wrap || !btn || wrap.dataset.toggleBound) return;
+        wrap.dataset.toggleBound = '1';
+
+        const apply = (open) => {
+            wrap.classList.toggle('is-collapsed', !open);
+            btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+            try { localStorage.setItem('blog-journal-open', open ? '1' : '0'); } catch (e) { /* 忽略 */ }
+        };
+
+        let saved = '0';
+        try { saved = localStorage.getItem('blog-journal-open') || '0'; } catch (e) { saved = '0'; }
+        apply(saved === '1');
+
+        btn.addEventListener('click', () => apply(wrap.classList.contains('is-collapsed')));
     },
 
     // ===================== 主页盒子的自由交互 =====================

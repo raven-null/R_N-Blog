@@ -15,7 +15,7 @@
     <meta property="og:image" content="https://ravennull.work/images/Default/web-logo.webp">
     <meta property="og:locale" content="zh_CN">
     <meta name="twitter:card" content="summary">
-    <link rel="stylesheet" href="css/bundle.css?v=d7cb5ed9ba">
+    <link rel="stylesheet" href="css/bundle.css?v=fbc6cfebb3">
     <title>渡鸦 NULL · 日光与暮色之间</title>
     <link rel="icon" id="siteFavicon" href="/images/Default/web-logo.webp" type="image/webp">
     <link rel="apple-touch-icon" href="/images/Default/web-logo.webp">
@@ -319,21 +319,20 @@
                                     </div>
                                 </div>
 
-                                <!-- 正在做：当天的任务（没登录 / 当天没任务时整块折叠） -->
-                                <div class="hv3-today home-life" id="homeLife">
-                                    <div class="hv3-today-head">
-                                        <span class="hv3-today-title">正在做</span>
-                                        <span class="hv3-today-count" id="lifeTaskCount"></span>
-                                    </div>
+                                <!-- 当天任务：直接贴在日历下面，不再单独一块标题 -->
+                                <div class="hv3-today-tasks home-life" id="homeLife">
                                     <div class="life-task-list" id="lifeTaskList"></div>
                                 </div>
 
-                                <!-- 日记：当月日记叠成一摞（文件堆叠样式），滚轮翻，点最上面那张编辑 -->
-                                <section class="hv3-journals" id="homeJournalBox" aria-label="日记，滚轮切换">
-                                    <div class="hv3-journals-head">
+                                <!-- 日记：默认收成一行，点标题展开；展开后是当月日记叠的一摞 -->
+                                <section class="hv3-journals is-collapsed" id="homeJournalBox" aria-label="日记，点标题展开">
+                                    <button class="hv3-journals-head" type="button" id="journalToggle" aria-expanded="false">
                                         <span class="hv3-journals-title">日记</span>
-                                        <span class="hv3-journals-month" id="journalMonthLabel"></span>
-                                    </div>
+                                        <span class="hv3-journals-right">
+                                            <span class="hv3-journals-month" id="journalMonthLabel"></span>
+                                            <span class="hv3-journals-caret" aria-hidden="true">▾</span>
+                                        </span>
+                                    </button>
                                     <div class="hv3-stack" id="hv3Journals"></div>
                                 </section>
                             </div>
@@ -479,7 +478,7 @@
     <script src="js/theme.js?v=20261030c" defer></script>
     <!-- 桌宠动效引擎（spring-driven character，见 public/vendor/grok/README.md） -->
 
-    <script src="js/app.js?v=20261101l" defer></script>
+    <script src="js/app.js?v=20261101m" defer></script>
     <script src="js/animations.js?v=3.14.0" defer></script>
 
     <script>
@@ -824,13 +823,19 @@
 
             const weekLabels = ['一', '二', '三', '四', '五', '六', '日'];
             const hint = isCurrentMonth ? `今天 ${now.getDate()}` : '归档';
+            // 有任务的日子点一个小圆点（任务和日历叠在一起看）
+            const taskDates = new Set(
+                ((window.BlogApp && BlogApp.lifeState && BlogApp.lifeState.tasks) || [])
+                    .map(t => (t && t.date) || '').filter(Boolean)
+            );
             let html = `<div class="cal-head"><span class="cal-title">${year} 年 ${month + 1} 月</span><span class="cal-today">${hint}</span></div>`;
             html += '<div class="cal-grid">';
             html += weekLabels.map(w => `<span class="cal-week">${w}</span>`).join('');
             for (let i = 0; i < offset; i++) html += '<span class="cal-day is-empty"></span>';
             for (let d = 1; d <= daysInMonth; d++) {
                 const dateKey = `${key}-${pad(d)}`;
-                const cls = ['cal-day', d === today ? 'is-today' : '', dateKey === selected ? 'is-selected' : '']
+                const cls = ['cal-day', d === today ? 'is-today' : '', dateKey === selected ? 'is-selected' : '',
+                    taskDates.has(dateKey) ? 'has-task' : '']
                     .filter(Boolean).join(' ');
                 html += `<span class="${cls}" data-date="${dateKey}">${d}</span>`;
             }

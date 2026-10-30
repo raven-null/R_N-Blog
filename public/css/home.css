@@ -768,38 +768,15 @@
 }
 
 /* ============================================================
-   04b · 日记：当月日记叠成一摞（复用「项目」的文件堆叠手感）
-   滚轮翻上下篇，只有最上面那张能点，点开写/改那一天
+   04b · 当天任务 + 日记
+   · 任务：直接贴在日历下面（没登录 / 当天没任务时 JS 整块隐藏）
+   · 日记：默认收成一行标题，点开才展开当月那一摞
    ============================================================ */
-.hv3-today {
+.hv3-today-tasks {
     flex: 0 0 auto;
 }
 
-.hv3-today-head,
-.hv3-journals-head {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 8px;
-    padding: 0 2px;
-}
-
-.hv3-today-title,
-.hv3-journals-title {
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: .08em;
-    color: var(--text-secondary);
-}
-
-.hv3-today-count,
-.hv3-journals-month {
-    font-size: 10.5px;
-    letter-spacing: .04em;
-    color: var(--text-muted);
-}
-
-.hv3-today .life-task-list {
+.hv3-today-tasks .life-task-list {
     display: flex;
     flex-direction: column;
     gap: 4px;
@@ -811,6 +788,70 @@
     flex-direction: column;
     gap: 6px;
     height: 240px;
+    transition: height .28s cubic-bezier(.2, .7, .3, 1);
+}
+
+.hv3-journals.is-collapsed {
+    height: auto;
+}
+
+.hv3-journals.is-collapsed .hv3-stack {
+    display: none;
+}
+
+.hv3-journals-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+    padding: 2px;
+    font: inherit;
+    color: inherit;
+    text-align: left;
+    background: none;
+    border: 0;
+    cursor: pointer;
+}
+
+.hv3-journals-head:focus-visible {
+    outline: 2px solid var(--accent, #f0a20c);
+    outline-offset: 2px;
+    border-radius: 6px;
+}
+
+.hv3-journals-right {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.hv3-journals-title {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    color: var(--text-secondary);
+}
+
+.hv3-journals-head:hover .hv3-journals-title {
+    color: var(--text);
+}
+
+.hv3-journals-month {
+    font-size: 10.5px;
+    letter-spacing: .04em;
+    color: var(--text-muted);
+}
+
+.hv3-journals-caret {
+    font-size: 10px;
+    line-height: 1;
+    color: var(--text-muted);
+    transition: transform .2s ease;
+}
+
+.hv3-journals.is-collapsed .hv3-journals-caret {
+    transform: rotate(-90deg);
 }
 
 .hv3-journals .hv3-stack {
@@ -1010,6 +1051,27 @@ html[data-theme="dark"] .hv3-today-panel {
     font-size: 13px;
     line-height: 1;
     opacity: .8;
+}
+
+/* 日历：有任务的日期下方点一个小圆点（任务和日历就这样叠在一起） */
+.cal-day {
+    position: relative;
+}
+
+.cal-day.has-task::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: 2px;
+    width: 3px;
+    height: 3px;
+    margin-left: -1.5px;
+    border-radius: 50%;
+    background: var(--accent, #f0a20c);
+}
+
+.cal-day.is-today.has-task::after {
+    background: var(--bg-primary, #fffefb);
 }
 
 /* 未登录：写不了 → 两个按钮换成「去后台登录」入口 */
