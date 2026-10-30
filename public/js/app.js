@@ -5431,6 +5431,7 @@ const BlogApp = {
         } else {
             this.stopScreenSaverPetals();
             this.stopScreenSaverBlink();
+            this.toggleScreenSaverPlay(false);
             document.getElementById('screenSaverPanel')?.classList.add('is-hidden');
         }
     },
@@ -5443,23 +5444,20 @@ const BlogApp = {
         return this._ssState;
     },
 
-    // 时钟 / 纯图 两个开关的状态 → 界面
+    // 时钟 / 动效 两个开关的状态 → 界面
     applyScreenSaverSwitches() {
         const state = this.ensureScreenSaverState();
         const wrap = document.getElementById('screenSaver');
-        const clock = document.getElementById('screenSaverClock');
-        const clockBtn = document.getElementById('ssClockBtn');
+        const hero = document.getElementById('ssHero');
         const pureBtn = document.getElementById('ssPureBtn');
-        if (clock) clock.classList.toggle('is-hidden', !state.clock);
+        if (hero) hero.classList.toggle('is-hidden', !state.clock);
         if (wrap) wrap.classList.toggle('is-pure', state.pure);
-        if (clockBtn) {
-            clockBtn.textContent = state.clock ? '时钟 开' : '时钟 关';
-            clockBtn.setAttribute('aria-pressed', state.clock ? 'true' : 'false');
-        }
         if (pureBtn) {
-            pureBtn.textContent = state.pure ? '纯图 开' : '纯图 关';
+            pureBtn.textContent = state.pure ? '动效 关' : '动效 开';
             pureBtn.setAttribute('aria-pressed', state.pure ? 'true' : 'false');
         }
+        const clockLabel = document.getElementById('ssClockLabel');
+        if (clockLabel) clockLabel.textContent = state.clock ? '显示' : '隐藏';
     },
 
     // 动效（呼吸 + 眨眼 + 花瓣）：纯图模式 / 减少动效下不跑
@@ -5652,8 +5650,8 @@ const BlogApp = {
         this._ssPetals = null;
     },
 
-    // 面板：时刻 / 曝光 / 泛光 / 跟随真实时间 / 时钟开关 / 纯图开关
-    // 统一用事件委托（面板内部任何 input 都重新算一遍），个别元素绑定失效也不影响
+    // 面板：照 KumengScreen 的布局（时辰 / 24h 时间轴 / 快捷时辰 / 昼夜循环 / 光线调节 / 时钟）
+    // 统一用事件委托，个别元素绑定失效也不影响
     bindScreenSaverPanel() {
         const panel = document.getElementById('screenSaverPanel');
         if (!panel) return;
@@ -5663,71 +5661,151 @@ const BlogApp = {
         const state = this.ensureScreenSaverState();
 
         panel.addEventListener('input', (e) => {
-            const id = e.target && e.target.id;
-            if (id === 'ssTime') state.hour = (Number(e.target.value) || 0) / 60;
-            else if (id === 'ssExposure') state.exposure = Number(e.target.value) || 1;
-            else if (id === 'ssGlow') state.glow = Number(e.target.value) || 0;
-            else return;
+            if (!e.target || e.target.id !== 'ssTime') return;
+            state.hour = (Number(e.target.value) || 0) / 60;
+            this.toggleScreenSaverPlay(false);
             this.syncScreenSaverPanelLabels();
             this.applyScreenSaverLighting();
         });
 
         panel.addEventListener('click', (e) => {
-            const btn = e.target.closest('.ss-btn');
-            if (!btn) return;
-            if (btn.id === 'ssFollowBtn') {
-                state.hour = null;
-                const now = new Date();
-                const timeEl = document.getElementById('ssTime');
-                if (timeEl) timeEl.value = String(now.getHours() * 60 + now.getMinutes());
+            const chip = e.target.closest('[data-ss-hour]');
+            if (chip) {
+                state.hour = Number(chip.dataset.ssHour);
+                this.toggleScreenSaverPlay(false);
                 this.syncScreenSaverPanelLabels();
                 this.applyScreenSaverLighting();
-            } else if (btn.id === 'ssClockBtn') {
-                state.clock = !state.clock;
-                this.applyScreenSaverSwitches();
-            } else if (btn.id === 'ssPureBtn') {
-                state.pure = !state.pure;
-                this.applyScreenSaverSwitches();
-                this.applyScreenSaverLighting();
-                this.applyScreenSaverMotion();
+                return;
+            }
+            const btn = e.target.closest('button');
+            if (!btn) return;
+            switch (btn.id) {
+                case 'ssFollowBtn':
+                    state.hour = null;
+                    this.toggleScreenSaverPlay(false);
+                    this.syncScreenSaverPanelLabels();
+                    this.applyScreenSaverLighting();
+                    break;
+                case 'ssPlayBtn':
+                    this.toggleScreenSaverPlay();
+                    break;
+                case 'ssEvPlus':
+                    state.exposure = Math.min(1.8, Math.round((state.exposure + 0.1) * 100) / 100);
+                    this.syncScreenSaverPanelLabels();
+                    this.applyScreenSaverLighting();
+                    break;
+                case 'ssEvMinus':
+                    state.exposure = Math.max(0.5, Math.round((state.exposure - 0.1) * 100) / 100);
+                    this.syncScreenSaverPanelLabels();
+                    this.applyScreenSaverLighting();
+                    break;
+                case 'ssClockBtn':
+                    state.clock = !state.clock;
+                    this.applyScreenSaverSwitches();
+                    break;
+                case 'ssPureBtn':
+                    state.pure = !state.pure;
+                    this.applyScreenSaverSwitches();
+                    this.applyScreenSaverLighting();
+                    this.applyScreenSaverMotion();
+                    break;
+                default:
+                    break;
             }
         });
 
-        // 打开面板时把滑块摆到当前状态
-        const now = new Date();
-        const timeEl = document.getElementById('ssTime');
-        if (timeEl) timeEl.value = String(now.getHours() * 60 + now.getMinutes());
-        const exposureEl = document.getElementById('ssExposure');
-        if (exposureEl) exposureEl.value = String(state.exposure);
-        const glowEl = document.getElementById('ssGlow');
-        if (glowEl) glowEl.value = String(state.glow);
         this.syncScreenSaverPanelLabels();
     },
 
-    // 面板上的数值文案（时刻 / 曝光 / 泛光）
-    syncScreenSaverPanelLabels() {
+    // 当前生效的时刻（手动预览用 state.hour，自动就跟真实时间）
+    currentScreenSaverHour() {
         const state = this.ensureScreenSaverState();
-        const fmt = (m) => `${String(Math.floor(m / 60) % 24).padStart(2, '0')}:${String(Math.round(m % 60)).padStart(2, '0')}`;
-        const tEl = document.getElementById('ssTimeVal');
-        if (tEl) tEl.textContent = state.hour === null ? '实时' : fmt(state.hour * 60);
-        const exposureEl = document.getElementById('ssExposure');
-        const eEl = document.getElementById('ssExposureVal');
-        if (exposureEl && eEl) eEl.textContent = Number(exposureEl.value).toFixed(2);
-        const glowEl = document.getElementById('ssGlow');
-        const gEl = document.getElementById('ssGlowVal');
-        if (glowEl && gEl) gEl.textContent = Number(glowEl.value).toFixed(2);
+        if (state.hour !== null) return state.hour;
+        const now = new Date();
+        return now.getHours() + now.getMinutes() / 60;
     },
 
-    // 屏保上的时钟（大号时间 + 日期，跟着本地时间走）
+    // 昼夜循环：每 120ms 推进一分钟（一圈约三分钟）
+    toggleScreenSaverPlay(on) {
+        const btn = document.getElementById('ssPlayBtn');
+        const state = this.ensureScreenSaverState();
+        const next = on === undefined ? !this._ssPlaying : !!on;
+        this._ssPlaying = next;
+        clearInterval(this._ssPlayTimer);
+        if (btn) {
+            btn.textContent = next ? '❙❙' : '▶';
+            btn.classList.toggle('is-on', next);
+            btn.setAttribute('aria-pressed', next ? 'true' : 'false');
+        }
+        if (!next) return;
+        state.hour = this.currentScreenSaverHour();
+        this._ssPlayTimer = setInterval(() => {
+            state.hour = (this.currentScreenSaverHour() + 1 / 60) % 24;
+            this.syncScreenSaverPanelLabels();
+            this.applyScreenSaverLighting();
+        }, 120);
+    },
+
+    // 面板文案：时辰名 / 时间 / EV / 选中态
+    syncScreenSaverPanelLabels() {
+        const state = this.ensureScreenSaverState();
+        const hour = this.currentScreenSaverHour();
+        const minutes = Math.round(hour * 60) % 1440;
+        const fmt = (m) => `${String(Math.floor(m / 60) % 24).padStart(2, '0')}:${String(Math.round(m % 60)).padStart(2, '0')}`;
+
+        const timeEl = document.getElementById('ssTime');
+        if (timeEl && document.activeElement !== timeEl) timeEl.value = String(minutes);
+        const nowEl = document.getElementById('ssNow');
+        if (nowEl) nowEl.textContent = fmt(minutes);
+
+        // 时辰：静夜 / 晨曦 / 白昼 / 薄暮 / 夜色
+        const h = hour;
+        const phase = h < 5 ? { name: '静夜', icon: '☾' }
+            : h < 8 ? { name: '晨曦', icon: '🌅' }
+            : h < 17 ? { name: '白昼', icon: '☀' }
+            : h < 19.5 ? { name: '薄暮', icon: '🌇' }
+            : { name: '夜色', icon: '☾' };
+        const phaseEl = document.getElementById('ssPhase');
+        if (phaseEl) phaseEl.textContent = phase.name;
+        const moonEl = document.querySelector('.ss-moon');
+        if (moonEl) moonEl.textContent = phase.icon;
+
+        const evEl = document.getElementById('ssEv');
+        if (evEl) {
+            const ev = Math.log2(state.exposure || 1);
+            evEl.textContent = (ev >= 0 ? '+' : '') + ev.toFixed(2);
+        }
+        const autoEl = document.getElementById('ssAutoLabel');
+        if (autoEl) {
+            const auto = state.hour === null && !this._ssPlaying;
+            autoEl.innerHTML = `${auto ? '自动' : '手动'} · EV <b id="ssEv">${evEl ? evEl.textContent : '0.00'}</b>`;
+        }
+        document.querySelectorAll('[data-ss-hour]').forEach((chip) => {
+            const ch = Number(chip.dataset.ssHour);
+            const on = Math.abs(ch - h) < 0.5;
+            chip.classList.toggle('is-on', on);
+        });
+        const clockLabel = document.getElementById('ssClockLabel');
+        if (clockLabel) clockLabel.textContent = state.clock ? '显示' : '隐藏';
+        const statusEl = document.getElementById('ssStatus');
+        if (statusEl) {
+            const auto = state.hour === null && !this._ssPlaying;
+            statusEl.textContent = `画面 · ${auto ? '实时光照' : '手动光照'} · 沉浸`;
+        }
+    },
+
+    // 屏保主视觉的时钟：大时间 + 日期 + 年份（照 KumengScreen 的排版）
     tickScreenSaverClock() {
-        const el = document.getElementById('screenSaverClock');
-        if (!el) return;
+        const big = document.getElementById('ssTimeBig');
+        const dateEl = document.getElementById('ssDateText');
+        const yearEl = document.getElementById('ssYearText');
+        if (!big) return;
         const now = new Date();
         const pad = (n) => String(n).padStart(2, '0');
         const week = ['日', '一', '二', '三', '四', '五', '六'][now.getDay()];
-        el.innerHTML =
-            `<span class="screensaver-time">${pad(now.getHours())}:${pad(now.getMinutes())}</span>`
-            + `<span class="screensaver-date">${now.getFullYear()}.${pad(now.getMonth() + 1)}.${pad(now.getDate())} 周${week}</span>`;
+        big.textContent = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+        if (dateEl) dateEl.textContent = `${now.getMonth() + 1}月${now.getDate()}日星期${week}`;
+        if (yearEl) yearEl.textContent = String(now.getFullYear());
     },
 
     // 首页时钟旁的主题图标同步

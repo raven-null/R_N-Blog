@@ -1459,22 +1459,23 @@ body.view-blog-active .nav-bar {
     }
 }
 
-/* 控制面板：H 收起 / 展开（不要毛玻璃，免得在插画上糊出一块遮罩） */
+/* 控制面板：照 KumengScreen 的布局（时辰 / 24h 时间轴 / 快捷时辰 / 昼夜循环 / 光线调节） */
 .screensaver-panel {
     position: absolute;
-    left: 26px;
-    bottom: 24px;
+    right: 26px;
+    bottom: 46px;
+    left: auto;
     z-index: 3;
     display: flex;
     flex-direction: column;
-    gap: 11px;
-    width: 268px;
-    padding: 14px 16px;
+    gap: 12px;
+    width: 360px;
+    padding: 16px 18px;
     font-size: 12px;
     color: #ece7dc;
-    background: rgba(10, 12, 18, .34);
-    border: 1px solid rgba(255, 255, 255, .14);
-    border-radius: 14px;
+    background: rgba(14, 16, 22, .74);
+    border: 1px solid rgba(255, 255, 255, .16);
+    border-radius: 16px;
     text-shadow: 0 1px 10px rgba(0, 0, 0, .6);
     transition: opacity .2s ease, transform .2s ease;
 }
@@ -1485,92 +1486,318 @@ body.view-blog-active .nav-bar {
     pointer-events: none;
 }
 
+/* 顶部：时辰 + 时间 + 回到此刻 */
+.ss-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.ss-moon {
+    font-size: 15px;
+    opacity: .9;
+}
+
+.ss-phase {
+    font-size: 14px;
+    font-weight: 650;
+    letter-spacing: .06em;
+}
+
+.ss-now {
+    margin-left: auto;
+    font-size: 26px;
+    font-weight: 300;
+    letter-spacing: .04em;
+    font-variant-numeric: tabular-nums;
+}
+
+.ss-pill {
+    padding: 4px 11px;
+    font-family: inherit;
+    font-size: 11.5px;
+    color: #f0ece3;
+    background: rgba(255, 255, 255, .1);
+    border: 1px solid rgba(255, 255, 255, .2);
+    border-radius: 999px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.ss-pill:hover {
+    background: rgba(255, 255, 255, .2);
+}
+
+/* 时间轴：轨道本身画成「夜 → 晨 → 日 → 暮 → 夜」的渐变色 */
+.ss-track {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.ss-track input[type="range"] {
+    width: 100%;
+    height: 16px;
+    appearance: none;
+    border-radius: 999px;
+    outline: none;
+    cursor: pointer;
+    background: linear-gradient(90deg,
+        #1b2440 0%,
+        #3a3f63 16%,
+        #7a6a86 28%,
+        #e8b98a 40%,
+        #f4e4c6 50%,
+        #e9b384 62%,
+        #7d5a6a 74%,
+        #2c2f4d 88%,
+        #141a2e 100%);
+}
+
+.ss-track input[type="range"]::-webkit-slider-thumb {
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border: 0;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 0 10px rgba(255, 245, 220, .95), 0 0 3px rgba(0, 0, 0, .4);
+}
+
+.ss-track input[type="range"]::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border: 0;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 0 10px rgba(255, 245, 220, .95);
+}
+
+.ss-ticks {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10.5px;
+    letter-spacing: .04em;
+    opacity: .55;
+}
+
+/* 行 */
 .ss-row {
     display: flex;
     align-items: center;
     gap: 8px;
+    flex-wrap: wrap;
 }
 
-.ss-row > span:first-child {
-    width: 30px;
-    flex: none;
-    opacity: .72;
-    letter-spacing: .08em;
-}
-
-.ss-row input[type="range"] {
-    flex: 1 1 auto;
-    min-width: 0;
-    accent-color: #e8c9a0;
-}
-
-.ss-val {
-    width: 44px;
-    flex: none;
-    text-align: right;
-    font-variant-numeric: tabular-nums;
-    opacity: .8;
-}
-
-.ss-foot {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    margin-top: 2px;
-}
-
-.ss-btn {
-    padding: 5px 10px;
+.ss-chip {
+    padding: 4px 12px;
     font-family: inherit;
-    font-size: 11.5px;
-    color: #f0ece3;
-    background: rgba(255, 255, 255, .12);
-    border: 1px solid rgba(255, 255, 255, .22);
-    border-radius: 999px;
+    font-size: 12px;
+    letter-spacing: .04em;
+    color: #ded8cd;
+    background: rgba(255, 255, 255, .06);
+    border: 1px solid rgba(255, 255, 255, .14);
+    border-radius: 10px;
     cursor: pointer;
 }
 
-.ss-btn:hover {
+.ss-chip:hover {
+    color: #fff;
+    border-color: rgba(255, 255, 255, .3);
+}
+
+.ss-chip.is-on {
+    color: #1a1a20;
+    background: #efe6d3;
+    border-color: #efe6d3;
+}
+
+.ss-play {
+    margin-left: auto;
+    width: 30px;
+    height: 28px;
+    font-size: 12px;
+    color: #efe6d3;
+    background: rgba(255, 255, 255, .08);
+    border: 1px solid rgba(255, 255, 255, .16);
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.ss-play.is-on {
+    color: #1a1a20;
+    background: #efe6d3;
+    border-color: #efe6d3;
+}
+
+.ss-light {
+    justify-content: space-between;
+}
+
+.ss-label {
+    font-size: 12.5px;
+    letter-spacing: .06em;
+    opacity: .9;
+}
+
+.ss-auto {
+    font-size: 12px;
+    letter-spacing: .04em;
+    opacity: .85;
+}
+
+.ss-auto b {
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+}
+
+.ss-step {
+    width: 24px;
+    height: 24px;
+    font-size: 13px;
+    line-height: 1;
+    color: #efe6d3;
+    background: rgba(255, 255, 255, .08);
+    border: 1px solid rgba(255, 255, 255, .16);
+    border-radius: 7px;
+    cursor: pointer;
+}
+
+.ss-step:hover {
     background: rgba(255, 255, 255, .2);
 }
 
 .ss-hint {
     font-size: 10.5px;
     letter-spacing: .06em;
+    opacity: .45;
+}
+
+/* 左上品牌 */
+.ss-brand {
+    position: absolute;
+    left: 44px;
+    top: 32px;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    color: #ece7dc;
+    text-shadow: 0 2px 18px rgba(0, 0, 0, .55);
+}
+
+.ss-brand-mark {
+    font-size: 15px;
+    opacity: .85;
+}
+
+.ss-brand-name {
+    font-size: 15px;
+    letter-spacing: .34em;
+    font-weight: 500;
+}
+
+.ss-brand-en {
+    font-size: 10px;
+    letter-spacing: .34em;
     opacity: .5;
 }
 
-/* 屏保时钟：右下角，时间大字 + 日期小字 */
-.screensaver-clock {
+/* 左侧主视觉：英文小标 + 大时钟 + 日期 + 引用 */
+.screensaver-hero {
     position: absolute;
-    right: 42px;
-    bottom: 40px;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 6px;
-    color: #f4f1ea;
-    text-shadow: 0 4px 26px rgba(0, 0, 0, .55);
-    pointer-events: none;
+    left: 62px;
+    top: 46%;
+    transform: translateY(-50%);
+    color: #f4f0e7;
+    text-shadow: 0 8px 34px rgba(0, 0, 0, .55);
+}
+
+.screensaver-hero.is-hidden {
+    display: none;
+}
+
+.ss-en {
+    font-size: 11px;
+    letter-spacing: .4em;
+    opacity: .6;
+    margin-bottom: 12px;
 }
 
 .screensaver-time {
-    font-size: clamp(44px, 7vw, 92px);
+    font-family: var(--font-serif, "Songti SC", "Noto Serif SC", Georgia, serif);
+    font-size: clamp(64px, 10.5vw, 158px);
     font-weight: 300;
-    line-height: 1;
-    letter-spacing: .04em;
+    line-height: .92;
+    letter-spacing: .02em;
     font-variant-numeric: tabular-nums;
 }
 
-.screensaver-date {
+.ss-sub {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 18px;
     font-size: 13px;
-    letter-spacing: .22em;
-    opacity: .82;
+    letter-spacing: .14em;
+    opacity: .86;
 }
 
-.screensaver-clock.is-hidden {
-    display: none;
+.ss-dash {
+    width: 36px;
+    height: 1px;
+    background: rgba(255, 255, 255, .45);
+}
+
+.ss-quote {
+    margin-top: 26px;
+    padding-left: 14px;
+    border-left: 1px solid rgba(255, 255, 255, .32);
+    font-size: 13px;
+    line-height: 2;
+    letter-spacing: .1em;
+    opacity: .75;
+}
+
+/* 右侧竖排 */
+.ss-vertical {
+    position: absolute;
+    right: 96px;
+    top: 38%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    writing-mode: vertical-rl;
+    text-orientation: upright;
+    color: #e9e4d8;
+    text-shadow: 0 2px 16px rgba(0, 0, 0, .5);
+    opacity: .78;
+}
+
+.ss-v-title {
+    font-size: 26px;
+    letter-spacing: .32em;
+}
+
+.ss-v-sub {
+    font-size: 11px;
+    letter-spacing: .28em;
+    opacity: .6;
+}
+
+/* 底部状态条 */
+.ss-bottom {
+    position: absolute;
+    left: 44px;
+    right: 44px;
+    bottom: 22px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    letter-spacing: .16em;
+    color: #ddd8cc;
+    text-shadow: 0 2px 12px rgba(0, 0, 0, .5);
+    opacity: .55;
 }
 
 /* 纯图模式：关掉天色、柔光、花瓣和呼吸，只剩原图 */

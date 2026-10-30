@@ -15,7 +15,7 @@
     <meta property="og:image" content="https://ravennull.work/images/Default/web-logo.webp">
     <meta property="og:locale" content="zh_CN">
     <meta name="twitter:card" content="summary">
-    <link rel="stylesheet" href="css/bundle.css?v=3e371beb3b">
+    <link rel="stylesheet" href="css/bundle.css?v=d64804a79c">
     <title>渡鸦 NULL · 日光与暮色之间</title>
     <link rel="icon" id="siteFavicon" href="/images/Default/web-logo.webp" type="image/webp">
     <link rel="apple-touch-icon" href="/images/Default/web-logo.webp">
@@ -508,7 +508,7 @@
     <script src="js/theme.js?v=20261030c" defer></script>
     <!-- 桌宠动效引擎（spring-driven character，见 public/vendor/grok/README.md） -->
 
-    <script src="js/app.js?v=20261101w" defer></script>
+    <script src="js/app.js?v=20261101x" defer></script>
     <script src="js/animations.js?v=3.14.0" defer></script>
 
     <script>
@@ -1129,32 +1129,75 @@
         <div class="screensaver-tint" id="screenSaverTint" aria-hidden="true"></div>
         <div class="screensaver-glow" id="screenSaverGlow" aria-hidden="true"></div>
         <canvas class="screensaver-petals" id="screenSaverPetals" aria-hidden="true"></canvas>
-        <div class="screensaver-clock" id="screenSaverClock" aria-live="off"></div>
 
-        <!-- 控制面板（H 键收起 / 展开） -->
+        <!-- 左上：品牌 -->
+        <div class="ss-brand">
+            <span class="ss-brand-mark" aria-hidden="true">☙</span>
+            <span class="ss-brand-name">枯梦</span>
+            <span class="ss-brand-en">KUMENG</span>
+        </div>
+
+        <!-- 左侧：英文小标 + 大时钟 + 日期 + 引用（原项目的主视觉） -->
+        <div class="screensaver-hero" id="ssHero">
+            <div class="ss-en">THE QUIET BETWEEN DREAMS</div>
+            <div class="screensaver-time" id="ssTimeBig">01:47</div>
+            <div class="ss-sub">
+                <span id="ssDateText"></span>
+                <span class="ss-dash" aria-hidden="true"></span>
+                <span id="ssYearText"></span>
+            </div>
+            <div class="ss-quote">「 我在梦里，<br>也在梦的尽头。 」</div>
+        </div>
+
+        <!-- 右侧竖排 -->
+        <div class="ss-vertical" aria-hidden="true">
+            <span class="ss-v-title">梦隙</span>
+            <span class="ss-v-sub">一场尚未醒来的梦</span>
+        </div>
+
+        <!-- 底部状态条 -->
+        <div class="ss-bottom">
+            <span>⏱ DREAMSCAPE · 01</span>
+            <span id="ssStatus">画面 · 实时光照 · 沉浸</span>
+        </div>
+
+        <!-- 右下：控制面板（H 键收起 / 展开），布局照 KumengScreen -->
         <div class="screensaver-panel" id="screenSaverPanel">
-            <div class="ss-row">
-                <span>时刻</span>
-                <input type="range" id="ssTime" min="0" max="1439" step="5" value="0">
-                <span class="ss-val" id="ssTimeVal">--:--</span>
+            <div class="ss-head">
+                <span class="ss-moon" aria-hidden="true">☾</span>
+                <span class="ss-phase" id="ssPhase">静夜</span>
+                <span class="ss-now" id="ssNow">22:00</span>
+                <button class="ss-pill" id="ssFollowBtn" type="button" title="回到此刻">↻ 回到此刻</button>
             </div>
-            <div class="ss-row">
-                <span>曝光</span>
-                <input type="range" id="ssExposure" min="0.5" max="1.8" step="0.01" value="1">
-                <span class="ss-val" id="ssExposureVal">1.00</span>
+
+            <div class="ss-track">
+                <input type="range" id="ssTime" min="0" max="1439" step="1" value="0" aria-label="预览时刻">
+                <div class="ss-ticks">
+                    <span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span>
+                </div>
             </div>
-            <div class="ss-row">
-                <span>泛光</span>
-                <input type="range" id="ssGlow" min="0" max="1" step="0.01" value="0.3">
-                <span class="ss-val" id="ssGlowVal">0.30</span>
+
+            <div class="ss-row ss-chips">
+                <button class="ss-chip" type="button" data-ss-hour="6">晨曦</button>
+                <button class="ss-chip" type="button" data-ss-hour="12">白昼</button>
+                <button class="ss-chip" type="button" data-ss-hour="18">薄暮</button>
+                <button class="ss-chip" type="button" data-ss-hour="21">夜色</button>
+                <button class="ss-play" id="ssPlayBtn" type="button" title="昼夜循环" aria-pressed="false">▶</button>
+                <button class="ss-chip" id="ssPureBtn" type="button" aria-pressed="false">动效 开</button>
             </div>
-            <div class="ss-foot">
-                <button class="ss-btn" id="ssFollowBtn" type="button">跟随真实时间</button>
+
+            <div class="ss-row ss-light">
+                <span class="ss-label">光线调节</span>
+                <span class="ss-auto" id="ssAutoLabel">自动 · EV <b id="ssEv">0.00</b></span>
+                <button class="ss-step" id="ssEvMinus" type="button" title="减曝光">−</button>
+                <button class="ss-step" id="ssEvPlus" type="button" title="加曝光">+</button>
+            </div>
+
+            <div class="ss-row ss-light">
+                <span class="ss-label">时钟</span>
+                <span class="ss-auto" id="ssClockLabel">显示</span>
+                <button class="ss-step" id="ssClockBtn" type="button" title="切换时钟">切换</button>
                 <span class="ss-hint">H 收起面板</span>
-            </div>
-            <div class="ss-foot">
-                <button class="ss-btn" id="ssClockBtn" type="button" aria-pressed="true">时钟 开</button>
-                <button class="ss-btn" id="ssPureBtn" type="button" aria-pressed="false">纯图 关</button>
             </div>
         </div>
 
