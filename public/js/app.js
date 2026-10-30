@@ -5391,12 +5391,15 @@ const BlogApp = {
     toggleScreenSaver(on) {
         const wrap = document.getElementById('screenSaver');
         const art = document.getElementById('screenSaverArt');
+        const eyes = document.getElementById('screenSaverEyes');
         if (!wrap) return;
         const next = on === undefined ? wrap.hidden : !!on;
         wrap.hidden = !next;
         document.body.classList.toggle('screensaver-on', next);
 
-        if (art && !art.src) art.src = 'images/sky/kumeng-1920.webp';
+        // 底图用项目原图（albedo），闭眼图叠在上面做眨眼
+        if (art && !art.getAttribute('src')) art.src = 'images/sky/kumeng-albedo.webp';
+        if (eyes && !eyes.getAttribute('src')) eyes.src = 'images/sky/kumeng-eyes-closed.webp';
         clearInterval(this._screenSaverTimer);
         clearInterval(this._screenSaverLightTimer);
         if (next) {
@@ -5410,6 +5413,7 @@ const BlogApp = {
             this._screenSaverLightTimer = setInterval(() => this.applyScreenSaverLighting(), 5 * 60 * 1000);
         } else {
             this.stopScreenSaverPetals();
+            this.stopScreenSaverBlink();
             document.getElementById('screenSaverPanel')?.classList.add('is-hidden');
         }
     },
@@ -5441,23 +5445,54 @@ const BlogApp = {
         }
     },
 
-    // 动效（呼吸 + 花瓣）：纯图模式 / 减少动效下不跑
+    // 动效（呼吸 + 眨眼 + 花瓣）：纯图模式 / 减少动效下不跑
     applyScreenSaverMotion() {
         const state = this.ensureScreenSaverState();
         const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         if (state.pure || reduce) {
             this.stopScreenSaverPetals();
-        } else if (!this._ssPetals) {
-            this.startScreenSaverPetals();
+            this.stopScreenSaverBlink();
+            return;
         }
+        if (!this._ssPetals) this.startScreenSaverPetals();
+        this.startScreenSaverBlink();
+    },
+
+    // 眨眼：叠一张闭眼图，随机间隔闪一下（偶尔连眨两下）
+    startScreenSaverBlink() {
+        const eyes = document.getElementById('screenSaverEyes');
+        if (!eyes || this._ssBlinkTimer) return;
+        const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (reduce) return;
+        const blinkOnce = () => {
+            eyes.classList.add('is-blinking');
+            setTimeout(() => eyes.classList.remove('is-blinking'), 110);
+        };
+        const loop = () => {
+            this._ssBlinkTimer = setTimeout(() => {
+                blinkOnce();
+                if (Math.random() < 0.28) setTimeout(blinkOnce, 170);
+                loop();
+            }, 3200 + Math.random() * 5200);
+        };
+        loop();
+    },
+
+    stopScreenSaverBlink() {
+        clearTimeout(this._ssBlinkTimer);
+        this._ssBlinkTimer = null;
+        document.getElementById('screenSaverEyes')?.classList.remove('is-blinking');
     },
 
     // 屏保光照：按本地时间（或面板里手选的时刻）连续插值
     applyScreenSaverLighting() {
         const art = document.getElementById('screenSaverArt');
+        const stage = document.getElementById('screenSaverStage');
         const tint = document.getElementById('screenSaverTint');
         const glow = document.getElementById('screenSaverGlow');
         if (!art) return;
+        // 光照/呼吸滤镜挂在 stage 上，底图和闭眼图一起变
+        const filterTarget = stage || art;
         const state = this.ensureScreenSaverState();
         // 以面板上的滑块为准（「跟随真实时间」时 hour 保持 null）
         const timeEl = document.getElementById('ssTime');
@@ -5467,7 +5502,7 @@ const BlogApp = {
         const glowEl = document.getElementById('ssGlow');
         if (glowEl) state.glow = Number(glowEl.value) || 0;
         if (state.pure) {
-            art.style.filter = 'none';
+            filterTarget.style.filter = 'none';
             if (tint) tint.style.background = 'transparent';
             if (glow) glow.style.background = 'transparent';
             return;
@@ -5493,7 +5528,7 @@ const BlogApp = {
         const lerp = (x, y) => x + (y - x) * k;
 
         const exposure = state.exposure || 1;
-        art.style.filter = `brightness(${(lerp(A.b, B.b) * exposure).toFixed(3)}) `
+        filterTarget.style.filter = `brightness(${(lerp(A.b, B.b) * exposure).toFixed(3)}) `
             + `saturate(${lerp(A.s, B.s).toFixed(3)}) `
             + `hue-rotate(${lerp(A.hr, B.hr).toFixed(1)}deg)`;
 
