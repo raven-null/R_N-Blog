@@ -397,9 +397,7 @@ html[data-tone="dark"] #loginPage {
 html[data-tone="dark"] .toc-sidebar-inner,
 html[data-tone="dark"] .toc-search,
 html[data-tone="dark"] .toc-search-input,
-html[data-tone="dark"] .sidebar-top-bar,
 html[data-tone="dark"] .sidebar-action-btn,
-html[data-tone="dark"] .mobile-top-bar,
 html[data-tone="dark"] .article-header,
 html[data-tone="dark"] .article-main,
 html[data-tone="dark"] .article-content,
@@ -429,8 +427,6 @@ html[data-tone="dark"] .article-meta a {
 
 /* 浅色主题下目录/正文卡保持纸白 */
 html[data-tone="light"] .toc-sidebar-inner,
-html[data-tone="light"] .sidebar-top-bar,
-html[data-tone="light"] .mobile-top-bar,
 html[data-tone="light"] .article-header {
     background: var(--glass-card, rgba(255, 253, 248, 0.85)) !important;
     color: var(--text) !important;
