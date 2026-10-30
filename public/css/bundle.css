@@ -5219,6 +5219,28 @@ html.reader-focus .article-content {
     cursor: pointer;
 }
 
+/* 删除当天日记：靠左摆，和提交/关闭分开 */
+.editor-delete {
+    height: 28px;
+    margin-right: auto;
+    padding: 0 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-secondary);
+    font-family: inherit;
+    font-size: 12px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: color .2s ease, border-color .2s ease, background .2s ease;
+}
+
+.editor-delete:hover {
+    color: #c0392b;
+    border-color: rgba(192, 57, 43, .55);
+    background: rgba(192, 57, 43, .08);
+}
+
 /* 日记展示盒子 */
 .home-journal-box {
     display: flex;

@@ -2564,9 +2564,12 @@ const BlogApp = {
 
         if (taskForm) taskForm.style.display = 'none';
         if (journalForm) journalForm.style.display = '';
+        const entry = (this.lifeState.journals || []).find(j => j.date === this.lifeState.date);
+        // 只有这天已经写过日记，才出现「删除」
+        const del = journalForm ? journalForm.querySelector('[data-journal-delete]') : null;
+        if (del) del.hidden = !(entry && entry.content);
         const ta = document.getElementById('editorJournalInput');
         if (ta) {
-            const entry = (this.lifeState.journals || []).find(j => j.date === this.lifeState.date);
             ta.value = entry ? entry.content : '';
             setTimeout(() => ta.focus(), 40);
         }
@@ -2625,14 +2628,20 @@ const BlogApp = {
         this.closeEditor();
     },
 
-    // 删除当天日记
+    // 删除当天日记（编辑器里的「删除」，删完关窗）
     async deleteJournal() {
-        if (!this.lifeState.date) return;
+        const date = this.lifeState.date;
+        if (!date) return;
+        let data;
         try {
-            await this.lifeApi(`?type=journal&date=${encodeURIComponent(this.lifeState.date)}`, { method: 'DELETE' });
-            this.lifeState.journals = (this.lifeState.journals || []).filter(j => j.date !== this.lifeState.date);
-            this.renderJournalStack();
-        } catch (err) { /* 忽略 */ }
+            data = await this.lifeApi(`?type=journal&date=${encodeURIComponent(date)}`, { method: 'DELETE' });
+        } catch (err) {
+            return; // 失败保留窗口，用户可以再试
+        }
+        if (data && data.unauthorized) return;
+        this.lifeState.journals = (this.lifeState.journals || []).filter(j => j.date !== date);
+        this.renderJournalStack();
+        this.closeEditor();
     },
 
     // 任务列表的完成 / 删除
@@ -2731,6 +2740,14 @@ const BlogApp = {
         document.getElementById('editorJournalForm')?.addEventListener('submit', (e) => {
             e.preventDefault();
             this.submitEditorJournal();
+        });
+
+        // 日记表单里的「删除」：确认后删掉这天的日记
+        document.getElementById('editorJournalForm')?.addEventListener('click', (e) => {
+            if (!e.target.closest('[data-journal-delete]')) return;
+            const label = this.formatDateLabel(this.lifeState.date);
+            if (!window.confirm(`删掉 ${label} 的日记？删除后不能恢复。`)) return;
+            this.deleteJournal();
         });
 
         // 归档月份切换
