@@ -300,7 +300,7 @@
   }
 
   async function autoTalk(force) {
-    if (!STATE.enabled || STATE.busy) return;
+    if (!STATE.enabled || STATE.busy || document.activeElement?.matches('input,textarea,[contenteditable="true"]')) return;
     const now = Date.now();
     if (!force && now - STATE.lastAutoAt < STATE.minGap) return;
     if (document.hidden) return;
@@ -409,7 +409,7 @@
 
   // ---------- 发一句话 ----------
   async function send(text) {
-    if (!text) return;
+    if (!text || STATE.busy) return;
     clearTimeout(STATE.autoSayTimer);
     clearTimeout(STATE.bubbleTimer);
     STATE.lastUserAt = Date.now();
@@ -463,6 +463,9 @@
 
   // ---------- 启动 ----------
   function start() {
+    if (STATE.started) return;
+    STATE.started = true;
+    try { STATE.enabled = localStorage.getItem('pet-quiet') !== 'true'; } catch (_) {}
     initPanel();
     initVoice();
     scheduleAuto();
@@ -488,7 +491,7 @@
 
     // 深夜提醒一次
     const hour = new Date().getHours();
-    if (hour >= 23 || hour < 5) {
+    if (STATE.enabled && (hour >= 23 || hour < 5)) {
       setTimeout(() => say('这个点了，别熬太晚喵', 7000), 6000);
     }
   }

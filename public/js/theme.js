@@ -137,15 +137,38 @@ const ThemeManager = {
     },
 
     // 初始化：读本地存储，老主题名自动迁移
+    mode: 'auto',
     init() {
-        const saved = localStorage.getItem('blog-theme') || 'paper';
-        this.setTheme(saved, { animate: false });
+        try { this.mode = localStorage.getItem('blog-theme-mode') || 'auto'; } catch (_) {}
+        this.followPeriod();
+        if (!this.bound) {
+            this.bound = true;
+            document.addEventListener('daylightchange', () => { if (this.mode === 'auto') this.followPeriod(); });
+        }
+    },
+    followPeriod() {
+        const period = document.documentElement.dataset.period || 'day';
+        const key = this.mode === 'dark' ? 'night' : this.mode === 'light' ? 'paper'
+            : ({ dawn: 'dawn', day: 'paper', dusk: 'ember', night: 'midnight' }[period] || 'paper');
+        this.setTheme(key, { animate: false, automatic: true });
+        document.documentElement.dataset.themeMode = this.mode;
+        document.querySelectorAll('[data-theme-mode-select]').forEach(el => { el.value = this.mode; });
+    },
+    setMode(mode) {
+        if (!['auto', 'light', 'dark'].includes(mode)) return;
+        this.mode = mode;
+        try { localStorage.setItem('blog-theme-mode', mode); } catch (_) {}
+        this.followPeriod();
     },
 
     setTheme(themeName, opts = {}) {
         const key = this.aliases[themeName] || themeName;
         if (!this.themes[key]) return;
 
+        if (!opts.automatic) {
+            this.mode = this.themes[key].scheme;
+            try { localStorage.setItem('blog-theme-mode', this.mode); } catch (_) {}
+        }
         this.currentTheme = key;
         const theme = this.themes[key];
         const colors = this.buildColors(key);
@@ -163,7 +186,7 @@ const ThemeManager = {
 
         if (window.Tone) window.Tone.refresh();
 
-        localStorage.setItem('blog-theme', key);
+        try { localStorage.setItem('blog-theme', key); } catch (_) {}
         this.updateThemeButtons();
     },
 
@@ -177,10 +200,7 @@ const ThemeManager = {
 
     // 切换到下一个主题
     nextTheme() {
-        const names = Object.keys(this.themes);
-        const i = names.indexOf(this.currentTheme);
-        const next = names[(i + 1) % names.length];
-        this.setTheme(next);
+        this.setMode(({ auto: 'light', light: 'dark', dark: 'auto' })[this.mode] || 'auto');
     },
 
     // 主题清单（给主题面板用）
@@ -226,3 +246,5 @@ const ThemeManager = {
 };
 
 window.ThemeManager = ThemeManager;
+
+ThemeManager.init();

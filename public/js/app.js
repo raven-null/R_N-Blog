@@ -43,7 +43,7 @@ const BlogApp = {
         // 任务 + 日记：仅后台登录后显示
         this.initLife();
         // 主页盒子的自由交互：堆叠切换 / 缩放 / 交换
-        this.bindBoxPlay();
+        // Editorial home uses normal flow instead of stacked card gestures.
         // 赛博猫娘对话
         // 首页手写开关（时钟旁第二个小圆钮）
         document.getElementById('hvHandBtn')?.addEventListener('click', (e) => {
@@ -73,7 +73,7 @@ const BlogApp = {
         // 身份区时钟（每分钟刷新一次显示）
         this.renderHvClock();
         clearInterval(this.hvClockTimer);
-        this.hvClockTimer = setInterval(() => this.renderHvClock(), 1000);
+        this.hvClockTimer = setInterval(() => { if (!document.hidden) this.renderHvClock(); }, 60000);
         this.initHomeCanvas();
         // 后台退出登录联动：admin_key / gallery_key 被清除时，前台图库 R18 恢复锁定
         window.addEventListener('storage', (e) => {
@@ -1368,7 +1368,7 @@ const BlogApp = {
     startHvClock() {
         this.renderHvClock();
         if (this.hvClockTimer) clearInterval(this.hvClockTimer);
-        this.hvClockTimer = setInterval(() => this.renderHvClock(), 1000);
+        this.hvClockTimer = setInterval(() => { if (!document.hidden) this.renderHvClock(); }, 60000);
     },
 
     renderHvClock() {
@@ -1659,6 +1659,7 @@ const BlogApp = {
 
     // 轮播容器高度跟着当前这张卡的封面走
     syncCarouselHeight() {
+        if (document.body.classList.contains("home-layout")) return;
         const carousel = document.getElementById('hvCarousel');
         const track = document.getElementById('hvCarTrack');
         if (!carousel || !track) return;
@@ -1675,6 +1676,7 @@ const BlogApp = {
 
     // 轮播：按钮翻页 + 自动播放
     bindCarousel() {
+        if (document.body.classList.contains("home-layout")) return;
         const track = document.getElementById('hvCarTrack');
         if (!track || track.dataset.carBound) return;
         track.dataset.carBound = '1';
@@ -4553,8 +4555,8 @@ const BlogApp = {
     // 正文手写体开关：默认开启（只有明确存了 '0' 才关）
     applyHandBody(on) {
         if (on === undefined) {
-            let raw = '1';
-            try { raw = localStorage.getItem('blog-hand-body') ?? '1'; } catch (e) { raw = '1'; }
+            let raw = '0';
+            try { raw = localStorage.getItem('blog-hand-body') ?? '0'; } catch (e) { raw = '0'; }
             on = raw !== '0';
         } else {
             try { localStorage.setItem('blog-hand-body', on ? '1' : '0'); } catch (e) { /* 忽略 */ }

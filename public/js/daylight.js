@@ -125,7 +125,9 @@
     root.style.setProperty('--sky-glow-opacity', L.glowOpacity.toFixed(3));
     root.style.setProperty('--sun-x', L.arc.x.toFixed(2) + '%');
     root.style.setProperty('--sun-y', L.arc.y.toFixed(2) + '%');
+    const previous = root.dataset.period;
     root.setAttribute('data-period', L.period.key);
+    if (previous !== L.period.key) document.dispatchEvent(new CustomEvent('daylightchange', { detail: L.period }));
     if (window.Tone) window.Tone.refresh();
     const dark = root.getAttribute('data-theme') === 'dark';
     root.style.setProperty('--art-brightness', (dark ? L.tone.brightness * 0.55 : L.tone.brightness).toFixed(3));
@@ -167,7 +169,7 @@
       tick();
       if (forced !== null) return; // 预览模式不自动走
       if (this.timer) clearInterval(this.timer);
-      this.timer = setInterval(tick, intervalMs);
+      this.timer = setInterval(() => { if (!document.hidden) tick(); }, intervalMs);
       document.addEventListener('visibilitychange', () => { if (!document.hidden) tick(); });
     },
 
