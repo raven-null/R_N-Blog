@@ -423,23 +423,23 @@
 }
 
 /* ============================================================
-   02 · 生活切片：图库随机播放，铺满
+   02 · 生活切片：图库随机播放，盒子跟当前图比例伸缩
    ============================================================ */
 .hv3-shots {
-    flex: 1 1 auto;
-    min-height: 200px;
+    flex: 0 0 auto;
 }
 
 .hv3-shot {
     position: relative;
-    flex: 1 1 auto;
-    min-height: 160px;
+    width: 100%;
+    height: var(--shot-h, 220px);
     border-radius: 18px;
     overflow: hidden;
     background: var(--surface-2, #f3eee1);
     cursor: zoom-in;
     isolation: isolate;
     box-shadow: 0 10px 30px rgba(16, 20, 32, .12);
+    transition: height .45s cubic-bezier(.2, .7, .3, 1);
 }
 
 .hv3-shot-img {
@@ -481,7 +481,7 @@
 .hv3-shot:hover .hv3-shot-meta { opacity: 1; }
 
 /* ============================================================
-   03 · 今日拾光：盒内无限自动滚动，多出的一律裁掉
+   03 · 今日拾光：默认自动滚，手动碰过就接管，离开几秒后接着自动
    ============================================================ */
 .hv3-news {
     flex: 0 0 auto;
@@ -492,7 +492,9 @@
     position: relative;
     flex: 1 1 auto;
     min-height: 0;
-    overflow: hidden;
+    /* 手动滚动要 overflow-y: auto；滚动条藏起来（与轮播一致） */
+    overflow-x: hidden;
+    overflow-y: auto;
     overscroll-behavior: contain;
     scrollbar-width: none !important;
     -ms-overflow-style: none !important;
@@ -506,17 +508,12 @@
     display: none !important;
 }
 
+/* 自动滚不再用 CSS animation（会被 overflow 打断），改由 JS 推 scrollTop；
+   这里只留一个可选的 class 兜底 */
 .hv3-ticker-track {
     display: flex;
     flex-direction: column;
     gap: 2px;
-    animation: hv3Ticker var(--ticker-dur, 40s) linear infinite;
-    will-change: transform;
-}
-
-@keyframes hv3Ticker {
-    from { transform: translate3d(0, 0, 0); }
-    to { transform: translate3d(0, -50%, 0); }
 }
 
 .hv3-news-item {
@@ -618,6 +615,35 @@
     text-overflow: ellipsis;
 }
 
+/* 封面截图：撑满卡片上沿（卡片有 16/18 内边距，负边距抵消） */
+.hv3-project-cover {
+    flex: none;
+    margin: -16px -18px 2px;
+    height: 108px;
+    overflow: hidden;
+    background: var(--surface-3, #f3eee1);
+    border-bottom: 1px solid var(--border, rgba(66, 54, 32, .1));
+}
+
+.hv3-project-cover img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top center;
+}
+
+.hv3-project-tag {
+    flex: none;
+    padding: 1px 8px;
+    border-radius: 999px;
+    font-size: 10.5px;
+    font-weight: 500;
+    color: var(--accent-strong, #a15c00);
+    background: var(--accent-soft, rgba(240, 162, 12, .13));
+    border: 1px solid var(--accent-ring, rgba(240, 162, 12, .34));
+}
+
 .hv3-project-star {
     font-size: 11px;
     color: var(--accent-strong, #a15c00);
@@ -645,6 +671,12 @@
     font-size: 11px;
     color: var(--text-muted);
     margin-top: auto;
+}
+
+.hv3-project-host {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .hv3-project-lang {

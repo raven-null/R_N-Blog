@@ -1074,7 +1074,8 @@ const BlogApp = {
         }
     },
 
-    // 今日拾光：盒子内无限自动滚动，滚出去的一律裁掉（列表内容复制一份，滚到一半即回位）
+    // 今日拾光：默认自动滚（JS 推 scrollTop，内容复制一份可无限循环）；
+    // 用户滚轮/触摸/拖拽一碰就暂停自动、交给手动；离开几秒后从当前位置接着自动。
     startNewsTicker(list, items) {
         if (!list) return;
         const pool = (items || []).filter((it) => it && it.title);
@@ -1083,27 +1084,58 @@ const BlogApp = {
             return;
         }
         const html = pool.map((it) => this.hv3NewsItemHTML(it)).join('');
-        // 复制两份：内容比盒子高多少都能一直滚下去
+        // 复制两份：滚过一半时把 scrollTop 减回去，接缝看不出来
         list.innerHTML = '<div class="hv3-ticker-track">' + html + html + '</div>';
         const track = list.firstElementChild;
         if (!track) return;
-        // 时长跟条目数走（一条约 3.2s，最短 24s），读起来不快不慢
-        track.style.setProperty('--ticker-dur', Math.max(24, pool.length * 3.2).toFixed(1) + 's');
 
-        const pause = () => { track.style.animationPlayState = 'paused'; };
-        const play = () => { track.style.animationPlayState = 'running'; };
-        list.addEventListener('pointerenter', pause);
-        list.addEventListener('pointerleave', play);
-        list.addEventListener('focusin', pause);
-        list.addEventListener('focusout', play);
-        document.addEventListener('visibilitychange', () => (document.hidden ? pause() : play()));
+        // 一条约 3.2px/帧 ≈ 60fps 下 190px/s，读起来不快不慢
+        const SPEED = 0.55;
+        let raf = 0;
+        let paused = false;
+        let resumeTimer = 0;
+        // 内容不到一屏就不用滚
+        let half = 0;
+        const measure = () => { half = track.scrollHeight / 2; };
+        measure();
+        window.addEventListener('resize', measure, { passive: true });
 
-        // 内容不到一屏就别滚了（否则底部会露出空白）
-        requestAnimationFrame(() => {
-            if (track.scrollHeight / 2 <= list.clientHeight + 6) {
-                track.style.animation = 'none';
-            }
-        });
+        const step = () => {
+            raf = 0;
+            if (paused || document.hidden || half <= list.clientHeight + 6) return;
+            list.scrollTop += SPEED;
+            // 滚过一半（第二份开头 ≈ 第一份开头）就悄悄减回去，无限循环
+            if (list.scrollTop >= half) list.scrollTop -= half;
+            raf = requestAnimationFrame(step);
+        };
+        const play = () => {
+            if (raf || paused || document.hidden) return;
+            raf = requestAnimationFrame(step);
+        };
+        const stop = () => {
+            if (raf) { cancelAnimationFrame(raf); raf = 0; }
+        };
+        const pause = (hold) => {
+            paused = true;
+            stop();
+            if (resumeTimer) clearTimeout(resumeTimer);
+            // hold=true：用户正在交互（滚轮/触摸），不自动恢复，等 pointerleave
+            if (!hold) resumeTimer = setTimeout(() => { paused = false; play(); }, 2500);
+        };
+
+        // 手动滚动：滚轮/触摸/键盘都算；交互期间不自动恢复
+        list.addEventListener('wheel', () => pause(true), { passive: true });
+        list.addEventListener('touchstart', () => pause(true), { passive: true });
+        list.addEventListener('pointerdown', () => pause(true), { passive: true });
+        list.addEventListener('keydown', () => pause(true));
+        // 鼠标悬停也暂停（读标题），移开后恢复
+        list.addEventListener('pointerenter', () => pause(true));
+        list.addEventListener('pointerleave', () => { paused = false; play(); });
+        list.addEventListener('focusin', () => pause(true));
+        list.addEventListener('focusout', () => { paused = false; play(); });
+        document.addEventListener('visibilitychange', () => (document.hidden ? stop() : play()));
+
+        play();
     },
 
     // 首页简报条目的 HTML（hv3 结构，与新闻视图的 news-item 互不影响）
@@ -1889,6 +1921,22 @@ const BlogApp = {
         let front = 0;
         let cur = -1;
 
+        // 盒子高度跟着当前图走：宽由列宽定，高 = 宽 / 图片比例（竖图变高、横图变扁）
+        const fitShotBox = (img) => {
+            const w = img.naturalWidth;
+            const h = img.naturalHeight;
+            if (!w || !h) return;
+            const boxW = stage.clientWidth || stage.parentElement?.clientWidth || 0;
+            if (!boxW) return;
+            let ratio = w / h;
+            ratio = Math.max(0.55, Math.min(2.4, ratio));
+            let boxH = Math.round(boxW / ratio);
+            // 上下限：别把左列撑爆，也别矮成一条
+            const maxH = Math.min(window.innerHeight * 0.55, 480);
+            boxH = Math.max(140, Math.min(maxH, boxH));
+            stage.style.setProperty('--shot-h', boxH + 'px');
+        };
+
         const show = (idx) => {
             const p = photos[idx];
             if (!p) return;
@@ -1902,6 +1950,7 @@ const BlogApp = {
                 next.classList.add('is-front');
                 prev.classList.remove('is-front');
                 front = 1 - front;
+                fitShotBox(next);
                 if (meta) meta.textContent = '随机播放 · ' + (idx + 1) + ' / ' + total;
             };
             if (next.dataset.src === src) { swap(); return; }
@@ -4012,39 +4061,38 @@ const BlogApp = {
         }
     },
 
-    // 渲染主页「我的项目」（GitHub 仓库卡片，单行横向，可拖拽/滑动查看）
+    // 渲染主页「创造与探索」：已上线站点卡片（带封面截图），文件堆叠展示
     async renderHomeProjects() {
         const box = document.getElementById('hv3Projects');
         if (!box || box.dataset.rendered) return;
         box.dataset.rendered = '1';
 
-        const items = await this.loadGithubRepos();
+        const items = this.deployedProjects || [];
         if (!items.length) {
-            box.innerHTML = '<div class="hv3-empty">项目列表暂时不可用</div>';
+            box.innerHTML = '<div class="hv3-empty">暂无已上线项目</div>';
             return;
         }
 
-        box.innerHTML = items.map(repo => this.hv3RepoCard(repo)).join('');
+        box.innerHTML = items.map(p => this.hv3DeployedCard(p)).join('');
         this.initFileStack(box, { autoMs: 4200 });
     },
 
-    // 首页项目卡片（hv3 结构；项目页仍用 githubRepoCard 那套）
-    hv3RepoCard(repo) {
-        const color = this.escAttr(repo.languageColor || '#8b8b8b');
-        const lang = repo.language
-            ? `<span class="hv3-project-lang"><i style="background:${color}"></i>${this.esc(repo.language)}</span>`
+    // 首页已上线项目卡片：封面截图 + 名称 / 标签 / 描述 / 域名
+    hv3DeployedCard(p) {
+        const cover = p.cover
+            ? `<div class="hv3-project-cover"><img src="${this.escAttr(p.cover)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.closest('.hv3-project-cover')?.remove()"></div>`
             : '';
-        const stars = Number(repo.stars) > 0 ? `<span class="hv3-project-star">★ ${Number(repo.stars)}</span>` : '';
+        const tag = p.tag ? `<span class="hv3-project-tag">${this.esc(p.tag)}</span>` : '';
         return `
-            <a class="hv3-project" href="${this.escAttr(repo.htmlUrl)}" target="_blank" rel="noopener">
+            <a class="hv3-project" href="${this.escAttr(p.url)}" target="_blank" rel="noopener">
+                ${cover}
                 <div class="hv3-project-head">
-                    <span class="hv3-project-name">${this.esc(repo.name)}</span>
-                    ${stars}
+                    <span class="hv3-project-name">${this.esc(p.name)}</span>
+                    ${tag}
                 </div>
-                <div class="hv3-project-desc">${this.esc(repo.description || '暂无描述')}</div>
+                <div class="hv3-project-desc">${this.esc(p.desc || '')}</div>
                 <div class="hv3-project-foot">
-                    ${lang}
-                    <span class="hv3-project-time">${this.relativeTime(repo.updatedAt)}</span>
+                    <span class="hv3-project-host">${this.esc(p.host || '')}</span>
                 </div>
             </a>
         `;
