@@ -5393,9 +5393,58 @@ const BlogApp = {
 
         if (art && !art.src) art.src = 'images/sky/kumeng-1920.webp';
         clearInterval(this._screenSaverTimer);
+        clearInterval(this._screenSaverLightTimer);
         if (next) {
+            this.applyScreenSaverLighting();
             this.tickScreenSaverClock();
             this._screenSaverTimer = setInterval(() => this.tickScreenSaverClock(), 1000);
+            // 光照变化很慢：五分钟重算一次就够
+            this._screenSaverLightTimer = setInterval(() => this.applyScreenSaverLighting(), 5 * 60 * 1000);
+        }
+    },
+
+    // 屏保光照：按本地时间连续插值（亮度 / 饱和 / 色相 + 天色叠加 + 一层柔光）
+    applyScreenSaverLighting() {
+        const art = document.getElementById('screenSaverArt');
+        const tint = document.getElementById('screenSaverTint');
+        const glow = document.getElementById('screenSaverGlow');
+        if (!art) return;
+        const now = new Date();
+        const h = now.getHours() + now.getMinutes() / 60;
+        // t=时刻，b=亮度，s=饱和，hr=色相偏移，r/g/b2=色调，a=色调浓度
+        const KEY = [
+            { t: 0, b: 0.40, s: 0.72, hr: -14, r: 8, g: 12, b2: 28, a: 0.58 },
+            { t: 5, b: 0.62, s: 0.90, hr: -6, r: 44, g: 32, b2: 66, a: 0.38 },
+            { t: 7, b: 0.94, s: 1.06, hr: -2, r: 255, g: 186, b2: 140, a: 0.14 },
+            { t: 12, b: 1.08, s: 1.06, hr: 0, r: 255, g: 246, b2: 220, a: 0.05 },
+            { t: 17, b: 0.96, s: 1.10, hr: 6, r: 255, g: 152, b2: 84, a: 0.16 },
+            { t: 19, b: 0.72, s: 1.04, hr: 14, r: 186, g: 96, b2: 64, a: 0.30 },
+            { t: 21.5, b: 0.50, s: 0.86, hr: -8, r: 24, g: 30, b2: 58, a: 0.50 },
+            { t: 24, b: 0.40, s: 0.72, hr: -14, r: 8, g: 12, b2: 28, a: 0.58 },
+        ];
+        let i = 0;
+        while (i < KEY.length - 2 && h > KEY[i + 1].t) i++;
+        const A = KEY[i];
+        const B = KEY[i + 1];
+        const k = (h - A.t) / Math.max(0.0001, B.t - A.t);
+        const lerp = (x, y) => x + (y - x) * k;
+
+        art.style.filter = `brightness(${lerp(A.b, B.b).toFixed(3)}) `
+            + `saturate(${lerp(A.s, B.s).toFixed(3)}) `
+            + `hue-rotate(${lerp(A.hr, B.hr).toFixed(1)}deg)`;
+
+        if (tint) {
+            tint.style.background = 'rgba('
+                + `${Math.round(lerp(A.r, B.r))}, ${Math.round(lerp(A.g, B.g))}, `
+                + `${Math.round(lerp(A.b2, B.b2))}, ${lerp(A.a, B.a).toFixed(3)})`;
+        }
+
+        // 柔光：正午在画面中上方，早晚贴地平线
+        const sunLow = Math.min(1, Math.abs(h - 12) / 7);
+        const strength = 0.30 * (1 - sunLow * 0.55);
+        if (glow) {
+            glow.style.background = `radial-gradient(ellipse 90% 70% at 50% ${Math.round(18 + sunLow * 62)}%, `
+                + `rgba(255, 238, 205, ${strength.toFixed(2)}), transparent 62%)`;
         }
     },
 

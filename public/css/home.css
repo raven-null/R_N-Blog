@@ -1392,6 +1392,24 @@ body.view-blog-active .nav-bar {
     height: 100%;
     object-fit: cover;
     object-position: center;
+    transition: filter 1.8s ease;
+}
+
+/* 天色色调：按时间叠加的一层颜色 */
+.screensaver-tint {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    transition: background 1.8s ease;
+}
+
+/* 柔光：像太阳一样从上方/地平线打下来的暖光 */
+.screensaver-glow {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    mix-blend-mode: screen;
+    transition: background 1.8s ease;
 }
 
 /* 屏保时钟：右下角，时间大字 + 日期小字 */
