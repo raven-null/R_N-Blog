@@ -6013,45 +6013,45 @@ html.reader-focus .article-content {
     overflow: visible;
 }
 
-/* 身体与五官 */
+/* 身体与五官（黑色桌宠：深色剪影 + 浅色眼睛，暗背景下也能看清轮廓） */
 .dp-body {
-    fill: rgba(250, 250, 255, 0.96);
-    stroke: rgba(120, 128, 220, 0.75);
+    fill: #1b1b22;
+    stroke: #3c3c4a;
     stroke-width: 2.4;
     stroke-linejoin: round;
 }
 
 .dp-ear {
-    fill: rgba(250, 250, 255, 0.96);
-    stroke: rgba(120, 128, 220, 0.75);
+    fill: #1b1b22;
+    stroke: #3c3c4a;
     stroke-width: 2.4;
     stroke-linejoin: round;
 }
 
 .dp-ear-in {
-    fill: rgba(255, 150, 200, 0.65);
+    fill: #34343f;
 }
 
 .dp-eye {
-    fill: #2b2f45;
+    fill: #f2f2f8;
     transform-box: fill-box;
     transform-origin: center;
     animation: dpBlink 4.6s ease-in-out infinite;
 }
 
 .dp-shine {
-    fill: #ffffff;
+    fill: #1b1b22;
 }
 
 .dp-mouth {
     fill: none;
-    stroke: #4a4a63;
+    stroke: #d8d8e4;
     stroke-width: 2;
     stroke-linecap: round;
 }
 
 .dp-cheek {
-    fill: rgba(255, 150, 190, 0.45);
+    fill: rgba(255, 140, 175, 0.30);
 }
 
 .dp-shadow {
@@ -6899,11 +6899,12 @@ body.canvas-on .reading-progress {
     position: absolute;
     inset: 1px;
     border-radius: 50%;
-    background: radial-gradient(circle at 50% 28%, #ffffff 0%, #eeeade 62%, #ddd8c8 100%);
+    /* 黑色桌宠配深色底座，别再用白瓷盘 */
+    background: radial-gradient(circle at 50% 28%, #44444f 0%, #2a2a34 62%, #191920 100%);
     box-shadow:
-        0 6px 16px rgba(8, 12, 30, 0.26),
-        inset 0 -5px 12px rgba(60, 48, 20, 0.07),
-        inset 0 1px 3px rgba(255, 255, 255, 0.9);
+        0 6px 16px rgba(8, 12, 30, 0.34),
+        inset 0 -5px 12px rgba(0, 0, 0, 0.28),
+        inset 0 1px 3px rgba(255, 255, 255, 0.16);
     pointer-events: none;
 }
 

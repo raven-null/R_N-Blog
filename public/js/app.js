@@ -3134,6 +3134,8 @@ const BlogApp = {
             })
             : null;
         if (this.petEngine) {
+            // 纯黑：引擎默认的 black 调色板是「#585858 → #000」渐变，这里直接压成纯色
+            if (typeof this.petEngine.setInk === 'function') this.petEngine.setInk('#000000');
             this.petEngine.setState('idle');
             this.petEngine.__petIdleTimer = 0;
         }

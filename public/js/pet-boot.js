@@ -45,6 +45,8 @@
           mode: 'hold',
           followPointer: true,
         });
+        // 纯黑：引擎默认的 black 调色板是「#585858 → #000」渐变，这里直接压成纯色
+        if (typeof engine.setInk === 'function') engine.setInk('#000000');
         engine.setState('idle');
       } catch (e) { engine = null; }
     }
