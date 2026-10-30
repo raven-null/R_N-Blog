@@ -649,7 +649,7 @@
     border-radius: 14px;
     text-decoration: none;
     color: inherit;
-    background: var(--glass-card-strong, rgba(255, 253, 248, .92));
+    background: var(--surface, #fffefb);
     border: 1px solid var(--glass-line, rgba(255, 255, 255, .5));
     box-shadow: 0 6px 18px rgba(20, 26, 44, .08);
     overflow: hidden;
@@ -829,10 +829,10 @@
     font-family: inherit;
     text-align: left;
     color: inherit;
-    background: var(--glass-card-strong, rgba(255, 253, 248, .92));
+    background: var(--surface, #fffefb);
     border: 1px solid var(--glass-line, rgba(255, 255, 255, .5));
     border-radius: 16px;
-    box-shadow: 0 8px 22px rgba(20, 26, 44, .1);
+    box-shadow: 0 8px 22px rgba(20, 26, 44, .12);
     overflow: hidden;
     cursor: pointer;
     transform-origin: 50% 55%;
@@ -850,6 +850,11 @@
 
 .hv3-journal:hover {
     box-shadow: 0 12px 28px rgba(20, 26, 44, .16);
+}
+
+/* 叠一摞时只用位移/旋转区分层次：不叠透明度，否则下层的字会透上来糊成一片 */
+.hv3-journals .hv3-journal {
+    opacity: 1;
 }
 
 .hv3-journal-head {
@@ -913,17 +918,13 @@
 }
 
 html[data-theme="dark"] .hv3-journal {
-    background: rgba(255, 255, 255, .085);
+    background: rgba(24, 27, 37, .94);
     border-color: rgba(255, 255, 255, .18);
-    backdrop-filter: blur(18px) saturate(1.25);
-    -webkit-backdrop-filter: blur(18px) saturate(1.25);
-    box-shadow:
-        0 12px 30px rgba(0, 0, 0, .42),
-        inset 0 1px 0 rgba(255, 255, 255, .1);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, .42);
 }
 
 html[data-theme="dark"] .hv3-today-panel {
-    background: rgba(255, 255, 255, .06);
+    background: rgba(22, 25, 34, .66);
     border-color: rgba(255, 255, 255, .16);
     backdrop-filter: blur(18px) saturate(1.2);
     -webkit-backdrop-filter: blur(18px) saturate(1.2);
@@ -1079,13 +1080,9 @@ html[data-theme="dark"] .cal-act {
         盖在画面上的渐变压得更深，保证文字压得住
    ============================================================ */
 html[data-theme="dark"] .hv3-project {
-    background: rgba(255, 255, 255, .085);
+    background: rgba(24, 27, 37, .94);
     border-color: rgba(255, 255, 255, .18);
-    backdrop-filter: blur(18px) saturate(1.25);
-    -webkit-backdrop-filter: blur(18px) saturate(1.25);
-    box-shadow:
-        0 12px 30px rgba(0, 0, 0, .42),
-        inset 0 1px 0 rgba(255, 255, 255, .1);
+    box-shadow: 0 10px 26px rgba(0, 0, 0, .42);
 }
 
 html[data-theme="dark"] .hv3-item:not(:has(.hv3-cover)) {
