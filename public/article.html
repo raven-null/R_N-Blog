@@ -2402,12 +2402,13 @@
     </div>
 
     <script>
-        // 正文手写开关（与首页共用 body.hand-body + localStorage）
+        // 正文手写开关（与首页共用 html.hand-body + localStorage；CSS 规则挂在 html 上，不能加到 body）
         (function () {
             var KEY = 'blog-hand-body';
             var btn = document.getElementById('readerHand');
+            var root = document.documentElement;
             var sync = function (on) {
-                document.body.classList.toggle('hand-body', !!on);
+                root.classList.toggle('hand-body', !!on);
                 if (btn) btn.setAttribute('aria-pressed', on ? 'true' : 'false');
             };
             var saved = false;
@@ -2416,7 +2417,7 @@
             if (btn) {
                 btn.addEventListener('click', function (e) {
                     e.preventDefault();
-                    var on = !document.body.classList.contains('hand-body');
+                    var on = !root.classList.contains('hand-body');
                     sync(on);
                     try { localStorage.setItem(KEY, on ? '1' : '0'); } catch (err) {}
                 });
