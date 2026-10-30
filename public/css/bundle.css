@@ -13947,7 +13947,7 @@ body.view-blog-active .nav-bar {
     }
 }
 
-/* 控制面板：H 收起 / 展开 */
+/* 控制面板：H 收起 / 展开（不要毛玻璃，免得在插画上糊出一块遮罩） */
 .screensaver-panel {
     position: absolute;
     left: 26px;
@@ -13960,11 +13960,10 @@ body.view-blog-active .nav-bar {
     padding: 14px 16px;
     font-size: 12px;
     color: #ece7dc;
-    background: rgba(12, 14, 20, .55);
-    border: 1px solid rgba(255, 255, 255, .16);
+    background: rgba(10, 12, 18, .34);
+    border: 1px solid rgba(255, 255, 255, .14);
     border-radius: 14px;
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    text-shadow: 0 1px 10px rgba(0, 0, 0, .6);
     transition: opacity .2s ease, transform .2s ease;
 }
 
