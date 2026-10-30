@@ -1369,3 +1369,88 @@ body.view-blog-active .nav-bar {
 
     .blog-bar-search input { width: 110px; }
 }
+
+/* ============================================================
+   屏保模式：整屏只剩背景插画，界面全部藏起来
+   ============================================================ */
+.screensaver {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: #05060a;
+}
+
+.screensaver[hidden] {
+    display: none;
+}
+
+/* 背景插画铺满整屏 */
+.screensaver-art {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+}
+
+/* 屏保时钟：右下角，时间大字 + 日期小字 */
+.screensaver-clock {
+    position: absolute;
+    right: 42px;
+    bottom: 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+    color: #f4f1ea;
+    text-shadow: 0 4px 26px rgba(0, 0, 0, .55);
+    pointer-events: none;
+}
+
+.screensaver-time {
+    font-size: clamp(44px, 7vw, 92px);
+    font-weight: 300;
+    line-height: 1;
+    letter-spacing: .04em;
+    font-variant-numeric: tabular-nums;
+}
+
+.screensaver-date {
+    font-size: 13px;
+    letter-spacing: .22em;
+    opacity: .82;
+}
+
+.screensaver-exit {
+    position: fixed;
+    right: 18px;
+    bottom: 18px;
+    z-index: 2;
+    padding: 6px 14px;
+    font-family: inherit;
+    font-size: 12px;
+    letter-spacing: .08em;
+    color: #f2f2f7;
+    background: rgba(255, 255, 255, .12);
+    border: 1px solid rgba(255, 255, 255, .25);
+    border-radius: 999px;
+    cursor: pointer;
+    opacity: .18;
+    transition: opacity .2s ease, background .2s ease;
+}
+
+.screensaver:hover .screensaver-exit,
+.screensaver-exit:focus-visible {
+    opacity: 1;
+    background: rgba(255, 255, 255, .2);
+}
+
+body.screensaver-on {
+    overflow: hidden;
+}
+
+/* 屏保时把底层界面藏掉（不 display:none，避免退出时布局重排） */
+body.screensaver-on > *:not(.screensaver) {
+    visibility: hidden;
+}

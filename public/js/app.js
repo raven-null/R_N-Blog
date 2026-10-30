@@ -63,6 +63,18 @@ const BlogApp = {
         });
         this.syncHvThemeIcon();
 
+        // 屏保模式（时钟旁第三个钮）：整屏只剩插画背景，Esc 退出
+        document.getElementById('hvScreenBtn')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.toggleScreenSaver(true);
+        });
+        document.getElementById('screenSaverExit')?.addEventListener('click', () => this.toggleScreenSaver(false));
+        document.addEventListener('keydown', (e) => {
+            if (e.key !== 'Escape') return;
+            if (!document.body.classList.contains('screensaver-on')) return;
+            this.toggleScreenSaver(false);
+        });
+
         // 正文手写开关（记忆在 localStorage）
         this.applyHandBody();
 
@@ -5370,6 +5382,35 @@ const BlogApp = {
         if (btn) btn.setAttribute('aria-pressed', on ? 'true' : 'false');
         return !!on;
     },
+    // 屏保模式：整屏只剩背景插画，界面全藏起来；Esc 或右下角「退出」返回
+    toggleScreenSaver(on) {
+        const wrap = document.getElementById('screenSaver');
+        const art = document.getElementById('screenSaverArt');
+        if (!wrap) return;
+        const next = on === undefined ? wrap.hidden : !!on;
+        wrap.hidden = !next;
+        document.body.classList.toggle('screensaver-on', next);
+
+        if (art && !art.src) art.src = 'images/sky/kumeng-1920.webp';
+        clearInterval(this._screenSaverTimer);
+        if (next) {
+            this.tickScreenSaverClock();
+            this._screenSaverTimer = setInterval(() => this.tickScreenSaverClock(), 1000);
+        }
+    },
+
+    // 屏保上的时钟（大号时间 + 日期，跟着本地时间走）
+    tickScreenSaverClock() {
+        const el = document.getElementById('screenSaverClock');
+        if (!el) return;
+        const now = new Date();
+        const pad = (n) => String(n).padStart(2, '0');
+        const week = ['日', '一', '二', '三', '四', '五', '六'][now.getDay()];
+        el.innerHTML =
+            `<span class="screensaver-time">${pad(now.getHours())}:${pad(now.getMinutes())}</span>`
+            + `<span class="screensaver-date">${now.getFullYear()}.${pad(now.getMonth() + 1)}.${pad(now.getDate())} 周${week}</span>`;
+    },
+
     // 首页时钟旁的主题图标同步
     syncHvThemeIcon() {
         const icon = document.getElementById('hvThemeIcon');

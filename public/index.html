@@ -15,7 +15,7 @@
     <meta property="og:image" content="https://ravennull.work/images/Default/web-logo.webp">
     <meta property="og:locale" content="zh_CN">
     <meta name="twitter:card" content="summary">
-    <link rel="stylesheet" href="css/bundle.css?v=50afea4df1">
+    <link rel="stylesheet" href="css/bundle.css?v=f0ad540229">
     <title>渡鸦 NULL · 日光与暮色之间</title>
     <link rel="icon" id="siteFavicon" href="/images/Default/web-logo.webp" type="image/webp">
     <link rel="apple-touch-icon" href="/images/Default/web-logo.webp">
@@ -252,6 +252,14 @@
                                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                         <path d="M4 20h4L18.5 9.5a2.5 2.5 0 0 0-3.5-3.5L4.5 16.5V20z"></path>
                                         <path d="M13.5 7.5l3 3"></path>
+                                    </svg>
+                                </button>
+                                <button class="hv3-toggle hv3-toggle-screen" id="hvScreenBtn" type="button" title="屏保模式（Esc 退出）" aria-label="切换屏保模式">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                        <path d="M4 9V4h5"></path>
+                                        <path d="M20 9V4h-5"></path>
+                                        <path d="M4 15v5h5"></path>
+                                        <path d="M20 15v5h-5"></path>
                                     </svg>
                                 </button>
                             </div>
@@ -497,7 +505,7 @@
     <script src="js/theme.js?v=20261030c" defer></script>
     <!-- 桌宠动效引擎（spring-driven character，见 public/vendor/grok/README.md） -->
 
-    <script src="js/app.js?v=20261101q" defer></script>
+    <script src="js/app.js?v=20261101r" defer></script>
     <script src="js/animations.js?v=3.14.0" defer></script>
 
     <script>
@@ -1109,6 +1117,12 @@
     if (document.readyState === 'complete') schedule();
     else window.addEventListener('load', function () { setTimeout(schedule, 200); });
 })();
-</script>
+</script>    <!-- 屏保模式：整屏只剩背景插画（默认隐藏，Esc 或右下角按钮退出） -->
+    <div class="screensaver" id="screenSaver" hidden>
+        <img class="screensaver-art" id="screenSaverArt" alt="" decoding="async">
+        <div class="screensaver-clock" id="screenSaverClock" aria-live="off"></div>
+        <button class="screensaver-exit" id="screenSaverExit" type="button" title="退出屏保（Esc）">退出</button>
+    </div>
+
 </body>
 </html>
