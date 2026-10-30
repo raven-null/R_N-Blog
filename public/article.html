@@ -17,6 +17,20 @@
     <link rel="apple-touch-icon" href="/images/Default/web-logo.webp">
     <!-- 手写体 Virgil：hand-body 默认开，preload 消掉 swap 闪动 -->
     <link rel="preload" href="/fonts/Virgil.woff2" as="font" type="font/woff2" crossorigin>
+    <!-- 进入文章页前先把上次的阅读设置（字号 / 行距 / 衬线 / 手写）贴回 <html>，
+         否则会先按默认渲染一帧，看着像"设置被重置" -->
+    <script>
+        (function () {
+            try {
+                var s = JSON.parse(localStorage.getItem('reader-settings') || '{}');
+                var root = document.documentElement;
+                if (s && s.font) root.style.setProperty('--reader-font-size', s.font + 'px');
+                if (s && s.line) root.style.setProperty('--reader-line-height', s.line);
+                if (s && s.fontFamily === 'serif') root.classList.add('reader-serif');
+                if (localStorage.getItem('blog-hand-body') === '1') root.classList.add('hand-body');
+            } catch (e) { /* 读不到就按默认 */ }
+        })();
+    </script>
     <script src="/js/site-icon.js?v=1.0.0" defer></script>
     
     <!-- 主样式 -->
