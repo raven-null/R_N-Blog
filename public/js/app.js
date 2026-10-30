@@ -5459,6 +5459,13 @@ const BlogApp = {
         const glow = document.getElementById('screenSaverGlow');
         if (!art) return;
         const state = this.ensureScreenSaverState();
+        // 以面板上的滑块为准（「跟随真实时间」时 hour 保持 null）
+        const timeEl = document.getElementById('ssTime');
+        if (timeEl && state.hour !== null) state.hour = (Number(timeEl.value) || 0) / 60;
+        const exposureEl = document.getElementById('ssExposure');
+        if (exposureEl) state.exposure = Number(exposureEl.value) || 1;
+        const glowEl = document.getElementById('ssGlow');
+        if (glowEl) state.glow = Number(glowEl.value) || 0;
         if (state.pure) {
             art.style.filter = 'none';
             if (tint) tint.style.background = 'transparent';
@@ -5582,64 +5589,69 @@ const BlogApp = {
     },
 
     // 面板：时刻 / 曝光 / 泛光 / 跟随真实时间 / 时钟开关 / 纯图开关
+    // 统一用事件委托（面板内部任何 input 都重新算一遍），个别元素绑定失效也不影响
     bindScreenSaverPanel() {
         const panel = document.getElementById('screenSaverPanel');
         if (!panel) return;
-        if (!panel.dataset.bound) {
-            panel.dataset.bound = '1';
-            const state = this.ensureScreenSaverState();
-            const timeEl = document.getElementById('ssTime');
-            const exposureEl = document.getElementById('ssExposure');
-            const glowEl = document.getElementById('ssGlow');
-            const fmt = (m) => `${String(Math.floor(m / 60) % 24).padStart(2, '0')}:${String(Math.round(m % 60)).padStart(2, '0')}`;
-            const syncLabels = () => {
-                const tEl = document.getElementById('ssTimeVal');
-                if (tEl) tEl.textContent = state.hour === null ? '实时' : fmt(timeEl.valueAsNumber);
-                const eEl = document.getElementById('ssExposureVal');
-                if (eEl) eEl.textContent = Number(exposureEl.value).toFixed(2);
-                const gEl = document.getElementById('ssGlowVal');
-                if (gEl) gEl.textContent = Number(glowEl.value).toFixed(2);
-            };
-            timeEl?.addEventListener('input', () => {
-                state.hour = timeEl.valueAsNumber / 60;
-                syncLabels();
-                this.applyScreenSaverLighting();
-            });
-            exposureEl?.addEventListener('input', () => {
-                state.exposure = Number(exposureEl.value);
-                syncLabels();
-                this.applyScreenSaverLighting();
-            });
-            glowEl?.addEventListener('input', () => {
-                state.glow = Number(glowEl.value);
-                syncLabels();
-                this.applyScreenSaverLighting();
-            });
-            document.getElementById('ssFollowBtn')?.addEventListener('click', () => {
+        panel.classList.remove('is-hidden');
+        if (panel.dataset.bound) return;
+        panel.dataset.bound = '1';
+        const state = this.ensureScreenSaverState();
+
+        panel.addEventListener('input', (e) => {
+            const id = e.target && e.target.id;
+            if (id === 'ssTime') state.hour = (Number(e.target.value) || 0) / 60;
+            else if (id === 'ssExposure') state.exposure = Number(e.target.value) || 1;
+            else if (id === 'ssGlow') state.glow = Number(e.target.value) || 0;
+            else return;
+            this.syncScreenSaverPanelLabels();
+            this.applyScreenSaverLighting();
+        });
+
+        panel.addEventListener('click', (e) => {
+            const btn = e.target.closest('.ss-btn');
+            if (!btn) return;
+            if (btn.id === 'ssFollowBtn') {
                 state.hour = null;
                 const now = new Date();
+                const timeEl = document.getElementById('ssTime');
                 if (timeEl) timeEl.value = String(now.getHours() * 60 + now.getMinutes());
-                syncLabels();
+                this.syncScreenSaverPanelLabels();
                 this.applyScreenSaverLighting();
-            });
-            document.getElementById('ssClockBtn')?.addEventListener('click', () => {
+            } else if (btn.id === 'ssClockBtn') {
                 state.clock = !state.clock;
                 this.applyScreenSaverSwitches();
-            });
-            document.getElementById('ssPureBtn')?.addEventListener('click', () => {
+            } else if (btn.id === 'ssPureBtn') {
                 state.pure = !state.pure;
                 this.applyScreenSaverSwitches();
                 this.applyScreenSaverLighting();
                 this.applyScreenSaverMotion();
-            });
-            // 面板打开时先按当前状态摆好滑块
-            const now = new Date();
-            if (timeEl) timeEl.value = String(now.getHours() * 60 + now.getMinutes());
-            if (exposureEl) exposureEl.value = String(state.exposure);
-            if (glowEl) glowEl.value = String(state.glow);
-            syncLabels();
-        }
-        panel.classList.remove('is-hidden');
+            }
+        });
+
+        // 打开面板时把滑块摆到当前状态
+        const now = new Date();
+        const timeEl = document.getElementById('ssTime');
+        if (timeEl) timeEl.value = String(now.getHours() * 60 + now.getMinutes());
+        const exposureEl = document.getElementById('ssExposure');
+        if (exposureEl) exposureEl.value = String(state.exposure);
+        const glowEl = document.getElementById('ssGlow');
+        if (glowEl) glowEl.value = String(state.glow);
+        this.syncScreenSaverPanelLabels();
+    },
+
+    // 面板上的数值文案（时刻 / 曝光 / 泛光）
+    syncScreenSaverPanelLabels() {
+        const state = this.ensureScreenSaverState();
+        const fmt = (m) => `${String(Math.floor(m / 60) % 24).padStart(2, '0')}:${String(Math.round(m % 60)).padStart(2, '0')}`;
+        const tEl = document.getElementById('ssTimeVal');
+        if (tEl) tEl.textContent = state.hour === null ? '实时' : fmt(state.hour * 60);
+        const exposureEl = document.getElementById('ssExposure');
+        const eEl = document.getElementById('ssExposureVal');
+        if (exposureEl && eEl) eEl.textContent = Number(exposureEl.value).toFixed(2);
+        const glowEl = document.getElementById('ssGlow');
+        const gEl = document.getElementById('ssGlowVal');
+        if (glowEl && gEl) gEl.textContent = Number(glowEl.value).toFixed(2);
     },
 
     // 屏保上的时钟（大号时间 + 日期，跟着本地时间走）
