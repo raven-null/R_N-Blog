@@ -15,7 +15,7 @@
     <meta property="og:image" content="https://ravennull.work/images/Default/web-logo.webp">
     <meta property="og:locale" content="zh_CN">
     <meta name="twitter:card" content="summary">
-    <link rel="stylesheet" href="css/bundle.css?v=375aea751c">
+    <link rel="stylesheet" href="css/bundle.css?v=4163d81557">
     <title>渡鸦 NULL · 日光与暮色之间</title>
     <link rel="icon" id="siteFavicon" href="/images/Default/web-logo.webp" type="image/webp">
     <link rel="apple-touch-icon" href="/images/Default/web-logo.webp">
@@ -295,6 +295,24 @@
                                 </div>
                             </div>
 
+                            <!-- 正在做：当天的任务（没登录 / 当天没任务时整块折叠） -->
+                            <div class="hv3-box hv3-today home-life" id="homeLife">
+                                <div class="hv3-today-head">
+                                    <span class="hv3-today-title">正在做</span>
+                                    <span class="hv3-today-count" id="lifeTaskCount"></span>
+                                </div>
+                                <div class="life-task-list" id="lifeTaskList"></div>
+                            </div>
+
+                            <!-- 日记：当月日记叠成一摞（文件堆叠样式），滚轮翻，点最上面那张编辑 -->
+                            <section class="hv3-box hv3-journals" id="homeJournalBox" aria-label="日记，滚轮切换">
+                                <div class="hv3-journals-head">
+                                    <span class="hv3-journals-title">日记</span>
+                                    <span class="hv3-journals-month" id="journalMonthLabel"></span>
+                                </div>
+                                <div class="hv3-stack" id="hv3Journals"></div>
+                            </section>
+
                             <section class="hv3-box hv3-news" aria-label="今日拾光">
                                 <div class="hv3-ticker" id="hv3News" aria-label="今日拾光，自动滚动"></div>
                             </section>
@@ -303,26 +321,6 @@
                                 <div class="hv3-stack" id="hv3Projects" aria-label="项目堆叠，滚轮切换"></div>
                             </section>
                         </div>
-                    </div>
-
-                    <div class="hv-side-row">
-                        <aside class="hv-side">
-
-                            <div class="hv-card home-life" id="homeLife">
-                                <div class="hv-card-head">
-                                    <span class="hv-card-title">正在做</span>
-                                    <span class="hv-card-sub" id="lifeTaskCount"></span>
-                                </div>
-                                <div class="life-task-list" id="lifeTaskList"></div>
-                            </div>
-
-                            <div class="hv-card home-journal-box" id="homeJournalBox">
-                                <div class="hv-card-head">
-                                    <span class="hv-card-title">日记</span>
-                                </div>
-                                <div class="journal-body" id="journalBody"></div>
-                            </div>
-                        </aside>
                     </div>
 
                 </div>
@@ -460,7 +458,7 @@
     <script src="js/theme.js?v=20261030c" defer></script>
     <!-- 桌宠动效引擎（spring-driven character，见 public/vendor/grok/README.md） -->
 
-    <script src="js/app.js?v=20261101b" defer></script>
+    <script src="js/app.js?v=20261101c" defer></script>
     <script src="js/animations.js?v=3.14.0" defer></script>
 
     <script>

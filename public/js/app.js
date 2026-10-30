@@ -2294,8 +2294,6 @@ const BlogApp = {
         if (!this.lifeAdminKey()) {
             box.style.display = 'none';
             if (journalBox) journalBox.style.display = 'none';
-            const row = box.closest('.hv-side-row');
-            if (row) row.style.display = 'none';
             // 未登录：日历底部的「＋任务 / ✎日记」一并藏起来（点了也写不了）
             document.getElementById('homeCalendar')?.classList.add('is-guest');
             return;
@@ -2375,14 +2373,12 @@ const BlogApp = {
 
     renderLife() {
         const monthEl = document.getElementById('lifeMonthLabel');
-        const journalDateEl = document.getElementById('journalDateLabel');
         if (monthEl) {
             const [y, m] = this.lifeState.month.split('-');
             monthEl.textContent = `${y} 年 ${Number(m)} 月`;
         }
-        if (journalDateEl) journalDateEl.textContent = this.formatDateLabel(this.lifeState.date);
         this.renderLifeTasks();
-        this.renderJournalView();
+        this.renderJournalStack();
     },
 
     formatDateLabel(date) {
@@ -2422,22 +2418,62 @@ const BlogApp = {
         `).join('');
     },
 
-    // 日记展示盒子：当天没写就整块折叠
-    renderJournalView() {
-        const box = document.getElementById('homeJournalBox');
-        const body = document.getElementById('journalBody');
-        if (!box || !body) return;
-        const entry = (this.lifeState.journals || []).find(j => j.date === this.lifeState.date);
-        if (!entry || !entry.content) {
-            box.style.display = 'none';
-            body.innerHTML = '';
+    // 日记：当月所有日记叠成一摞（和「项目」同一套文件堆叠），滚轮翻，点最上面那张编辑
+    renderJournalStack() {
+        const box = document.getElementById('hv3Journals');
+        const wrap = document.getElementById('homeJournalBox');
+        if (!box) return;
+        const month = this.lifeState.month || '';
+        const monthEl = document.getElementById('journalMonthLabel');
+        if (monthEl) {
+            const [y, m] = month.split('-');
+            monthEl.textContent = y ? `${y} 年 ${Number(m)} 月` : '';
+        }
+        if (wrap && !month) {
+            wrap.style.display = 'none';
             return;
         }
-        box.style.display = '';
-        body.innerHTML = entry.content
-            .split('\n')
-            .map(line => `<p>${this.esc(line) || '&nbsp;'}</p>`)
-            .join('');
+
+        const list = (this.lifeState.journals || [])
+            .filter(j => j && j.date && j.content)
+            .sort((a, b) => String(a.date).localeCompare(String(b.date)));
+
+        if (!list.length) {
+            box.innerHTML = '<button class="hv3-journal is-empty" type="button" data-journal-new="1">'
+                + '<span class="hv3-journal-hint">这个月还没写日记</span>'
+                + '<span class="hv3-journal-tip">点这里写一篇</span></button>';
+        } else {
+            box.innerHTML = list.map(j => this.journalCard(j)).join('');
+        }
+        if (wrap) wrap.style.display = '';
+
+        // 重建后重新叠一摞：日记不自动翻，只跟手动滚轮
+        this.initFileStack(box, { autoMs: 0 });
+        this.syncJournalStack(this.lifeState.date);
+    },
+
+    // 单篇日记卡：日期 + 摘要（4 行截断）+ 字数
+    journalCard(j) {
+        const text = String(j.content || '');
+        const len = text.replace(/\s+/g, '').length;
+        const brief = text.replace(/\n+/g, ' ').trim().slice(0, 160);
+        return `<button class="hv3-journal" type="button" data-journal-date="${this.escAttr(j.date)}">
+            <div class="hv3-journal-head">
+                <span class="hv3-journal-date">${this.esc(this.formatDateLabel(j.date))}</span>
+                <span class="hv3-journal-len">${len} 字</span>
+            </div>
+            <div class="hv3-journal-body">${this.esc(brief)}${text.length > 160 ? '…' : ''}</div>
+            <div class="hv3-journal-foot">点开编辑</div>
+        </button>`;
+    },
+
+    // 让日记堆叠翻到指定日期那一张（堆叠里没有这天就保持不动）
+    syncJournalStack(date) {
+        const box = document.getElementById('hv3Journals');
+        if (!box || typeof box.hvStackGoTo !== 'function') return;
+        const cards = [...box.children];
+        const idx = cards.findIndex(c => c.dataset.journalDate === date);
+        if (idx >= 0) box.hvStackGoTo(idx);
     },
 
     // 选择日期（日历点击）：从日历下方弹出编写盒子
@@ -2448,6 +2484,7 @@ const BlogApp = {
         const after = () => {
             this.renderLife();
             this.updateSelectedCalCell();
+            this.syncJournalStack(date);
             this.openEditor();
         };
         if (month !== this.lifeState.month) {
@@ -2593,7 +2630,7 @@ const BlogApp = {
         try {
             await this.lifeApi(`?type=journal&date=${encodeURIComponent(this.lifeState.date)}`, { method: 'DELETE' });
             this.lifeState.journals = (this.lifeState.journals || []).filter(j => j.date !== this.lifeState.date);
-            this.renderJournalView();
+            this.renderJournalStack();
         } catch (err) { /* 忽略 */ }
     },
 
@@ -2676,6 +2713,23 @@ const BlogApp = {
         document.getElementById('journalDeleteBtn')?.addEventListener('click', (e) => {
             e.stopPropagation();
             this.deleteJournal();
+        });
+
+        // 日记堆叠：点最上面那张 → 翻到那天并打开日记编辑器；空卡 → 直接写选中那天
+        document.getElementById('hv3Journals')?.addEventListener('click', (e) => {
+            const card = e.target.closest('[data-journal-date]');
+            if (card) {
+                const date = card.dataset.journalDate;
+                if (date && date !== this.lifeState.date) {
+                    this.lifeState.date = date;
+                    this.updateSelectedCalCell();
+                    this.renderLifeTasks();
+                    if (typeof window.renderCalendar === 'function') window.renderCalendar(this.lifeState.month);
+                }
+                this.openLifeEditor('journal');
+                return;
+            }
+            if (e.target.closest('[data-journal-new]')) this.openLifeEditor('journal');
         });
 
         // 日历点击联动（日历会重建，用事件委托）
@@ -4892,11 +4946,13 @@ const BlogApp = {
     },
 
     // 项目：文件堆叠（照「文件堆叠」设计稿）——卡片带旋转偏移叠一摞，滚轮或定时换最上面那张
+    // 可重复调用：内容重建后（比如换月份）再传一次，会按新卡片重新叠，滚轮监听只绑一次
+    // autoMs: 0 → 不自动翻，只跟手动滚轮
     initFileStack(box, opts = {}) {
-        if (!box || box.dataset.stackBound) return;
-        const cards = [...box.children].filter((el) => el.nodeType === 1 && !el.classList.contains('hv3-empty'));
-        if (!cards.length) return;
-        box.dataset.stackBound = '1';
+        if (!box) return;
+        const cardsOf = () => [...box.children]
+            .filter((el) => el.nodeType === 1 && !el.classList.contains('hv3-empty'));
+        if (!cardsOf().length) return;
         box.classList.add('is-stack');
 
         // 层叠参数：最上面 -1.6°，往下依次 +1.2° / +2.6° / +3.8°
@@ -4906,10 +4962,14 @@ const BlogApp = {
             { rot: 2.6, x: 12, y: 11, o: 0.86, s: 0.97, z: 20 },
             { rot: 3.8, x: 17, y: 16, o: 0.72, s: 0.955, z: 10 },
         ];
-        const state = { active: 0, timer: 0 };
+        const autoMs = opts.autoMs === 0 ? 0 : (opts.autoMs || 4200);
+        const state = box._stackState || (box._stackState = { active: 0, timer: 0 });
 
         const paint = () => {
+            const cards = cardsOf();
             const n = cards.length;
+            if (!n) return;
+            if (state.active >= n || state.active < 0) state.active = 0;
             cards.forEach((el, i) => {
                 const pos = (i - state.active + n) % n;
                 const L = LAYERS[pos];
@@ -4940,26 +5000,41 @@ const BlogApp = {
         };
 
         const step = (dir) => {
-            state.active = (state.active + dir + cards.length) % cards.length;
+            const n = cardsOf().length;
+            if (!n) return;
+            state.active = (state.active + dir + n) % n;
             paint();
         };
         const startAuto = () => {
             clearInterval(state.timer);
-            state.timer = setInterval(() => { if (!document.hidden) step(1); }, opts.autoMs || 4200);
+            if (!autoMs) return;
+            state.timer = setInterval(() => { if (!document.hidden) step(1); }, autoMs);
         };
         const stopAuto = () => clearInterval(state.timer);
 
-        let wheelAt = 0;
-        box.addEventListener('wheel', (e) => {
-            e.preventDefault();
-            const now = Date.now();
-            if (now - wheelAt < 260) return;
-            wheelAt = now;
-            step(Math.sign(e.deltaY) || 1);
-            startAuto();
-        }, { passive: false });
-        box.addEventListener('pointerenter', stopAuto);
-        box.addEventListener('pointerleave', startAuto);
+        // 对外入口：按索引把某张直接翻到最上面（日记跟日期联动用）
+        box.hvStackGoTo = (idx) => {
+            const n = cardsOf().length;
+            if (!n) return;
+            state.active = ((idx % n) + n) % n;
+            paint();
+        };
+        box.hvStackStep = step;
+
+        if (!box.dataset.stackBound) {
+            box.dataset.stackBound = '1';
+            let wheelAt = 0;
+            box.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const now = Date.now();
+                if (now - wheelAt < 260) return;
+                wheelAt = now;
+                step(Math.sign(e.deltaY) || 1);
+                startAuto();
+            }, { passive: false });
+            box.addEventListener('pointerenter', stopAuto);
+            box.addEventListener('pointerleave', startAuto);
+        }
 
         paint();
         startAuto();

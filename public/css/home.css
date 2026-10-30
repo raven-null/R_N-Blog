@@ -712,6 +712,158 @@
     text-align: center;
 }
 
+/* ============================================================
+   04b · 日记：当月日记叠成一摞（复用「项目」的文件堆叠手感）
+   滚轮翻上下篇，只有最上面那张能点，点开写/改那一天
+   ============================================================ */
+.hv3-today {
+    flex: 0 0 auto;
+}
+
+.hv3-today-head,
+.hv3-journals-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 0 2px;
+}
+
+.hv3-today-title,
+.hv3-journals-title {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    color: var(--text-secondary);
+}
+
+.hv3-today-count,
+.hv3-journals-month {
+    font-size: 10.5px;
+    letter-spacing: .04em;
+    color: var(--text-muted);
+}
+
+.hv3-today .life-task-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.hv3-journals {
+    flex: 0 0 auto;
+    height: 240px;
+}
+
+.hv3-journals .hv3-stack {
+    flex: 1 1 auto;
+    min-height: 0;
+    margin: 2px 8px 10px 2px;
+}
+
+.hv3-journal {
+    position: absolute;
+    inset: 4px 10px 10px 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 12px 14px;
+    font-family: inherit;
+    text-align: left;
+    color: inherit;
+    background: var(--glass-card-strong, rgba(255, 253, 248, .92));
+    border: 1px solid var(--glass-line, rgba(255, 255, 255, .5));
+    border-radius: 16px;
+    box-shadow: 0 8px 22px rgba(20, 26, 44, .1);
+    overflow: hidden;
+    cursor: pointer;
+    transform-origin: 50% 55%;
+    transform:
+        rotate(var(--stack-rot, 0deg))
+        translate(var(--stack-x, 0px), var(--stack-y, 0px))
+        scale(var(--stack-s, 1));
+    opacity: var(--stack-o, 1);
+    transition:
+        transform .5s cubic-bezier(.25, .46, .45, .94),
+        opacity .35s ease,
+        box-shadow .3s ease;
+    will-change: transform;
+}
+
+.hv3-journal:hover {
+    box-shadow: 0 12px 28px rgba(20, 26, 44, .16);
+}
+
+.hv3-journal-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    flex: 0 0 auto;
+}
+
+.hv3-journal-date {
+    font-size: 12.5px;
+    font-weight: 650;
+    letter-spacing: .02em;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.hv3-journal-len {
+    flex: 0 0 auto;
+    font-size: 10.5px;
+    color: var(--text-muted);
+}
+
+.hv3-journal-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    font-size: 12px;
+    line-height: 1.55;
+    color: var(--text-secondary);
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.hv3-journal-foot {
+    flex: 0 0 auto;
+    font-size: 10.5px;
+    letter-spacing: .04em;
+    color: var(--text-muted);
+}
+
+.hv3-journal.is-empty {
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    text-align: center;
+}
+
+.hv3-journal-hint {
+    font-size: 12.5px;
+    color: var(--text-secondary);
+}
+
+.hv3-journal-tip {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+html[data-theme="dark"] .hv3-journal {
+    background: rgba(255, 255, 255, .085);
+    border-color: rgba(255, 255, 255, .18);
+    backdrop-filter: blur(18px) saturate(1.25);
+    -webkit-backdrop-filter: blur(18px) saturate(1.25);
+    box-shadow:
+        0 12px 30px rgba(0, 0, 0, .42),
+        inset 0 1px 0 rgba(255, 255, 255, .1);
+}
+
 /* 日历：让里面浮出的编辑弹窗有定位参照（视觉仍由日历自己负责） */
 .hv3-cal {
     position: relative;
