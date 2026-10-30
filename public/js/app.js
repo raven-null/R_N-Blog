@@ -1613,7 +1613,7 @@ const BlogApp = {
         }
         track.dataset.empty = '';
 
-        track.innerHTML = posts.map((post) => {
+        track.innerHTML = posts.slice(0, 4).map((post) => {
             const href = 'article.html?post=' + encodeURIComponent(post.filename || '');
             const title = this.esc(post.title || '无标题');
             const date = this.formatDate ? this.formatDate(post.date) : (post.date || '');
@@ -1756,7 +1756,7 @@ const BlogApp = {
             return;
         }
 
-        const pick = photos;   // 全部渲染，交给无限滚动
+        const pick = photos.slice(0, 6); // Homepage preview stays small; full collection lives in gallery.
         const tile = (p, i) => {
             const src = String(p.thumb || p.url).replace(/"/g, '&quot;');
             return '<button type="button" class="hv-photo" data-idx="' + i + '" title="看图">'
@@ -4333,6 +4333,7 @@ const BlogApp = {
     stackCards: new Map(),
 
     initStackBox(box, opts = {}) {
+        if (document.body.classList.contains("home-layout")) return;
         if (!box || box.dataset.stackBound) return;
         box.dataset.stackBound = '1';
 

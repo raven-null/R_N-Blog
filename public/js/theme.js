@@ -140,6 +140,7 @@ const ThemeManager = {
     mode: 'auto',
     init() {
         try { this.mode = localStorage.getItem('blog-theme-mode') || 'auto'; } catch (_) {}
+        if (!['auto', 'light', 'dark'].includes(this.mode)) this.mode = 'auto';
         this.followPeriod();
         if (!this.bound) {
             this.bound = true;
@@ -176,6 +177,9 @@ const ThemeManager = {
         // 骨架与强调色也写到 html 上，方便 CSS 层（tokens.css / ui.css）判断
         const root = document.documentElement;
         root.setAttribute('data-theme', theme.scheme);
+        root.setAttribute('data-tone', theme.scheme);
+        root.setAttribute('data-theme-mode', this.mode);
+        document.querySelectorAll('[data-theme-mode-select]').forEach(el => { el.value = this.mode; });
         root.setAttribute('data-accent', theme.accent);
 
         if (opts.animate !== false && window.BlogAnimations && window.BlogAnimations.ready) {

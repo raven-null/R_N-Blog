@@ -192,7 +192,7 @@ html[data-period="dusk"] {
 }
 
 /* 静夜：月光蓝 */
-html[data-period="night"] {
+html[data-theme="dark"] {
     --accent: #5f7fc4 !important;
     --accent-hover: #4c69ab !important;
     --accent-strong: #3a5391 !important;
@@ -288,7 +288,7 @@ html[data-period="night"] {
    这里在夜段覆盖文字与玻璃色：字变浅、卡片变深，
    白天再自己变回来（切换有 CSS 过渡）。
    ============================================================ */
-html[data-period="night"] {
+html[data-theme="dark"] {
     --text: #eef0f7 !important;
     --text-secondary: #b9bfcd !important;
     --text-muted: #8d94a6 !important;
@@ -305,25 +305,25 @@ html[data-period="night"] {
 }
 
 /* 卡片外的文字（区块标题、更多、简介）也一并变浅 */
-html[data-period="night"] .hv-name,
-html[data-period="night"] .hv-bio,
-html[data-period="night"] .hv-block-title,
-html[data-period="night"] .hv-more,
-html[data-period="night"] .hv-block-sub,
-html[data-period="night"] .hv-clock-time,
-html[data-period="night"] .hv-clock-date {
+html[data-theme="dark"] .hv-name,
+html[data-theme="dark"] .hv-bio,
+html[data-theme="dark"] .hv-block-title,
+html[data-theme="dark"] .hv-more,
+html[data-theme="dark"] .hv-block-sub,
+html[data-theme="dark"] .hv-clock-time,
+html[data-theme="dark"] .hv-clock-date {
     color: var(--text) !important;
 }
 
-html[data-period="night"] .hv-bio,
-html[data-period="night"] .hv-block-sub,
-html[data-period="night"] .hv-clock-date,
-html[data-period="night"] .hv-more {
+html[data-theme="dark"] .hv-bio,
+html[data-theme="dark"] .hv-block-sub,
+html[data-theme="dark"] .hv-clock-date,
+html[data-theme="dark"] .hv-more {
     color: var(--text-muted) !important;
 }
 
 /* 夜里插画别压太死，留点细节 */
-html[data-period="night"] .sky-art {
+html[data-theme="dark"] .sky-art {
     filter: brightness(var(--art-brightness, 0.5)) saturate(0.92);
 }
 
@@ -495,52 +495,25 @@ html[data-tone="dark"] .sky-art {
    这里在天色到「静夜」时，把所有表面变量一起压成暗色，
    页面上任何用变量的地方（含正文块级元素）都会跟着变。
    ============================================================ */
-html[data-period="night"] {
-    --bg: #0b0f17 !important;
-    --bg-subtle: #0e131c !important;
-    --surface: #121822 !important;
-    --surface-2: #18202c !important;
-    --surface-3: #1f2836 !important;
 
-    --bg-primary: #0b0f17 !important;
-    --bg-secondary: #0e131c !important;
-    --bg-tertiary: #1f2836 !important;
-    --bg-card: #121822 !important;
-
-    --border: rgba(255, 245, 232, 0.1) !important;
-    --border-strong: rgba(255, 245, 232, 0.18) !important;
-    --border-light: rgba(255, 245, 232, 0.18) !important;
-
-    --text: #eef0f7 !important;
-    --text-primary: #eef0f7 !important;
-    --text-secondary: #b9bfcd !important;
-    --text-muted: #8d94a6 !important;
-
-    --glass-card: rgba(20, 24, 37, 0.72) !important;
-    --glass-card-strong: rgba(20, 24, 37, 0.88) !important;
-    --glass-line: rgba(255, 255, 255, 0.12) !important;
-
-    --shadow: rgba(0, 0, 0, 0.55) !important;
-    --glow: rgba(255, 255, 255, 0.06) !important;
-}
 
 /* 正文里的代码块 / 表格 / 引用，夜间一律用暗实底 */
-html[data-period="night"] .article-content pre,
-html[data-period="night"] .article-content code,
-html[data-period="night"] .article-content kbd,
-html[data-period="night"] .article-content table,
-html[data-period="night"] .article-content thead,
-html[data-period="night"] .article-content tbody,
-html[data-period="night"] .article-content th,
-html[data-period="night"] .article-content td,
-html[data-period="night"] .article-content blockquote,
-html[data-period="night"] .article-content details,
-html[data-period="night"] .article-content summary,
-html[data-period="night"] .article-content .code-block,
-html[data-period="night"] .article-content .code-header,
-html[data-period="night"] .article-content .copy-btn,
-html[data-period="night"] .article-content .hljs,
-html[data-period="night"] .article-content .table-wrap {
+html[data-theme="dark"] .article-content pre,
+html[data-theme="dark"] .article-content code,
+html[data-theme="dark"] .article-content kbd,
+html[data-theme="dark"] .article-content table,
+html[data-theme="dark"] .article-content thead,
+html[data-theme="dark"] .article-content tbody,
+html[data-theme="dark"] .article-content th,
+html[data-theme="dark"] .article-content td,
+html[data-theme="dark"] .article-content blockquote,
+html[data-theme="dark"] .article-content details,
+html[data-theme="dark"] .article-content summary,
+html[data-theme="dark"] .article-content .code-block,
+html[data-theme="dark"] .article-content .code-header,
+html[data-theme="dark"] .article-content .copy-btn,
+html[data-theme="dark"] .article-content .hljs,
+html[data-theme="dark"] .article-content .table-wrap {
     background-color: var(--surface-2) !important;
     color: var(--text) !important;
     border-color: var(--border) !important;

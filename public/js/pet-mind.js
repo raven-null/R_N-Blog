@@ -28,8 +28,8 @@
   // ---------- 本地短句（AI 不可用时的兜底，也用于即时反应） ----------
   const LINES = {
     home: [
-      '今天有三篇新的，要不要看看？',
-      '左边那篇讲无限画布的，你可能会喜欢',
+      '最近的文字已经整理好了，挑一篇看看吧',
+      '想找点灵感？可以看看文章或项目',
       '现在是{period}，光打在画上刚好',
       '照片墙一直没人翻，喵有点寂寞',
       '站里一共 {posts} 篇文章，你读过几篇？',
@@ -41,7 +41,7 @@
       '列表只看标题看不出味道，点进去试试',
     ],
     article: [
-      '这篇读了一半了，慢慢来',
+      '读到 {progress}% 了，慢慢来',
       '读到这儿有想法的话可以跟我说',
       '要不要我总结一下这段？',
       '看太久了，眼睛歇一下',
@@ -102,7 +102,7 @@
 
     // 首页：精选文章标题 + 简报标题 + 数字
     if (view === 'home') {
-      ctx.posts = [...document.querySelectorAll('.hv-post-title')].map((e) => e.textContent.trim()).slice(0, 5);
+      ctx.posts = [...document.querySelectorAll('.hv-car-title, .hv-post-title')].map((e) => e.textContent.trim()).slice(0, 5);
       ctx.news = [...document.querySelectorAll('#newsList .news-item')].map((e) => e.textContent.replace(/\s+/g, ' ').trim().slice(0, 40)).slice(0, 4);
       ctx.statPosts = (document.getElementById('homeCtaPosts') || {}).textContent || '';
       ctx.statPhotos = (document.getElementById('homeCtaPhotos') || {}).textContent || '';
@@ -178,6 +178,7 @@
     item.className = 'pet-msg pet-msg-' + role;
     item.textContent = text;
     box.appendChild(item);
+    while (box.children.length > 40) box.firstElementChild.remove();
     box.scrollTop = box.scrollHeight;
     if (role === 'user' || role === 'assistant') {
       STATE.history.push({ role, content: text });
@@ -187,7 +188,7 @@
 
   // ---------- 角色状态 ----------
   function petState(name, backMs) {
-    const eng = global.BlogApp && global.BlogApp.petEngine;
+    const eng = global.BlogApp?.petEngine || global.PetBoot?.engine || global.PetBootEngine;
     if (!eng) return;
     try {
       eng.setState(name, { resetEyes: true });
@@ -234,7 +235,7 @@
     if (ctx.lightboxOpen) bits.push('- 图库里正打开一张大图（第 ' + (ctx.photoIndex + 1) + ' 张 / 共 ' + ctx.photoTotal + ' 张）');
     else if (ctx.galleryCount) bits.push('- 图库共 ' + ctx.galleryCount + ' 张照片');
     if (ctx.projectNames && ctx.projectNames.length) bits.push('- 项目列表：' + ctx.projectNames.join(' / '));
-    bits.push('', '要求：回复控制在 1~2 句、40 字以内；不要列点，不要重复上面的信息，像旁边的人随口搭一句。');
+    bits.push('', '要求：日常聊天简短自然；用户要求解释文字或总结时，给出清晰、有依据的说明，必要时分点，不编造文章中未提供的信息。');
     return bits.join('\n');
   }
 
@@ -244,12 +245,13 @@
       { role: 'system', content: buildPrompt(ctx) },
       ...STATE.history.slice(-8),
     ];
-    if (userText) messages.push({ role: 'user', content: userText });
+    if (userText && messages.at(-1)?.content !== userText) messages.push({ role: 'user', content: userText });
 
     const res = await fetch('/api/ai', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ messages }),
+      signal: AbortSignal.timeout(30000),
     });
     if (!res.ok) throw new Error('HTTP ' + res.status);
 
@@ -296,14 +298,15 @@
     const line = pool[Math.floor(Math.random() * pool.length)];
     return line
       .replace('{period}', ({ dawn: '晨曦', day: '白昼', dusk: '薄暮', night: '静夜' })[ctx.period] || '现在')
-      .replace('{posts}', ctx.statPosts || '不少');
+      .replace('{posts}', ctx.statPosts || '不少')
+      .replace('{progress}', String(ctx.progress ?? 0));
   }
 
   async function autoTalk(force) {
     if (!STATE.enabled || STATE.busy || document.activeElement?.matches('input,textarea,[contenteditable="true"]')) return;
     const now = Date.now();
     if (!force && now - STATE.lastAutoAt < STATE.minGap) return;
-    if (document.hidden) return;
+    if (document.hidden || document.getElementById('deskPet')?.dataset.state === 'sleep') return;
 
     STATE.lastAutoAt = now;
     const ctx = collect();
@@ -313,28 +316,12 @@
     say(quick, 5200);
     petState(ctx.view === 'article' ? 'thinking' : 'curious', 2600);
 
-    // 再让 AI 补一句更贴现场的（失败就沉默，不打扰）
-    STATE.busy = true;
-    try {
-      const ai = await askAI('现在随便跟我说一句，结合我正在看的东西，别重复我刚说的话。');
-      const text = (ai || '').replace(/^["「]|["」]$/g, '').trim();
-      if (text && text.length <= 90) {
-        clearTimeout(STATE.autoSayTimer);
-        STATE.autoSayTimer = setTimeout(() => {
-          if (STATE.busy) return;          // 用户已经插话了，这句就不补了
-          say(text, 9000);
-          petState('excited', 1800);
-        }, 5200);
-      }
-    } catch (e) {
-      /* AI 不可用时只有本地那句，够用 */
-    } finally {
-      STATE.busy = false;
-    }
+    // Ambient greetings stay local; AI requests are reserved for explicit questions.
   }
 
   function scheduleAuto() {
     clearTimeout(STATE.timer);
+    if (!STATE.enabled || document.hidden) return;
     const [lo, hi] = STATE.autoMs;
     const wait = lo + Math.random() * (hi - lo);
     STATE.timer = setTimeout(() => {
@@ -471,11 +458,13 @@
     scheduleAuto();
 
     document.addEventListener('visibilitychange', () => {
-      if (!document.hidden) scheduleAuto();
+      if (document.hidden) clearTimeout(STATE.timer);
+      else scheduleAuto();
     });
 
     // 视图切换：过几秒打一句招呼
     const watchView = () => {
+      if (document.hidden) return;
       const v = visibleView();
       if (v !== STATE.lastView) {
         STATE.lastView = v;
@@ -492,7 +481,7 @@
     // 深夜提醒一次
     const hour = new Date().getHours();
     if (STATE.enabled && (hour >= 23 || hour < 5)) {
-      setTimeout(() => say('这个点了，别熬太晚喵', 7000), 6000);
+      setTimeout(() => { if (STATE.enabled && !document.hidden) say('这个点了，别熬太晚喵', 7000); }, 6000);
     }
   }
 
@@ -502,6 +491,14 @@
     say,
     send,
     autoTalk,
+    setQuiet(quiet) {
+      STATE.enabled = !quiet;
+      clearTimeout(STATE.autoSayTimer);
+      clearTimeout(STATE.timer);
+      try { localStorage.setItem('pet-quiet', String(quiet)); } catch (_) {}
+      if (quiet) bubbleEl()?.classList.remove('is-show');
+      else scheduleAuto();
+    },
     toggleTTS(on) {
       STATE.ttsOn = on === undefined ? !STATE.ttsOn : !!on;
       return STATE.ttsOn;

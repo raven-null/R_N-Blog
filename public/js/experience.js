@@ -20,11 +20,11 @@
     launch.onclick = () => { const open=panel.classList.toggle('is-open'); launch.setAttribute('aria-expanded',String(open)); if(open) document.getElementById('petChatInput')?.focus(); }; pet.append(launch);
     const shortcuts=document.createElement('div'); shortcuts.className='pet-shortcuts';
     const action=(label,fn)=>{const b=document.createElement('button');b.type='button';b.textContent=label;b.onclick=fn;shortcuts.append(b);return b;};
-    action('随机阅读',()=>{const posts=window.BlogApp?.posts; if(posts?.length){const post=posts[Math.floor(Math.random()*posts.length)]; location.href='/article.html?post='+encodeURIComponent(post.filename);} else location.href='/#blog';});
+    action('随机阅读',()=>{const posts=window.BlogApp?.posts; if(posts?.length){const post=posts[Math.floor(Math.random()*posts.length)]; location.href='/article.html?post='+encodeURIComponent(post.filename);} else location.href='/?type=article';});
     action('切换天色',()=>window.ThemeManager?.nextTheme());
-    shortcuts.addEventListener('pointerdown', e => { if (e.target.closest('button')) e.preventDefault(); });
-    action('解释选中内容',()=>{const selected=getSelection()?.toString().trim();if(selected)window.PetMind?.send('请解释这段内容：'+selected.slice(0,1200));else window.PetMind?.say('先选中一段文字，再来问我。');});
-    const quiet=action('安静模式',()=>{if(!window.PetMind)return;const state=window.PetMind.state;state.enabled=!state.enabled;try{localStorage.setItem('pet-quiet',String(!state.enabled));}catch(_){}quiet.textContent=state.enabled?'安静模式':'恢复陪伴';});
+    shortcuts.addEventListener('pointerdown', e => { if (e.target.closest('button')?.dataset.keepSelection) e.preventDefault(); });
+    action('解释选中内容',()=>{const selected=getSelection()?.toString().trim();if(selected)window.PetMind?.send('请解释这段内容：'+selected.slice(0,1200));else window.PetMind?.say('先选中一段文字，再来问我。');}).dataset.keepSelection='true';
+    const quiet=action('安静模式',()=>{if(!window.PetMind)return;const state=window.PetMind.state;window.PetMind.setQuiet(state.enabled);quiet.textContent=state.enabled?'安静模式':'恢复陪伴';});
     try{if(localStorage.getItem('pet-quiet')==='true')quiet.textContent='恢复陪伴';}catch(_){}
     panel.querySelector('.pet-chat-head')?.after(shortcuts);
     document.addEventListener('keydown',e=>{if(e.key==='Escape'){panel.classList.remove('is-open');launch.setAttribute('aria-expanded','false');}});
