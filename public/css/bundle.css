@@ -12893,10 +12893,16 @@ body.home-layout .hv-news-box #newsList .news-item-meta{font-family:var(--font-s
 
 .hv3-shot {
     position: relative;
-    /* 宽高都由当前图比例算（fitShotBox 写 --shot-w / --shot-h）：
-       竖图变窄变高、横图变宽变扁，整块跟着图变大小，居中显示 */
-    width: var(--shot-w, 100%);
-    height: var(--shot-h, 220px);
+    /* 盒子宽高完全跟当前这张图走（fitShotBox 把算好的 --shot-w / --shot-h
+       和原始宽高比 --shot-ar 写在元素上）：竖图变窄变高、横图变宽变扁，
+       整块跟着图片一起变大变小，居中显示。
+       这里没有任何写死的高度：JS 还没算出尺寸时，aspect-ratio + max-height
+       也保证盒子形状 = 图片比例（既不裁切也不留白） */
+    --shot-max-h: min(62vh, 560px);
+    width: min(var(--shot-w, 100%), calc(var(--shot-max-h) * var(--shot-ar, 1.6)));
+    height: var(--shot-h, auto);
+    aspect-ratio: var(--shot-ar, 1.6);
+    max-height: var(--shot-max-h);
     margin-inline: auto;
     border-radius: 18px;
     overflow: hidden;
@@ -13238,7 +13244,8 @@ html[data-theme="dark"] .hv3-shot {
         min-height: 0;
     }
 
-    .hv3-shot { min-height: 220px; }
+    /* 窄屏只收紧高度上限，比例仍然完全由图片决定（写死 min-height 会把横图压出留白） */
+    .hv3-shot { --shot-max-h: min(56vh, 460px); }
 
     .hv3-news { height: 216px; }
     .hv3-projects { height: 280px; }

@@ -1963,27 +1963,35 @@ const BlogApp = {
         let front = 0;
         let cur = -1;
 
-        // 盒子宽高严格等于当前图的真实像素比例（不夹 ratio，否则 cover 会裁掉一边）：
+        // 盒子宽高严格等于当前图的真实像素比例（不 clamp ratio，否则会裁掉一边）：
         // 在列宽与高度上限内尽量放大，放不下就等比缩小 —— 图永远完整可见
         const fitShotBox = (img) => {
             const nw = img.naturalWidth;
             const nh = img.naturalHeight;
             if (!nw || !nh) return;
-            const availW = stage.parentElement ? stage.parentElement.clientWidth : stage.clientWidth;
+            const availW = (stage.parentElement && stage.parentElement.clientWidth) || stage.clientWidth;
             if (!availW) return;
             const ratio = nw / nh; // 真实宽高比，不 clamp
-            const maxH = Math.min(window.innerHeight * 0.6, 520);
+            // 高度上限与 CSS 的 --shot-max-h 保持一致（窄屏收一档），否则 max-height 会把比例压歪
+            const maxH = window.innerWidth <= 900
+                ? Math.min(window.innerHeight * 0.56, 460)
+                : Math.min(window.innerHeight * 0.62, 560);
 
             let w = availW;
             let h = Math.round(w / ratio);
             if (h > maxH) {
-                h = maxH;
+                h = Math.round(maxH);
                 w = Math.round(h * ratio);
             }
-            if (h < 80 || w < 80) return;
+            if (h < 60 || w < 60) return;
+            if (w === Number(stage.dataset.w) && h === Number(stage.dataset.h)) return;
 
             stage.style.setProperty('--shot-w', w + 'px');
             stage.style.setProperty('--shot-h', h + 'px');
+            // 原始比例给 CSS 兜底：JS 尺寸没生效时盒子形状也还是这张图的比例
+            stage.style.setProperty('--shot-ar', String(Math.round(ratio * 10000) / 10000));
+            stage.dataset.w = String(w);
+            stage.dataset.h = String(h);
         };
 
         const show = (idx) => {
