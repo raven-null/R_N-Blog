@@ -15,7 +15,7 @@
     <meta property="og:image" content="https://ravennull.work/images/Default/web-logo.webp">
     <meta property="og:locale" content="zh_CN">
     <meta name="twitter:card" content="summary">
-    <link rel="stylesheet" href="css/bundle.css?v=0f7491db43">
+    <link rel="stylesheet" href="css/bundle.css?v=2101f72ad9">
     <title>渡鸦 NULL · 日光与暮色之间</title>
     <link rel="icon" id="siteFavicon" href="/images/Default/web-logo.webp" type="image/webp">
     <link rel="apple-touch-icon" href="/images/Default/web-logo.webp">
@@ -505,7 +505,7 @@
     <script src="js/theme.js?v=20261030c" defer></script>
     <!-- 桌宠动效引擎（spring-driven character，见 public/vendor/grok/README.md） -->
 
-    <script src="js/app.js?v=20261101s" defer></script>
+    <script src="js/app.js?v=20261101t" defer></script>
     <script src="js/animations.js?v=3.14.0" defer></script>
 
     <script>
@@ -1122,7 +1122,36 @@
         <img class="screensaver-art" id="screenSaverArt" alt="" decoding="async">
         <div class="screensaver-tint" id="screenSaverTint" aria-hidden="true"></div>
         <div class="screensaver-glow" id="screenSaverGlow" aria-hidden="true"></div>
+        <canvas class="screensaver-petals" id="screenSaverPetals" aria-hidden="true"></canvas>
         <div class="screensaver-clock" id="screenSaverClock" aria-live="off"></div>
+
+        <!-- 控制面板（H 键收起 / 展开） -->
+        <div class="screensaver-panel" id="screenSaverPanel">
+            <div class="ss-row">
+                <span>时刻</span>
+                <input type="range" id="ssTime" min="0" max="1439" step="5" value="0">
+                <span class="ss-val" id="ssTimeVal">--:--</span>
+            </div>
+            <div class="ss-row">
+                <span>曝光</span>
+                <input type="range" id="ssExposure" min="0.5" max="1.8" step="0.01" value="1">
+                <span class="ss-val" id="ssExposureVal">1.00</span>
+            </div>
+            <div class="ss-row">
+                <span>泛光</span>
+                <input type="range" id="ssGlow" min="0" max="1" step="0.01" value="0.3">
+                <span class="ss-val" id="ssGlowVal">0.30</span>
+            </div>
+            <div class="ss-foot">
+                <button class="ss-btn" id="ssFollowBtn" type="button">跟随真实时间</button>
+                <span class="ss-hint">H 收起面板</span>
+            </div>
+            <div class="ss-foot">
+                <button class="ss-btn" id="ssClockBtn" type="button" aria-pressed="true">时钟 开</button>
+                <button class="ss-btn" id="ssPureBtn" type="button" aria-pressed="false">纯图 关</button>
+            </div>
+        </div>
+
         <button class="screensaver-exit" id="screenSaverExit" type="button" title="退出屏保（Esc）">退出</button>
     </div>
 

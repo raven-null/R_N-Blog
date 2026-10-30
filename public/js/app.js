@@ -70,9 +70,14 @@ const BlogApp = {
         });
         document.getElementById('screenSaverExit')?.addEventListener('click', () => this.toggleScreenSaver(false));
         document.addEventListener('keydown', (e) => {
-            if (e.key !== 'Escape') return;
             if (!document.body.classList.contains('screensaver-on')) return;
-            this.toggleScreenSaver(false);
+            if (e.key === 'Escape') {
+                this.toggleScreenSaver(false);
+                return;
+            }
+            if (e.key === 'h' || e.key === 'H') {
+                document.getElementById('screenSaverPanel')?.classList.toggle('is-hidden');
+            }
         });
 
         // 正文手写开关（记忆在 localStorage）
@@ -5395,22 +5400,73 @@ const BlogApp = {
         clearInterval(this._screenSaverTimer);
         clearInterval(this._screenSaverLightTimer);
         if (next) {
+            this.bindScreenSaverPanel();
             this.applyScreenSaverLighting();
+            this.applyScreenSaverSwitches();
+            this.applyScreenSaverMotion();
             this.tickScreenSaverClock();
             this._screenSaverTimer = setInterval(() => this.tickScreenSaverClock(), 1000);
             // 光照变化很慢：五分钟重算一次就够
             this._screenSaverLightTimer = setInterval(() => this.applyScreenSaverLighting(), 5 * 60 * 1000);
+        } else {
+            this.stopScreenSaverPetals();
+            document.getElementById('screenSaverPanel')?.classList.add('is-hidden');
         }
     },
 
-    // 屏保光照：按本地时间连续插值（亮度 / 饱和 / 色相 + 天色叠加 + 一层柔光）
+    // 屏保状态（延续到下次进入，不写 localStorage）
+    ensureScreenSaverState() {
+        if (!this._ssState) {
+            this._ssState = { hour: null, exposure: 1, glow: 0.3, clock: true, pure: false };
+        }
+        return this._ssState;
+    },
+
+    // 时钟 / 纯图 两个开关的状态 → 界面
+    applyScreenSaverSwitches() {
+        const state = this.ensureScreenSaverState();
+        const wrap = document.getElementById('screenSaver');
+        const clock = document.getElementById('screenSaverClock');
+        const clockBtn = document.getElementById('ssClockBtn');
+        const pureBtn = document.getElementById('ssPureBtn');
+        if (clock) clock.classList.toggle('is-hidden', !state.clock);
+        if (wrap) wrap.classList.toggle('is-pure', state.pure);
+        if (clockBtn) {
+            clockBtn.textContent = state.clock ? '时钟 开' : '时钟 关';
+            clockBtn.setAttribute('aria-pressed', state.clock ? 'true' : 'false');
+        }
+        if (pureBtn) {
+            pureBtn.textContent = state.pure ? '纯图 开' : '纯图 关';
+            pureBtn.setAttribute('aria-pressed', state.pure ? 'true' : 'false');
+        }
+    },
+
+    // 动效（呼吸 + 花瓣）：纯图模式 / 减少动效下不跑
+    applyScreenSaverMotion() {
+        const state = this.ensureScreenSaverState();
+        const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (state.pure || reduce) {
+            this.stopScreenSaverPetals();
+        } else if (!this._ssPetals) {
+            this.startScreenSaverPetals();
+        }
+    },
+
+    // 屏保光照：按本地时间（或面板里手选的时刻）连续插值
     applyScreenSaverLighting() {
         const art = document.getElementById('screenSaverArt');
         const tint = document.getElementById('screenSaverTint');
         const glow = document.getElementById('screenSaverGlow');
         if (!art) return;
+        const state = this.ensureScreenSaverState();
+        if (state.pure) {
+            art.style.filter = 'none';
+            if (tint) tint.style.background = 'transparent';
+            if (glow) glow.style.background = 'transparent';
+            return;
+        }
         const now = new Date();
-        const h = now.getHours() + now.getMinutes() / 60;
+        const h = state.hour === null ? now.getHours() + now.getMinutes() / 60 : state.hour;
         // t=时刻，b=亮度，s=饱和，hr=色相偏移，r/g/b2=色调，a=色调浓度
         const KEY = [
             { t: 0, b: 0.40, s: 0.72, hr: -14, r: 8, g: 12, b2: 28, a: 0.58 },
@@ -5429,7 +5485,8 @@ const BlogApp = {
         const k = (h - A.t) / Math.max(0.0001, B.t - A.t);
         const lerp = (x, y) => x + (y - x) * k;
 
-        art.style.filter = `brightness(${lerp(A.b, B.b).toFixed(3)}) `
+        const exposure = state.exposure || 1;
+        art.style.filter = `brightness(${(lerp(A.b, B.b) * exposure).toFixed(3)}) `
             + `saturate(${lerp(A.s, B.s).toFixed(3)}) `
             + `hue-rotate(${lerp(A.hr, B.hr).toFixed(1)}deg)`;
 
@@ -5439,13 +5496,150 @@ const BlogApp = {
                 + `${Math.round(lerp(A.b2, B.b2))}, ${lerp(A.a, B.a).toFixed(3)})`;
         }
 
-        // 柔光：正午在画面中上方，早晚贴地平线
+        // 柔光：正午在画面中上方，早晚贴地平线；强度受面板「泛光」控制
         const sunLow = Math.min(1, Math.abs(h - 12) / 7);
-        const strength = 0.30 * (1 - sunLow * 0.55);
+        const glowFactor = state.glow === undefined ? 0.3 : state.glow;
+        const strength = 0.30 * (1 - sunLow * 0.55) * (glowFactor / 0.3);
         if (glow) {
-            glow.style.background = `radial-gradient(ellipse 90% 70% at 50% ${Math.round(18 + sunLow * 62)}%, `
-                + `rgba(255, 238, 205, ${strength.toFixed(2)}), transparent 62%)`;
+            glow.style.background = strength <= 0.001
+                ? 'transparent'
+                : `radial-gradient(ellipse 90% 70% at 50% ${Math.round(18 + sunLow * 62)}%, `
+                  + `rgba(255, 238, 205, ${strength.toFixed(2)}), transparent 62%)`;
         }
+    },
+
+    // 白玫瑰花瓣：canvas 粒子，缓慢侧向飘落 + 轻摆 + 自转
+    startScreenSaverPetals() {
+        const canvas = document.getElementById('screenSaverPetals');
+        if (!canvas || this._ssPetals) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        const dpr = Math.min(2, window.devicePixelRatio || 1);
+        const resize = () => {
+            canvas.width = Math.max(1, Math.floor(canvas.clientWidth * dpr));
+            canvas.height = Math.max(1, Math.floor(canvas.clientHeight * dpr));
+        };
+        resize();
+
+        const rand = (a, b) => a + Math.random() * (b - a);
+        const makePetal = () => ({
+            x: rand(0, canvas.width),
+            y: rand(-canvas.height * 0.6, 0),
+            r: rand(5, 13) * dpr,
+            flat: rand(0.42, 0.8),
+            vx: rand(0.1, 0.5) * dpr,
+            vy: rand(0.16, 0.55) * dpr,
+            sway: rand(0.12, 0.42) * dpr,
+            phase: rand(0, Math.PI * 2),
+            spin: rand(-0.006, 0.006),
+            rot: rand(0, Math.PI * 2),
+            alpha: rand(0.26, 0.6),
+        });
+
+        const count = Math.max(14, Math.min(46, Math.round(canvas.clientWidth / 42)));
+        const petals = Array.from({ length: count }, makePetal);
+        let last = performance.now();
+        const frame = (t) => {
+            const dt = Math.min(48, t - last) / 16.67;
+            last = t;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (let i = 0; i < petals.length; i++) {
+                const p = petals[i];
+                p.y += p.vy * dt;
+                p.x += (p.vx + Math.sin(p.phase + t * 0.00035) * p.sway) * dt;
+                p.rot += p.spin * dt;
+                if (p.y > canvas.height + p.r * 2) Object.assign(p, makePetal(), { y: -p.r * 2 });
+                if (p.x > canvas.width + p.r * 2) p.x = -p.r * 2;
+                if (p.x < -p.r * 2) p.x = canvas.width + p.r * 2;
+
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                ctx.rotate(p.rot);
+                ctx.scale(1, p.flat);
+                ctx.beginPath();
+                ctx.moveTo(0, -p.r);
+                ctx.bezierCurveTo(p.r * 0.92, -p.r * 0.7, p.r * 0.78, p.r * 0.74, 0, p.r);
+                ctx.bezierCurveTo(-p.r * 0.78, p.r * 0.74, -p.r * 0.92, -p.r * 0.7, 0, -p.r);
+                ctx.closePath();
+                ctx.fillStyle = `rgba(255, 252, 250, ${p.alpha})`;
+                ctx.fill();
+                ctx.restore();
+            }
+            this._ssPetals.raf = requestAnimationFrame(frame);
+        };
+        this._ssPetals = { raf: requestAnimationFrame(frame), canvas, resize };
+        window.addEventListener('resize', resize, { passive: true });
+    },
+
+    stopScreenSaverPetals() {
+        const t = this._ssPetals;
+        if (!t) return;
+        cancelAnimationFrame(t.raf);
+        window.removeEventListener('resize', t.resize);
+        const ctx = t.canvas.getContext('2d');
+        if (ctx) ctx.clearRect(0, 0, t.canvas.width, t.canvas.height);
+        this._ssPetals = null;
+    },
+
+    // 面板：时刻 / 曝光 / 泛光 / 跟随真实时间 / 时钟开关 / 纯图开关
+    bindScreenSaverPanel() {
+        const panel = document.getElementById('screenSaverPanel');
+        if (!panel) return;
+        if (!panel.dataset.bound) {
+            panel.dataset.bound = '1';
+            const state = this.ensureScreenSaverState();
+            const timeEl = document.getElementById('ssTime');
+            const exposureEl = document.getElementById('ssExposure');
+            const glowEl = document.getElementById('ssGlow');
+            const fmt = (m) => `${String(Math.floor(m / 60) % 24).padStart(2, '0')}:${String(Math.round(m % 60)).padStart(2, '0')}`;
+            const syncLabels = () => {
+                const tEl = document.getElementById('ssTimeVal');
+                if (tEl) tEl.textContent = state.hour === null ? '实时' : fmt(timeEl.valueAsNumber);
+                const eEl = document.getElementById('ssExposureVal');
+                if (eEl) eEl.textContent = Number(exposureEl.value).toFixed(2);
+                const gEl = document.getElementById('ssGlowVal');
+                if (gEl) gEl.textContent = Number(glowEl.value).toFixed(2);
+            };
+            timeEl?.addEventListener('input', () => {
+                state.hour = timeEl.valueAsNumber / 60;
+                syncLabels();
+                this.applyScreenSaverLighting();
+            });
+            exposureEl?.addEventListener('input', () => {
+                state.exposure = Number(exposureEl.value);
+                syncLabels();
+                this.applyScreenSaverLighting();
+            });
+            glowEl?.addEventListener('input', () => {
+                state.glow = Number(glowEl.value);
+                syncLabels();
+                this.applyScreenSaverLighting();
+            });
+            document.getElementById('ssFollowBtn')?.addEventListener('click', () => {
+                state.hour = null;
+                const now = new Date();
+                if (timeEl) timeEl.value = String(now.getHours() * 60 + now.getMinutes());
+                syncLabels();
+                this.applyScreenSaverLighting();
+            });
+            document.getElementById('ssClockBtn')?.addEventListener('click', () => {
+                state.clock = !state.clock;
+                this.applyScreenSaverSwitches();
+            });
+            document.getElementById('ssPureBtn')?.addEventListener('click', () => {
+                state.pure = !state.pure;
+                this.applyScreenSaverSwitches();
+                this.applyScreenSaverLighting();
+                this.applyScreenSaverMotion();
+            });
+            // 面板打开时先按当前状态摆好滑块
+            const now = new Date();
+            if (timeEl) timeEl.value = String(now.getHours() * 60 + now.getMinutes());
+            if (exposureEl) exposureEl.value = String(state.exposure);
+            if (glowEl) glowEl.value = String(state.glow);
+            syncLabels();
+        }
+        panel.classList.remove('is-hidden');
     },
 
     // 屏保上的时钟（大号时间 + 日期，跟着本地时间走）

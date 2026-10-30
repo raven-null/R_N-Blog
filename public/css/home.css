@@ -1412,6 +1412,121 @@ body.view-blog-active .nav-bar {
     transition: background 1.8s ease;
 }
 
+/* 花瓣画布 */
+.screensaver-petals {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+/* 呼吸感：极轻微的缩放（系统开「减少动效」时自动关掉） */
+@keyframes ssBreath {
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.014);
+    }
+}
+
+.screensaver-art {
+    animation: ssBreath 9s ease-in-out infinite;
+    will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .screensaver-art {
+        animation: none;
+    }
+}
+
+/* 控制面板：H 收起 / 展开 */
+.screensaver-panel {
+    position: absolute;
+    left: 26px;
+    bottom: 24px;
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+    width: 268px;
+    padding: 14px 16px;
+    font-size: 12px;
+    color: #ece7dc;
+    background: rgba(12, 14, 20, .55);
+    border: 1px solid rgba(255, 255, 255, .16);
+    border-radius: 14px;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    transition: opacity .2s ease, transform .2s ease;
+}
+
+.screensaver-panel.is-hidden {
+    opacity: 0;
+    transform: translateY(8px);
+    pointer-events: none;
+}
+
+.ss-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ss-row > span:first-child {
+    width: 30px;
+    flex: none;
+    opacity: .72;
+    letter-spacing: .08em;
+}
+
+.ss-row input[type="range"] {
+    flex: 1 1 auto;
+    min-width: 0;
+    accent-color: #e8c9a0;
+}
+
+.ss-val {
+    width: 44px;
+    flex: none;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    opacity: .8;
+}
+
+.ss-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 2px;
+}
+
+.ss-btn {
+    padding: 5px 10px;
+    font-family: inherit;
+    font-size: 11.5px;
+    color: #f0ece3;
+    background: rgba(255, 255, 255, .12);
+    border: 1px solid rgba(255, 255, 255, .22);
+    border-radius: 999px;
+    cursor: pointer;
+}
+
+.ss-btn:hover {
+    background: rgba(255, 255, 255, .2);
+}
+
+.ss-hint {
+    font-size: 10.5px;
+    letter-spacing: .06em;
+    opacity: .5;
+}
+
 /* 屏保时钟：右下角，时间大字 + 日期小字 */
 .screensaver-clock {
     position: absolute;
@@ -1438,6 +1553,22 @@ body.view-blog-active .nav-bar {
     font-size: 13px;
     letter-spacing: .22em;
     opacity: .82;
+}
+
+.screensaver-clock.is-hidden {
+    display: none;
+}
+
+/* 纯图模式：关掉天色、柔光、花瓣和呼吸，只剩原图 */
+.screensaver.is-pure .screensaver-tint,
+.screensaver.is-pure .screensaver-glow,
+.screensaver.is-pure .screensaver-petals {
+    display: none;
+}
+
+.screensaver.is-pure .screensaver-art {
+    animation: none;
+    filter: none !important;
 }
 
 .screensaver-exit {
