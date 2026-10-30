@@ -446,23 +446,21 @@
     transition: width .45s cubic-bezier(.2, .7, .3, 1), height .45s cubic-bezier(.2, .7, .3, 1);
 }
 
-/* 盒子宽高 = 图片真实像素比例，cover 铺满（比例一致即完整显示、无缝隙） */
+/* 盒子宽高 = 图片真实像素比例；contain 保证任何情况下都完整显示、绝不裁切 */
 .hv3-shot-img {
     position: absolute;
     inset: 0;
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
     opacity: 0;
-    transform: scale(1.05);
-    transition: opacity .9s ease, transform 7s linear;
-    will-change: opacity, transform;
+    transition: opacity .9s ease;
+    will-change: opacity;
     pointer-events: none;
 }
 
 .hv3-shot-img.is-front {
     opacity: 1;
-    transform: scale(1);
 }
 
 .hv3-shot-meta {

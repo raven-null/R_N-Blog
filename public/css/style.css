@@ -80,7 +80,7 @@ body.home-layout {
     display: flex;
     align-items: center;
     justify-content: center;
-    height: 56px;
+    height: 40px;
     gap: 24px;
 }
 
@@ -7716,6 +7716,9 @@ body.view-gallery-active .gallery-wall {
 
 .gw-body {
     position: relative;
+    /* 给一个基础宽度当布局起点（JS 按视口宽算列数）；高度不设，tile 绝对定位铺开 */
+    width: 100%;
+    min-height: 100%;
 }
 
 .gw-tile {
@@ -10275,8 +10278,8 @@ html[data-tone="dark"] .stack-pin {
 
 @media (hover: hover) and (pointer: fine) {
     .top-bar-pill {
-        /* 闲置态：上移藏起，只留约 8px 小黑边 */
-        transform: translateY(calc(-100% + 8px));
+        /* 闲置态：上移藏起，只留约 6px 小黑边 */
+        transform: translateY(calc(-100% + 6px));
         background: rgba(18, 20, 28, .92);
         border-color: rgba(255, 255, 255, .08);
         box-shadow: 0 2px 14px rgba(0, 0, 0, .28);

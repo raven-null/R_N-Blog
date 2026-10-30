@@ -83,7 +83,7 @@ body.home-layout {
     display: flex;
     align-items: center;
     justify-content: center;
-    height: 56px;
+    height: 40px;
     gap: 24px;
 }
 
@@ -7719,6 +7719,9 @@ body.view-gallery-active .gallery-wall {
 
 .gw-body {
     position: relative;
+    /* 给一个基础宽度当布局起点（JS 按视口宽算列数）；高度不设，tile 绝对定位铺开 */
+    width: 100%;
+    min-height: 100%;
 }
 
 .gw-tile {
@@ -10278,8 +10281,8 @@ html[data-tone="dark"] .stack-pin {
 
 @media (hover: hover) and (pointer: fine) {
     .top-bar-pill {
-        /* 闲置态：上移藏起，只留约 8px 小黑边 */
-        transform: translateY(calc(-100% + 8px));
+        /* 闲置态：上移藏起，只留约 6px 小黑边 */
+        transform: translateY(calc(-100% + 6px));
         background: rgba(18, 20, 28, .92);
         border-color: rgba(255, 255, 255, .08);
         box-shadow: 0 2px 14px rgba(0, 0, 0, .28);
@@ -12905,23 +12908,21 @@ body.home-layout .hv-news-box #newsList .news-item-meta{font-family:var(--font-s
     transition: width .45s cubic-bezier(.2, .7, .3, 1), height .45s cubic-bezier(.2, .7, .3, 1);
 }
 
-/* 盒子宽高 = 图片真实像素比例，cover 铺满（比例一致即完整显示、无缝隙） */
+/* 盒子宽高 = 图片真实像素比例；contain 保证任何情况下都完整显示、绝不裁切 */
 .hv3-shot-img {
     position: absolute;
     inset: 0;
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
     opacity: 0;
-    transform: scale(1.05);
-    transition: opacity .9s ease, transform 7s linear;
-    will-change: opacity, transform;
+    transition: opacity .9s ease;
+    will-change: opacity;
     pointer-events: none;
 }
 
 .hv3-shot-img.is-front {
     opacity: 1;
-    transform: scale(1);
 }
 
 .hv3-shot-meta {

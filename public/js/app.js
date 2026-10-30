@@ -1476,12 +1476,12 @@ const BlogApp = {
         }
     },
 
-    // ---------- 图库图片墙：平移 / 缩放 / 工具条 ----------
+    // ---------- 图库图片墙：无限画布 · 拖拽平移 · 缩放 · 视野虚拟化 ----------
 
-    gw: { x: 0, y: 0, s: 1, dragging: false, moved: 0, vx: 0, vy: 0, raf: 0, inertia: 0, inited: false },
+    gw: { x: 0, y: 0, s: 1, dragging: false, moved: 0, vx: 0, vy: 0, raf: 0, inertia: 0, inited: false, panTimer: 0 },
 
-    get gwMinS() { return 0.18; },
-    get gwMaxS() { return 2.4; },
+    get gwMinS() { return 0.2; },
+    get gwMaxS() { return 2.2; },
 
     initGalleryWall() {
         const wall = document.getElementById('galleryWall');
@@ -1567,7 +1567,7 @@ const BlogApp = {
             lastX = e.clientX;
             lastY = e.clientY;
             lastT = now;
-            this.gwApply();
+            this.wallSchedule();
         };
 
         const up = () => {
@@ -1581,6 +1581,43 @@ const BlogApp = {
         window.addEventListener('pointermove', move);
         window.addEventListener('pointerup', up);
         window.addEventListener('pointercancel', up);
+
+        // 双指捏合缩放（以两指中点为中心，同时支持两指拖动平移）
+        let pinch = null;
+        const touchDist = (a, b) => Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+        wall.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 2) {
+                this.stopGwInertia();
+                this.gw.dragging = false;
+                wall.classList.remove('is-dragging');
+                this.gw.moved = 99;
+                const [a, b] = e.touches;
+                pinch = {
+                    d0: Math.max(1, touchDist(a, b)),
+                    s0: this.gw.s,
+                    x0: this.gw.x,
+                    y0: this.gw.y,
+                    mx: (a.clientX + b.clientX) / 2,
+                    my: (a.clientY + b.clientY) / 2,
+                };
+            }
+        }, { passive: true });
+        wall.addEventListener('touchmove', (e) => {
+            if (e.touches.length === 2 && pinch) {
+                const [a, b] = e.touches;
+                const d = touchDist(a, b);
+                const mx = (a.clientX + b.clientX) / 2;
+                const my = (a.clientY + b.clientY) / 2;
+                const next = Math.min(this.gwMaxS, Math.max(this.gwMinS, pinch.s0 * (d / pinch.d0)));
+                const k = next / pinch.s0;
+                this.gw.x = mx - (pinch.mx - pinch.x0) * k;
+                this.gw.y = my - (pinch.my - pinch.y0) * k;
+                this.gw.s = next;
+                this.wallSchedule();
+            }
+        }, { passive: true });
+        wall.addEventListener('touchend', () => { pinch = null; });
+        wall.addEventListener('touchcancel', () => { pinch = null; });
 
         // 滚轮缩放（以指针为中心）
         wall.addEventListener('wheel', (e) => {
@@ -1598,12 +1635,17 @@ const BlogApp = {
             if (e.target.closest('.gw-tile')) return;
             this.gwFit();
         });
+
+        window.addEventListener('resize', () => {
+            if (this.gw.inited && this.currentView === 'gallery') this.wallRender();
+        }, { passive: true });
     },
 
     gwApply() {
         const plane = document.getElementById('gwPlane');
         if (!plane) return;
         plane.style.transform = 'translate3d(' + this.gw.x + 'px, ' + this.gw.y + 'px, 0) scale(' + this.gw.s + ')';
+        this.wallSchedule();
     },
 
     gwZoomAt(px, py, factor) {
@@ -1612,7 +1654,7 @@ const BlogApp = {
         this.gw.x = px - ((px - this.gw.x) / this.gw.s) * next;
         this.gw.y = py - ((py - this.gw.y) / this.gw.s) * next;
         this.gw.s = next;
-        this.gwApply();
+        this.wallSchedule();
     },
 
     // 适应宽度（默认视角）：整排照片刚好铺满屏幕宽，从顶上开始看
@@ -1651,7 +1693,7 @@ const BlogApp = {
             if (Math.abs(this.gw.vx) < 0.02 && Math.abs(this.gw.vy) < 0.02) return;
             this.gw.x += this.gw.vx * 16;
             this.gw.y += this.gw.vy * 16;
-            this.gwApply();
+            this.wallRender();
             this.gw.inertia = requestAnimationFrame(step);
         };
         this.gw.inertia = requestAnimationFrame(step);
@@ -1921,23 +1963,24 @@ const BlogApp = {
         let front = 0;
         let cur = -1;
 
-        // 盒子宽高都跟着当前图走（与文章轮播同一套思路）：
-        // 先按可用宽定，竖图变窄变高、横图变宽变扁 —— 图完整显示，不裁切
+        // 盒子宽高严格等于当前图的真实像素比例（不夹 ratio，否则 cover 会裁掉一边）：
+        // 在列宽与高度上限内尽量放大，放不下就等比缩小 —— 图永远完整可见
         const fitShotBox = (img) => {
             const nw = img.naturalWidth;
             const nh = img.naturalHeight;
             if (!nw || !nh) return;
             const availW = stage.parentElement ? stage.parentElement.clientWidth : stage.clientWidth;
             if (!availW) return;
-            let ratio = nw / nh;
-            ratio = Math.max(0.55, Math.min(2.4, ratio));
+            const ratio = nw / nh; // 真实宽高比，不 clamp
+            const maxH = Math.min(window.innerHeight * 0.6, 520);
 
-            // 先按高度上限摆，放不下就回退成占满可用宽（与 syncCarouselHeight 一致）
-            const maxH = Math.min(window.innerHeight * 0.55, 480);
-            let h = maxH;
-            let w = Math.round(h * ratio);
-            if (w > availW) { w = availW; h = Math.round(w / ratio); }
-            if (h < 120 || w < 120) return;
+            let w = availW;
+            let h = Math.round(w / ratio);
+            if (h > maxH) {
+                h = maxH;
+                w = Math.round(h * ratio);
+            }
+            if (h < 80 || w < 80) return;
 
             stage.style.setProperty('--shot-w', w + 'px');
             stage.style.setProperty('--shot-h', h + 'px');
@@ -3507,14 +3550,41 @@ const BlogApp = {
         };
     },
 
-    // 高宽比：优先用图片加载后测到的真实比例；还没有就按 id 稳定地编一个
+    // 缩略图按格子大小要小图（?w= 变体），别下全尺寸 —— 首屏更快、流量更省
+    wallTileSrc(p, big) {
+        const base = p ? (p.thumb || p.url) : '';
+        if (!base) return '';
+        const w = big ? 480 : 320;
+        return base + (base.includes('?') ? '&' : '?') + 'w=' + w;
+    },
+
+    // 记下图片真实高宽比（naturalWidth/Height 是唯一可信来源，元数据可能缺尺寸或 EXIF 旋转）
+    wallNoteNatRatio(id, img) {
+        if (!id || !img.naturalWidth) return;
+        const ratio = img.naturalHeight / img.naturalWidth;
+        const prev = this.photoWallRatio.get(id);
+        if (prev && Math.abs(prev - ratio) < 0.02) return;
+        this.photoWallRatio.set(id, ratio);
+        // 比例变了就防抖重排一次，瀑布流错落才接近真实形状
+        clearTimeout(this.photoWallRelayoutTimer);
+        this.photoWallRelayoutTimer = setTimeout(() => {
+            if (!this.gw.inited) return;
+            this.wallComputeLayout();
+            this.wallRender();
+        }, 220);
+    },
+
+    // 高宽比：优先用图片加载后测到的；还没有就按元数据；再没有按 id 稳定编一个
     wallPhotoRatio(p) {
         const known = this.photoWallRatio.get(p.id);
-        if (known) return Math.min(2.6, Math.max(0.42, known));
+        if (known) return known;
+        const w = Number(p && p.width) || 0;
+        const h = Number(p && p.height) || 0;
+        if (w > 0 && h > 0) return h / w;
         const s = String(p.id || '');
-        let h = 0;
-        for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 1000;
-        return 0.62 + (h % 100) / 100 * 0.85;   // 0.62 ~ 1.47
+        let h2 = 0;
+        for (let i = 0; i < s.length; i++) h2 = (h2 * 31 + s.charCodeAt(i)) % 1000;
+        return 0.62 + (h2 % 100) / 100 * 0.85;   // 0.62 ~ 1.47
     },
 
     wallComputeLayout() {
@@ -3524,15 +3594,10 @@ const BlogApp = {
             this.photoWallLayout = null;
             return;
         }
-        const W = body.clientWidth || 2400;
+        // 列宽按「一块 ≈ 视口宽」算，块在画布上无限平铺
+        const W = body.clientWidth || window.innerWidth || 1200;
         if (this.photoWallView === 'masonry') this.wallComputeMasonry(W);
         else this.wallComputeGrid(W);
-        // 给墙内容容器一个实际尺寸（tile 绝对定位，容器本身要有大小）
-        const gwBody = document.getElementById('gwBody');
-        if (gwBody && this.photoWallLayout) {
-            gwBody.style.width = Math.round(this.photoWallLayout.blockW) + 'px';
-            gwBody.style.height = Math.round(this.photoWallLayout.blockH) + 'px';
-        }
     },
 
     /* 方格：把整池照片全部铺开（不再只铺一块），随机放大照旧，
@@ -3754,67 +3819,94 @@ const BlogApp = {
         this.photoWallLayout = { items, cols, cellW, blockW: W, blockH: blockH - GAP };
     },
 
+    /* 渲染：块（blockW×blockH）在画布上无限平铺，只创建/保留视野内的 tile（虚拟化）。
+       几千张图也不卡；拖到哪一块就渲染哪一块。 */
     wallRender() {
+        const wall = document.getElementById('galleryWall');
+        const plane = document.getElementById('gwPlane');
         const body = document.getElementById('gwBody');
         const layout = this.photoWallLayout;
-        if (!body || !layout) return;
+        if (!wall || !plane || !body || !layout) return;
         body.classList.toggle('is-masonry', this.photoWallView === 'masonry');
 
+        const vw = wall.clientWidth || window.innerWidth || 1200;
+        const vh = wall.clientHeight || window.innerHeight || 800;
+        const s = this.gw.s;
+        // 视野在画布坐标里的矩形（留一圈余量，减少边缘闪现）
+        const pad = 80 / s;
+        const x0 = -this.gw.x / s - pad;
+        const x1 = (vw - this.gw.x) / s + pad;
+        const y0 = -this.gw.y / s - pad;
+        const y1 = (vh - this.gw.y) / s + pad;
+        const blockW = Math.max(1, layout.blockW);
+        const blockH = Math.max(1, layout.blockH);
+
         const alive = new Set();
-        for (const it of layout.items) {
-            alive.add(it.key);
-            let el = this.photoWallTiles.get(it.key);
-            if (!el) {
-                el = document.createElement('button');
-                el.type = 'button';
-                el.className = 'gw-tile';
-                el.dataset.key = it.key;
-                el.dataset.id = it.id;
-                const img = document.createElement('img');
-                img.loading = 'lazy';
-                img.decoding = 'async';
-                img.referrerPolicy = 'no-referrer';
-                img.alt = '';
-                img.addEventListener('error', () => { img.style.visibility = 'hidden'; });
-                img.addEventListener('load', () => this.wallNoteRatio(it.id, img));
-                el.appendChild(img);
-                body.appendChild(el);
-                this.photoWallTiles.set(it.key, el);
+        const k0 = Math.floor(x0 / blockW);
+        const k1 = Math.floor(x1 / blockW);
+        const m0 = Math.floor(y0 / blockH);
+        const m1 = Math.floor(y1 / blockH);
+        for (let k = k0; k <= k1; k++) {
+            for (let m = m0; m <= m1; m++) {
+                const bx = k * blockW;
+                const by = m * blockH;
+                if (by > y1 || by + blockH < y0) continue;
+                for (let i = 0; i < layout.items.length; i++) {
+                    const it = layout.items[i];
+                    const wy = by + it.y;
+                    if (wy > y1 || wy + it.h < y0) continue;
+                    const wx = bx + it.x;
+                    if (wx > x1 || wx + it.w < x0) continue;
+                    const key = k + ',' + m + ',' + (it.key || i);
+                    alive.add(key);
+                    let el = this.photoWallTiles.get(key);
+                    if (!el) {
+                        el = document.createElement('button');
+                        el.type = 'button';
+                        el.className = 'gw-tile';
+                        el.dataset.key = key;
+                        el.dataset.id = it.id;
+                        const img = document.createElement('img');
+                        img.loading = 'lazy';
+                        img.decoding = 'async';
+                        img.referrerPolicy = 'no-referrer';
+                        img.alt = '';
+                        img.addEventListener('error', () => { img.style.visibility = 'hidden'; });
+                        img.addEventListener('load', () => this.wallNoteNatRatio(it.id, img));
+                        el.appendChild(img);
+                        body.appendChild(el);
+                        this.photoWallTiles.set(key, el);
+                    }
+                    const p = this.photoWallById.get(it.id);
+                    const img = el.firstElementChild;
+                    const src = this.wallTileSrc(p, it.big);
+                    if (src && img.getAttribute('src') !== src) img.src = src;
+                    el.style.left = wx + 'px';
+                    el.style.top = wy + 'px';
+                    el.style.width = it.w + 'px';
+                    el.style.height = it.h + 'px';
+                    el.classList.toggle('is-big', !!it.big);
+                    el.classList.toggle('is-expanded', !!it.expanded);
+                }
             }
-            const p = this.photoWallById.get(it.id);
-            const img = el.firstElementChild;
-            const src = p ? (p.thumb || p.url) : '';
-            if (src && img.getAttribute('src') !== src) img.src = src;
-            el.style.left = it.x + 'px';
-            el.style.top = it.y + 'px';
-            el.style.width = it.w + 'px';
-            el.style.height = it.h + 'px';
-            el.classList.toggle('is-big', !!it.big);
-            el.classList.toggle('is-expanded', !!it.expanded);
         }
         this.photoWallTiles.forEach((el, key) => {
             if (alive.has(key)) return;
             el.remove();
             this.photoWallTiles.delete(key);
         });
-        const sub = document.getElementById('photoWallSub');
+        plane.style.transform = 'translate3d(' + this.gw.x + 'px, ' + this.gw.y + 'px, 0) scale(' + s + ')';
+        const sub = document.getElementById('gwCount');
         if (sub) sub.textContent = `${this.photoWallPool.length} 张`;
     },
 
-    // 记下真实高宽比；瀑布流下攒够一批就重排一次，让错落更接近真实形状
-    wallNoteRatio(id, img) {
-        if (!id || !img.naturalWidth) return;
-        const ratio = img.naturalHeight / img.naturalWidth;
-        const prev = this.photoWallRatio.get(id);
-        if (prev && Math.abs(prev - ratio) < 0.02) return;
-        this.photoWallRatio.set(id, ratio);
-        if (this.photoWallView !== 'masonry') return;
-        clearTimeout(this.photoWallRelayoutTimer);
-        this.photoWallRelayoutTimer = setTimeout(() => {
-            if (this.photoWallView !== 'masonry' || !this.canvasOn) return;
-            this.wallComputeLayout();
+    // rAF 节流：拖拽/惯性期间每帧最多渲一次
+    wallSchedule() {
+        if (this.gw.raf) return;
+        this.gw.raf = requestAnimationFrame(() => {
+            this.gw.raf = 0;
             this.wallRender();
-        }, 700);
+        });
     },
 
     bindPhotoWall() {
