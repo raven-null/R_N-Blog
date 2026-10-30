@@ -5554,9 +5554,11 @@ const BlogApp = {
         const r = hit.getBoundingClientRect();
         const btnW = btn.offsetWidth || 32;
         const btnH = btn.offsetHeight || 14;
+        // 放在「沉浸」右边，贴太近右边缘就退到 44px 内边距处
+        const left = Math.min(r.right + 14, window.innerWidth - btnW - 44);
         btn.style.right = 'auto';
         btn.style.bottom = 'auto';
-        btn.style.left = `${Math.max(12, Math.round(r.left - btnW - 16))}px`;
+        btn.style.left = `${Math.max(12, Math.round(left))}px`;
         btn.style.top = `${Math.round(r.top + (r.height - btnH) / 2)}px`;
     },
 
