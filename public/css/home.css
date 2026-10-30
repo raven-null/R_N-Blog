@@ -1384,6 +1384,31 @@ body.view-blog-active .nav-bar {
     display: none;
 }
 
+/* 原版页面（构建好的 screensaver/index.html）：加载成功才算 native 模式 */
+.screensaver-frame {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    display: none;
+    background: #05060a;
+}
+
+.screensaver[data-mode="native"] .screensaver-frame {
+    display: block;
+}
+
+.screensaver[data-mode="native"] .screensaver-fallback {
+    display: none;
+}
+
+/* 自带降级层：原版构建不在时用它 */
+.screensaver-fallback {
+    position: absolute;
+    inset: 0;
+}
+
 /* 背景插画 + 闭眼图（眨眼用）：同一个容器上做呼吸和光照，两层不会错位 */
 .screensaver-stage {
     position: absolute;

@@ -170,3 +170,16 @@
   from = "/favicon.ico"
   to = "/images/Default/web-logo.webp"
   status = 200
+
+# ===== 屏保原版（KumengScreen 构建产物放在 /screensaver/）=====
+# 构建出来的页面用根绝对路径引用资源（/_next/...、/art/...），
+# 这里把这两类请求改写到 /screensaver/ 下，子路径挂载才能正常加载。
+[[redirects]]
+  from = "/_next/*"
+  to = "/screensaver/_next/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/art/*"
+  to = "/screensaver/art/:splat"
+  status = 200

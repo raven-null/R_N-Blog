@@ -5387,17 +5387,38 @@ const BlogApp = {
         if (btn) btn.setAttribute('aria-pressed', on ? 'true' : 'false');
         return !!on;
     },
-    // 屏保模式：整屏只剩背景插画，界面全藏起来；Esc 或右下角「退出」返回
+    // 屏保模式：优先加载构建好的原版页面（public/screensaver/），拿不到就用自带降级层
     toggleScreenSaver(on) {
         const wrap = document.getElementById('screenSaver');
         const art = document.getElementById('screenSaverArt');
         const eyes = document.getElementById('screenSaverEyes');
+        const frame = document.getElementById('screenSaverFrame');
         if (!wrap) return;
         const next = on === undefined ? wrap.hidden : !!on;
         wrap.hidden = !next;
         document.body.classList.toggle('screensaver-on', next);
 
-        // 底图：先用 71KB 的小图秒开，高清 albedo 在后台换上来；闭眼图也后台加载，加载完才开始眨眼
+        if (next) this.probeNativeScreensaver();
+
+        // 原版可用：只让 iframe 跑，自带那套动画/光照全部停掉
+        if (this.screenSaverNative()) {
+            clearInterval(this._screenSaverTimer);
+            clearInterval(this._screenSaverLightTimer);
+            this.stopScreenSaverPetals();
+            this.stopScreenSaverBlink();
+            if (!frame) return;
+            if (next) {
+                if (frame.dataset.src !== 'screensaver/index.html') {
+                    frame.dataset.src = 'screensaver/index.html';
+                    frame.src = 'screensaver/index.html';
+                }
+            } else {
+                frame.src = 'about:blank';
+            }
+            return;
+        }
+
+        // 降级层：底图先用 71KB 小图秒开，高清 albedo 后台换上来；闭眼图就绪才眨眼
         if (art && !art.dataset.srcSet) {
             art.dataset.srcSet = '1';
             art.src = 'images/sky/kumeng-960.webp';
@@ -5434,6 +5455,30 @@ const BlogApp = {
             this.toggleScreenSaverPlay(false);
             document.getElementById('screenSaverPanel')?.classList.add('is-hidden');
         }
+    },
+
+    // 只探测一次：/screensaver/index.html 在不在
+    probeNativeScreensaver() {
+        const wrap = document.getElementById('screenSaver');
+        if (!wrap || wrap.dataset.mode) return;
+        wrap.dataset.mode = 'fallback';
+        fetch('screensaver/index.html', { method: 'HEAD', cache: 'no-store' })
+            .then((r) => {
+                if (!r.ok) return;
+                wrap.dataset.mode = 'native';
+                const frame = document.getElementById('screenSaverFrame');
+                if (!frame || wrap.hidden) return;
+                frame.dataset.src = 'screensaver/index.html';
+                frame.src = 'screensaver/index.html';
+                this.stopScreenSaverPetals();
+                this.stopScreenSaverBlink();
+                document.getElementById('screenSaverPanel')?.classList.add('is-hidden');
+            })
+            .catch(() => { wrap.dataset.mode = 'fallback'; });
+    },
+
+    screenSaverNative() {
+        return document.getElementById('screenSaver')?.dataset.mode === 'native';
     },
 
     // 屏保状态（延续到下次进入，不写 localStorage）
