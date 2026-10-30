@@ -13236,6 +13236,9 @@ body.home-layout .hv-news-box #newsList .news-item-meta{font-family:var(--font-s
 
 .hv3-journals {
     flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
     height: 240px;
 }
 
@@ -13348,34 +13351,70 @@ html[data-theme="dark"] .hv3-journal {
         inset 0 1px 0 rgba(255, 255, 255, .1);
 }
 
-/* 日历：让里面浮出的编辑弹窗有定位参照（视觉仍由日历自己负责） */
-.hv3-cal {
+html[data-theme="dark"] .hv3-today-panel {
+    background: rgba(255, 255, 255, .06);
+    border-color: rgba(255, 255, 255, .16);
+    backdrop-filter: blur(18px) saturate(1.2);
+    -webkit-backdrop-filter: blur(18px) saturate(1.2);
+}
+
+/* 「今天」卡：日期 + 写作按钮 + 日历 + 任务 + 日记，合在一张卡里 */
+.hv3-today-panel {
+    flex: 0 0 auto;
     position: relative;
+    gap: 10px;
+    padding: 12px 14px 14px;
+    border-radius: 20px;
+    background: var(--glass-card, rgba(255, 253, 248, .5));
+    border: 1px solid var(--glass-line, rgba(255, 255, 255, .5));
+    box-shadow: 0 10px 26px rgba(20, 26, 44, .08);
+}
+
+.hv3-today-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.hv3-today-date {
+    font-size: 12.5px;
+    font-weight: 650;
+    letter-spacing: .02em;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.hv3-today-acts {
+    display: flex;
+    align-items: center;
+    gap: 6px;
     flex: 0 0 auto;
 }
 
-/* 日历顶部：写任务 / 写日记 —— 点日期弹出的编辑器是同一套，这里少走一步 */
-.cal-actions {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 9px;
+/* 日历区域：编辑弹窗相对它浮出（top: 100% 正好是日历底部） */
+.hv3-cal-block {
+    position: relative;
+    min-height: 0;
 }
 
+/* 写任务 / 写日记 —— 点日期弹出的编辑器是同一套，这里少走一步 */
 .cal-act {
-    flex: 1 1 0;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 5px;
-    min-height: 32px;
-    padding: 6px 10px;
+    gap: 4px;
+    min-height: 28px;
+    padding: 4px 9px;
     font-family: inherit;
-    font-size: 12px;
+    font-size: 11.5px;
     letter-spacing: .02em;
     color: var(--text-secondary);
     background: var(--surface-2, rgba(0, 0, 0, .04));
     border: 1px solid var(--border, rgba(0, 0, 0, .08));
-    border-radius: 10px;
+    border-radius: 9px;
     cursor: pointer;
     transition: color .2s ease, background .2s ease, border-color .2s ease, transform .2s ease;
 }
@@ -13406,16 +13445,15 @@ html[data-theme="dark"] .hv3-journal {
     display: none;
     align-items: center;
     justify-content: center;
-    flex: 1 1 0;
-    min-height: 32px;
-    padding: 6px 10px;
-    font-size: 12px;
+    min-height: 28px;
+    padding: 4px 9px;
+    font-size: 11.5px;
     letter-spacing: .02em;
     color: var(--text-secondary);
     text-decoration: none;
     background: var(--surface-2, rgba(0, 0, 0, .04));
     border: 1px dashed var(--border, rgba(0, 0, 0, .12));
-    border-radius: 10px;
+    border-radius: 9px;
     transition: color .2s ease, border-color .2s ease;
 }
 
@@ -13424,12 +13462,12 @@ html[data-theme="dark"] .hv3-journal {
     border-color: var(--accent);
 }
 
-.home-calendar.is-guest .cal-actions .cal-act {
+.hv3-today-panel.is-guest .cal-act {
     display: none;
 }
 
-.home-calendar.is-guest .cal-actions .cal-login {
-    display: flex;
+.hv3-today-panel.is-guest .cal-login {
+    display: inline-flex;
 }
 
 html[data-theme="dark"] .cal-act {
@@ -13495,6 +13533,9 @@ html[data-theme="dark"] .hv3-shot {
         flex: 1 1 auto;
         width: 100%;
     }
+
+    /* 窄屏先给「今天」：写作入口排在最前面 */
+    .hv3-right { order: -1; }
 
     .hv3-shots {
         flex: 0 0 auto;

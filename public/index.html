@@ -15,7 +15,7 @@
     <meta property="og:image" content="https://ravennull.work/images/Default/web-logo.webp">
     <meta property="og:locale" content="zh_CN">
     <meta name="twitter:card" content="summary">
-    <link rel="stylesheet" href="css/bundle.css?v=ef2ef367a2">
+    <link rel="stylesheet" href="css/bundle.css?v=8d32a5b74f">
     <title>渡鸦 NULL · 日光与暮色之间</title>
     <link rel="icon" id="siteFavicon" href="/images/Default/web-logo.webp" type="image/webp">
     <link rel="apple-touch-icon" href="/images/Default/web-logo.webp">
@@ -265,59 +265,71 @@
                         </div>
 
                         <div class="hv3-col hv3-right">
-                            <div class="hv3-box hv3-cal">
-                                <div class="home-calendar" id="homeCalendar"></div>
+                            <!-- 「今天」卡：日历 + 任务 + 日记合成一张，写作入口放头部 -->
+                            <div class="hv3-box hv3-today-panel" id="hv3TodayPanel">
+                                <div class="hv3-today-bar">
+                                    <span class="hv3-today-date" id="todayDateLabel"></span>
+                                    <div class="hv3-today-acts">
+                                        <button class="cal-act" type="button" data-cal-act="task"><span class="cal-act-ico" aria-hidden="true">＋</span>任务</button>
+                                        <button class="cal-act" type="button" data-cal-act="journal"><span class="cal-act-ico" aria-hidden="true">✎</span>日记</button>
+                                        <a class="cal-login" href="admin.html" title="去后台登录">登录后可写任务和日记</a>
+                                    </div>
+                                </div>
 
-                                <!-- 点日期后从日历下方浮出的编写弹窗 -->
-                                <div class="home-editor-pop" id="homeEditorWrap">
-                                    <div class="home-editor-inner">
-                                        <div class="dash-panel home-editor" id="homeEditor">
-                                            <!-- 第一步：选择写任务还是日记 -->
-                                            <div class="editor-choice" id="editorChoice">
-                                                <span class="editor-date" id="editorDateLabel"></span>
-                                                <button class="editor-choice-btn" type="button" data-kind="task">任务</button>
-                                                <button class="editor-choice-btn" type="button" data-kind="journal">日记</button>
-                                                <button class="editor-close" type="button" data-close="1" title="关闭">×</button>
-                                            </div>
+                                <div class="hv3-cal-block">
+                                    <div class="home-calendar" id="homeCalendar"></div>
 
-                                            <!-- 第二步：任务编写 -->
-                                            <form class="editor-form" id="editorTaskForm" style="display:none;">
-                                                <input type="text" id="editorTaskInput" placeholder="写下一个任务，回车或点提交保存" maxlength="120" autocomplete="off">
-                                                <button class="editor-submit" type="submit">提交</button>
-                                                <button class="editor-close" type="button" data-close="1" title="关闭">×</button>
-                                            </form>
-
-                                            <!-- 第二步：日记编写 -->
-                                            <form class="editor-form editor-form-journal" id="editorJournalForm" style="display:none;">
-                                                <textarea id="editorJournalInput" placeholder="写下今天的日记…" maxlength="20000"></textarea>
-                                                <div class="editor-form-actions">
-                                                    <button class="editor-delete" type="button" data-journal-delete="1" title="删除这天的日记" hidden>删除</button>
-                                                    <button class="editor-submit" type="submit">提交</button>
+                                    <!-- 点日期后从日历下方浮出的编写弹窗 -->
+                                    <div class="home-editor-pop" id="homeEditorWrap">
+                                        <div class="home-editor-inner">
+                                            <div class="dash-panel home-editor" id="homeEditor">
+                                                <!-- 第一步：选择写任务还是日记 -->
+                                                <div class="editor-choice" id="editorChoice">
+                                                    <span class="editor-date" id="editorDateLabel"></span>
+                                                    <button class="editor-choice-btn" type="button" data-kind="task">任务</button>
+                                                    <button class="editor-choice-btn" type="button" data-kind="journal">日记</button>
                                                     <button class="editor-close" type="button" data-close="1" title="关闭">×</button>
                                                 </div>
-                                            </form>
+
+                                                <!-- 第二步：任务编写 -->
+                                                <form class="editor-form" id="editorTaskForm" style="display:none;">
+                                                    <input type="text" id="editorTaskInput" placeholder="写下一个任务，回车或点提交保存" maxlength="120" autocomplete="off">
+                                                    <button class="editor-submit" type="submit">提交</button>
+                                                    <button class="editor-close" type="button" data-close="1" title="关闭">×</button>
+                                                </form>
+
+                                                <!-- 第二步：日记编写 -->
+                                                <form class="editor-form editor-form-journal" id="editorJournalForm" style="display:none;">
+                                                    <textarea id="editorJournalInput" placeholder="写下今天的日记…" maxlength="20000"></textarea>
+                                                    <div class="editor-form-actions">
+                                                        <button class="editor-delete" type="button" data-journal-delete="1" title="删除这天的日记" hidden>删除</button>
+                                                        <button class="editor-submit" type="submit">提交</button>
+                                                        <button class="editor-close" type="button" data-close="1" title="关闭">×</button>
+                                                    </div>
+                                                </form>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            <!-- 正在做：当天的任务（没登录 / 当天没任务时整块折叠） -->
-                            <div class="hv3-box hv3-today home-life" id="homeLife">
-                                <div class="hv3-today-head">
-                                    <span class="hv3-today-title">正在做</span>
-                                    <span class="hv3-today-count" id="lifeTaskCount"></span>
+                                <!-- 正在做：当天的任务（没登录 / 当天没任务时整块折叠） -->
+                                <div class="hv3-today home-life" id="homeLife">
+                                    <div class="hv3-today-head">
+                                        <span class="hv3-today-title">正在做</span>
+                                        <span class="hv3-today-count" id="lifeTaskCount"></span>
+                                    </div>
+                                    <div class="life-task-list" id="lifeTaskList"></div>
                                 </div>
-                                <div class="life-task-list" id="lifeTaskList"></div>
-                            </div>
 
-                            <!-- 日记：当月日记叠成一摞（文件堆叠样式），滚轮翻，点最上面那张编辑 -->
-                            <section class="hv3-box hv3-journals" id="homeJournalBox" aria-label="日记，滚轮切换">
-                                <div class="hv3-journals-head">
-                                    <span class="hv3-journals-title">日记</span>
-                                    <span class="hv3-journals-month" id="journalMonthLabel"></span>
-                                </div>
-                                <div class="hv3-stack" id="hv3Journals"></div>
-                            </section>
+                                <!-- 日记：当月日记叠成一摞（文件堆叠样式），滚轮翻，点最上面那张编辑 -->
+                                <section class="hv3-journals" id="homeJournalBox" aria-label="日记，滚轮切换">
+                                    <div class="hv3-journals-head">
+                                        <span class="hv3-journals-title">日记</span>
+                                        <span class="hv3-journals-month" id="journalMonthLabel"></span>
+                                    </div>
+                                    <div class="hv3-stack" id="hv3Journals"></div>
+                                </section>
+                            </div>
 
                             <section class="hv3-box hv3-projects" aria-label="创造与探索">
                                 <div class="hv3-project-grid" id="hv3Projects" aria-label="已上线项目"></div>
@@ -460,7 +472,7 @@
     <script src="js/theme.js?v=20261030c" defer></script>
     <!-- 桌宠动效引擎（spring-driven character，见 public/vendor/grok/README.md） -->
 
-    <script src="js/app.js?v=20261101g" defer></script>
+    <script src="js/app.js?v=20261101h" defer></script>
     <script src="js/animations.js?v=3.14.0" defer></script>
 
     <script>
@@ -806,12 +818,6 @@
             const weekLabels = ['一', '二', '三', '四', '五', '六', '日'];
             const hint = isCurrentMonth ? `今天 ${now.getDate()}` : '归档';
             let html = `<div class="cal-head"><span class="cal-title">${year} 年 ${month + 1} 月</span><span class="cal-today">${hint}</span></div>`;
-            // 「写任务 / 写日记」放在日历顶上：不用滚动就能看见、随手就点
-            html += '<div class="cal-actions">'
-                + '<button type="button" class="cal-act" data-cal-act="task"><span class="cal-act-ico" aria-hidden="true">＋</span>任务</button>'
-                + '<button type="button" class="cal-act" data-cal-act="journal"><span class="cal-act-ico" aria-hidden="true">✎</span>日记</button>'
-                + '<a class="cal-login" href="admin.html" title="去后台登录">登录后可写任务和日记</a>'
-                + '</div>';
             html += '<div class="cal-grid">';
             html += weekLabels.map(w => `<span class="cal-week">${w}</span>`).join('');
             for (let i = 0; i < offset; i++) html += '<span class="cal-day is-empty"></span>';

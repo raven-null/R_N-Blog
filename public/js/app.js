@@ -2297,8 +2297,9 @@ const BlogApp = {
         if (!this.lifeAdminKey()) {
             box.style.display = 'none';
             if (journalBox) journalBox.style.display = 'none';
-            // 未登录：日历底部的「＋任务 / ✎日记」一并藏起来（点了也写不了）
-            document.getElementById('homeCalendar')?.classList.add('is-guest');
+            // 未登录：写作按钮换成「去后台登录」入口
+            document.getElementById('hv3TodayPanel')?.classList.add('is-guest');
+            this.updateTodayHeader();
             return;
         }
 
@@ -2380,8 +2381,17 @@ const BlogApp = {
             const [y, m] = this.lifeState.month.split('-');
             monthEl.textContent = `${y} 年 ${Number(m)} 月`;
         }
+        this.updateTodayHeader();
         this.renderLifeTasks();
         this.renderJournalStack();
+    },
+
+    // 「今天」卡头部的日期（日历选中哪天就写哪天）
+    updateTodayHeader() {
+        const el = document.getElementById('todayDateLabel');
+        if (!el) return;
+        const date = this.lifeState.date || this.formatDateKey(new Date());
+        el.textContent = this.formatDateLabel(date);
     },
 
     formatDateLabel(date) {
@@ -2689,10 +2699,10 @@ const BlogApp = {
 
     // 日历点击（登录前也绑上：未登录时点日期至少给提示，别让人以为日历坏了）
     bindCalendarClicks() {
-        const cal = document.getElementById('homeCalendar');
-        if (!cal || cal.dataset.clickBound) return;
-        cal.dataset.clickBound = '1';
-        cal.addEventListener('click', (e) => {
+        const panel = document.getElementById('hv3TodayPanel') || document.getElementById('homeCalendar');
+        if (!panel || panel.dataset.clickBound) return;
+        panel.dataset.clickBound = '1';
+        panel.addEventListener('click', (e) => {
             const cell = e.target.closest('.cal-day');
             const act = e.target.closest('[data-cal-act]');
             if (!act && (!cell || !cell.dataset.date)) return;
