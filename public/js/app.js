@@ -1672,7 +1672,7 @@ const BlogApp = {
                 const h = img.naturalHeight;
                 if (!w || !h) return;
                 let ratio = w / h;
-                ratio = Math.max(0.9, Math.min(1.9, ratio));   // 别让极端长图把卡片拉飞
+                ratio = Math.max(0.55, Math.min(2.4, ratio));   // 竖图/超宽图都能进来，交给容器尺寸去适配
                 const item = img.closest('.hv3-item');
                 if (item) item.style.setProperty('--cover-ratio', String(ratio));
                 this.syncCarouselHeight();
@@ -1692,23 +1692,33 @@ const BlogApp = {
         setTimeout(() => this.syncCarouselHeight(), 1200);
     },
 
-    // 轮播容器高度跟着当前这张卡的封面比例走（文字叠在图上，不占额外高度）
+    // 整块轮播的尺寸跟着当前封面走：竖图窄而高、横图宽而扁（宽高都由封面比例算）
     syncCarouselHeight() {
         const carousel = document.getElementById('hv3Car');
         const track = document.getElementById('hv3Track');
         if (!carousel || !track) return;
         const items = [...track.querySelectorAll('.hv3-item')];
         if (!items.length) return;
-        const w = items[0].getBoundingClientRect().width || track.clientWidth || 0;
-        if (!w) return;
-        const idx = Math.round(track.scrollLeft / w);
-        const card = items[Math.min(items.length - 1, Math.max(0, idx))];
+        const availW = track.parentElement ? track.parentElement.clientWidth : track.clientWidth;
+        if (!availW) return;
+        const idx = Math.round(track.scrollLeft / (track.scrollWidth / items.length || 1));
+        const card = items[Math.min(items.length - 1, Math.max(0, idx))] || items[0];
         if (!card) return;
         // --cover-ratio = 宽 / 高（renderHvPosts 按封面原始尺寸写入，缺省 1.6）
-        const raw = Number((card.style.getPropertyValue('--cover-ratio') || '').trim()) || 1.6;
-        const h = Math.round(w / Math.max(0.55, Math.min(1.9, raw)));
-        if (h > 90 && Math.abs(h - Number(carousel.dataset.h || 0)) > 1) {
-            carousel.style.height = h + 'px';
+        const ratio = Math.max(0.5, Math.min(2.4,
+            Number((card.style.getPropertyValue('--cover-ratio') || '').trim()) || 1.6));
+
+        // 先按高度上限摆，放不下就回退成占满可用宽
+        const maxH = Math.min(window.innerHeight * 0.62, 560);
+        let h = maxH;
+        let w = Math.round(h * ratio);
+        if (w > availW) { w = availW; h = Math.round(w / ratio); }
+        if (h < 120 || w < 120) return;
+
+        if (Math.abs(w - Number(carousel.dataset.w || 0)) > 1 || Math.abs(h - Number(carousel.dataset.h || 0)) > 1) {
+            carousel.style.setProperty('--car-w', w + 'px');
+            carousel.style.setProperty('--car-h', h + 'px');
+            carousel.dataset.w = String(w);
             carousel.dataset.h = String(h);
         }
     },
@@ -1726,6 +1736,17 @@ const BlogApp = {
             rafPending = true;
             requestAnimationFrame(() => {
                 rafPending = false;
+                this.syncCarouselHeight();
+            });
+        }, { passive: true });
+
+        // 视口变化后可用宽度变了，尺寸要重算（宽高都跟封面走，不能只靠 CSS）
+        let resizePending = false;
+        window.addEventListener('resize', () => {
+            if (resizePending) return;
+            resizePending = true;
+            requestAnimationFrame(() => {
+                resizePending = false;
                 this.syncCarouselHeight();
             });
         }, { passive: true });

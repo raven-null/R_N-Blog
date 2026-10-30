@@ -12606,9 +12606,12 @@ body.home-layout .hv-news-box #newsList .news-item-meta{font-family:var(--font-s
 
 .hv3-car {
     position: relative;
-    width: 100%;
-    height: var(--car-h, 360px); /* 由 syncCarouselHeight() 按封面比例写入 */
-    transition: height .5s cubic-bezier(.2, .7, .3, 1);
+    /* 宽高都由当前封面的比例算（syncCarouselHeight 写 --car-w / --car-h）：
+       竖图变窄变高、横图变宽变扁，整块轮播跟着封面变大小 */
+    width: var(--car-w, 100%);
+    height: var(--car-h, 360px);
+    margin-inline: auto;
+    transition: width .45s cubic-bezier(.2, .7, .3, 1), height .45s cubic-bezier(.2, .7, .3, 1);
     border-radius: 18px;
     overflow: hidden;
     background: var(--surface-2, #f3eee1);
