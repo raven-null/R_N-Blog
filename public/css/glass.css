@@ -76,10 +76,10 @@ body:not(.home-layout) .article-layout,
 
 /* —— 顶部导航 —— */
 .top-bar {
-    background: rgba(18, 18, 20, 0.55) !important;
-    backdrop-filter: var(--glass-blur);
-    -webkit-backdrop-filter: var(--glass-blur);
-    border-bottom: 1px solid var(--glass-border);
+    background: transparent !important;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border-bottom: 1px solid transparent;
 }
 
 /* —— 分类导航栏（滚动时由 JS 加深 .scrolled） —— */

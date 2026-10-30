@@ -5,13 +5,8 @@
     for (const [name, src] of [['Daylight','/js/daylight.js?v=20261030c'],['ThemeManager','/js/theme.js?v=20261030c']]) {
       if (!window[name]) await new Promise(resolve => { const script = document.createElement('script'); script.src = src; script.onload = resolve; script.onerror = resolve; document.head.append(script); });
     }
-    const target = document.querySelector('.top-bar-inner, .sidebar-top-bar, .mobile-top-bar');
-    if (target && !document.querySelector('[data-theme-mode-select]')) {
-      const label = document.createElement('label'); label.className = 'theme-mode-control';
-      label.innerHTML = '<span>外观</span><select data-theme-mode-select aria-label="主题模式"><option value="auto">跟随天色</option><option value="light">固定浅色</option><option value="dark">固定深色</option></select>';
-      label.querySelector('select').value = window.ThemeManager?.mode || 'auto';
-      label.addEventListener('change', e => window.ThemeManager?.setMode(e.target.value)); target.append(label);
-    }
+    // 「外观」下拉已按需求移除；主题仍由 ThemeManager 自动跟随天色，
+    // 桌宠「切换天色」按钮保留手动切换入口。
     const update = () => { const el = document.getElementById('periodLabel'); if (el) el.textContent = ({dawn:'晨光初至',day:'日光正好',dusk:'落日余温',night:'静夜微光'})[document.documentElement.dataset.period] || '日光正好'; };
     update(); document.addEventListener('daylightchange', update);
     const pet = document.getElementById('deskPet'), panel = document.getElementById('petChat');

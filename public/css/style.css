@@ -66,8 +66,8 @@ body.home-layout {
 
 /* 顶部导航栏 */
 .top-bar {
-    background: var(--bg-secondary);
-    border-bottom: 1px solid var(--border);
+    background: transparent;
+    border-bottom: 1px solid transparent;
     padding: 0 16px;
     flex-shrink: 0;
 }
