@@ -5415,6 +5415,7 @@ const BlogApp = {
                 }
             } else {
                 frame.src = 'about:blank';
+                clearInterval(this._ssImmersiveTimer);
             }
             return;
         }
@@ -5496,16 +5497,46 @@ const BlogApp = {
             btn.style.right = '';
             btn.style.bottom = '';
             btn.style.top = '';
+            btn.style.display = '';
             this.alignScreenSaverExit();
             setTimeout(() => this.alignScreenSaverExit(), 600);
             setTimeout(() => this.alignScreenSaverExit(), 1800);
+            this.watchNativeImmersive();
         } else if (btn.parentElement !== slot) {
             slot.appendChild(btn);
             btn.style.left = '';
             btn.style.right = '';
             btn.style.top = '';
             btn.style.bottom = '';
+            btn.style.display = '';
+            clearInterval(this._ssImmersiveTimer);
         }
+    },
+
+    // 原版进「沉浸」后整排底部信息会收起：这时候父页的「退出」也跟着藏起来
+    watchNativeImmersive() {
+        clearInterval(this._ssImmersiveTimer);
+        const frame = document.getElementById('screenSaverFrame');
+        if (!frame || !this.screenSaverNative()) return;
+        const tick = () => {
+            const btn = document.getElementById('screenSaverExit');
+            if (!btn) return;
+            let doc = null;
+            try { doc = frame.contentDocument; } catch (e) { return; }
+            if (!doc || !doc.body) return;
+            const hit = [...doc.querySelectorAll('span, div, button, a')]
+                .filter((el) => !el.children.length && /^沉浸$/.test((el.textContent || '').trim()))
+                .pop();
+            if (!hit) return;
+            const cs = frame.contentWindow.getComputedStyle(hit);
+            const visible = hit.getClientRects().length > 0
+                && cs.visibility !== 'hidden'
+                && Number(cs.opacity) > 0.05
+                && cs.display !== 'none';
+            btn.style.display = visible ? '' : 'none';
+        };
+        tick();
+        this._ssImmersiveTimer = setInterval(tick, 700);
     },
 
     // 把退出按钮对齐到 iframe 里「沉浸」那行文字的左侧
