@@ -15,7 +15,7 @@
     <meta property="og:image" content="https://ravennull.work/images/Default/web-logo.webp">
     <meta property="og:locale" content="zh_CN">
     <meta name="twitter:card" content="summary">
-    <link rel="stylesheet" href="css/bundle.css?v=c86ab9cb0d">
+    <link rel="stylesheet" href="css/bundle.css?v=c0a839c0ab">
     <title>渡鸦 NULL · 日光与暮色之间</title>
     <link rel="icon" id="siteFavicon" href="/images/Default/web-logo.webp" type="image/webp">
     <link rel="apple-touch-icon" href="/images/Default/web-logo.webp">
@@ -257,6 +257,11 @@
                                     <span class="hv3-shot-meta" id="hv3ShotMeta"></span>
                                 </div>
                             </section>
+
+                            <!-- 今日拾光：内容浏览，归到「看图」这一列 -->
+                            <section class="hv3-box hv3-news" aria-label="今日拾光">
+                                <div class="hv3-ticker" id="hv3News" aria-label="今日拾光，自动滚动"></div>
+                            </section>
                         </div>
 
                         <div class="hv3-col hv3-right">
@@ -312,10 +317,6 @@
                                     <span class="hv3-journals-month" id="journalMonthLabel"></span>
                                 </div>
                                 <div class="hv3-stack" id="hv3Journals"></div>
-                            </section>
-
-                            <section class="hv3-box hv3-news" aria-label="今日拾光">
-                                <div class="hv3-ticker" id="hv3News" aria-label="今日拾光，自动滚动"></div>
                             </section>
 
                             <section class="hv3-box hv3-projects" aria-label="创造与探索">
@@ -459,7 +460,7 @@
     <script src="js/theme.js?v=20261030c" defer></script>
     <!-- 桌宠动效引擎（spring-driven character，见 public/vendor/grok/README.md） -->
 
-    <script src="js/app.js?v=20261101e" defer></script>
+    <script src="js/app.js?v=20261101f" defer></script>
     <script src="js/animations.js?v=3.14.0" defer></script>
 
     <script>
@@ -805,6 +806,12 @@
             const weekLabels = ['一', '二', '三', '四', '五', '六', '日'];
             const hint = isCurrentMonth ? `今天 ${now.getDate()}` : '归档';
             let html = `<div class="cal-head"><span class="cal-title">${year} 年 ${month + 1} 月</span><span class="cal-today">${hint}</span></div>`;
+            // 「写任务 / 写日记」放在日历顶上：不用滚动就能看见、随手就点
+            html += '<div class="cal-actions">'
+                + '<button type="button" class="cal-act" data-cal-act="task"><span class="cal-act-ico" aria-hidden="true">＋</span>任务</button>'
+                + '<button type="button" class="cal-act" data-cal-act="journal"><span class="cal-act-ico" aria-hidden="true">✎</span>日记</button>'
+                + '<a class="cal-login" href="admin.html" title="去后台登录">登录后可写任务和日记</a>'
+                + '</div>';
             html += '<div class="cal-grid">';
             html += weekLabels.map(w => `<span class="cal-week">${w}</span>`).join('');
             for (let i = 0; i < offset; i++) html += '<span class="cal-day is-empty"></span>';
@@ -815,12 +822,6 @@
                 html += `<span class="${cls}" data-date="${dateKey}">${d}</span>`;
             }
             html += '</div>';
-            // 日历底部直接放「写任务 / 写日记」：写的日期 = 当前选中那天（默认今天）
-            html += '<div class="cal-actions">'
-                + '<button type="button" class="cal-act" data-cal-act="task"><span class="cal-act-ico" aria-hidden="true">＋</span>任务</button>'
-                + '<button type="button" class="cal-act" data-cal-act="journal"><span class="cal-act-ico" aria-hidden="true">✎</span>日记</button>'
-                + '<a class="cal-login" href="admin.html" title="去后台登录">登录后可写任务和日记</a>'
-                + '</div>';
             box.innerHTML = html;
         }
         // 供 app.js 在切换归档月份时重建日历

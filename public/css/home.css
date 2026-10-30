@@ -436,7 +436,7 @@
        整块跟着图片一起变大变小，居中显示。
        这里没有任何写死的高度：JS 还没算出尺寸时，aspect-ratio + max-height
        也保证盒子形状 = 图片比例（既不裁切也不留白） */
-    --shot-max-h: min(62vh, 560px);
+    --shot-max-h: min(56vh, 430px);
     width: min(var(--shot-w, 100%), calc(var(--shot-max-h) * var(--shot-ar, 1.6)));
     height: var(--shot-h, auto);
     aspect-ratio: var(--shot-ar, 1.6);
@@ -562,8 +562,9 @@
    04 · 创造与探索：文件堆叠
    ============================================================ */
 .hv3-projects {
-    flex: 0 0 auto;
-    height: 300px;
+    /* 右列最后一块：有富余高度就长高，把两列底部拉齐 */
+    flex: 1 1 auto;
+    min-height: 300px;
 }
 
 .hv3-stack {
@@ -870,11 +871,11 @@ html[data-theme="dark"] .hv3-journal {
     flex: 0 0 auto;
 }
 
-/* 日历底部：写任务 / 写日记 —— 点日期弹出的编辑器是同一套，这里少走一步 */
+/* 日历顶部：写任务 / 写日记 —— 点日期弹出的编辑器是同一套，这里少走一步 */
 .cal-actions {
     display: flex;
     gap: 8px;
-    margin-top: 10px;
+    margin-bottom: 9px;
 }
 
 .cal-act {
@@ -1018,9 +1019,9 @@ html[data-theme="dark"] .hv3-shot {
     }
 
     /* 窄屏只收紧高度上限，比例仍然完全由图片决定（写死 min-height 会把横图压出留白） */
-    .hv3-shot { --shot-max-h: min(56vh, 460px); }
+    .hv3-shot { --shot-max-h: min(52vh, 380px); }
 
     .hv3-news { height: 216px; }
-    .hv3-projects { height: 280px; }
+    .hv3-projects { min-height: 280px; }
     .hv3-item-title { font-size: 16px; }
 }

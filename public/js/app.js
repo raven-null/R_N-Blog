@@ -1784,7 +1784,9 @@ const BlogApp = {
             Number((card.style.getPropertyValue('--cover-ratio') || '').trim()) || 1.6));
 
         // 先按高度上限摆，放不下就回退成占满可用宽
-        const maxH = Math.min(window.innerHeight * 0.62, 560);
+        const maxH = window.innerWidth <= 900
+            ? Math.min(window.innerHeight * 0.52, 380)
+            : Math.min(window.innerHeight * 0.56, 430);
         let h = maxH;
         let w = Math.round(h * ratio);
         if (w > availW) { w = availW; h = Math.round(w / ratio); }
@@ -1984,8 +1986,8 @@ const BlogApp = {
             const ratio = nw / nh; // 真实宽高比，不 clamp
             // 高度上限与 CSS 的 --shot-max-h 保持一致（窄屏收一档），否则 max-height 会把比例压歪
             const maxH = window.innerWidth <= 900
-                ? Math.min(window.innerHeight * 0.56, 460)
-                : Math.min(window.innerHeight * 0.62, 560);
+                ? Math.min(window.innerHeight * 0.52, 380)
+                : Math.min(window.innerHeight * 0.56, 430);
 
             let w = availW;
             let h = Math.round(w / ratio);
