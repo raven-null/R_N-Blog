@@ -29,6 +29,24 @@ function uniqueHeadingId(heading, index) {
     if (link) link.setAttribute('href', '#' + id);
 }
 
+/**
+ * 同步文章页的 document.title 与分享卡片 meta（og:title / og:description）
+ * 爬虫与微信/Twitter 分享读的是 meta，不是 JS 渲染后的 DOM——两处都要写。
+ */
+function setPageMeta(title, description) {
+    try { document.title = title; } catch (e) { /* 忽略 */ }
+    try {
+        var desc = description || '渡鸦NULL 博客文章。';
+        var set = function (sel, content) {
+            var el = document.querySelector(sel);
+            if (el) el.setAttribute('content', content);
+        };
+        set('meta[property="og:title"]', title);
+        set('meta[property="og:description"]', desc);
+        set('meta[name="description"]', desc);
+    } catch (e) { /* 忽略 */ }
+}
+
 const ArticleApp = {
             // 当前文章数据
             currentPost: null,
@@ -169,7 +187,7 @@ const ArticleApp = {
                     frontmatter: {},
                 };
                 this.renderArticle();
-                document.title = `${this.currentPost.title} - 我的博客`;
+                setPageMeta(`${this.currentPost.title} - 渡鸦NULL`, this.currentPost.summary || this.currentPost.description);
             },
 
             // ===== 长文章分块加载（首块秒开，向下滚动自动续上；读者看不到「分章」） =====
@@ -351,7 +369,7 @@ const ArticleApp = {
                     isNews: true
                 };
                 this.renderArticle();
-                document.title = `${this.currentPost.title} - 我的博客`;
+                setPageMeta(`${this.currentPost.title} - 渡鸦NULL`, item.summary || item.content);
             },
 
             // 加载单篇文章（仅支持资讯，静态文章已迁移至 Blobs）

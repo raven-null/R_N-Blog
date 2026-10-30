@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="robots" content="noindex">
+    <title>页面不存在 - 渡鸦NULL</title>
+    <link rel="icon" id="siteFavicon" href="/images/Default/web-logo.webp" type="image/webp">
+    <link rel="stylesheet" href="/css/tokens.css?v=1.6.0">
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100dvh;
+            display: grid;
+            place-items: center;
+            font-family: var(--font-sans, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif);
+            background: var(--bg, #fbf8f1);
+            color: var(--text, #1c1a16);
+        }
+        .nf {
+            text-align: center;
+            padding: 32px 24px;
+            max-width: 420px;
+        }
+        .nf-code {
+            font-size: 72px;
+            font-weight: 700;
+            line-height: 1;
+            color: var(--accent, #f0a20c);
+            letter-spacing: -0.02em;
+        }
+        .nf h1 {
+            margin: 16px 0 8px;
+            font-size: 20px;
+            font-weight: 600;
+        }
+        .nf p {
+            margin: 0 0 28px;
+            font-size: 14px;
+            line-height: 1.7;
+            color: var(--text-secondary, #56514a);
+        }
+        .nf a {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            height: 36px;
+            padding: 0 18px;
+            border-radius: 10px;
+            background: var(--accent, #f0a20c);
+            color: var(--text-on-accent, #2a1a02);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background 0.18s ease;
+        }
+        .nf a:hover { background: var(--accent-hover, #d98f06); }
+        .nf a:focus-visible {
+            outline: none;
+            box-shadow: 0 0 0 3px var(--accent-ring, rgba(240, 162, 12, 0.34));
+        }
+    </style>
+</head>
+<body>
+    <main class="nf">
+        <div class="nf-code" aria-hidden="true">404</div>
+        <h1>页面不存在</h1>
+        <p>这个地址可能已失效，或从未存在过。<br>回到首页看看最近写了什么吧。</p>
+        <a href="/">返回首页</a>
+    </main>
+</body>
+</html>

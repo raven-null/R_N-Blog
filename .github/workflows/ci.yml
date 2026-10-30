@@ -1,0 +1,39 @@
+# CI：类型检查 + CSS lint（止血防线）
+# ------------------------------------------------------------
+# ui-baseline 视觉回归需要基线截图（.local-data/ 不进仓库）与本机 Chrome，
+# 暂只在本地跑：pnpm ui:diff。基线入库后再接到 CI。
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck (netlify functions + scripts)
+        run: pnpm typecheck
+
+      # warning 不阻断；防新代码继续堆 !important / 坏 hex。
+      # 全量 warning 数量看日志，清账后把 severity 改 error。
+      - name: Lint CSS
+        run: pnpm lint:css
+
+      - name: UI logic smoke tests
+        run: pnpm test:ui

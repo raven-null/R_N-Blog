@@ -1688,6 +1688,7 @@ const BlogApp = {
 
         this.bindCarousel();
         this.syncCarouselHeight();
+        this.syncCarouselDots();
         setTimeout(() => this.syncCarouselHeight(), 300);
         setTimeout(() => this.syncCarouselHeight(), 1200);
     },
@@ -1723,13 +1724,19 @@ const BlogApp = {
         }
     },
 
-    // 轮播：按钮翻页 + 自动播放
+    // 轮播：按钮翻页 + 自动播放（尊重系统"减少动效"，tab 隐藏时暂停）
     bindCarousel() {
         const track = document.getElementById('hv3Track');
         if (!track || track.dataset.carBound) return;
         track.dataset.carBound = '1';
 
-        // 滚动过程中用 rAF 跟手同步高度（平滑滚动期间也能跟上）
+        const motionMq = window.matchMedia
+            ? window.matchMedia('(prefers-reduced-motion: reduce)')
+            : null;
+        const reduced = () => !!(motionMq && motionMq.matches);
+        const scrollBehavior = () => (reduced() ? 'auto' : 'smooth');
+
+        // 滚动过程中用 rAF 跟手同步高度（平滑滚动期间也能跟上）+ 指示点
         let rafPending = false;
         track.addEventListener('scroll', () => {
             if (rafPending) return;
@@ -1737,6 +1744,7 @@ const BlogApp = {
             requestAnimationFrame(() => {
                 rafPending = false;
                 this.syncCarouselHeight();
+                this.syncCarouselDots();
             });
         }, { passive: true });
 
@@ -1764,12 +1772,29 @@ const BlogApp = {
             let next = track.scrollLeft + dir * w;
             if (next > max - 4) next = 0;            // 到底回开头，循环
             if (next < 0) next = max;
-            track.scrollTo({ left: next, behavior: 'smooth' });
+            track.scrollTo({ left: next, behavior: scrollBehavior() });
             setTimeout(() => this.syncCarouselHeight(), 260);
             setTimeout(() => this.syncCarouselHeight(), 620);
+            setTimeout(() => this.syncCarouselDots(), 260);
+        };
+
+        // 跳到第 i 张（指示点点击）
+        const goTo = (i) => {
+            const items = [...track.querySelectorAll('.hv3-item')];
+            if (!items[i]) return;
+            track.scrollTo({ left: items[i].offsetLeft, behavior: scrollBehavior() });
+            setTimeout(() => this.syncCarouselHeight(), 260);
+            setTimeout(() => this.syncCarouselDots(), 260);
         };
 
         document.getElementById('hv3Car')?.addEventListener('click', (e) => {
+            const dot = e.target.closest('[data-car-index]');
+            if (dot) {
+                e.preventDefault();
+                goTo(Number(dot.dataset.carIndex) || 0);
+                restartAuto();
+                return;
+            }
             const btn = e.target.closest('[data-car-dir]');
             if (!btn) return;
             e.preventDefault();
@@ -1777,19 +1802,61 @@ const BlogApp = {
             restartAuto();
         });
 
-        // 自动播放：8 秒一张，鼠标悬停暂停
+        // 自动播放：8 秒一张；悬停/聚焦暂停；reduced-motion 与 tab 隐藏不播
         let timer = 0;
+        let hoverPaused = false;
         const startAuto = () => {
             clearInterval(timer);
+            if (reduced() || hoverPaused || document.hidden) return;
             timer = setInterval(() => slide(1), 8000);
         };
         const restartAuto = () => startAuto();
         const carousel = document.getElementById('hv3Car');
         if (carousel) {
-            carousel.addEventListener('mouseenter', () => clearInterval(timer));
-            carousel.addEventListener('mouseleave', startAuto);
+            carousel.addEventListener('mouseenter', () => { hoverPaused = true; clearInterval(timer); });
+            carousel.addEventListener('mouseleave', () => { hoverPaused = false; startAuto(); });
+            carousel.addEventListener('focusin', () => { hoverPaused = true; clearInterval(timer); });
+            carousel.addEventListener('focusout', (e) => {
+                if (carousel.contains(e.relatedTarget)) return;
+                hoverPaused = false;
+                startAuto();
+            });
+        }
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) clearInterval(timer);
+            else startAuto();
+        });
+        // 用户中途改系统"减少动效"设置也立即生效
+        if (motionMq && motionMq.addEventListener) {
+            motionMq.addEventListener('change', () => startAuto());
         }
         startAuto();
+    },
+
+    // 分页指示点：按当前卡片数重建（单张隐藏），滚动后高亮当前张
+    syncCarouselDots() {
+        const track = document.getElementById('hv3Track');
+        const dotsWrap = document.getElementById('hv3Dots');
+        if (!track || !dotsWrap) return;
+        const items = [...track.querySelectorAll('.hv3-item')];
+        if (items.length < 2) {
+            dotsWrap.hidden = true;
+            dotsWrap.innerHTML = '';
+            return;
+        }
+        dotsWrap.hidden = false;
+        // 数量变了才重建，避免每次滚动刷 DOM
+        if (dotsWrap.childElementCount !== items.length) {
+            dotsWrap.innerHTML = items.map((_, i) =>
+                '<button type="button" class="hv3-dot" data-car-index="' + i
+                + '" aria-label="第 ' + (i + 1) + ' 张，共 ' + items.length + ' 张"></button>'
+            ).join('');
+        }
+        const idx = Math.round(track.scrollLeft / (track.clientWidth || 1));
+        const active = Math.min(items.length - 1, Math.max(0, idx));
+        dotsWrap.querySelectorAll('.hv3-dot').forEach((d, i) => {
+            d.setAttribute('aria-current', i === active ? 'true' : 'false');
+        });
     },
 
     // 生活切片：从整个图库里随机抽图，一直播（双层交叉淡入，点一下看大图）
@@ -3849,6 +3916,41 @@ const BlogApp = {
         }
         document.body.classList.add('wheel-open');
         this.syncWheelActive();
+
+        // 焦点进菜单（键盘用户可用 Tab/方向遍历），并记住来处以便关闭时归还
+        this._wheelPrevFocus = document.activeElement;
+        const firstItem = layer.querySelector('.wheel-item, .wheel-center');
+        if (firstItem && firstItem.focus) firstItem.focus();
+
+        // Escape 关闭；打开期间把 Tab 圈在菜单内（简易焦点陷阱）
+        if (!this._wheelKeyBound) {
+            this._wheelKeyBound = true;
+            document.addEventListener('keydown', (e) => {
+                if (!this.wheelOpen) return;
+                if (e.key === 'Escape') {
+                    e.preventDefault();
+                    this.closeWheel();
+                    return;
+                }
+                if (e.key !== 'Tab') return;
+                const wheel = document.getElementById('wheel');
+                if (!wheel) return;
+                const focusables = [...wheel.querySelectorAll('button')];
+                if (!focusables.length) return;
+                const first = focusables[0];
+                const last = focusables[focusables.length - 1];
+                if (e.shiftKey && document.activeElement === first) {
+                    e.preventDefault();
+                    last.focus();
+                } else if (!e.shiftKey && document.activeElement === last) {
+                    e.preventDefault();
+                    first.focus();
+                } else if (!wheel.contains(document.activeElement)) {
+                    e.preventDefault();
+                    first.focus();
+                }
+            });
+        }
     },
 
     closeWheel() {
@@ -3861,6 +3963,11 @@ const BlogApp = {
             trigger.setAttribute('aria-expanded', 'false');
         }
         document.body.classList.remove('wheel-open');
+        // 焦点归还触发按钮（键盘用户不会掉回页面顶部）
+        const prev = this._wheelPrevFocus;
+        this._wheelPrevFocus = null;
+        const target = (prev && document.contains(prev) && prev.focus) ? prev : trigger;
+        if (target && target.focus) target.focus();
     },
 
     // 高亮当前视图对应的轮盘选项

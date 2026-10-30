@@ -381,6 +381,47 @@
 .hv3-car:hover .hv3-nav { opacity: 1; }
 .hv3-nav:hover { transform: scale(1.06); background: rgba(10, 12, 20, .55); }
 
+/* 分页指示点：叠在封面下缘中间；单张时由 JS hidden 掉 */
+.hv3-dots {
+    position: absolute;
+    left: 50%;
+    bottom: 10px;
+    transform: translateX(-50%);
+    z-index: 4;
+    display: flex;
+    gap: 6px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: rgba(10, 12, 20, .38);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+}
+
+.hv3-dots[hidden] { display: none; }
+
+.hv3-dot {
+    width: 8px;
+    height: 8px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, .45);
+    cursor: pointer;
+    transition: background .2s ease, transform .2s ease;
+}
+
+.hv3-dot:hover { background: rgba(255, 255, 255, .75); }
+
+.hv3-dot[aria-current="true"] {
+    background: #fff;
+    transform: scale(1.25);
+}
+
+.hv3-dot:focus-visible {
+    outline: 2px solid var(--accent, #f0a20c);
+    outline-offset: 2px;
+}
+
 /* ============================================================
    02 · 生活切片：图库随机播放，铺满
    ============================================================ */

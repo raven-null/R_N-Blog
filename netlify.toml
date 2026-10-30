@@ -1,5 +1,7 @@
 [build]
-  command = "echo 'Static site with Functions'"
+  # 部署前跑类型检查（netlify/functions + scripts）；CSS/JS 产物已提交在 public/，
+  # 不在部署时重建。stylelint 在 GitHub Actions CI 里跑（warning 不阻断）。
+  command = "pnpm typecheck"
   publish = "public"
 
 [functions]

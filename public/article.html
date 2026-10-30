@@ -3,9 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="description" content="渡鸦NULL 博客文章。">
+    <meta name="author" content="渡鸦NULL">
+    <meta property="og:type" content="article">
+    <meta property="og:site_name" content="渡鸦NULL">
+    <meta property="og:title" content="文章 - 渡鸦NULL">
+    <meta property="og:description" content="渡鸦NULL 博客文章。">
+    <meta property="og:image" content="https://ravennull.work/images/Default/web-logo.webp">
+    <meta property="og:locale" content="zh_CN">
+    <meta name="twitter:card" content="summary">
     <title>文章详情 - 我的博客</title>
     <link rel="icon" id="siteFavicon" href="/images/Default/web-logo.webp" type="image/webp">
     <link rel="apple-touch-icon" href="/images/Default/web-logo.webp">
+    <!-- 手写体 Virgil：hand-body 默认开，preload 消掉 swap 闪动 -->
+    <link rel="preload" href="/fonts/Virgil.woff2" as="font" type="font/woff2" crossorigin>
     <script src="/js/site-icon.js?v=1.0.0" defer></script>
     
     <!-- 主样式 -->
@@ -1903,18 +1914,18 @@
         .article-chunk { display: contents; }
         .chunk-progress {
             margin: 36px auto 24px; max-width: 760px; padding: 12px 16px; border-radius: 12px;
-            background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.1);
+            background: var(--surface-2); border: 1px solid var(--border);
             display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-            font-size: 12.5px; color: rgba(255,255,255,.66);
+            font-size: 12.5px; color: var(--text-secondary);
         }
         .chunk-progress[hidden] { display: none !important; }
         .chunk-actions { display: flex; gap: 8px; margin-left: auto; }
         .chunk-btn {
             padding: 6px 14px; border-radius: 999px; cursor: pointer; font-family: inherit;
-            border: 1px solid rgba(255,255,255,.16); background: rgba(255,255,255,.08); color: #e6ecff; font-size: 12.5px;
+            border: 1px solid var(--border-strong); background: var(--surface-3); color: var(--text-primary); font-size: 12.5px;
             transition: background .18s ease;
         }
-        .chunk-btn:hover { background: rgba(255,255,255,.16); }
+        .chunk-btn:hover { background: var(--accent-soft); border-color: var(--accent); }
         .chunk-sentinel { height: 1px; width: 100%; }
     </style>
     <style>
@@ -1924,39 +1935,39 @@
         .related-posts {
             margin: 40px 0 0;
             padding-top: 22px;
-            border-top: 1px solid rgba(255,255,255,.1);
+            border-top: 1px solid var(--border);
         }
         .related-posts-head {
             display: flex; align-items: center; gap: 8px;
             margin-bottom: 14px;
-            font-size: 15px; font-weight: 600; color: var(--text-primary, #e8e9f2);
+            font-size: 15px; font-weight: 600; color: var(--text-primary);
         }
         .related-posts-head .rp-count {
             padding: 1px 8px; border-radius: 99px; font-size: 11.5px; font-weight: 500;
-            color: #cfe2ff; background: rgba(115,170,255,.16); border: 1px solid rgba(115,170,255,.32);
+            color: var(--accent-strong); background: var(--accent-soft); border: 1px solid var(--accent-ring);
         }
-        .related-posts-head .rp-tip { margin-left: auto; font-size: 11.5px; font-weight: 400; color: rgba(255,255,255,.42); }
+        .related-posts-head .rp-tip { margin-left: auto; font-size: 11.5px; font-weight: 400; color: var(--text-muted); }
         .rp-list { display: flex; flex-direction: column; gap: 10px; }
         .rp-card {
             display: block; padding: 13px 15px; border-radius: 12px; text-decoration: none;
-            background: rgba(255,255,255,.04);
-            border: 1px solid rgba(255,255,255,.12);
+            background: var(--surface-2);
+            border: 1px solid var(--border);
             transition: border-color .18s ease, background .18s ease, transform .18s ease;
         }
-        .rp-card:hover { border-color: rgba(115,170,255,.55); background: rgba(115,170,255,.1); transform: translateY(-1px); }
+        .rp-card:hover { border-color: var(--accent); background: var(--accent-soft); transform: translateY(-1px); }
         .rp-card .rp-title {
             display: block; margin-bottom: 5px;
-            font-size: 14.5px; font-weight: 600; color: var(--text-primary, #e8e9f2);
+            font-size: 14.5px; font-weight: 600; color: var(--text-primary);
             overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
         }
         .rp-card .rp-excerpt {
             display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden;
-            font-size: 12.5px; line-height: 1.7; color: rgba(255,255,255,.5);
+            font-size: 12.5px; line-height: 1.7; color: var(--text-secondary);
         }
-        .rp-card .rp-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 7px; font-size: 11.5px; color: rgba(255,255,255,.42); }
+        .rp-card .rp-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 7px; font-size: 11.5px; color: var(--text-muted); }
         .rp-card .rp-tag {
             padding: 1px 7px; border-radius: 99px;
-            background: rgba(115,170,255,.12); border: 1px solid rgba(115,170,255,.28); color: #cfe2ff;
+            background: var(--accent-soft); border: 1px solid var(--accent-ring); color: var(--accent-strong);
         }
         @media (max-width: 640px) {
             .related-posts { margin-top: 30px; }
@@ -1972,18 +1983,18 @@
              · 没有（只有自写解释 / 只有锚点）→ 只把气泡打开，不跳转。 */
         .term-link {
             color: inherit;
-            border-bottom: 1px dashed rgba(115,170,255,.7);
+            border-bottom: 1px dashed var(--accent);
             cursor: pointer;
             transition: background .15s ease, border-bottom-color .15s ease;
         }
         /* 没有「定义引用」的词条不跳转，也就不给手型光标（点了不会走） */
         .term-link.term-link-info { cursor: help; }
-        .term-link:hover { background: rgba(115,170,255,.12); border-bottom-color: #73aaff; }
-        .term-link:focus-visible { outline: 2px solid rgba(115,170,255,.6); outline-offset: 2px; border-radius: 3px; }
+        .term-link:hover { background: var(--accent-soft); border-bottom-color: var(--accent-hover); }
+        .term-link:focus-visible { outline: 2px solid var(--accent-ring); outline-offset: 2px; border-radius: 3px; }
         .term-flash { animation: termFlash 1.4s ease; }
         @keyframes termFlash {
             0%, 100% { background: transparent; }
-            20%, 60% { background: rgba(115,170,255,.22); }
+            20%, 60% { background: var(--accent-soft); }
         }
         /* 气泡：不截断文字，只限尺寸并要求可滚 */
         .term-bubble {
@@ -1997,49 +2008,49 @@
             overscroll-behavior: contain;
             padding: 10px 12px;
             border-radius: 12px;
-            background: rgba(20, 22, 30, .98);
-            border: 1px solid rgba(255, 255, 255, .16);
-            box-shadow: 0 18px 44px -16px rgba(0, 0, 0, .9);
+            background: var(--surface);
+            border: 1px solid var(--border-strong);
+            box-shadow: var(--shadow-3);
             font-size: 12.5px;
             line-height: 1.75;
-            color: var(--text-primary, #e8e9f2);
+            color: var(--text-primary);
         }
         .term-bubble-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
-        .term-bubble-word { font-weight: 600; color: #cfe2ff; }
+        .term-bubble-word { font-weight: 600; color: var(--accent-strong); }
         .term-bubble-def { white-space: pre-wrap; word-break: break-word; }
         /* 文末「本篇术语」表 */
         .related-terms {
             margin: 40px 0 0;
             padding-top: 22px;
-            border-top: 1px solid rgba(255,255,255,.1);
+            border-top: 1px solid var(--border);
         }
         .related-terms-head {
             display: flex; align-items: center; gap: 8px;
             margin-bottom: 14px;
-            font-size: 15px; font-weight: 600; color: var(--text-primary, #e8e9f2);
+            font-size: 15px; font-weight: 600; color: var(--text-primary);
         }
         .related-terms-head .rt-count {
             padding: 1px 8px; border-radius: 99px; font-size: 11.5px; font-weight: 500;
-            color: #cfe2ff; background: rgba(115,170,255,.16); border: 1px solid rgba(115,170,255,.32);
+            color: var(--accent-strong); background: var(--accent-soft); border: 1px solid var(--accent-ring);
         }
-        .related-terms-head .rt-tip { margin-left: auto; font-size: 11.5px; font-weight: 400; color: rgba(255,255,255,.42); }
+        .related-terms-head .rt-tip { margin-left: auto; font-size: 11.5px; font-weight: 400; color: var(--text-muted); }
         .rt-list { display: flex; flex-direction: column; gap: 9px; }
         .rt-item {
             display: block; width: 100%; text-align: left; cursor: pointer; font-family: inherit;
             padding: 11px 13px; border-radius: 11px;
-            background: rgba(255,255,255,.04);
-            border: 1px solid rgba(255,255,255,.12);
+            background: var(--surface-2);
+            border: 1px solid var(--border);
             transition: border-color .18s ease, background .18s ease;
         }
-        .rt-item:hover { border-color: rgba(115,170,255,.55); background: rgba(115,170,255,.1); }
+        .rt-item:hover { border-color: var(--accent); background: var(--accent-soft); }
         /* 自写解释的词条：定义不在正文里，没有可跳的位置 → 不可点、不给手型与 hover 反馈 */
         .rt-item-plain { cursor: default; }
-        .rt-item-plain:hover { border-color: rgba(255,255,255,.12); background: rgba(255,255,255,.04); }
+        .rt-item-plain:hover { border-color: var(--border); background: var(--surface-2); }
         .rt-item .rt-word {
             display: block; margin-bottom: 4px;
-            font-size: 13.5px; font-weight: 600; color: #cfe2ff;
+            font-size: 13.5px; font-weight: 600; color: var(--accent-strong);
         }
-        .rt-item .rt-def { font-size: 12.5px; line-height: 1.75; color: rgba(255,255,255,.55); white-space: pre-wrap; word-break: break-word; }
+        .rt-item .rt-def { font-size: 12.5px; line-height: 1.75; color: var(--text-secondary); white-space: pre-wrap; word-break: break-word; }
         @media (max-width: 640px) {
             .related-terms { margin-top: 30px; }
             .related-terms-head .rt-tip { display: none; }
@@ -2053,37 +2064,37 @@
         .related-canvas {
             margin: 42px 0 8px;
             padding-top: 22px;
-            border-top: 1px solid rgba(255,255,255,.1);
+            border-top: 1px solid var(--border);
         }
         .related-canvas-head {
             display: flex; align-items: center; gap: 8px;
             margin-bottom: 14px;
-            font-size: 15px; font-weight: 600; color: var(--text-primary, #e8e9f2);
+            font-size: 15px; font-weight: 600; color: var(--text-primary);
         }
         .related-canvas-head .rc-count {
             padding: 1px 8px; border-radius: 99px; font-size: 11.5px; font-weight: 500;
-            color: #cfe2ff; background: rgba(115,170,255,.16); border: 1px solid rgba(115,170,255,.32);
+            color: var(--accent-strong); background: var(--accent-soft); border: 1px solid var(--accent-ring);
         }
-        .related-canvas-head .rc-tip { margin-left: auto; font-size: 11.5px; font-weight: 400; color: rgba(255,255,255,.42); }
+        .related-canvas-head .rc-tip { margin-left: auto; font-size: 11.5px; font-weight: 400; color: var(--text-muted); }
         .related-canvas-list { display: flex; flex-direction: column; gap: 10px; }
         .rc-card {
             display: flex; align-items: center; gap: 10px; width: 100%;
             padding: 12px 14px; border-radius: 12px; cursor: pointer; text-align: left;
             font-family: inherit; font-size: 13.5px;
-            color: var(--text-primary, #e8e9f2);
-            background: rgba(255,255,255,.04);
-            border: 1px solid rgba(255,255,255,.12);
+            color: var(--text-primary);
+            background: var(--surface-2);
+            border: 1px solid var(--border);
             transition: border-color .18s ease, background .18s ease;
         }
-        .rc-card:hover { border-color: rgba(115,170,255,.55); background: rgba(115,170,255,.1); }
+        .rc-card:hover { border-color: var(--accent); background: var(--accent-soft); }
         .rc-card .rc-k {
             flex: none; padding: 2px 9px; border-radius: 99px; font-size: 11.5px; font-weight: 600;
-            color: #cfe2ff; background: rgba(115,170,255,.18); border: 1px solid rgba(115,170,255,.34);
+            color: var(--accent-strong); background: var(--accent-soft); border: 1px solid var(--accent-ring);
         }
-        .rc-card.map .rc-k { color: #f0d7ff; background: rgba(180,120,255,.18); border-color: rgba(180,120,255,.36); }
+        .rc-card.map .rc-k { color: #b478ff; background: rgba(180,120,255,.14); border-color: rgba(180,120,255,.32); }
         .rc-card .rc-n { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .rc-card .rc-act { flex: none; font-size: 12px; color: rgba(255,255,255,.45); }
-        .rc-card[aria-expanded="true"] .rc-act { color: #7fb2ff; }
+        .rc-card .rc-act { flex: none; font-size: 12px; color: var(--text-muted); }
+        .rc-card[aria-expanded="true"] .rc-act { color: var(--accent); }
         .rc-stage { margin: -2px 0 4px; border-radius: 12px; overflow: hidden; }
         .rc-stage:empty { display: none; }
         .rc-stage .embed-block { border-radius: 12px; }
@@ -2356,7 +2367,7 @@
     <script src="js/reader.js?v=3.13.7" defer></script>
     <script src="js/animations.js?v=3.14.0" defer></script>
 
-    <script src="js/article-app.js?v=2.4.0" defer></script>
+    <script src="js/article-app.js?v=2.4.1" defer></script>
     <script src="/vendor/grok/geometry-data.js?v=1.0.0" defer></script>
     <script src="/vendor/grok/math.js?v=1.0.0" defer></script>
     <script src="/vendor/grok/tables.js?v=1.0.0" defer></script>
