@@ -15,7 +15,7 @@
     <meta property="og:image" content="https://ravennull.work/images/Default/web-logo.webp">
     <meta property="og:locale" content="zh_CN">
     <meta name="twitter:card" content="summary">
-    <link rel="stylesheet" href="css/bundle.css?v=c761c092e7">
+    <link rel="stylesheet" href="css/bundle.css?v=a15001c5ee">
     <title>渡鸦 NULL · 日光与暮色之间</title>
     <link rel="icon" id="siteFavicon" href="/images/Default/web-logo.webp" type="image/webp">
     <link rel="apple-touch-icon" href="/images/Default/web-logo.webp">
@@ -83,16 +83,18 @@
     <!-- ===== CONTENT WRAPPER ===== -->
     <div class="content-wrapper" id="contentWrapper">
 
-        <!-- 顶部导航栏 -->
+        <!-- 顶部导航栏：品牌 + 视图切换合一行居中；桌面端闲置收起、悬浮展开 -->
         <header class="top-bar">
             <div class="top-bar-inner">
-                <a href="/admin.html" class="top-bar-brand" title="进入后台">我的博客</a>
-                <div class="top-bar-views" id="viewSwitch">
-                    <div class="view-indicator" id="viewIndicator"></div>
-                    <button class="view-btn active" data-view="home" onclick="BlogApp.switchView('home')">主页</button>
-                    <button class="view-btn" data-view="blog" onclick="BlogApp.switchView('blog')">文章</button>
-                    <button class="view-btn" data-view="gallery" onclick="BlogApp.switchView('gallery')">图库</button>
-                    <button class="view-btn" data-view="projects" onclick="BlogApp.switchView('projects')">项目</button>
+                <div class="top-bar-pill" id="topBarPill">
+                    <a href="/admin.html" class="top-bar-brand" title="进入后台">我的博客</a>
+                    <div class="top-bar-views" id="viewSwitch">
+                        <div class="view-indicator" id="viewIndicator"></div>
+                        <button class="view-btn active" data-view="home" onclick="BlogApp.switchView('home')">主页</button>
+                        <button class="view-btn" data-view="blog" onclick="BlogApp.switchView('blog')">文章</button>
+                        <button class="view-btn" data-view="gallery" onclick="BlogApp.switchView('gallery')">图库</button>
+                        <button class="view-btn" data-view="projects" onclick="BlogApp.switchView('projects')">项目</button>
+                    </div>
                 </div>
             </div>
         </header>
