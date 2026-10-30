@@ -5453,7 +5453,7 @@ const BlogApp = {
         if (hero) hero.classList.toggle('is-hidden', !state.clock);
         if (wrap) wrap.classList.toggle('is-pure', state.pure);
         if (pureBtn) {
-            pureBtn.textContent = state.pure ? '动效 关' : '动效 开';
+            pureBtn.innerHTML = `<span class="ss-ico" aria-hidden="true">✦</span>${state.pure ? '动效关' : '动效开'}`;
             pureBtn.setAttribute('aria-pressed', state.pure ? 'true' : 'false');
         }
         const clockLabel = document.getElementById('ssClockLabel');
@@ -5770,15 +5770,12 @@ const BlogApp = {
         const moonEl = document.querySelector('.ss-moon');
         if (moonEl) moonEl.textContent = phase.icon;
 
-        const evEl = document.getElementById('ssEv');
-        if (evEl) {
-            const ev = Math.log2(state.exposure || 1);
-            evEl.textContent = (ev >= 0 ? '+' : '') + ev.toFixed(2);
-        }
+        const ev = Math.log2(state.exposure || 1);
+        const evText = ev.toFixed(2);
         const autoEl = document.getElementById('ssAutoLabel');
         if (autoEl) {
             const auto = state.hour === null && !this._ssPlaying;
-            autoEl.innerHTML = `${auto ? '自动' : '手动'} · EV <b id="ssEv">${evEl ? evEl.textContent : '0.00'}</b>`;
+            autoEl.innerHTML = `${auto ? '自动' : '手动'} · EV <b>${evText}</b>`;
         }
         document.querySelectorAll('[data-ss-hour]').forEach((chip) => {
             const ch = Number(chip.dataset.ssHour);

@@ -13971,9 +13971,9 @@ body.view-blog-active .nav-bar {
     z-index: 3;
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    width: 360px;
-    padding: 16px 18px;
+    gap: 10px;
+    width: 344px;
+    padding: 14px 16px;
     font-size: 12px;
     color: #ece7dc;
     background: rgba(14, 16, 22, .74);
@@ -14002,23 +14002,23 @@ body.view-blog-active .nav-bar {
 }
 
 .ss-phase {
-    font-size: 14px;
+    font-size: 13.5px;
     font-weight: 650;
     letter-spacing: .06em;
 }
 
 .ss-now {
     margin-left: auto;
-    font-size: 26px;
+    font-size: 24px;
     font-weight: 300;
-    letter-spacing: .04em;
+    letter-spacing: .03em;
     font-variant-numeric: tabular-nums;
 }
 
 .ss-pill {
-    padding: 4px 11px;
+    padding: 3px 10px;
     font-family: inherit;
-    font-size: 11.5px;
+    font-size: 11px;
     color: #f0ece3;
     background: rgba(255, 255, 255, .1);
     border: 1px solid rgba(255, 255, 255, .2);
@@ -14040,7 +14040,7 @@ body.view-blog-active .nav-bar {
 
 .ss-track input[type="range"] {
     width: 100%;
-    height: 16px;
+    height: 10px;
     appearance: none;
     border-radius: 999px;
     outline: none;
@@ -14059,8 +14059,8 @@ body.view-blog-active .nav-bar {
 
 .ss-track input[type="range"]::-webkit-slider-thumb {
     appearance: none;
-    width: 14px;
-    height: 14px;
+    width: 12px;
+    height: 12px;
     border: 0;
     border-radius: 50%;
     background: #fff;
@@ -14068,8 +14068,8 @@ body.view-blog-active .nav-bar {
 }
 
 .ss-track input[type="range"]::-moz-range-thumb {
-    width: 14px;
-    height: 14px;
+    width: 12px;
+    height: 12px;
     border: 0;
     border-radius: 50%;
     background: #fff;
@@ -14079,9 +14079,9 @@ body.view-blog-active .nav-bar {
 .ss-ticks {
     display: flex;
     justify-content: space-between;
-    font-size: 10.5px;
+    font-size: 10px;
     letter-spacing: .04em;
-    opacity: .55;
+    opacity: .5;
 }
 
 /* 行 */
@@ -14092,45 +14092,67 @@ body.view-blog-active .nav-bar {
     flex-wrap: wrap;
 }
 
+/* 时辰 / 播放 / 动效：原版是纯文字按钮，只在选中时给一点底 */
 .ss-chip {
-    padding: 4px 12px;
+    padding: 4px 9px;
     font-family: inherit;
     font-size: 12px;
     letter-spacing: .04em;
-    color: #ded8cd;
-    background: rgba(255, 255, 255, .06);
-    border: 1px solid rgba(255, 255, 255, .14);
-    border-radius: 10px;
+    color: #ddd6c8;
+    background: none;
+    border: 0;
+    border-radius: 8px;
     cursor: pointer;
+    transition: background .16s ease, color .16s ease;
 }
 
 .ss-chip:hover {
     color: #fff;
-    border-color: rgba(255, 255, 255, .3);
+    background: rgba(255, 255, 255, .08);
 }
 
 .ss-chip.is-on {
-    color: #1a1a20;
-    background: #efe6d3;
-    border-color: #efe6d3;
+    color: #fff;
+    background: rgba(255, 255, 255, .15);
+}
+
+.ss-chip:focus-visible {
+    outline: 1px solid rgba(255, 255, 255, .45);
+    outline-offset: 1px;
 }
 
 .ss-play {
     margin-left: auto;
-    width: 30px;
-    height: 28px;
-    font-size: 12px;
-    color: #efe6d3;
-    background: rgba(255, 255, 255, .08);
-    border: 1px solid rgba(255, 255, 255, .16);
-    border-radius: 8px;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    font-size: 13px;
+    line-height: 1;
+    color: #ddd6c8;
+    background: none;
+    border: 0;
+    border-radius: 6px;
     cursor: pointer;
 }
 
+.ss-play:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, .1);
+}
+
 .ss-play.is-on {
-    color: #1a1a20;
-    background: #efe6d3;
-    border-color: #efe6d3;
+    color: #fff;
+}
+
+.ss-motion {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.ss-ico {
+    font-size: 11px;
+    opacity: .8;
 }
 
 .ss-light {
@@ -14144,9 +14166,9 @@ body.view-blog-active .nav-bar {
 }
 
 .ss-auto {
-    font-size: 12px;
+    font-size: 11.5px;
     letter-spacing: .04em;
-    opacity: .85;
+    opacity: .8;
 }
 
 .ss-auto b {
@@ -14155,19 +14177,21 @@ body.view-blog-active .nav-bar {
 }
 
 .ss-step {
-    width: 24px;
-    height: 24px;
+    width: 20px;
+    height: 20px;
+    padding: 0;
     font-size: 13px;
     line-height: 1;
-    color: #efe6d3;
-    background: rgba(255, 255, 255, .08);
-    border: 1px solid rgba(255, 255, 255, .16);
-    border-radius: 7px;
+    color: #ddd6c8;
+    background: none;
+    border: 0;
+    border-radius: 6px;
     cursor: pointer;
 }
 
 .ss-step:hover {
-    background: rgba(255, 255, 255, .2);
+    color: #fff;
+    background: rgba(255, 255, 255, .1);
 }
 
 .ss-hint {
