@@ -18,6 +18,8 @@
     "scrape": "tsx scripts/scrape-local.ts",
     "covers": "node scripts/build-project-covers.mjs",
     "build:css": "node scripts/build-css.mjs",
+    "ui:baseline": "node scripts/ui-baseline.mjs --update",
+    "ui:diff": "node scripts/ui-baseline.mjs",
     "test:ui": "node scripts/test-ui.mjs"
   },
   "dependencies": {
