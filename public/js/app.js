@@ -42,6 +42,8 @@ const BlogApp = {
         this.startAutoRefresh();
         // 任务 + 日记：仅后台登录后显示
         this.initLife();
+        // 左列「文章 / 照片」切换
+        this.bindStageTabs();
         // 主页盒子的自由交互：堆叠切换 / 缩放 / 交换
         // Editorial home uses normal flow instead of stacked card gestures.
         // 赛博猫娘对话
@@ -1884,7 +1886,11 @@ const BlogApp = {
         const startAuto = () => {
             clearInterval(timer);
             if (reduced() || hoverPaused || document.hidden) return;
-            timer = setInterval(() => slide(1), 8000);
+            timer = setInterval(() => {
+                // 面板被切到「照片」时轮播是 display:none，别白白翻页
+                const t = document.getElementById('hv3Track');
+                if (t && t.clientWidth) slide(1);
+            }, 8000);
         };
         const restartAuto = () => startAuto();
         const carousel = document.getElementById('hv3Car');
@@ -1953,13 +1959,17 @@ const BlogApp = {
         }
 
         if (!photos.length) {
-            const wrap = stage.closest('.hv3-shots');
-            if (wrap) wrap.style.display = 'none';
+            // 没有照片可播：收起照片面板和它的切换标签
+            stage.style.display = 'none';
+            document.querySelector('.hv3-stage-tab[data-stage="shots"]')?.remove();
             return;
         }
 
         const layers = [...stage.querySelectorAll('.hv3-shot-img')];
         if (layers.length < 2) return;
+        // 面板切换回来时靠它重算尺寸
+        this._shotStage = stage;
+        this._shotFrontImg = null;
         const meta = document.getElementById('hv3ShotMeta');
         const total = photos.length;
         let front = 0;
@@ -1978,36 +1988,7 @@ const BlogApp = {
         // 盒子宽高严格等于当前图的真实像素比例（不 clamp ratio，否则会裁掉一边）：
         // 在列宽与高度上限内尽量放大，放不下就等比缩小 —— 图永远完整可见
         const fitShotBox = (img) => {
-            const nw = img.naturalWidth;
-            const nh = img.naturalHeight;
-            if (!nw || !nh) return;
-            const availW = (stage.parentElement && stage.parentElement.clientWidth) || stage.clientWidth;
-            if (!availW) return;
-            const ratio = nw / nh; // 真实宽高比，不 clamp
-            // 高度上限与 CSS 的 --shot-max-h 保持一致（窄屏收一档），否则 max-height 会把比例压歪
-            const maxH = window.innerWidth <= 900
-                ? Math.min(window.innerHeight * 0.52, 380)
-                : Math.min(window.innerHeight * 0.56, 430);
-
-            let w = availW;
-            let h = Math.round(w / ratio);
-            if (h > maxH) {
-                h = Math.round(maxH);
-                w = Math.round(h * ratio);
-            }
-            if (h < 60 || w < 60) return;
-            if (w === Number(stage.dataset.w) && h === Number(stage.dataset.h)) {
-                revealBox();
-                return;
-            }
-
-            stage.style.setProperty('--shot-w', w + 'px');
-            stage.style.setProperty('--shot-h', h + 'px');
-            // 原始比例给 CSS 兜底：JS 尺寸没生效时盒子形状也还是这张图的比例
-            stage.style.setProperty('--shot-ar', String(Math.round(ratio * 10000) / 10000));
-            stage.dataset.w = String(w);
-            stage.dataset.h = String(h);
-            revealBox();
+            if (this.fitShotBoxTo(stage, img) !== false) revealBox();
         };
 
         const show = (idx) => {
@@ -2024,6 +2005,7 @@ const BlogApp = {
                 prev.classList.remove('is-front');
                 front = 1 - front;
                 fitShotBox(next);
+                this._shotFrontImg = next;
                 if (meta) meta.textContent = '随机播放 · ' + (idx + 1) + ' / ' + total;
             };
             if (next.dataset.src === src) { swap(); return; }
@@ -2047,7 +2029,12 @@ const BlogApp = {
         };
 
         nextShot();
-        const timer = setInterval(() => { if (!document.hidden) nextShot(); }, 5000);
+        // 面板切到「文章」时这块是 display:none（宽度 0），不白白换图
+        const timer = setInterval(() => {
+            if (document.hidden) return;
+            if (!stage.clientWidth) return;
+            nextShot();
+        }, 5000);
 
         // 视口变化后可用宽度变了，尺寸要重算（与轮播 resize 一致）
         let resizePending = false;
@@ -2071,6 +2058,71 @@ const BlogApp = {
         });
         stage.title = '点击看大图（每 5 秒随机换一张）';
         stage.dataset.timer = String(timer);
+    },
+
+    // 生活切片：把盒子宽高设成图片真实比例（可用宽 × 高度上限内等比内切）
+    // 返回 false 表示这次算不了（图没加载 / 面板被隐藏宽度为 0）
+    fitShotBoxTo(stage, img) {
+        if (!stage || !img) return false;
+        const nw = img.naturalWidth;
+        const nh = img.naturalHeight;
+        if (!nw || !nh) return false;
+        const availW = (stage.parentElement && stage.parentElement.clientWidth) || stage.clientWidth;
+        if (!availW) return false;
+        const ratio = nw / nh; // 真实宽高比，不 clamp
+        // 高度上限与 CSS 的 --shot-max-h 保持一致（窄屏收一档），否则 max-height 会把比例压歪
+        const maxH = window.innerWidth <= 900
+            ? Math.min(window.innerHeight * 0.52, 380)
+            : Math.min(window.innerHeight * 0.56, 430);
+
+        let w = availW;
+        let h = Math.round(w / ratio);
+        if (h > maxH) {
+            h = Math.round(maxH);
+            w = Math.round(h * ratio);
+        }
+        if (h < 60 || w < 60) return false;
+        if (w === Number(stage.dataset.w) && h === Number(stage.dataset.h)) return true;
+
+        stage.style.setProperty('--shot-w', w + 'px');
+        stage.style.setProperty('--shot-h', h + 'px');
+        // 原始比例给 CSS 兜底：JS 尺寸没生效时盒子形状也还是这张图的比例
+        stage.style.setProperty('--shot-ar', String(Math.round(ratio * 10000) / 10000));
+        stage.dataset.w = String(w);
+        stage.dataset.h = String(h);
+        return true;
+    },
+
+    // 面板切回来时重算当前那张图的尺寸（隐藏期间宽度是 0，算不了）
+    refitShotBox() {
+        if (this._shotStage && this._shotFrontImg) {
+            this.fitShotBoxTo(this._shotStage, this._shotFrontImg);
+        }
+    },
+
+    // 左列「文章 / 照片」切换：一次只露一个
+    bindStageTabs() {
+        const body = document.getElementById('hv3StageBody');
+        const tabs = [...document.querySelectorAll('.hv3-stage-tab')];
+        if (!body || !tabs.length || body.dataset.tabsBound) return;
+        body.dataset.tabsBound = '1';
+        tabs.forEach((tab) => {
+            tab.addEventListener('click', () => {
+                const stage = tab.dataset.stage;
+                if (!stage || body.dataset.stage === stage) return;
+                body.dataset.stage = stage;
+                tabs.forEach((t) => {
+                    const on = t === tab;
+                    t.classList.toggle('is-on', on);
+                    t.setAttribute('aria-selected', on ? 'true' : 'false');
+                });
+                // 面板刚显示出来才有宽度，尺寸要重算
+                requestAnimationFrame(() => {
+                    if (stage === 'shots') this.refitShotBox();
+                    else this.syncCarouselHeight();
+                });
+            });
+        });
     },
 
     // 无限滚动：滚过一半时悄悄把位置减回去，看起来永远滚不完
@@ -2299,6 +2351,8 @@ const BlogApp = {
             if (journalBox) journalBox.style.display = 'none';
             // 未登录：写作按钮换成「去后台登录」入口
             document.getElementById('hv3TodayPanel')?.classList.add('is-guest');
+            const guestHint = document.getElementById('todayGuestHint');
+            if (guestHint) guestHint.hidden = false;
             this.updateTodayHeader();
             return;
         }

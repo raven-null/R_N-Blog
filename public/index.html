@@ -15,7 +15,7 @@
     <meta property="og:image" content="https://ravennull.work/images/Default/web-logo.webp">
     <meta property="og:locale" content="zh_CN">
     <meta name="twitter:card" content="summary">
-    <link rel="stylesheet" href="css/bundle.css?v=8d32a5b74f">
+    <link rel="stylesheet" href="css/bundle.css?v=ce5b8764dc">
     <title>渡鸦 NULL · 日光与暮色之间</title>
     <link rel="icon" id="siteFavicon" href="/images/Default/web-logo.webp" type="image/webp">
     <link rel="apple-touch-icon" href="/images/Default/web-logo.webp">
@@ -239,22 +239,28 @@
                     <!-- 两列：左「文章 + 图片」，右「日历 + 简报 + 项目」 -->
                     <div class="hv3-flow">
                         <div class="hv3-col hv3-left">
-                            <section class="hv3-box hv3-posts" aria-label="最近的文字">
-                                <div class="hv3-car" id="hv3Car">
-                                    <div class="hv3-track" id="hv3Track">
-                                        <div class="hv3-skeleton"></div>
-                                    </div>
-                                    <button class="hv3-nav hv3-prev" type="button" data-car-dir="-1" aria-label="上一张">‹</button>
-                                    <button class="hv3-nav hv3-next" type="button" data-car-dir="1" aria-label="下一张">›</button>
-                                    <div class="hv3-dots" id="hv3Dots" role="group" aria-label="轮播页码" hidden></div>
+                            <!-- 文章 + 照片合成一张卡：顶部切换，同一块位置轮换显示 -->
+                            <section class="hv3-box hv3-stage" aria-label="文章与照片">
+                                <div class="hv3-stage-tabs" role="tablist" aria-label="切换文章 / 照片">
+                                    <button class="hv3-stage-tab is-on" type="button" role="tab" aria-selected="true" data-stage="posts">文章</button>
+                                    <button class="hv3-stage-tab" type="button" role="tab" aria-selected="false" data-stage="shots">照片</button>
                                 </div>
-                            </section>
 
-                            <section class="hv3-box hv3-shots" aria-label="生活切片">
-                                <div class="hv3-shot" id="hv3Shots">
-                                    <img class="hv3-shot-img" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">
-                                    <img class="hv3-shot-img" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">
-                                    <span class="hv3-shot-meta" id="hv3ShotMeta"></span>
+                                <div class="hv3-stage-body" id="hv3StageBody" data-stage="posts">
+                                    <div class="hv3-car" id="hv3Car">
+                                        <div class="hv3-track" id="hv3Track">
+                                            <div class="hv3-skeleton"></div>
+                                        </div>
+                                        <button class="hv3-nav hv3-prev" type="button" data-car-dir="-1" aria-label="上一张">‹</button>
+                                        <button class="hv3-nav hv3-next" type="button" data-car-dir="1" aria-label="下一张">›</button>
+                                        <div class="hv3-dots" id="hv3Dots" role="group" aria-label="轮播页码" hidden></div>
+                                    </div>
+
+                                    <div class="hv3-shot" id="hv3Shots">
+                                        <img class="hv3-shot-img" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">
+                                        <img class="hv3-shot-img" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">
+                                        <span class="hv3-shot-meta" id="hv3ShotMeta"></span>
+                                    </div>
                                 </div>
                             </section>
 
@@ -329,6 +335,12 @@
                                     </div>
                                     <div class="hv3-stack" id="hv3Journals"></div>
                                 </section>
+
+                                <!-- 未登录时的引导（登录后自动收起） -->
+                                <div class="hv3-today-guest" id="todayGuestHint" hidden>
+                                    <span>登录后台后，这里就能写任务和日记</span>
+                                    <a href="admin.html">去登录 ›</a>
+                                </div>
                             </div>
 
                             <section class="hv3-box hv3-projects" aria-label="创造与探索">
@@ -472,7 +484,7 @@
     <script src="js/theme.js?v=20261030c" defer></script>
     <!-- 桌宠动效引擎（spring-driven character，见 public/vendor/grok/README.md） -->
 
-    <script src="js/app.js?v=20261101h" defer></script>
+    <script src="js/app.js?v=20261101i" defer></script>
     <script src="js/animations.js?v=3.14.0" defer></script>
 
     <script>
