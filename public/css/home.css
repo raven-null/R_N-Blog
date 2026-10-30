@@ -1197,23 +1197,10 @@ body.view-blog-active .waterfall {
     column-width: 300px;
 }
 
-/* 右上角的标签 / 搜索按钮浮起来，不再占一条 64px 的空行 */
+/* 右下角那两个图标（标签 / 搜索）跟顶部工具条重复了：文章页直接不显示，
+   功能由顶部条里的标签胶囊 + 搜索框承担 */
 body.view-blog-active .nav-bar {
-    position: absolute;
-    top: 52px;
-    right: 20px;
-    left: auto;
-    padding: 0;
-    background: none;
-    border: 0;
-    z-index: 95;
-}
-
-body.view-blog-active .nav-bar .nav-inner {
-    max-width: none;
-    height: auto;
-    padding: 0;
-    justify-content: flex-end;
+    display: none !important;
 }
 
 /* ============================================================
