@@ -192,6 +192,7 @@ const ThemeManager = {
 
         try { localStorage.setItem('blog-theme', key); } catch (_) {}
         this.updateThemeButtons();
+        document.dispatchEvent(new CustomEvent("themechange", { detail: { mode: this.mode, theme: key } }));
     },
 
     // 直接应用主题颜色到 CSS 变量

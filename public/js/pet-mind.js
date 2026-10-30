@@ -403,6 +403,7 @@
     logPush('user', text);
     petState('thinking', 0);
     STATE.busy = true;
+    setSending(true);
 
     const el = bubbleEl();
     if (el) { el.textContent = '…'; el.classList.add('is-show'); }
@@ -416,7 +417,15 @@
       petState('confused', 1500);
     } finally {
       STATE.busy = false;
+      setSending(false);
     }
+  }
+
+  function setSending(busy) {
+    const form = document.getElementById("petChatForm");
+    form?.setAttribute("aria-busy", String(busy));
+    const button = form?.querySelector("[type=submit]");
+    if (button) { button.disabled = busy; button.textContent = busy ? "…" : "↑"; button.setAttribute("aria-label", busy ? "正在回复" : "发送消息"); }
   }
 
   // ---------- 对话面板 ----------
@@ -430,7 +439,7 @@
     form && form.addEventListener('submit', (e) => {
       e.preventDefault();
       const text = (input && input.value || '').trim();
-      if (!text) return;
+      if (!text || STATE.busy) return;
       input.value = '';
       send(text);
     });

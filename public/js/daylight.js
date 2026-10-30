@@ -119,6 +119,7 @@
   function publish(minutes) {
     const L = lightingFor(minutes);
     const root = document.documentElement;
+    Daylight.minutes = minutes;
     root.style.setProperty('--sky-top', rgbCss(L.top));
     root.style.setProperty('--sky-bottom', rgbCss(L.bottom));
     root.style.setProperty('--sky-glow', rgbCss(L.glowColor));
@@ -159,36 +160,43 @@
 
     // 开始按真实时间刷新
     start(intervalMs = 30000) {
+      if (this.timer) clearInterval(this.timer);
+      this.preview = previewHour();
       dropLegacyBadge();
       setTimeout(dropLegacyBadge, 400);
       setTimeout(dropLegacyBadge, 1500);
-      const forced = previewHour();
+      const forced = this.preview;
       const tick = () => {
-        publish(forced === null ? clockMinutes(new Date()) : forced * 60);
+        publish(this.preview === null ? clockMinutes(new Date()) : this.preview * 60);
       };
       tick();
       if (forced !== null) return; // 预览模式不自动走
       if (this.timer) clearInterval(this.timer);
       this.timer = setInterval(() => { if (!document.hidden) tick(); }, intervalMs);
-      document.addEventListener('visibilitychange', () => { if (!document.hidden) tick(); });
+      if (!this.visibilityBound) {
+        this.visibilityBound = true;
+        document.addEventListener('visibilitychange', () => { if (!document.hidden) this.refresh(); });
+      }
+    },
+
+    refresh() {
+      return publish(this.preview == null ? clockMinutes(new Date()) : this.preview * 60);
     },
 
     // 预览：手动指定小时（0–24），传 null 回到真实时间
     setHour(hour) {
-      if (hour === null || hour === undefined) {
-        publish(clockMinutes(new Date()));
-        return;
-      }
-      publish(Math.max(0, Math.min(24, hour)) * 60);
+      this.preview = hour == null ? null : Math.max(0, Math.min(24, Number(hour)));
+      if (this.preview !== null && !Number.isFinite(this.preview)) this.preview = null;
+      this.refresh();
     },
   };
 
   global.Daylight = Daylight;
+  document.addEventListener('themechange', () => { if (Daylight.minutes !== undefined) publish(Daylight.minutes); });
 
   // 尽早跑一次，避免首屏闪一下默认色
   if (typeof document !== 'undefined') {
     const boot = () => Daylight.start();
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
-    else boot();
+    boot();
   }
 })(window);

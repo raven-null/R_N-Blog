@@ -2,7 +2,7 @@
 (() => {
   const boot = async () => {
     // Tool pages also share the same clock and theme without loading blog code.
-    for (const [name, src] of [['Daylight','/js/daylight.js?v=20261030'],['ThemeManager','/js/theme.js?v=20261030']]) {
+    for (const [name, src] of [['Daylight','/js/daylight.js?v=20261030c'],['ThemeManager','/js/theme.js?v=20261030c']]) {
       if (!window[name]) await new Promise(resolve => { const script = document.createElement('script'); script.src = src; script.onload = resolve; script.onerror = resolve; document.head.append(script); });
     }
     const target = document.querySelector('.top-bar-inner, .sidebar-top-bar, .mobile-top-bar');
@@ -31,5 +31,5 @@
     document.getElementById('petChatClose')?.addEventListener('click',()=>launch.setAttribute('aria-expanded','false'));
   };
   // Run after deferred scripts and their synchronous initializers.
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+  if(document.readyState!=='complete')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
