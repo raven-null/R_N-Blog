@@ -2844,6 +2844,20 @@ const BlogApp = {
         });
 
         // 日历点击联动已挪到 bindCalendarClicks（未登录也要能提示）
+
+        // 点窗户外面 / 按 Esc：自动收起编写弹窗
+        document.addEventListener('click', (e) => {
+            const wrap = document.getElementById('homeEditorWrap');
+            if (!wrap || !wrap.classList.contains('is-open')) return;
+            if (e.target.closest('#homeEditorWrap')) return;
+            // 点日历 / 点日记堆叠自己会重开，不在这里抢着关
+            if (e.target.closest('#homeCalendar') || e.target.closest('#hv3Journals')) return;
+            this.closeEditor();
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key !== 'Escape') return;
+            this.closeEditor();
+        });
     },
 
     // ===================== 主页盒子的自由交互 =====================
