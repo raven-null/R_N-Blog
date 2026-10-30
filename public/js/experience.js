@@ -16,8 +16,8 @@
     update(); document.addEventListener('daylightchange', update);
     const pet = document.getElementById('deskPet'), panel = document.getElementById('petChat');
     if (!pet || !panel) return;
-    const launch = document.createElement('button'); launch.type='button'; launch.className='pet-launch'; launch.textContent='枯梦 · 小助手'; launch.setAttribute('aria-expanded','false'); launch.setAttribute('aria-controls','petChat');
-    launch.onclick = () => { const open=panel.classList.toggle('is-open'); launch.setAttribute('aria-expanded',String(open)); if(open) document.getElementById('petChatInput')?.focus(); }; pet.append(launch);
+    // 「枯梦 · 小助手」小字按钮已按需求移除；聊天面板与快捷指令保留。
+    const closePanel = () => panel.classList.remove('is-open');
     const shortcuts=document.createElement('div'); shortcuts.className='pet-shortcuts';
     const action=(label,fn)=>{const b=document.createElement('button');b.type='button';b.textContent=label;b.onclick=fn;shortcuts.append(b);return b;};
     action('随机阅读',()=>{const posts=window.BlogApp?.posts; if(posts?.length){const post=posts[Math.floor(Math.random()*posts.length)]; location.href='/article.html?post='+encodeURIComponent(post.filename);} else location.href='/?type=article';});
@@ -27,8 +27,8 @@
     const quiet=action('安静模式',()=>{if(!window.PetMind)return;const state=window.PetMind.state;window.PetMind.setQuiet(state.enabled);quiet.textContent=state.enabled?'安静模式':'恢复陪伴';});
     try{if(localStorage.getItem('pet-quiet')==='true')quiet.textContent='恢复陪伴';}catch(_){}
     panel.querySelector('.pet-chat-head')?.after(shortcuts);
-    document.addEventListener('keydown',e=>{if(e.key==='Escape'){panel.classList.remove('is-open');launch.setAttribute('aria-expanded','false');}});
-    document.getElementById('petChatClose')?.addEventListener('click',()=>launch.setAttribute('aria-expanded','false'));
+    document.addEventListener('keydown',e=>{if(e.key==='Escape')closePanel();});
+    document.getElementById('petChatClose')?.addEventListener('click',closePanel);
   };
   // Run after deferred scripts and their synchronous initializers.
   if(document.readyState!=='complete')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
