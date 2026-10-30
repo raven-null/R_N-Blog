@@ -13180,6 +13180,63 @@ body.home-layout .hv-news-box #newsList .news-item-meta{font-family:var(--font-s
     flex: 0 0 auto;
 }
 
+/* 日历底部：写任务 / 写日记 —— 点日期弹出的编辑器是同一套，这里少走一步 */
+.cal-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.cal-act {
+    flex: 1 1 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    min-height: 32px;
+    padding: 6px 10px;
+    font-family: inherit;
+    font-size: 12px;
+    letter-spacing: .02em;
+    color: var(--text-secondary);
+    background: var(--surface-2, rgba(0, 0, 0, .04));
+    border: 1px solid var(--border, rgba(0, 0, 0, .08));
+    border-radius: 10px;
+    cursor: pointer;
+    transition: color .2s ease, background .2s ease, border-color .2s ease, transform .2s ease;
+}
+
+.cal-act:hover {
+    color: var(--text);
+    border-color: var(--accent);
+    transform: translateY(-1px);
+}
+
+.cal-act:active {
+    transform: translateY(0);
+}
+
+.cal-act:focus-visible {
+    outline: 2px solid var(--accent, #f0a20c);
+    outline-offset: 2px;
+}
+
+.cal-act-ico {
+    font-size: 13px;
+    line-height: 1;
+    opacity: .8;
+}
+
+/* 未登录：写不了，整排按钮藏起来 */
+.home-calendar.is-guest .cal-actions {
+    display: none;
+}
+
+html[data-theme="dark"] .cal-act {
+    background: rgba(255, 255, 255, .08);
+    border-color: rgba(255, 255, 255, .16);
+}
+
 /* ============================================================
    深色：卡片用「浅色玻璃遮罩」（白色半透明 + 模糊），
         盖在画面上的渐变压得更深，保证文字压得住

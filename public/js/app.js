@@ -2296,6 +2296,8 @@ const BlogApp = {
             if (journalBox) journalBox.style.display = 'none';
             const row = box.closest('.hv-side-row');
             if (row) row.style.display = 'none';
+            // 未登录：日历底部的「＋任务 / ✎日记」一并藏起来（点了也写不了）
+            document.getElementById('homeCalendar')?.classList.add('is-guest');
             return;
         }
 
@@ -2460,6 +2462,30 @@ const BlogApp = {
         document.querySelectorAll('#homeCalendar .cal-day').forEach(el => {
             el.classList.toggle('is-selected', el.dataset.date === this.lifeState.date);
         });
+    },
+
+    // 日历底部的「＋任务 / ✎日记」：跳过"选类型"这一步，直接打开对应表单
+    // 日期 = 当前选中那天（没选过就是今天；翻到归档月就是那月 1 号）
+    openLifeEditor(kind) {
+        if (!this.lifeAdminKey()) return;
+        const wrap = document.getElementById('homeEditorWrap');
+        if (!this.lifeState.date) {
+            this.lifeState.date = this.formatDateKey(new Date());
+            this.lifeState.month = this.lifeState.date.slice(0, 7);
+        }
+        const open = () => {
+            this.renderLife();
+            this.updateSelectedCalCell();
+            this.openEditor();
+            this.chooseEditorKind(kind);
+        };
+        const month = this.lifeState.date.slice(0, 7);
+        if (month !== this.lifeState.month) {
+            this.loadLifeMonth(month).then(ok => { if (ok) open(); });
+            return;
+        }
+        if (!wrap) return;
+        open();
     },
 
     // 打开编写盒子（第一步：选「任务 / 日记」）
@@ -2654,6 +2680,13 @@ const BlogApp = {
 
         // 日历点击联动（日历会重建，用事件委托）
         document.getElementById('homeCalendar')?.addEventListener('click', (e) => {
+            // 日历底部的「＋任务 / ✎日记」：直接打开对应表单
+            const act = e.target.closest('[data-cal-act]');
+            if (act) {
+                e.preventDefault();
+                this.openLifeEditor(act.dataset.calAct);
+                return;
+            }
             const cell = e.target.closest('.cal-day');
             if (!cell || !cell.dataset.date) return;
             this.selectLifeDate(cell.dataset.date);

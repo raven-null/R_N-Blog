@@ -15,7 +15,7 @@
     <meta property="og:image" content="https://ravennull.work/images/Default/web-logo.webp">
     <meta property="og:locale" content="zh_CN">
     <meta name="twitter:card" content="summary">
-    <link rel="stylesheet" href="css/bundle.css?v=630f7b91cb">
+    <link rel="stylesheet" href="css/bundle.css?v=375aea751c">
     <title>渡鸦 NULL · 日光与暮色之间</title>
     <link rel="icon" id="siteFavicon" href="/images/Default/web-logo.webp" type="image/webp">
     <link rel="apple-touch-icon" href="/images/Default/web-logo.webp">
@@ -460,7 +460,7 @@
     <script src="js/theme.js?v=20261030c" defer></script>
     <!-- 桌宠动效引擎（spring-driven character，见 public/vendor/grok/README.md） -->
 
-    <script src="js/app.js?v=20261101a" defer></script>
+    <script src="js/app.js?v=20261101b" defer></script>
     <script src="js/animations.js?v=3.14.0" defer></script>
 
     <script>
@@ -816,6 +816,11 @@
                 html += `<span class="${cls}" data-date="${dateKey}">${d}</span>`;
             }
             html += '</div>';
+            // 日历底部直接放「写任务 / 写日记」：写的日期 = 当前选中那天（默认今天）
+            html += '<div class="cal-actions">'
+                + '<button type="button" class="cal-act" data-cal-act="task"><span class="cal-act-ico" aria-hidden="true">＋</span>任务</button>'
+                + '<button type="button" class="cal-act" data-cal-act="journal"><span class="cal-act-ico" aria-hidden="true">✎</span>日记</button>'
+                + '</div>';
             box.innerHTML = html;
         }
         // 供 app.js 在切换归档月份时重建日历
