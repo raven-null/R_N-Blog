@@ -13691,7 +13691,7 @@ html[data-theme="dark"] .hv3-shot {
 body.view-blog-active .main-content {
     max-width: none !important;
     width: 100% !important;
-    padding: 24px 28px 64px !important;
+    padding: 12px 28px 64px !important;
 }
 
 body.view-blog-active .waterfall {
@@ -13699,8 +13699,126 @@ body.view-blog-active .waterfall {
     column-width: 300px;
 }
 
+/* 右上角的标签 / 搜索按钮浮起来，不再占一条 64px 的空行 */
+body.view-blog-active .nav-bar {
+    position: absolute;
+    top: 52px;
+    right: 20px;
+    left: auto;
+    padding: 0;
+    background: none;
+    border: 0;
+    z-index: 95;
+}
+
+body.view-blog-active .nav-bar .nav-inner {
+    max-width: none;
+    height: auto;
+    padding: 0;
+    justify-content: flex-end;
+}
+
+/* ============================================================
+   文章页顶部条：篇数 + 热门标签快捷筛选 + 搜索
+   （原来这就是一片空白，现在用来直达筛选）
+   ============================================================ */
+.blog-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 16px;
+    padding: 2px 2px 12px;
+    border-bottom: 1px solid var(--border);
+}
+
+.blog-bar-left {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.blog-bar-title {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    color: var(--text);
+}
+
+.blog-bar-count {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.blog-bar-right {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.blog-bar-tags {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.blog-tag {
+    padding: 3px 11px;
+    font-family: inherit;
+    font-size: 11.5px;
+    letter-spacing: .02em;
+    color: var(--text-secondary);
+    background: var(--surface-2, rgba(0, 0, 0, .04));
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: color .2s ease, background .2s ease, border-color .2s ease;
+}
+
+.blog-tag:hover {
+    color: var(--text);
+    border-color: var(--accent);
+}
+
+.blog-tag.is-on {
+    color: var(--bg-primary);
+    background: var(--accent);
+    border-color: var(--accent);
+}
+
+.blog-bar-search {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 11px;
+    color: var(--text-muted);
+    background: var(--surface-2, rgba(0, 0, 0, .04));
+    border: 1px solid var(--border);
+    border-radius: 999px;
+}
+
+.blog-bar-search input {
+    width: 140px;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    font-family: inherit;
+    font-size: 12px;
+    color: var(--text);
+}
+
+.blog-bar-search input::placeholder {
+    color: var(--text-muted);
+}
+
 @media (max-width: 760px) {
     body.view-blog-active .main-content {
-        padding: 20px 16px 60px !important;
+        padding: 10px 16px 60px !important;
     }
+
+    .blog-bar-tags { display: none; }
+
+    .blog-bar-search input { width: 110px; }
 }

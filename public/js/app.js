@@ -289,13 +289,46 @@ const BlogApp = {
                     <p>暂无文章</p>
                 </div>
             `;
+            this.renderBlogBar();
             return;
         }
 
         const postsHTML = this.filteredPosts.map(post => this.renderPostCard(post)).join('');
         postsContainer.innerHTML = `<div class="waterfall">${postsHTML}</div>`;
+        this.renderBlogBar();
         if (typeof this.renderPostWall === 'function') this.renderPostWall();
         if (typeof this.renderHvPosts === 'function') this.renderHvPosts();
+    },
+
+    // 文章页顶部条：篇数 + 热门标签快捷筛选 + 搜索（把原来那块空白用起来）
+    renderBlogBar() {
+        const countEl = document.getElementById('blogBarCount');
+        if (countEl) countEl.textContent = `${this.filteredPosts.length} 篇`;
+
+        const tagsWrap = document.getElementById('blogBarTags');
+        if (tagsWrap) {
+            const counts = new Map();
+            (this.posts || []).forEach(p => (p.tags || []).forEach(t => counts.set(t, (counts.get(t) || 0) + 1)));
+            const topTags = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 7).map(([t]) => t);
+            const chip = (tag, label, on) =>
+                `<button class="blog-tag${on ? ' is-on' : ''}" type="button" data-blog-tag="${this.escAttr(tag)}">${this.esc(label)}</button>`;
+            tagsWrap.innerHTML = chip('', '全部', !this.currentTag)
+                + topTags.map(t => chip(t, t, this.currentTag === t)).join('');
+            if (!tagsWrap.dataset.bound) {
+                tagsWrap.dataset.bound = '1';
+                tagsWrap.addEventListener('click', (e) => {
+                    const btn = e.target.closest('[data-blog-tag]');
+                    if (!btn) return;
+                    this.filterByTag(btn.dataset.blogTag || null);
+                });
+            }
+        }
+
+        const input = document.getElementById('blogBarSearch');
+        if (input && !input.dataset.bound) {
+            input.dataset.bound = '1';
+            input.addEventListener('input', () => this.searchPosts(input.value));
+        }
     },
 
     // 根据作者名字返回对应头像（站长使用设置中的头像，其他用默认）

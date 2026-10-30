@@ -15,7 +15,7 @@
     <meta property="og:image" content="https://ravennull.work/images/Default/web-logo.webp">
     <meta property="og:locale" content="zh_CN">
     <meta name="twitter:card" content="summary">
-    <link rel="stylesheet" href="css/bundle.css?v=fbc6cfebb3">
+    <link rel="stylesheet" href="css/bundle.css?v=69eb4c6f11">
     <title>渡鸦 NULL · 日光与暮色之间</title>
     <link rel="icon" id="siteFavicon" href="/images/Default/web-logo.webp" type="image/webp">
     <link rel="apple-touch-icon" href="/images/Default/web-logo.webp">
@@ -141,6 +141,24 @@
 
                 <!-- 视图：博客 -->
                 <section class="view view-blog" id="view-blog" style="display:none;">
+                    <!-- 文章页顶部条：篇数 + 标签快捷筛选 + 搜索（把原来那块空白用起来） -->
+                    <div class="blog-bar" id="blogBar">
+                        <div class="blog-bar-left">
+                            <span class="blog-bar-title">文章</span>
+                            <span class="blog-bar-count" id="blogBarCount"></span>
+                        </div>
+                        <div class="blog-bar-right">
+                            <div class="blog-bar-tags" id="blogBarTags"></div>
+                            <label class="blog-bar-search">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <circle cx="11" cy="11" r="8"></circle>
+                                    <path d="m21 21-4.35-4.35"></path>
+                                </svg>
+                                <input type="search" id="blogBarSearch" placeholder="搜索标题 / 标签" autocomplete="off">
+                            </label>
+                        </div>
+                    </div>
+
                     <div id="posts">
                         <div class="loading">
                             <div class="loading-spinner"></div>
@@ -478,7 +496,7 @@
     <script src="js/theme.js?v=20261030c" defer></script>
     <!-- 桌宠动效引擎（spring-driven character，见 public/vendor/grok/README.md） -->
 
-    <script src="js/app.js?v=20261101m" defer></script>
+    <script src="js/app.js?v=20261101n" defer></script>
     <script src="js/animations.js?v=3.14.0" defer></script>
 
     <script>
