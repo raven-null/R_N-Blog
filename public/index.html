@@ -15,7 +15,7 @@
     <meta property="og:image" content="https://ravennull.work/images/Default/web-logo.webp">
     <meta property="og:locale" content="zh_CN">
     <meta name="twitter:card" content="summary">
-    <link rel="stylesheet" href="css/bundle.css?v=5f363ad6e3">
+    <link rel="stylesheet" href="css/bundle.css?v=fdec099b63">
     <title>渡鸦 NULL · 日光与暮色之间</title>
     <link rel="icon" id="siteFavicon" href="/images/Default/web-logo.webp" type="image/webp">
     <link rel="apple-touch-icon" href="/images/Default/web-logo.webp">
@@ -110,10 +110,6 @@
                                 <line x1="7" y1="7" x2="7.01" y2="7"></line>
                             </svg>
                         </button>
-                        <div class="tags-dropdown" id="tagsDropdown">
-                            <div class="tags-dropdown-title" id="tagsDropdownTitle">全部标签</div>
-                            <div class="tags-dropdown-list" id="tagsDropdownList"></div>
-                        </div>
                     </div>
                     <div class="nav-tools-item">
                         <button class="nav-search-btn" onclick="BlogApp.toggleSearch()" title="Search">
@@ -149,6 +145,11 @@
                         </div>
                         <div class="blog-bar-right">
                             <div class="blog-bar-tags" id="blogBarTags"></div>
+                            <button class="blog-bar-more" type="button" onclick="BlogApp.toggleTagsPanel()" title="全部标签">更多 <span aria-hidden="true">▾</span></button>
+                            <div class="tags-dropdown" id="tagsDropdown">
+                                <div class="tags-dropdown-title" id="tagsDropdownTitle">全部标签</div>
+                                <div class="tags-dropdown-list" id="tagsDropdownList"></div>
+                            </div>
                             <label class="blog-bar-search">
                                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                     <circle cx="11" cy="11" r="8"></circle>
@@ -496,7 +497,7 @@
     <script src="js/theme.js?v=20261030c" defer></script>
     <!-- 桌宠动效引擎（spring-driven character，见 public/vendor/grok/README.md） -->
 
-    <script src="js/app.js?v=20261101o" defer></script>
+    <script src="js/app.js?v=20261101p" defer></script>
     <script src="js/animations.js?v=3.14.0" defer></script>
 
     <script>

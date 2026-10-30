@@ -13739,11 +13739,34 @@ body.view-blog-active .nav-bar {
 }
 
 .blog-bar-right {
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: flex-end;
     gap: 10px;
     flex-wrap: wrap;
+}
+
+/* 「更多 ▾」：打开全部标签的下拉（面板就是原来的 #tagsDropdown） */
+.blog-bar-more {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 11px;
+    font-family: inherit;
+    font-size: 11.5px;
+    letter-spacing: .02em;
+    color: var(--text-secondary);
+    background: var(--surface-2, rgba(0, 0, 0, .04));
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: color .2s ease, border-color .2s ease;
+}
+
+.blog-bar-more:hover {
+    color: var(--text);
+    border-color: var(--accent);
 }
 
 .blog-bar-tags {

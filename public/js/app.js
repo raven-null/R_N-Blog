@@ -309,11 +309,14 @@ const BlogApp = {
         if (tagsWrap) {
             const counts = new Map();
             (this.posts || []).forEach(p => (p.tags || []).forEach(t => counts.set(t, (counts.get(t) || 0) + 1)));
-            const topTags = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 7).map(([t]) => t);
+            const topTags = [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([t]) => t);
+            // 只露 3 个热门标签，其余收进「更多 ▾」；当前选中的标签一定要露出来
+            const shown = topTags.slice(0, 3);
+            if (this.currentTag && !shown.includes(this.currentTag)) shown.push(this.currentTag);
             const chip = (tag, label, on) =>
                 `<button class="blog-tag${on ? ' is-on' : ''}" type="button" data-blog-tag="${this.escAttr(tag)}">${this.esc(label)}</button>`;
             tagsWrap.innerHTML = chip('', '全部', !this.currentTag)
-                + topTags.map(t => chip(t, t, this.currentTag === t)).join('');
+                + shown.map(t => chip(t, t, this.currentTag === t)).join('');
             if (!tagsWrap.dataset.bound) {
                 tagsWrap.dataset.bound = '1';
                 tagsWrap.addEventListener('click', (e) => {
@@ -328,6 +331,17 @@ const BlogApp = {
         if (input && !input.dataset.bound) {
             input.dataset.bound = '1';
             input.addEventListener('input', () => this.searchPosts(input.value));
+        }
+
+        // 点「更多」外面自动收起标签下拉（只绑一次）
+        if (!document.body.dataset.tagsOutsideBound) {
+            document.body.dataset.tagsOutsideBound = '1';
+            document.addEventListener('click', (e) => {
+                const panel = document.getElementById('tagsDropdown');
+                if (!panel || !panel.classList.contains('show')) return;
+                if (e.target.closest('#tagsDropdown') || e.target.closest('.blog-bar-more')) return;
+                this.closeTagsPanel();
+            });
         }
     },
 
