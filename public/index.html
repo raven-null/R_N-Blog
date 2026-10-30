@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <link rel="stylesheet" href="css/bundle.css?v=c28eb32f3e">
+    <link rel="stylesheet" href="css/bundle.css?v=6e5b83d3fc">
     <title>渡鸦 NULL · 日光与暮色之间</title>
     <link rel="icon" id="siteFavicon" href="/images/Default/web-logo.webp" type="image/webp">
     <link rel="apple-touch-icon" href="/images/Default/web-logo.webp">
@@ -244,7 +244,11 @@
                         </div>
                     </section>
                             <section class="hv-photo-box"><div class="section-heading"><span>02 / MOMENTS</span><h2>生活切片</h2></div>
-                            <div class="hv-photo-scroll stack-box" id="hvPhotos"></div>
+                            <div class="hv-shot-stage" id="hvPhotos">
+                                <img class="hv-shot-img" alt="" referrerpolicy="no-referrer">
+                                <img class="hv-shot-img" alt="" referrerpolicy="no-referrer">
+                                <span class="hv-shot-meta" id="hvShotMeta"></span>
+                            </div>
                         </section>
                         </div>
                         <div class="hv-col hv-col-right">
@@ -283,10 +287,10 @@
                         </div>
                         </div>
                             <section class="hv-news-box"><div class="section-heading"><span>DAILY DISCOVERY</span><h2>今日拾光</h2></div>
-                                <div class="home-news-list news-list stack-box" id="newsList"></div>
+                                <div class="home-news-list news-list hv-ticker" id="newsList" aria-label="今日拾光，自动滚动"></div>
                             </section>
                             <section class="hv-block hv-projects-box"><div class="section-heading"><span>03 / IN THE MAKING</span><h2>创造与探索</h2></div>
-                        <div class="hv-projects home-projects-grid" id="homeProjectsGrid"></div>
+                        <div class="hv-file-stack" id="homeProjectsGrid" aria-label="项目堆叠，滚轮切换"></div>
                     </section>
                         </div>
                     </div>
@@ -447,7 +451,7 @@
     <script src="js/theme.js?v=20261030c" defer></script>
     <!-- 桌宠动效引擎（spring-driven character，见 public/vendor/grok/README.md） -->
 
-    <script src="js/app.js?v=20261030b" defer></script>
+    <script src="js/app.js?v=20261031a" defer></script>
     <script src="js/animations.js?v=3.14.0" defer></script>
 
     <script>

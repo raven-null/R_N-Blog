@@ -2,7 +2,8 @@ import fs from 'node:fs';
 import { createHash } from 'node:crypto';
 
 // Keep the homepage bundle reproducible from tracked sources.
-const names = ['style', 'glass', 'wheel', 'scrollbar', 'responsive', 'mobile', 'tokens', 'sky', 'renewal'];
+// home.css 放在最后：它是首页四块内容（轮播/图片/简报/项目）的唯一权威，要盖住旧规则。
+const names = ['style', 'glass', 'wheel', 'scrollbar', 'responsive', 'mobile', 'tokens', 'sky', 'renewal', 'home'];
 const imports = [];
 const parts = names.map(name => {
   const source = fs.readFileSync(`public/css/${name}.css`, 'utf8').replace(/\r\n/g, '\n');

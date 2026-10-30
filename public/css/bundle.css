@@ -12357,3 +12357,422 @@ body.home-layout .hv-news-box #newsList>.news-item:nth-child(n+5),body.home-layo
 body.home-layout :is(.hv-carousel-box,.hv-photo-box,.hv-news-box,.hv-projects-box){max-height:none!important;flex:0 0 auto!important}
 body.home-layout .hv-news-box #newsList .news-item-title{font-family:var(--font-sans)!important;font-size:15px!important;line-height:1.65!important}
 body.home-layout .hv-news-box #newsList .news-item-meta{font-family:var(--font-sans)!important}
+
+
+/* home.css */
+/* ============================================================
+   首页（P2 重写）· 四块内容的行为与外观
+   ------------------------------------------------------------
+   本文件是 index.html 首页四块内容的「唯一权威」：
+     01 最近的文字（文章轮播，盒子随封面比例伸缩）
+     02 生活切片（图库随机播放）
+     03 今日拾光（盒内无限自动滚动）
+     04 创造与探索（文件堆叠）
+   它在 bundle 最末（renewal 之后）加载，用来盖住此前累积的多套旧规则；
+   P6 清帐时再把 style.css 里对应的旧段落整体删掉。
+
+   约定：需要在旧规则之上生效的地方才用 !important，新代码不滥用。
+   ============================================================ */
+
+/* ---------- 两列：左列略宽，两列等高对齐布局图 ---------- */
+body.home-layout .hv-flow {
+    display: flex;
+    align-items: stretch;
+    gap: 18px;
+}
+
+body.home-layout .hv-col-left { flex: 1.08 1 0; }
+body.home-layout .hv-col-right { flex: 1 1 0; }
+body.home-layout .hv-col { min-width: 0; }
+
+/* ============================================================
+   01 · 最近的文字 —— 盒子高度跟着封面走
+   ============================================================ */
+body.home-layout .hv-carousel-box {
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+}
+
+body.home-layout .hv-carousel-box .hv-carousel {
+    position: relative;
+    width: 100%;
+    height: var(--car-h, 460px); /* 由 BlogApp.syncCarouselHeight() 写入 */
+    transition: height .55s cubic-bezier(.2, .7, .3, 1);
+}
+
+body.home-layout .hv-carousel-box .hv-car-track {
+    display: flex !important;
+    align-items: flex-start !important;
+    width: 100%;
+    height: 100% !important;
+    padding: 0 !important;
+    gap: 0 !important;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    border-radius: 22px;
+}
+
+body.home-layout .hv-carousel-box .hv-car-track::-webkit-scrollbar { display: none; }
+
+body.home-layout .hv-carousel-box .hv-car-track > * {
+    flex: 0 0 100% !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    scroll-snap-align: start;
+}
+
+body.home-layout .hv-carousel-box .hv-car-item {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    height: auto !important;
+    aspect-ratio: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: hidden;
+    border-radius: 22px;
+}
+
+/* 封面区按图片自身比例：--cover-ratio = 宽 / 高（renderHvPosts 写入，0.9~1.9） */
+body.home-layout .hv-carousel-box .hv-car-cover {
+    flex: 0 0 auto !important;
+    width: 100%;
+    height: auto !important;
+    min-height: 0 !important;
+    aspect-ratio: var(--cover-ratio, 1.6);
+    overflow: hidden;
+    background: var(--surface-2, #f3eee1);
+}
+
+body.home-layout .hv-carousel-box .hv-car-cover img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+body.home-layout .hv-carousel-box .hv-car-body {
+    flex: 0 0 auto !important;
+    padding: 16px 20px 18px !important;
+}
+
+body.home-layout .hv-carousel-box .hv-car-title {
+    font-size: 20px !important;
+    line-height: 1.45 !important;
+    -webkit-line-clamp: 2 !important;
+    line-clamp: 2 !important;
+}
+
+/* 左右翻页按钮：只在这一张范围里浮动 */
+body.home-layout .hv-carousel-box .hv-car-btn { z-index: 3; }
+
+/* ============================================================
+   02 · 生活切片 —— 图库随机播放（双层交叉淡入）
+   ============================================================ */
+body.home-layout .hv-col-left {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+/* 文章轮播按内容高，图片盒吃掉左列剩下的高度 → 两列底边自然齐平 */
+body.home-layout .hv-col-left .hv-carousel-box { flex: 0 0 auto; }
+
+body.home-layout .hv-col-left .hv-photo-box {
+    width: 100% !important;
+    flex: 1 1 auto;
+    min-height: 260px;
+    height: auto !important;
+    max-height: none !important;
+    align-self: stretch !important;
+}
+
+body.home-layout .hv-shot-stage {
+    position: relative;
+    width: 100%;
+    height: 100% !important;
+    border-radius: 22px;
+    overflow: hidden;
+    background: var(--surface-2, #f3eee1);
+    cursor: zoom-in;
+    isolation: isolate;
+}
+
+body.home-layout .hv-shot-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0;
+    transform: scale(1.06);
+    transition: opacity .9s ease, transform 7s linear;
+    will-change: opacity, transform;
+    pointer-events: none;
+}
+
+/* 缓慢推近的那点动效：让静态图也有呼吸感 */
+body.home-layout .hv-shot-img.is-front {
+    opacity: 1;
+    transform: scale(1);
+}
+
+body.home-layout .hv-shot-meta {
+    position: absolute;
+    left: 14px;
+    bottom: 12px;
+    z-index: 2;
+    padding: 4px 10px;
+    font-size: 11.5px;
+    letter-spacing: .04em;
+    color: #fff;
+    background: rgba(10, 12, 20, .42);
+    border-radius: 999px;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    opacity: 0;
+    transition: opacity .3s ease;
+    pointer-events: none;
+}
+
+body.home-layout .hv-shot-stage:hover .hv-shot-meta { opacity: 1; }
+
+/* ============================================================
+   03 · 今日拾光 —— 盒内无限自动滚动，滚出去的一律裁掉
+   ============================================================ */
+body.home-layout .hv-col-right .hv-news-box {
+    width: 100% !important;
+    height: 220px !important;
+    max-height: 220px !important;
+}
+
+body.home-layout .hv-ticker {
+    position: relative !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    overflow: hidden !important;
+    overscroll-behavior: contain;
+    padding: 0 !important;
+    /* 上下边缘淡出，滚动时不会突然被切断 */
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 16px, #000 calc(100% - 16px), transparent 100%);
+    mask-image: linear-gradient(to bottom, transparent 0, #000 16px, #000 calc(100% - 16px), transparent 100%);
+}
+
+body.home-layout .hv-ticker-track {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    animation: hvTicker var(--ticker-dur, 40s) linear infinite;
+    will-change: transform;
+}
+
+body.home-layout .hv-ticker-track > * { flex: 0 0 auto; }
+
+body.home-layout .hv-ticker a.news-item {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 2px !important;
+    padding: 8px 10px !important;
+    border-radius: 12px;
+}
+
+body.home-layout .hv-ticker a.news-item .news-item-title {
+    font-size: 13.5px;
+    line-height: 1.44;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+body.home-layout .hv-ticker a.news-item .news-item-cat,
+body.home-layout .hv-ticker a.news-item .news-item-meta {
+    font-size: 11px;
+    opacity: .72;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+@keyframes hvTicker {
+    from { transform: translate3d(0, 0, 0); }
+    to { transform: translate3d(0, -50%, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    body.home-layout .hv-ticker-track { animation: none; }
+}
+
+/* ============================================================
+   04 · 创造与探索 —— 文件堆叠（卡片带旋转偏移叠一摞）
+   ============================================================ */
+body.home-layout .hv-projects-box {
+    width: 100% !important;
+    height: 380px !important;
+    max-height: 380px !important;
+    display: block !important;
+    align-items: stretch !important;
+}
+
+body.home-layout .hv-file-stack {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    /* 内缩一圈：旋转和位移不会压到相邻盒子 */
+    padding: 12px 16px 18px;
+}
+
+body.home-layout .hv-file-stack > .home-project {
+    position: absolute;
+    inset: 18px 22px 26px;
+    display: flex;
+    flex-direction: column;
+    transform: rotate(var(--stack-rot, 0deg)) translate(var(--stack-x, 0px), var(--stack-y, 0px)) scale(var(--stack-s, 1));
+    opacity: var(--stack-o, 1);
+    transition: transform .5s cubic-bezier(.25, .46, .45, .94), opacity .35s ease, box-shadow .3s ease;
+    transform-origin: 50% 55%;
+    will-change: transform;
+    text-decoration: none;
+    overflow: hidden;
+}
+
+/* 最上面那张给一点更强的层次，其余弱化 */
+body.home-layout .hv-file-stack > .home-project:hover {
+    box-shadow: 0 18px 44px rgba(20, 26, 44, .16);
+}
+
+/* 还没进入堆叠状态时的兜底：按原卡片流排 */
+body.home-layout .hv-file-stack:not(.is-file-stack) > .home-project {
+    position: static;
+    transform: none;
+    opacity: 1;
+}
+
+/* ============================================================
+   窄屏：两列改一列，高度收紧
+   ============================================================ */
+@media (max-width: 900px) {
+    body.home-layout .hv-flow {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    body.home-layout .hv-col-left,
+    body.home-layout .hv-col-right {
+        flex: 1 1 auto;
+        width: 100%;
+    }
+
+    body.home-layout .hv-col-left .hv-photo-box {
+        flex: 0 0 auto;
+        height: 300px !important;
+        max-height: 300px !important;
+        min-height: 0;
+    }
+    body.home-layout .hv-projects-box { height: 320px !important; max-height: 320px !important; }
+    body.home-layout .hv-col-right .hv-news-box { height: 200px !important; max-height: 200px !important; }
+    body.home-layout .hv-carousel-box .hv-car-title { font-size: 18px !important; }
+}
+
+/* ============================================================
+   与旧规则的对冲层
+   ------------------------------------------------------------
+   style.css 末尾那段「堆叠高特异性覆盖」用了 #hvPhotos / #newsList /
+   #homeProjectsGrid 的 ID 选择器 + !important，把三个容器和它们的卡片
+   按旧的堆叠结构钉死了。这里用「body.home-layout + ID」拿到更高特殊性，
+   把新版需要的东西要回来。P6 清帐时连同旧段一起删。
+   ============================================================ */
+body.home-layout #newsList,
+body.home-layout #hvPhotos,
+body.home-layout #homeProjectsGrid {
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    margin: 0 !important;
+    background: none !important;
+    border: 0 !important;
+    box-shadow: none !important;
+}
+
+body.home-layout #newsList {
+    display: block !important;
+    position: relative !important;
+    overflow: hidden !important;
+    padding: 0 !important;
+}
+
+body.home-layout #hvPhotos {
+    display: block !important;
+    position: relative !important;
+    overflow: hidden !important;
+    padding: 0 !important;
+    border-radius: 22px !important;
+}
+
+/* 项目的堆叠舞台：留出内圈，旋转的卡片不会被裁掉 */
+body.home-layout #homeProjectsGrid {
+    position: relative !important;
+    display: block !important;
+    overflow: visible !important;
+    padding: 12px 16px 18px !important;
+}
+
+/* 项目卡片：位置/旋转由 CSS 变量驱动（initFileStack 写变量，这里只负责摆） */
+body.home-layout #homeProjectsGrid > .home-project {
+    position: absolute !important;
+    inset: 18px 22px 26px !important;
+    width: auto !important;
+    max-width: none !important;
+    height: auto !important;
+    margin: 0 !important;
+    flex: 0 0 auto !important;
+    grid-area: auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: flex-start !important;
+    gap: 8px !important;
+    padding: 20px 24px !important;
+    border-radius: 20px !important;
+    transform-origin: 50% 55% !important;
+    transform:
+        rotate(var(--stack-rot, 0deg))
+        translate(var(--stack-x, 0px), var(--stack-y, 0px))
+        scale(var(--stack-s, 1)) !important;
+    opacity: var(--stack-o, 1) !important;
+    transition:
+        transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+        opacity 0.35s ease,
+        box-shadow 0.3s ease !important;
+    will-change: transform !important;
+    overflow: hidden !important;
+}
+
+/* 还没开始堆叠（数据没到 / 加载失败）时按普通卡片流排 */
+body.home-layout #homeProjectsGrid:not(.is-file-stack) > .home-project {
+    position: static !important;
+    transform: none !important;
+    opacity: 1 !important;
+    inset: auto !important;
+}
+
+/* 卡片内部：名称一行、描述吃掉中间、底部语言与时间贴底 */
+body.home-layout #homeProjectsGrid > .home-project .home-project-desc {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    -webkit-box-orient: vertical;
+}
+
+body.home-layout #homeProjectsGrid > .home-project .home-project-foot {
+    margin-top: auto;
+}
+

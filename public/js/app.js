@@ -1066,18 +1066,44 @@ const BlogApp = {
             const items = await this.loadNews();
             this.newsItems = items;
             this.newsPool = items;
-            this.newsShown = 0;
-            list.innerHTML = '';
-            this.renderMoreNews();
-            this.bindNewsInfiniteScroll(list);
-            this.fillNewsIfShort(list);
-            // 简报改成堆叠卡片 + 滚轮切换（循环即无限）
-            setTimeout(() => this.initNewsStack(), 500);
-            this.initNewsStack();
+            this.newsShown = items.length;
+            this.startNewsTicker(list, items);
         } catch (e) {
             console.error('资讯加载失败:', e);
             list.innerHTML = '<div class="home-empty">资讯加载失败，稍后再试</div>';
         }
+    },
+
+    // 今日拾光：盒子内无限自动滚动，滚出去的一律裁掉（列表内容复制一份，滚到一半即回位）
+    startNewsTicker(list, items) {
+        if (!list) return;
+        const pool = (items || []).filter((it) => it && it.title);
+        if (!pool.length) {
+            list.innerHTML = '<div class="home-empty">暂无资讯</div>';
+            return;
+        }
+        const html = pool.map((it) => this.newsItemHTML(it)).join('');
+        // 复制两份：内容比盒子高多少都能一直滚下去
+        list.innerHTML = '<div class="hv-ticker-track">' + html + html + '</div>';
+        const track = list.firstElementChild;
+        if (!track) return;
+        // 时长跟条目数走（一条约 3.2s，最短 24s），读起来不快不慢
+        track.style.setProperty('--ticker-dur', Math.max(24, pool.length * 3.2).toFixed(1) + 's');
+
+        const pause = () => { track.style.animationPlayState = 'paused'; };
+        const play = () => { track.style.animationPlayState = 'running'; };
+        list.addEventListener('pointerenter', pause);
+        list.addEventListener('pointerleave', play);
+        list.addEventListener('focusin', pause);
+        list.addEventListener('focusout', play);
+        document.addEventListener('visibilitychange', () => (document.hidden ? pause() : play()));
+
+        // 内容不到一屏就别滚了（否则底部会露出空白）
+        requestAnimationFrame(() => {
+            if (track.scrollHeight / 2 <= list.clientHeight + 6) {
+                track.style.animation = 'none';
+            }
+        });
     },
 
     // 简报：鼠标悬停时自动缓慢滚动（来回走，不会卡在底）
@@ -1657,26 +1683,28 @@ const BlogApp = {
         setTimeout(() => this.syncCarouselHeight(), 1200);
     },
 
-    // 轮播容器高度跟着当前这张卡的封面走
+    // 轮播容器高度跟着当前这张卡的封面走（盒子随封面比例伸缩）
     syncCarouselHeight() {
-        if (document.body.classList.contains("home-layout")) return;
         const carousel = document.getElementById('hvCarousel');
         const track = document.getElementById('hvCarTrack');
         if (!carousel || !track) return;
         const items = [...track.querySelectorAll('.hv-car-item')];
         if (!items.length) return;
-        const w = track.clientWidth || 0;
+        const w = items[0].getBoundingClientRect().width || track.clientWidth || 0;
         if (!w) return;
         const idx = Math.round(track.scrollLeft / w);
         const card = items[Math.min(items.length - 1, Math.max(0, idx))];
         if (!card) return;
-        const h = Math.round(card.offsetHeight);
-        if (h > 40) carousel.style.height = h + 'px';
+        const h = Math.round(card.getBoundingClientRect().height);
+        // 高度由「封面比例 + 文字区」算出，容器只是跟随，不再强制正方形
+        if (h > 60 && Math.abs(h - Number(carousel.dataset.h || 0)) > 1) {
+            carousel.style.height = h + 'px';
+            carousel.dataset.h = String(h);
+        }
     },
 
     // 轮播：按钮翻页 + 自动播放
     bindCarousel() {
-        if (document.body.classList.contains("home-layout")) return;
         const track = document.getElementById('hvCarTrack');
         if (!track || track.dataset.carBound) return;
         track.dataset.carBound = '1';
@@ -1733,11 +1761,11 @@ const BlogApp = {
         startAuto();
     },
 
-    // 照片盒子：图库照片铺成网格，内部无限滚动（内容复制一份做无缝循环）
+    // 生活切片：从整个图库里随机抽图，一直播（双层交叉淡入，点一下看大图）
     async renderHvPhotos() {
-        const box = document.getElementById('hvPhotos');
-        if (!box || box.dataset.loaded) return;
-        box.dataset.loaded = '1';
+        const stage = document.getElementById('hvPhotos');
+        if (!stage || stage.dataset.loaded) return;
+        stage.dataset.loaded = '1';
 
         let photos = [];
         try {
@@ -1751,34 +1779,66 @@ const BlogApp = {
         }
 
         if (!photos.length) {
-            const wrap = box.closest('.hv-photo-box');
+            const wrap = stage.closest('.hv-photo-box');
             if (wrap) wrap.style.display = 'none';
             return;
         }
 
-        const pick = photos.slice(0, 6); // Homepage preview stays small; full collection lives in gallery.
-        const tile = (p, i) => {
-            const src = String(p.thumb || p.url).replace(/"/g, '&quot;');
-            return '<button type="button" class="hv-photo" data-idx="' + i + '" title="看图">'
-                + '<img src="' + src + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.style.visibility=\'hidden\'">'
-                + '</button>';
+        const layers = [...stage.querySelectorAll('.hv-shot-img')];
+        if (layers.length < 2) return;
+        const meta = document.getElementById('hvShotMeta');
+        const total = photos.length;
+        let front = 0;
+        let cur = -1;
+
+        const show = (idx) => {
+            const p = photos[idx];
+            if (!p) return;
+            const prev = layers[front];
+            const next = layers[1 - front];
+            const src = String(p.thumb || p.url);
+            let done = false;
+            const swap = () => {
+                if (done) return;
+                done = true;
+                next.classList.add('is-front');
+                prev.classList.remove('is-front');
+                front = 1 - front;
+                if (meta) meta.textContent = '随机播放 · ' + (idx + 1) + ' / ' + total;
+            };
+            if (next.dataset.src === src) { swap(); return; }
+            next.dataset.src = src;
+            next.addEventListener('load', swap, { once: true });
+            next.addEventListener('error', () => {
+                // 坏图直接跳过，换下一张（节流避免连续失败刷屏）
+                setTimeout(() => { if (!done) nextShot(); }, 600);
+            }, { once: true });
+            next.src = src;
+            if (next.complete && next.naturalWidth) swap();
         };
-        box.innerHTML = pick.map(tile).join('');
 
-        this.initPhotoStack();
+        const nextShot = () => {
+            if (total === 1) { show(0); return; }
+            let n = Math.floor(Math.random() * total);
+            // 别连着放同一张
+            for (let i = 0; i < 6 && n === cur; i++) n = Math.floor(Math.random() * total);
+            cur = n;
+            show(cur);
+        };
 
-        box.addEventListener('click', (e) => {
-            const btn = e.target.closest('.hv-photo');
-            if (!btn) return;
-            const idx = Number(btn.dataset.idx) || 0;
-            const photo = pick[idx % pick.length];
-            if (!photo) return;
-            window.__galleryImages = pick;
+        nextShot();
+        const timer = setInterval(() => { if (!document.hidden) nextShot(); }, 5000);
+
+        stage.addEventListener('click', () => {
+            const p = photos[cur];
+            if (!p) return;
+            window.__galleryImages = photos;
             if (typeof window.openGalleryLightbox === 'function') {
-                window.openGalleryLightbox(photo.url || photo.thumb, idx % pick.length);
+                window.openGalleryLightbox(p.url || p.thumb, cur);
             }
         });
-
+        stage.title = '点击看大图（每 5 秒随机换一张）';
+        stage.dataset.timer = String(timer);
     },
 
     // 无限滚动：滚过一半时悄悄把位置减回去，看起来永远滚不完
@@ -3827,7 +3887,7 @@ const BlogApp = {
         }
 
         box.innerHTML = items.map(repo => this.githubRepoCard(repo)).join('');
-        this.initProjectStack();
+        this.initFileStack(box, { autoMs: 4200 });
     },
 
     // 项目横向列表：鼠标按住拖拽滚动（触屏走原生滑动，不显示滚动条）
@@ -4458,14 +4518,83 @@ const BlogApp = {
         this.initStackBox(list, { autoMs: 4200 });
     },
 
-    // 项目：全部堆成一摞
+    // 项目：文件堆叠（照「文件堆叠」设计稿）——卡片带旋转偏移叠一摞，滚轮或定时换最上面那张
+    initFileStack(box, opts = {}) {
+        if (!box || box.dataset.stackBound) return;
+        const cards = [...box.children].filter((el) => el.nodeType === 1 && !el.classList.contains('home-empty'));
+        if (!cards.length) return;
+        box.dataset.stackBound = '1';
+        box.classList.add('is-file-stack');
+
+        // 层叠参数：最上面 -1.6°，往下依次 +1.2° / +2.6° / +3.8°
+        const LAYERS = [
+            { rot: -1.6, x: 0, y: 0, o: 1, s: 1, z: 40 },
+            { rot: 1.2, x: 6, y: 6, o: 0.94, s: 0.985, z: 30 },
+            { rot: 2.6, x: 12, y: 11, o: 0.86, s: 0.97, z: 20 },
+            { rot: 3.8, x: 17, y: 16, o: 0.72, s: 0.955, z: 10 },
+        ];
+        const state = { active: 0, timer: 0 };
+
+        const paint = () => {
+            const n = cards.length;
+            cards.forEach((el, i) => {
+                const pos = (i - state.active + n) % n;
+                const L = LAYERS[pos];
+                if (!L) {
+                    // 压在最下面的那几张直接收起来，别让几百张卡片参与动画
+                    el.style.setProperty('--stack-rot', '4.6deg');
+                    el.style.setProperty('--stack-x', '20px');
+                    el.style.setProperty('--stack-y', '19px');
+                    el.style.setProperty('--stack-s', '0.94');
+                    el.style.setProperty('--stack-o', '0');
+                    el.style.zIndex = '1';
+                    el.style.pointerEvents = 'none';
+                    el.setAttribute('aria-hidden', 'true');
+                    el.tabIndex = -1;
+                    return;
+                }
+                el.removeAttribute('aria-hidden');
+                el.tabIndex = 0;
+                el.style.setProperty('--stack-rot', L.rot + 'deg');
+                el.style.setProperty('--stack-x', L.x + 'px');
+                el.style.setProperty('--stack-y', L.y + 'px');
+                el.style.setProperty('--stack-s', String(L.s));
+                el.style.setProperty('--stack-o', String(L.o));
+                el.style.zIndex = String(L.z);
+                // 只有最上面那张能点，避免点到后面被盖住的卡片
+                el.style.pointerEvents = pos === 0 ? 'auto' : 'none';
+            });
+        };
+
+        const step = (dir) => {
+            state.active = (state.active + dir + cards.length) % cards.length;
+            paint();
+        };
+        const startAuto = () => {
+            clearInterval(state.timer);
+            state.timer = setInterval(() => { if (!document.hidden) step(1); }, opts.autoMs || 4200);
+        };
+        const stopAuto = () => clearInterval(state.timer);
+
+        let wheelAt = 0;
+        box.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const now = Date.now();
+            if (now - wheelAt < 260) return;
+            wheelAt = now;
+            step(Math.sign(e.deltaY) || 1);
+            startAuto();
+        }, { passive: false });
+        box.addEventListener('pointerenter', stopAuto);
+        box.addEventListener('pointerleave', startAuto);
+
+        paint();
+        startAuto();
+    },
+
+    // 旧入口保留：项目堆叠统一走 initFileStack
     initProjectStack() {
-        const box = document.getElementById('homeProjectsGrid');
-        if (!box || box.dataset.stackInit === '1') return;
-        box.dataset.stackInit = '1';
-        box.classList.remove('loop-box', 'loop-projects');
-        box.classList.add('stack-box', 'stack-projects');
-        this.initStackBox(box, { autoMs: 4600 });
+        this.initFileStack(document.getElementById('homeProjectsGrid'), { autoMs: 4200 });
     },
 
     // 照片：全部堆成一摞
