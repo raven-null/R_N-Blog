@@ -20,8 +20,6 @@
     ttsRate: 1.05,
     ttsPitch: 1.1,
     ttsVoice: '',
-    wakeWord: '渡鸦',
-    wakeAction: 'panel',
     autoMs: [70000, 155000],   // 白天主动说话间隔
     nightAutoMs: [150000, 300000], // 夜间：更安静
     minGap: 50000,             // 两次自动说话的最小间隔
@@ -541,11 +539,6 @@
       }
       const live = (finalText || interim).trim();
       if (!live) return;
-      // 召唤词：常驻监听时先看是不是在叫它（命中了就不当聊天内容处理）
-      if (wakeListening() && !voiceMode && matchWake(live)) {
-        onWakeWord();
-        return;
-      }
       const el = bubbleEl();
       if (el) {
         el.textContent = live;
@@ -566,9 +559,8 @@
       if (e.error === 'not-allowed') {
         say('麦克风没开权限，我收不到声音', 5000);
         stopVoiceMode();
-        stopWake();
       } else if (e.error === 'no-speech') {
-        if (!voiceMode && !wakeListening()) say('没听到声音…再试一次？', 4000);
+        if (!voiceMode) say('没听到声音…再试一次？', 4000);
       } else if (e.error !== 'aborted') {
         say('没听清…再说一次？', 4000);
       }
@@ -581,8 +573,6 @@
       if (!STATE.busy) petState(voiceMode ? 'listening' : 'idle', 0);
       // 对话模式：浏览器自己停了就接上（等回复期间先别抢麦克风）
       if (voiceMode && !doc.hidden) restartRecognition(400);
-      // 召唤词监听：同理，浏览器自己停就接着听
-      else if (wakeListening() && !doc.hidden) scheduleWakeListen(600);
     };
 
     mic.addEventListener('click', (e) => {
@@ -592,136 +582,6 @@
       try { rec.start(); } catch (err) { /* 已在启动中 */ }
     });
     recognition = rec;
-  }
-
-  // ---------- 召唤词（语音唤醒） ----------
-  // 常驻识别里匹配关键词；命中后按后台设置唤出对话框 / 直接进实时对话 / 只应一声。
-  // 注意：这是"一直听着"的，耗电也涉及隐私，所以默认关闭、15 分钟没被叫到自动关。
-  const WAKE = { enabled: false, allowed: true, autoStarted: false, hitAt: 0, listenTimer: 0, idleTimer: 0, button: null };
-  const WAKE_ALIASES = ['渡鸦', '渡鸭', '渡亚', '度鸦', '杜鸦', '毒鸦'];
-  const WAKE_ACTIONS = ['panel', 'voice', 'line'];
-
-  function wakeWords() {
-    const base = String(STATE.wakeWord || '').trim() || '渡鸦';
-    const list = WAKE_ALIASES.slice();
-    if (!list.includes(base)) list.unshift(base);
-    return list;
-  }
-
-  function matchWake(text) {
-    const said = String(text || '').replace(/[\s,，。.、!！?？、~～]/g, '');
-    if (!said) return false;
-    return wakeWords().some((word) => said.indexOf(word.replace(/\s+/g, '')) !== -1);
-  }
-
-  function wakeListening() {
-    return WAKE.enabled && !voiceMode && !!recognition;
-  }
-
-  function scheduleWakeListen(delay) {
-    clearTimeout(WAKE.listenTimer);
-    if (!wakeListening() || doc.hidden) return;
-    WAKE.listenTimer = setTimeout(() => {
-      if (!wakeListening() || doc.hidden) return;
-      try {
-        recognition.continuous = true;
-        recognition.interimResults = true;
-        recognition.start();
-      } catch (e) { /* 可能已经在跑 */ }
-    }, delay || 0);
-  }
-
-  function updateWakeUI() {
-    const btn = WAKE.button || doc.getElementById('petWakeToggle');
-    if (!btn) return;
-    // 后台关掉「允许语音召唤」后，这颗 👂 直接不显示
-    btn.style.display = WAKE.allowed ? '' : 'none';
-    const word = STATE.wakeWord || '渡鸦';
-    btn.classList.toggle('is-on', WAKE.enabled);
-    btn.setAttribute('aria-pressed', String(WAKE.enabled));
-    btn.title = WAKE.enabled ? '停止召唤词监听（喊「' + word + '」就能叫我）' : '开启召唤词（喊「' + word + '」叫我）';
-    btn.setAttribute('aria-label', btn.title);
-  }
-
-  // 由 pet-core 按后台设置调用：站主关掉后访客就看不到这个入口
-  function setWakeAllowed(allowed) {
-    WAKE.allowed = allowed !== false;
-    if (!WAKE.allowed && WAKE.enabled) stopWake(true);
-    updateWakeUI();
-  }
-
-  function onWakeWord() {
-    if (Date.now() - WAKE.hitAt < 2500) return;
-    WAKE.hitAt = Date.now();
-    const action = WAKE_ACTIONS.includes(STATE.wakeAction) ? STATE.wakeAction : 'panel';
-    stopWake(true);              // 命中后先停，避免同一句里连续触发
-    STATE.lastUserAt = Date.now();
-    if (action === 'voice') {
-      startVoiceMode();
-      return;
-    }
-    if (action === 'line') {
-      say(pickLine(), 4200, { log: false });
-      petState('happy', 1400);
-      return;
-    }
-    say('在呢', 2200, { log: false });
-    openPanel();
-  }
-
-  function startWake() {
-    if (WAKE.enabled) return true;
-    if (!WAKE.allowed) {
-      say('站主把语音召唤关掉了', 4000, { log: false });
-      return false;
-    }
-    if (!recognition) {
-      say('这个浏览器听不见我…换 Chrome / Edge 再说', 5000, { log: false });
-      return false;
-    }
-    WAKE.enabled = true;
-    updateWakeUI();
-    const word = STATE.wakeWord || '渡鸦';
-    say('叫我「' + word + '」就行，我先听着', 5200, { log: false });
-    petState('listening', 2200);
-    scheduleWakeListen(0);
-    clearTimeout(WAKE.idleTimer);
-    WAKE.idleTimer = setTimeout(() => {
-      if (WAKE.enabled) {
-        stopWake(true);
-        say('我先不听了，想叫我的话再点 👂', 4200, { log: false });
-      }
-    }, 15 * 60 * 1000);
-    return true;
-  }
-
-  function stopWake(silent) {
-    const was = WAKE.enabled;
-    WAKE.enabled = false;
-    clearTimeout(WAKE.listenTimer);
-    clearTimeout(WAKE.idleTimer);
-    updateWakeUI();
-    if (!voiceMode) {
-      try { if (recognition) recognition.stop(); } catch (e) { /* 忽略 */ }
-    }
-    if (was && !silent) say('好，我不听了', 3200, { log: false });
-    return was;
-  }
-
-  function toggleWake() {
-    if (WAKE.enabled) {
-      stopWake(false);
-      return false;
-    }
-    return startWake();
-  }
-
-  // 前台没有召唤词按钮了：靠后台开关 + 用户第一次和桌宠互动后再开麦
-  // （浏览器要求有用户手势才允许启动语音识别，所以不能页面一加载就听）
-  function maybeWake() {
-    if (!WAKE.allowed || WAKE.enabled || WAKE.autoStarted) return false;
-    WAKE.autoStarted = true;
-    return startWake();
   }
 
   // ---------- 对话模式（连点三下桌宠 / 悬停选「聊天」后开）：边说边答 ----------
@@ -749,7 +609,7 @@
     // 实时对话：不打开对话框，直接在桌宠气泡里说
     if (!STATE.ttsOn) toggleTTS(true);
     doc.getElementById('deskPet')?.classList.add('is-voice-mode');
-    say('直接说话就行，不用开对话框；再点一下麦克风或连点三下退出', 6500, { log: false });
+    say('直接说话就行，不用开对话框；再长按我一次就退出', 6500, { log: false });
     petState('listening', 0);
     restartRecognition(0);
     return true;
@@ -926,7 +786,6 @@
     place();
     setTimeout(place, 30);
     setTimeout(() => input && input.focus(), 120);
-    maybeWake();
   }
 
   function closePanel() {
@@ -967,8 +826,6 @@
       toggleTTS();
     });
 
-    // 召唤词不再有前台按钮：完全由后台「允许语音召唤」控制，
-    // 用户第一次和桌宠互动后再开始听（浏览器要求有手势才能开麦）。
 
     // Esc 关闭；点面板外面也关闭
     doc.addEventListener('keydown', (e) => {
@@ -983,7 +840,6 @@
     });
 
     syncTools();
-    updateWakeUI();
   }
 
   // ---------- 启动 ----------
@@ -1003,12 +859,8 @@
     doc.addEventListener('visibilitychange', () => {
       if (doc.hidden) {
         clearTimeout(STATE.timer);
-        if (WAKE.enabled) {
-          try { if (recognition) recognition.stop(); } catch (e) { /* 忽略 */ }
-        }
       } else {
         scheduleAuto();
-        if (WAKE.enabled) scheduleWakeListen(500);
       }
     });
 
@@ -1124,15 +976,7 @@
     startVoiceMode,
     stopVoiceMode,
     toggleVoiceMode,
-    startWake,
-    stopWake,
-    toggleWake,
-    setWakeAllowed,
-    maybeWake,
-    matchWake,
-    wakeWords,
     isSleeping,
-    get wakeEnabled() { return WAKE.enabled; },
     get voiceMode() { return voiceMode; },
     get listening() { return !!listening; },
     get recognition() { return recognition; },

@@ -443,11 +443,11 @@
     let pending = null;
     let frame = 0;
     let lastTap = 0;
-    // 380ms 内：1 下=开对话框、2 下=召唤三个圆、3 下=实时对话。
-    // 窗口收窄到和双击确认延迟一致，两次双击之间不会串成三连击。
-    const TRIPLE_WINDOW = 380;
-    const DOUBLE_DELAY = 380;
-    const tapTimes = [];
+    // 交互：单击=摸一下、双击=召唤三个圆、长按=实时对话（按住不放才进）
+    const DOUBLE_WINDOW = 380;
+    const LONG_PRESS = 620;
+    let longPressTimer = 0;
+    let longPressed = false;
     const toggleVoiceMode = () => {
       const mind = global.PetMind;
       if (mind && typeof mind.toggleVoiceMode === 'function') mind.toggleVoiceMode();
@@ -474,6 +474,7 @@
       const rect = pet.getBoundingClientRect();
       drag = true;
       moved = false;
+      longPressed = false;
       startX = lastX = e.clientX;
       startY = lastY = e.clientY;
       lastT = Date.now();
@@ -485,13 +486,26 @@
       // 注意：三个圆要等真的开始拖动才收（见 onMove），否则双击的第一下就会把它们收掉
       try { body.setPointerCapture(e.pointerId); } catch (err) { /* 忽略 */ }
       if (e.cancelable) e.preventDefault();
+      // 长按不放 → 进 / 退实时对话（松手后不再当点击处理）
+      clearTimeout(longPressTimer);
+      longPressTimer = setTimeout(() => {
+        longPressTimer = 0;
+        longPressed = true;
+        if (S.orbit) hideOrbit();
+        toggleVoiceMode();
+      }, LONG_PRESS);
     };
 
     const onMove = (e) => {
       if (!drag) return;
       const dx = e.clientX - startX;
       const dy = e.clientY - startY;
-      if (!moved && Math.abs(dx) + Math.abs(dy) > 3) { moved = true; hideOrbit(); }
+      if (!moved && Math.abs(dx) + Math.abs(dy) > 3) {
+        moved = true;
+        hideOrbit();
+        clearTimeout(longPressTimer);   // 开始拖了就不是长按
+        longPressTimer = 0;
+      }
       if (!moved) return;
       // 速度采样：只留最近一段，松手时才像被甩出去
       const now = Date.now();
@@ -512,11 +526,19 @@
       if (!drag) return;
       drag = false;
       S.dragging = false;
+      clearTimeout(longPressTimer);
+      longPressTimer = 0;
       if (frame) { cancelRaf(frame); frame = 0; }
       if (pending) { place(pending.x, pending.y); pending = null; }
       try { body.releasePointerCapture(e.pointerId); } catch (err) { /* 忽略 */ }
       pet.classList.remove('is-dragging');
       pet.style.removeProperty('--pet-tilt');
+
+      if (longPressed) {                   // 长按已经处理过（进/退实时对话），这次不算点击
+        longPressed = false;
+        lastTap = 0;
+        return;
+      }
 
       if (moved) {
         glide(vx, vy);
@@ -527,34 +549,16 @@
 
       if (S.sleeping) {                    // 睡着时点一下：直接醒
         lastTap = 0;
-        tapTimes.length = 0;
         toggleSleep(false);
         return;
       }
       const now = Date.now();
-      lastTap = now;
-      tapTimes.push(now);
-      while (tapTimes.length && now - tapTimes[0] > TRIPLE_WINDOW) tapTimes.shift();
+      const isDouble = lastTap > 0 && now - lastTap < DOUBLE_WINDOW;
+      lastTap = isDouble ? 0 : now;
       react();                             // 立刻给动作反馈
-      // 第一次摸桌宠时，如果后台允许，就顺手开始听召唤词
-      if (global.PetMind && typeof global.PetMind.maybeWake === 'function') global.PetMind.maybeWake();
 
-      if (tapTimes.length >= 3) {          // 三连击：实时对话（不碰对话框）
-        clearTimeout(S.tapTimer);
-        S.tapTimer = 0;
-        tapTimes.length = 0;
-        hideOrbit();
-        toggleVoiceMode();
-        return;
-      }
-      if (tapTimes.length === 2) {         // 双击：召唤 / 收起三个圆（等一等看有没有第三下）
-        clearTimeout(S.tapTimer);
-        S.tapTimer = setTimeout(() => {
-          S.tapTimer = 0;
-          if (tapTimes.length !== 2) return;
-          tapTimes.length = 0;
-          toggleOrbit();
-        }, DOUBLE_DELAY);
+      if (isDouble) {                      // 双击：召唤 / 收起三个圆
+        toggleOrbit();
         return;
       }
       // 单击：只是摸一下（跳一下 + 冒一句），对话框只从 💬 那个圆进
@@ -575,8 +579,10 @@
     const cancelPendingTap = () => {
       clearTimeout(S.tapTimer);
       S.tapTimer = 0;
+      clearTimeout(longPressTimer);
+      longPressTimer = 0;
+      longPressed = false;
       lastTap = 0;
-      tapTimes.length = 0;
       if (drag) {
         drag = false;
         S.dragging = false;
@@ -880,9 +886,6 @@
     ttsRate: 1.05,
     ttsPitch: 1.1,
     ttsVoice: '',
-    wakeWord: '渡鸦',
-    wakeEnabled: true,
-    wakeAction: 'panel',
     persona: '',
     loaded: false,
   };
@@ -924,9 +927,6 @@
       if (typeof CONFIG.ttsRate === 'number') mind.state.ttsRate = CONFIG.ttsRate;
       if (typeof CONFIG.ttsPitch === 'number') mind.state.ttsPitch = CONFIG.ttsPitch;
       mind.state.ttsVoice = CONFIG.ttsVoice || '';
-      mind.state.wakeWord = CONFIG.wakeWord || '渡鸦';
-      mind.state.wakeAction = CONFIG.wakeAction || 'panel';
-      if (typeof mind.setWakeAllowed === 'function') mind.setWakeAllowed(CONFIG.wakeEnabled !== false);
       // 朗读默认值：只在本机还没选过时应用
       if (CONFIG.tts) {
         let local = null;
@@ -955,9 +955,6 @@
         CONFIG.ttsRate = Number.isFinite(Number(pet.ttsRate)) ? Math.min(1.6, Math.max(0.6, Number(pet.ttsRate))) : 1.05;
         CONFIG.ttsPitch = Number.isFinite(Number(pet.ttsPitch)) ? Math.min(1.6, Math.max(0.6, Number(pet.ttsPitch))) : 1.1;
         CONFIG.ttsVoice = String(pet.ttsVoice || '').slice(0, 40);
-        CONFIG.wakeWord = String(pet.wakeWord || '渡鸦').slice(0, 20);
-        CONFIG.wakeEnabled = pet.wakeEnabled !== false;
-        CONFIG.wakeAction = ['panel', 'voice', 'line'].includes(pet.wakeAction) ? pet.wakeAction : 'panel';
         CONFIG.persona = String(pet.persona || '').slice(0, 300);
         applyConfig();
       })
