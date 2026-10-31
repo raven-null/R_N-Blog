@@ -1832,17 +1832,17 @@ const BlogApp = {
         }
         track.dataset.empty = '';
 
-        track.innerHTML = posts.map((post) => {
+        track.innerHTML = posts.map((post, i) => {
             const href = 'article.html?post=' + encodeURIComponent(post.filename || '');
             const title = this.esc(post.title || '无标题');
             const date = this.formatDate ? this.formatDate(post.date) : (post.date || '');
             const tag = (post.tags && post.tags[0]) ? '<span class="hv3-tag">' + this.esc(post.tags[0]) + '</span>' : '';
-            // 封面固定两层：和生活切片一样靠交叉淡入换图（setCoverPlay 往里灌图）
+            // 封面固定两层：和生活切片一样靠交叉淡入换图（swapCoverPlay 往里灌图）
             const img0 = post.image
                 ? '<img class="hv3-cover-img is-front" src="' + this.escAttr(post.image) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">'
                 : '<img class="hv3-cover-img is-front" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">';
             const cover = '<span class="hv3-cover">' + img0 + '<img class="hv3-cover-img" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"></span>';
-            return '<a class="hv3-item" href="' + href + '" data-has-cover="' + (post.image ? '1' : '') + '">'
+            return '<a class="hv3-item' + (i === 0 ? ' is-front' : '') + '" href="' + href + '" data-has-cover="' + (post.image ? '1' : '') + '">'
                 + cover
                 + '<span class="hv3-body">'
                 + '<span class="hv3-item-title">' + title + '</span>'
@@ -1882,39 +1882,72 @@ const BlogApp = {
             img.addEventListener('error', () => { markPlay(); }, { once: true });
         });
 
-        this.bindCarousel();
+        this._postPlay = { posts: posts, idx: 0 };
         this.syncCarouselHeight();
-        this.syncCarouselDots();
         setTimeout(() => this.syncCarouselHeight(), 300);
         setTimeout(() => this.syncCarouselHeight(), 1200);
 
-        // 等方向判定完再启动封面播放（延迟一拍，让自带的竖图封面先落位）
-        setTimeout(() => this.startCoverPlay(playCards), 400);
+        this.bindPostPlay();
+        this.startPostPlay();
+        // 等方向判定完再补竖图封面（延迟一拍，让自带的竖图封面先落位）
+        setTimeout(() => this.fillCoverPlay(playCards), 400);
     },
 
-    /* ===== 文章卡封面：和生活切片一样的「随机播放」 =====
-       · 池子只放竖图（横图已经在图片区那边播了，两边不抢同一批图）
-       · 交叉淡入换图，5 秒一轮
-       · 只给视野附近的卡换图：横向轮播里其实就一张在眼前，
-         其余的卡不动，省掉几十张图同时下载 */
-    startCoverPlay(cards) {
-        this._coverPlayCards = cards || [];
-        if (this._coverTimer) { clearInterval(this._coverTimer); this._coverTimer = 0; }
-        const tick = () => {
+    /* ===== 文章位：整张卡交叉淡入播放 =====
+       · 封面和标题是一张卡的两个部分，切换时一起淡出淡入（用户要的「两边一起切」）
+       · 5 秒一篇，全部文章轮流过；左右箭头手动切上一篇 / 下一篇
+       · 不再有横向滚动条和页码圆点 */
+    bindPostPlay() {
+        const car = document.getElementById('hv3Car');
+        if (!car || car.dataset.playBound) return;
+        car.dataset.playBound = '1';
+        car.addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-car-dir]');
+            if (!btn) return;
+            e.preventDefault();
+            const dir = Number(btn.dataset.carDir) || 1;
+            this.gotoPost((this._postPlay ? this._postPlay.idx : 0) + dir);
+            this.startPostPlay();
+        });
+        // 鼠标停上去就暂停自动切换，走开再继续
+        car.addEventListener('mouseenter', () => this.stopPostPlay());
+        car.addEventListener('mouseleave', () => this.startPostPlay());
+    },
+
+    startPostPlay() {
+        this.stopPostPlay();
+        this._postTimer = setInterval(() => {
             if (document.hidden) return;
-            const live = this._coverPlayCards.filter((el) => {
-                if (!el.isConnected) return false;
-                const r = el.getBoundingClientRect();
-                return r.right > -240 && r.left < window.innerWidth + 240;
-            });
-            if (!live.length) return;
-            this.portraitPool().then((pool) => {
-                if (!pool.length) return;
-                live.forEach((el) => this.swapCoverPlay(el, pool));
-            }).catch(() => { /* 图库拿不到就不播 */ });
-        };
-        tick();
-        this._coverTimer = setInterval(tick, 5000);
+            const car = document.getElementById('hv3Car');
+            // 面板被切走时这框是 display:none，别白白切
+            if (!car || !car.clientWidth) return;
+            if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+            this.gotoPost((this._postPlay ? this._postPlay.idx : 0) + 1);
+        }, 5000);
+    },
+
+    stopPostPlay() {
+        if (this._postTimer) { clearInterval(this._postTimer); this._postTimer = 0; }
+    },
+
+    gotoPost(i) {
+        const st = this._postPlay;
+        if (!st || !st.posts.length) return;
+        const n = ((i % st.posts.length) + st.posts.length) % st.posts.length;
+        st.idx = n;
+        const items = [...document.querySelectorAll('#hv3Track .hv3-item')];
+        items.forEach((el, k) => el.classList.toggle('is-front', k === n));
+        this.syncCarouselHeight();
+    },
+
+    /* 横图封面和没有封面的卡：用图库竖图补一张封面。
+       这里只补一次 —— 整张卡本来就在 5 秒一换，卡内再定时换图会双重动。 */
+    fillCoverPlay(cards) {
+        if (!cards || !cards.length) return;
+        this.portraitPool().then((pool) => {
+            if (!pool.length) return;
+            cards.forEach((el) => this.swapCoverPlay(el, pool));
+        }).catch(() => { /* 图库拿不到就留空底 */ });
     },
 
     // 竖图池：图库清单里方向为「高 > 宽」的那些（未知方向就加载一张量出来，量过记缓存）
@@ -1992,7 +2025,8 @@ const BlogApp = {
         if (!items.length) return;
         const availW = track.parentElement ? track.parentElement.clientWidth : track.clientWidth;
         if (!availW) return;
-        const idx = Math.round(track.scrollLeft / (track.scrollWidth / items.length || 1));
+        // 当前是第几张由播放器决定（不再是横向滚动位置）
+        const idx = this._postPlay ? this._postPlay.idx : 0;
         const card = items[Math.min(items.length - 1, Math.max(0, idx))] || items[0];
         if (!card) return;
         // --cover-ratio = 宽 / 高（renderHvPosts 按封面原始尺寸写入，缺省 1.6）
@@ -2301,7 +2335,7 @@ const BlogApp = {
                 window.openGalleryLightbox(p.url || p.thumb, cur);
             }
         });
-        stage.title = '点击看大图（每 5 秒随机换一张横图）';
+        stage.title = '点击看大图';
         stage.dataset.timer = String(timer);
     },
 

@@ -273,45 +273,39 @@ html[data-theme="dark"] .hv3-card {
     box-shadow: 0 10px 30px rgba(16, 20, 32, .12);
 }
 
+/* 文章位不再是横向轮播：所有文章卡叠在同一个框里，
+   靠 is-front 交叉淡入切换 —— 封面和标题是一整张卡一起换，
+   和生活切片的播放形式一致。 */
 .hv3-track {
-    display: flex;
-    flex-wrap: nowrap;
-    gap: 0;
+    position: relative;
+    display: block;
     width: 100%;
     height: 100%;
-    overflow-x: auto;
-    overflow-y: hidden;
-    scroll-snap-type: x mandatory;
-    /* 全站 scrollbar.css 用 *::-webkit-scrollbar + thin !important 全局接管滚条，
-       这里必须用 !important 才能彻底去掉轮播底部那条横条 */
-    scrollbar-width: none !important;
-    -ms-overflow-style: none !important;
-}
-
-.hv3-track::-webkit-scrollbar {
-    width: 0 !important;
-    height: 0 !important;
-    display: none !important;
-    background: transparent !important;
-}
-
-.hv3-track::-webkit-scrollbar-thumb,
-.hv3-track::-webkit-scrollbar-track {
-    display: none !important;
-    background: transparent !important;
+    overflow: hidden;
 }
 
 .hv3-item {
-    position: relative;
-    flex: 0 0 100%;
+    position: absolute;
+    inset: 0;
     width: 100%;
     height: 100%;
     display: block;
-    scroll-snap-align: start;
     text-decoration: none;
     color: #fff;
     overflow: hidden;
     background: var(--surface-2, #f3eee1);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity .6s ease, visibility 0s linear .6s;
+    pointer-events: none;
+}
+
+.hv3-item.is-front {
+    opacity: 1;
+    visibility: visible;
+    transition: opacity .6s ease;
+    pointer-events: auto;
+    z-index: 2;
 }
 
 /* 封面铺满整张卡（高度由 .hv3-car 控制） */
