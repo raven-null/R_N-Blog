@@ -6172,6 +6172,83 @@ body.screensaver-on .deskpet {
     display: none !important;
 }
 
+/* ===== 悬停浮出的三个圆（聊天 / 朗读 / 睡觉） ===== */
+.deskpet-orbit {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 3;
+}
+
+.deskpet-orbit-item {
+    position: absolute;
+    width: 30px;
+    height: 30px;
+    margin: -15px 0 0 -15px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    font-size: 13px;
+    line-height: 1;
+    color: var(--text-secondary);
+    background: color-mix(in srgb, var(--card-bg, #16161f) 82%, transparent);
+    border: 1px solid var(--line-soft, rgba(255, 255, 255, 0.55));
+    border-radius: 50%;
+    cursor: pointer;
+    opacity: 0;
+    transform: scale(0.62);
+    pointer-events: none;
+    transition:
+        opacity 0.18s ease,
+        transform 0.24s cubic-bezier(0.22, 1, 0.36, 1),
+        border-color 0.18s,
+        color 0.18s;
+    transition-delay: calc(var(--orbit-i, 0) * 45ms);
+}
+
+.deskpet-orbit.is-show .deskpet-orbit-item {
+    opacity: 1;
+    transform: scale(1);
+    pointer-events: auto;
+}
+
+.deskpet.is-dragging .deskpet-orbit {
+    display: none;
+}
+
+.deskpet-orbit-item:hover,
+.deskpet-orbit-item:focus-visible {
+    color: var(--text);
+    border-color: var(--accent, #f0a20c);
+    transform: scale(1.1);
+    outline: none;
+}
+
+/* 对话模式：底座一圈呼吸光，表示它正听着 */
+.deskpet.is-voice-mode .deskpet-plate {
+    animation: dpVoicePulse 1.9s ease-in-out infinite;
+}
+
+.deskpet.is-voice-mode .deskpet-body {
+    filter: drop-shadow(0 0 10px rgba(120, 170, 255, 0.55));
+}
+
+@keyframes dpVoicePulse {
+    0%, 100% {
+        box-shadow:
+            0 10px 22px rgba(10, 14, 32, 0.28),
+            0 0 0 2px rgba(150, 190, 255, 0.18),
+            inset 0 -6px 12px rgba(0, 0, 0, 0.22);
+    }
+
+    50% {
+        box-shadow:
+            0 10px 22px rgba(10, 14, 32, 0.28),
+            0 0 0 6px rgba(150, 190, 255, 0.34),
+            inset 0 -6px 12px rgba(0, 0, 0, 0.22);
+    }
+}
+
 /* 手机：缩小并避开底部区域 */
 @media (max-width: 900px) {
     .deskpet {

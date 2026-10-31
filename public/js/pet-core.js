@@ -397,6 +397,7 @@
       clearTimeout(S.stateTimer);
       clearTimeout(S.tapTimer);
       hideBubble();
+      if (S.orbit) S.orbit.hideLater(0);
       engineState('sleeping');
       try { global.dispatchEvent(new global.CustomEvent('pet:sleep', { detail: { sleeping: true } })); } catch (e) { /* 忽略 */ }
     } else {
@@ -442,6 +443,14 @@
     let pending = null;
     let frame = 0;
     let lastTap = 0;
+    // 连击判定窗口：单击开面板、双击睡觉、三连击进对话模式
+    const TAP_WINDOW = 420;
+    const tapTimes = [];
+    const toggleVoiceMode = () => {
+      const mind = global.PetMind;
+      if (mind && typeof mind.toggleVoiceMode === 'function') mind.toggleVoiceMode();
+      else speakRandom();
+    };
     let vx = 0;
     let vy = 0;
     let lastX = 0;
@@ -471,6 +480,7 @@
       originY = rect.top;
       pet.classList.add('is-dragging');
       setState('dragging', 0);
+      if (S.orbit) S.orbit.hideLater(0);   // 拖动时别让三个圆跟着乱飘
       try { body.setPointerCapture(e.pointerId); } catch (err) { /* 忽略 */ }
       if (e.cancelable) e.preventDefault();
     };
@@ -513,27 +523,30 @@
         return;
       }
 
-      const now = Date.now();
-      if (now - lastTap < 340) {          // 双击：睡觉 / 唤醒
-        lastTap = 0;
-        clearTimeout(S.tapTimer);
-        S.tapTimer = 0;
-        toggleSleep();
-        return;
-      }
       if (S.sleeping) {                    // 睡着时点一下：直接醒
         lastTap = 0;
+        tapTimes.length = 0;
         toggleSleep(false);
         return;
       }
-      lastTap = now;
+      lastTap = Date.now();
       react();                             // 立刻给动作反馈
+      // 1 / 2 / 3 连击的判定都推迟到窗口结束，避免「双击睡觉」和「三连击进对话模式」打架
+      tapTimes.push(lastTap);
       clearTimeout(S.tapTimer);
-      // 250ms 后才确认是单击：打开对话面板（双击已经在这之前被拦下）
+      if (tapTimes.length >= 3) {
+        tapTimes.length = 0;
+        S.tapTimer = 0;
+        toggleVoiceMode();
+        return;
+      }
       S.tapTimer = setTimeout(() => {
         S.tapTimer = 0;
-        openChat();
-      }, 250);
+        const n = tapTimes.length;
+        tapTimes.length = 0;
+        if (n >= 2) toggleSleep();
+        else openChat();
+      }, TAP_WINDOW);
     };
 
     S.dragging = false;
@@ -551,6 +564,7 @@
       clearTimeout(S.tapTimer);
       S.tapTimer = 0;
       lastTap = 0;
+      tapTimes.length = 0;
       if (drag) {
         drag = false;
         S.dragging = false;
@@ -626,6 +640,100 @@
     body.addEventListener('pointerleave', () => {
       if (!S.sleeping && !S.dragging && !isLocked()) setState('idle', 0);
     });
+  }
+
+  // ---------- 悬停浮出的三个圆：聊天 / 朗读 / 睡觉 ----------
+  // 触屏没有 hover，不创建（触屏靠三连击进对话模式）
+  function hoverCapable() {
+    try { return !global.matchMedia || global.matchMedia('(hover: hover)').matches; } catch (e) { return true; }
+  }
+
+  function layoutOrbit() {
+    const host = doc.getElementById('deskpetOrbit');
+    const pet = petEl();
+    if (!host || !pet) return;
+    const r = pet.getBoundingClientRect();
+    const vw = global.innerWidth || 1024;
+    const vh = global.innerHeight || 800;
+    const cx = r.left + r.width / 2;
+    const cy = r.top + r.height / 2;
+    // 朝屏幕内侧铺开，避免贴边时飞出视口
+    const vx = cx < vw / 2 ? 1 : -1;
+    const vy = cy < vh / 2 ? 1 : -1;
+    const base = Math.atan2(vy, vx);
+    const dist = 66;
+    const spread = [-0.95, -0.05, 0.85];
+    const items = host.children;
+    for (let i = 0; i < items.length; i++) {
+      const ang = base + spread[i];
+      const x = clamp(cx + Math.cos(ang) * dist, 26, vw - 26) - r.left;
+      const y = clamp(cy + Math.sin(ang) * dist, 26, vh - 26) - r.top;
+      items[i].style.left = Math.round(x) + 'px';
+      items[i].style.top = Math.round(y) + 'px';
+      items[i].style.setProperty('--orbit-i', String(i));
+    }
+  }
+
+  function bindOrbit() {
+    const pet = petEl();
+    const body = bodyEl();
+    if (!pet || !body || typeof doc.createElement !== 'function' || !hoverCapable()) return;
+    if (doc.getElementById('deskpetOrbit')) return;
+
+    const host = doc.createElement('div');
+    host.className = 'deskpet-orbit';
+    host.id = 'deskpetOrbit';
+
+    const actions = [
+      { key: 'chat', icon: '💬', label: '聊天', run: () => openChat() },
+      { key: 'tts', icon: '🔊', label: '朗读 / 静音', run: () => global.PetMind?.toggleTTS?.() },
+      { key: 'sleep', icon: '🌙', label: '睡觉 / 唤醒', run: () => toggleSleep() },
+    ];
+    actions.forEach((a) => {
+      const btn = doc.createElement('button');
+      btn.type = 'button';
+      btn.className = 'deskpet-orbit-item';
+      btn.dataset.petAction = a.key;
+      btn.textContent = a.icon;
+      btn.title = a.label;
+      btn.setAttribute('aria-label', a.label);
+      btn.addEventListener('pointerdown', (e) => e.stopPropagation());
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        a.run();
+        hideLater(1400);
+      });
+      host.appendChild(btn);
+    });
+    pet.appendChild(host);
+
+    let showTimer = 0;
+    let hideTimer = 0;
+    const show = (delay) => {
+      clearTimeout(hideTimer);
+      clearTimeout(showTimer);
+      showTimer = setTimeout(() => {
+        if (S.dragging) return;
+        layoutOrbit();
+        host.classList.add('is-show');
+      }, delay === undefined ? 160 : delay);
+    };
+    const hideLater = (ms) => {
+      clearTimeout(showTimer);
+      clearTimeout(hideTimer);
+      hideTimer = setTimeout(() => host.classList.remove('is-show'), ms === undefined ? 450 : ms);
+    };
+
+    body.addEventListener('pointerenter', () => { if (!S.sleeping) show(); });
+    body.addEventListener('pointerleave', () => hideLater());
+    host.addEventListener('pointerenter', () => clearTimeout(hideTimer));
+    host.addEventListener('pointerleave', () => hideLater());
+
+    global.addEventListener('resize', () => {
+      if (host.classList.contains('is-show')) layoutOrbit();
+    });
+    S.orbit = { host, layoutOrbit, hideLater };
   }
 
   // 你在输入框打字时它竖起来听
@@ -797,6 +905,7 @@
 
     bindDrag();
     bindHover();
+    bindOrbit();
     bindGaze();
     bindFocus();
     bindReflow();

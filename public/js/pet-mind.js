@@ -519,6 +519,8 @@
   // ---------- 语音输入 ----------
   let recognition = null;
   let listening = false;
+  let voiceMode = false;
+  let recRestartTimer = 0;
 
   function initVoice() {
     const SR = global.SpeechRecognition || global.webkitSpeechRecognition;
@@ -541,7 +543,7 @@
       listening = true;
       mic.classList.add('is-listening');
       petState('listening', 0);
-      say('在听…', 9000, { log: false, speak: false });
+      if (!voiceMode) say('在听…', 9000, { log: false, speak: false });
     };
     rec.onresult = (e) => {
       let interim = '';
@@ -562,29 +564,87 @@
       }
       const input = doc.getElementById('petChatInput');
       if (input) input.value = live.slice(0, 300);
-      if (finalText) send(finalText.trim());
+      if (finalText) {
+        STATE.lastUserAt = Date.now();
+        send(finalText.trim());
+      }
     };
     rec.onerror = (e) => {
       listening = false;
       mic.classList.remove('is-listening');
-      if (e.error === 'not-allowed') say('麦克风没开权限，我收不到声音', 5000);
-      else if (e.error === 'no-speech') say('没听到声音…再试一次？', 4000);
-      else if (e.error !== 'aborted') say('没听清…再说一次？', 4000);
-      if (!STATE.busy) petState('idle', 0);
+      if (e.error === 'not-allowed') {
+        say('麦克风没开权限，我收不到声音', 5000);
+        stopVoiceMode();
+      } else if (e.error === 'no-speech') {
+        if (!voiceMode) say('没听到声音…再试一次？', 4000);
+      } else if (e.error !== 'aborted') {
+        say('没听清…再说一次？', 4000);
+      }
+      if (!STATE.busy) petState(voiceMode ? 'listening' : 'idle', 0);
     };
     rec.onend = () => {
       listening = false;
       mic.classList.remove('is-listening');
       // 正在等 AI 回复时别把 thinking 顶掉
-      if (!STATE.busy) petState('idle', 0);
+      if (!STATE.busy) petState(voiceMode ? 'listening' : 'idle', 0);
+      // 对话模式：浏览器自己停了就接上（等回复期间先别抢麦克风）
+      if (voiceMode && !doc.hidden) restartRecognition(400);
     };
 
     mic.addEventListener('click', (e) => {
       e.stopPropagation();
+      if (voiceMode) { stopVoiceMode('对话模式关掉了'); return; }
       if (listening) { try { rec.stop(); } catch (err) { /* 忽略 */ } return; }
       try { rec.start(); } catch (err) { /* 已在启动中 */ }
     });
     recognition = rec;
+  }
+
+  // ---------- 对话模式（连点三下桌宠 / 悬停选「聊天」后开）：边说边答 ----------
+  function restartRecognition(delay) {
+    clearTimeout(recRestartTimer);
+    if (!recognition || !voiceMode) return;
+    recRestartTimer = setTimeout(() => {
+      if (!voiceMode || !recognition || doc.hidden) return;
+      try {
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.start();
+      } catch (e) { /* 可能已经在跑 */ }
+    }, delay || 0);
+  }
+
+  function startVoiceMode() {
+    if (voiceMode) return true;
+    if (!recognition) {
+      say('这个浏览器听不见我…换 Chrome / Edge 再说', 5000, { log: false });
+      return false;
+    }
+    voiceMode = true;
+    STATE.lastUserAt = Date.now();
+    openPanel();
+    if (!STATE.ttsOn) toggleTTS(true);
+    global.PetCore?.state && (global.PetCore.state.voiceMode = true);
+    doc.getElementById('deskPet')?.classList.add('is-voice-mode');
+    say('对话模式：直接说话就行，再连点三下退出', 6500, { log: false });
+    petState('listening', 0);
+    restartRecognition(0);
+    return true;
+  }
+
+  function stopVoiceMode(reason) {
+    if (!voiceMode) return;
+    voiceMode = false;
+    clearTimeout(recRestartTimer);
+    doc.getElementById('deskPet')?.classList.remove('is-voice-mode');
+    try { recognition && recognition.stop(); } catch (e) { /* 忽略 */ }
+    if (!STATE.busy) petState('idle', 0);
+    if (reason) say(reason, 4200, { log: false, speak: false });
+  }
+
+  function toggleVoiceMode() {
+    if (voiceMode) { stopVoiceMode('对话模式关掉了'); return false; }
+    return startVoiceMode();
   }
 
   // ---------- 发一句话 ----------
@@ -747,6 +807,7 @@
 
   function closePanel() {
     doc.getElementById('petChat')?.classList.remove('is-open');
+    if (voiceMode) stopVoiceMode();
   }
 
   function initPanel() {
@@ -925,7 +986,11 @@
     setQuiet,
     toggleTTS,
     setName,
+    startVoiceMode,
+    stopVoiceMode,
+    toggleVoiceMode,
     isSleeping,
+    get voiceMode() { return voiceMode; },
     get listening() { return !!listening; },
     get recognition() { return recognition; },
     state: STATE,

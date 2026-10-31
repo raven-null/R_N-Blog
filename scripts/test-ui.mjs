@@ -95,6 +95,13 @@ const release=()=>fireWin('pointerup',{pointerId:1});
 press();release();flushRaf();
 assert.equal(PetCore.sleeping,false,'single tap does not sleep');
 assert.ok(engineStates.includes('excited'),'single tap plays a reaction');
+// 测试环境的 setTimeout 是手动队列：把单击窗口结算掉，否则会和三连击判定累计
+const flushTapWindow=()=>{
+  let hit=0;
+  for(const [id,t] of [...core.timers]) if(t.ms===420){core.timers.delete(id);t.fn();hit++;}
+  return hit;
+};
+flushTapWindow();
 
 // 拖拽：位置被夹在视口内并记住（按比例存）
 press(500,500);fireWin('pointermove',{clientX:300,clientY:300});flushRaf();
@@ -104,17 +111,25 @@ release();flushRaf();
 const saved=JSON.parse(core.storage.get('deskpet_pos_v2')||'null');
 assert.ok(saved&&typeof saved.rx==='number','drag position is stored as a viewport ratio');
 
-// 双击：睡觉并记住（先等过双击判定窗口，避免上一次单击被算进来）
-await new Promise(resolve=>setTimeout(resolve,360));
-press();release();            // 第 1 下：单击（记录点击时间）
-press();release();            // 第 2 下：落在 340ms 窗口内 → 睡觉
+// 双击：两次点击落在同一个 420ms 窗口 → 睡觉
+press();release();            // 第 1 下
+press();release();            // 第 2 下
+assert.ok(flushTapWindow()>0,'tap window timer is scheduled');
 flushRaf();
 assert.equal(PetCore.sleeping,true,'double tap puts the pet to sleep');
 assert.equal(petNode.dataset.state,'sleep');
 assert.equal(core.storage.get('pet-asleep'),'1','sleep state survives reloads');
 assert.ok(engineStates.includes('sleeping'));
 
+// 三连击：进对话模式（这里没有 PetMind，退化成冒一句，但不能睡）
+PetCore.toggleSleep(false);
+press();release();press();release();press();release();
+flushTapWindow();
+flushRaf();
+assert.equal(PetCore.sleeping,false,'triple tap does not put the pet to sleep');
+
 // 睡着时不主动搭话（心智层负责抑制，这里确认状态可见）
+PetCore.toggleSleep(true);
 assert.equal(PetCore.sleeping,true);
 
 // 气泡：始终落在视口内，箭头跟着宠物
