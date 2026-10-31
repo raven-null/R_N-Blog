@@ -15,7 +15,7 @@
     <meta property="og:image" content="https://ravennull.work/images/Default/web-logo.webp">
     <meta property="og:locale" content="zh_CN">
     <meta name="twitter:card" content="summary">
-    <link rel="stylesheet" href="css/bundle.css?v=4680204b0e">
+    <link rel="stylesheet" href="css/bundle.css?v=96f5494b91">
     <title>渡鸦 NULL · 日光与暮色之间</title>
     <link rel="icon" id="siteFavicon" href="/images/Default/web-logo.webp" type="image/webp">
     <link rel="apple-touch-icon" href="/images/Default/web-logo.webp">
@@ -27,6 +27,9 @@
     <!-- 图库图片来自独立的 r-gallery 站点：提前建连，减少首图 DNS/TLS 开销 -->
     <link rel="preconnect" href="https://r-gallery.netlify.app" crossorigin>
     <link rel="dns-prefetch" href="https://r-gallery.netlify.app">
+    <!-- 音乐视图内嵌 Folia：同样提前建连 -->
+    <link rel="preconnect" href="https://music.ravennull.work" crossorigin>
+    <link rel="dns-prefetch" href="https://music.ravennull.work">
     <script src="/js/site-icon.js?v=1.0.0" defer></script>
 
     <!-- Styles -->
@@ -71,6 +74,8 @@
     </script>
     <script src="/js/tone.js?v=20261030" defer></script>
 <script src="/js/experience.js?v=20261103a" defer></script>
+    <!-- 音乐视图：iframe 的加载 / 遮罩 / 探活 / 降级都归它管，defer 保证在 DOM 解析后拿到节点 -->
+    <script src="/js/music-view.js?v=1.0.0" defer></script>
 </head>
 
 <body class="home-layout">
@@ -97,9 +102,8 @@
                         <button class="view-btn" data-view="blog" onclick="BlogApp.switchView('blog')">文章</button>
                         <button class="view-btn" data-view="gallery" onclick="BlogApp.switchView('gallery')">图库</button>
                         <button class="view-btn" data-view="projects" onclick="BlogApp.switchView('projects')">项目</button>
-                        <!-- 音乐：站内独立页（内嵌 Folia 播放器），不是视图，所以不带 data-view，
-                             也不参与 switchView 白名单；滑块指示器按 [data-view] 定位，不受影响。 -->
-                        <a class="view-btn view-btn--link" href="/music" title="音乐播放器">音乐</a>
+                        <!-- 音乐和其它四个一样是视图，原地切换不跳页；内容是全屏 iframe（见 js/music-view.js） -->
+                        <button class="view-btn" data-view="music" onclick="BlogApp.switchView('music')">音乐</button>
                     </div>
                 </div>
             </div>
@@ -217,6 +221,37 @@
                             </div>
                         </div>
 
+                    </div>
+                </section>
+
+                <!-- 视图：音乐（内嵌 Folia 播放器；桌面首页就预加载，手机走降级卡片） -->
+                <section class="view view-music" id="view-music" style="display:none;">
+                    <div id="musicBooting"><div class="music-spinner" aria-hidden="true"></div><span>正在唤醒播放器…</span></div>
+                    <!-- src 必须先占位：空 src 的 iframe 会把本页当成地址，导致无限递归加载。
+                         注意：绝对不能加 sandbox，Folia 靠 localStorage 存登录态。 -->
+                    <iframe id="musicFrame" src="about:blank" title="Folia 音乐播放器"
+                            allow="autoplay; fullscreen; encrypted-media; clipboard-write; picture-in-picture"
+                            referrerpolicy="strict-origin-when-cross-origin"></iframe>
+
+                    <!-- 小屏降级：默认不加载 iframe -->
+                    <div id="musicDegrade">
+                        <h1>音乐播放器</h1>
+                        <p>全屏歌词播放器在手机上更适合单独打开，独立窗口不会挤、也不会被地址栏打断。</p>
+                        <div class="music-degrade-actions">
+                            <a class="music-big-btn primary" href="https://music.ravennull.work/" target="_blank" rel="noopener noreferrer">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle>
+                                </svg>
+                                打开播放器
+                            </a>
+                            <button class="music-big-btn ghost" id="musicInlineBtn" type="button">还是在这个页面里听</button>
+                        </div>
+                    </div>
+
+                    <div id="musicNotice" role="status">
+                        <span class="music-notice-text">播放器好像没加载出来。</span>
+                        <button type="button" id="musicRetryBtn">重试</button>
+                        <a href="https://music.ravennull.work/" target="_blank" rel="noopener noreferrer">新窗口打开</a>
                     </div>
                 </section>
 
@@ -1028,7 +1063,7 @@
                 if (_hasRoute) _startView = 'blog';
                 // 从别的页面（如音乐页顶栏）带 #blog / #gallery / #projects 进来时直达对应视图。
                 // 显式 hash 的优先级高于默认主页，但不能越过「该视图被后台禁用」这条。
-                const _hashView = /^#(home|blog|gallery|projects)$/.exec(window.location.hash || '');
+                const _hashView = /^#(home|blog|gallery|projects|music)$/.exec(window.location.hash || '');
                 if (_hashView && _views[_hashView[1]] !== false) _startView = _hashView[1];
                 setTimeout(() => BlogApp.moveIndicator(BlogApp.currentView || _startView), 0);
                 if (BlogApp.currentView !== _startView && _views[_startView] !== false) {

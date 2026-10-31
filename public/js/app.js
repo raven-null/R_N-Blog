@@ -659,9 +659,9 @@ const BlogApp = {
         this.closeSearch();
     },
 
-    // 切换视图（主页 / 博客 / 图库 / 项目）
+    // 切换视图（主页 / 博客 / 图库 / 项目 / 音乐）
     switchView(view) {
-        const valid = ['home', 'blog', 'gallery', 'projects'];
+        const valid = ['home', 'blog', 'gallery', 'projects', 'music'];
         if (!valid.includes(view) || this.currentView === view) return;
 
         // 检查该视图是否被设置禁用
@@ -692,6 +692,8 @@ const BlogApp = {
         document.body.classList.toggle('view-gallery-active', view === 'gallery');
         // 文章页铺满左右：首页那条 1200px 限宽（renewal.css）只该管首页
         document.body.classList.toggle('view-blog-active', view === 'blog');
+        // 音乐视图：铺满滚动区、不要 main-content 的限宽与内边距（见 css/music.css）
+        document.body.classList.toggle('view-music-active', view === 'music');
         // 切换视图时隐藏分类面板
         const tagPanel = document.getElementById('galleryTagFloatPanel');
         if (tagPanel) tagPanel.classList.remove('show');
@@ -708,6 +710,8 @@ const BlogApp = {
             else this.initGalleryWall();
         }
         if (view === 'projects') this.renderProjects();
+        // 音乐视图：iframe 的预加载/遮罩/降级由 js/music-view.js 管，切进来时让它重新对齐高度
+        if (view === 'music' && window.MusicView) window.MusicView.onShow();
 
         // 入场动画
         const activeView = document.getElementById('view-' + view);

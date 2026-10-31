@@ -1,0 +1,238 @@
+/* ============================================================
+   音乐视图：首页第 5 个视图（内嵌 Folia 播放器）
+   ------------------------------------------------------------
+   和其它四个视图一样由 BlogApp.switchView('music') 切换，
+   但内容是全屏 iframe，所以要摆脱 main-content 的限宽与内边距。
+   ============================================================ */
+
+/* 音乐视图不吃 main-content 的盒子，铺满整个可滚动区 */
+body.view-music-active .scroll-area {
+    overflow: hidden;
+}
+
+body.view-music-active .main-content {
+    max-width: none !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    height: 100%;
+}
+
+#view-music {
+    position: relative;
+    height: 100%;
+    min-height: 0;   /* 盖掉 .view 的 min-height: 40vh */
+    background: #0b0b0e;
+    overflow: hidden;
+}
+
+/* 环境光斑：Folia 加载前不至于是一块死黑 */
+#view-music::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background:
+        radial-gradient(ellipse 55% 45% at 12% 18%, rgba(90, 120, 255, 0.14), transparent 65%),
+        radial-gradient(ellipse 50% 40% at 88% 12%, rgba(190, 90, 255, 0.10), transparent 65%),
+        radial-gradient(ellipse 60% 50% at 78% 82%, rgba(0, 210, 190, 0.07), transparent 65%);
+}
+
+#musicFrame {
+    position: relative;
+    z-index: 1;
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: #0b0b0e;
+}
+
+/* ---------- 加载遮罩 ---------- */
+/* Folia 首屏较大，先给个呼吸感；注意它只会盖一小会儿，
+   之后交给 Folia 自己的启动动画（见 music-view.js 的 BOOT_MAX_COVER） */
+#musicBooting {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    background: radial-gradient(ellipse 60% 50% at 50% 40%, rgba(30, 30, 40, 0.55), rgba(11, 11, 14, 0.92));
+    color: rgba(255, 255, 255, 0.66);
+    font-size: 13px;
+    letter-spacing: 0.04em;
+    transition: opacity 0.45s ease;
+}
+
+#musicBooting.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.music-spinner {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.16);
+    border-top-color: rgba(255, 255, 255, 0.72);
+    animation: music-spin 0.9s linear infinite;
+}
+
+@keyframes music-spin {
+    to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .music-spinner { animation-duration: 2.4s; }
+}
+
+/* ---------- 兜底提示条 ---------- */
+#musicNotice {
+    position: absolute;
+    left: 50%;
+    bottom: 16px;
+    transform: translateX(-50%);
+    z-index: 4;
+    display: none;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    max-width: min(92vw, 520px);
+    padding: 10px 14px;
+    border-radius: 14px;
+    background: rgba(24, 24, 30, 0.92);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 16px 40px -12px rgba(0, 0, 0, 0.75);
+    color: rgba(255, 255, 255, 0.78);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+#musicNotice.show {
+    display: flex;
+}
+
+#musicNotice .music-notice-text {
+    flex: 1 1 200px;
+}
+
+#musicNotice a,
+#musicNotice button {
+    font-family: inherit;
+    font-size: 12.5px;
+    cursor: pointer;
+    white-space: nowrap;
+    color: #0b0b10;
+    background: linear-gradient(180deg, #fff, #d9d9e3);
+    border: 1px solid rgba(255, 255, 255, 0.55);
+    border-radius: 999px;
+    padding: 5px 12px;
+    text-decoration: none;
+}
+
+#musicNotice button {
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+#musicNotice button:active {
+    transform: scale(0.95);
+}
+
+/* ---------- 小屏降级卡片 ---------- */
+/* 手机上把全屏沉浸式播放器塞进视图里体验不好，默认只给一张卡片 */
+#musicDegrade {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    padding: 24px;
+    padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+    text-align: center;
+    background: radial-gradient(ellipse 70% 55% at 50% 35%, rgba(30, 30, 44, 0.55), rgba(11, 11, 14, 0.96));
+}
+
+body.view-music-active.music-degraded #musicDegrade {
+    display: flex;
+}
+
+body.music-degraded #musicFrame,
+body.music-degraded #musicBooting {
+    display: none;
+}
+
+#musicDegrade h1 {
+    margin: 0;
+    font-size: 19px;
+    font-weight: 600;
+    color: #fff;
+    letter-spacing: 0.02em;
+}
+
+#musicDegrade p {
+    margin: 0;
+    max-width: 30em;
+    color: rgba(255, 255, 255, 0.58);
+    font-size: 13px;
+    line-height: 1.7;
+}
+
+.music-degrade-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: min(320px, 82vw);
+}
+
+.music-big-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 13px 18px;
+    border-radius: 14px;
+    text-decoration: none;
+    font-size: 14.5px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.music-big-btn:active {
+    transform: scale(0.97);
+}
+
+.music-big-btn.primary {
+    color: #0b0b10;
+    background: linear-gradient(180deg, #fff, #d5d5e0);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+}
+
+.music-big-btn.ghost {
+    color: #e8e8ea;
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.035));
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    font-weight: 500;
+}
+
+.music-big-btn svg {
+    width: 16px;
+    height: 16px;
+    flex: none;
+}
+
+@media (max-width: 560px) {
+    #musicDegrade { gap: 14px; padding: 20px 18px; }
+    #musicDegrade h1 { font-size: 17px; }
+    #musicDegrade p { font-size: 12.5px; }
+}
