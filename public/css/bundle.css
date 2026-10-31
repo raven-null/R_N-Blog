@@ -12827,10 +12827,10 @@ html[data-theme="dark"] .hv3-card {
 
 /* 口号区已移除：头像名字在左，时钟与数字在右 */
 
-/* 卡内下排：时钟在左，三个数字在右 */
+/* 卡内下排：时钟 / 三个数字 / 三个圆钮 */
 .hv3-hero-right {
     display: flex;
-    align-items: flex-end;
+    align-items: center;
     justify-content: space-between;
     gap: 18px;
     flex: 0 0 auto;
@@ -12920,32 +12920,9 @@ html[data-theme="dark"] .hv3-card {
 
 .hv3-sub-grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr);
     gap: 18px;
     align-items: stretch;
-}
-
-/* 显示工具卡：标题 + 三个圆钮（主题 / 手写体 / 屏保），整体居中 */
-.hv3-tools {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    min-width: 0;
-    text-align: center;
-}
-
-.hv3-tools-title {
-    font-size: 11px;
-    letter-spacing: .14em;
-    text-transform: uppercase;
-    color: var(--text-muted);
-}
-
-.hv3-tools .hv3-toggles {
-    justify-content: center;
-    flex-wrap: wrap;
 }
 
 .hv3-box {
@@ -13268,8 +13245,7 @@ html[data-theme="dark"] .hv3-card {
    03 · 今日拾光：默认自动滚，手动碰过就接管，离开几秒后接着自动
    ============================================================ */
 .hv3-news {
-    /* 右侧子网格里占 2/3，和工具卡同高；高度写死才能让内部列表滚动 */
-    grid-column: span 2;
+    /* 右侧只剩它一块，占满 8 栏；高度写死才能让内部列表滚动 */
     height: 176px;
 }
 
@@ -13884,19 +13860,25 @@ html[data-theme="dark"] .hv3-shot {
 
     .hv3-hero { gap: 14px; }
 
-    .hv3-hero-right { justify-content: space-between; }
+    /* 窄屏三块（时钟 / 数字 / 三个圆钮）挤不下，允许折到下一行 */
+    .hv3-hero-right {
+        flex-wrap: wrap;
+        gap: 12px;
+        justify-content: space-between;
+    }
+
+    .hv3-toggle {
+        width: 34px;
+        height: 34px;
+    }
+
+    /* 折到第二行时靠右，和上面那排数字对齐 */
+    .hv3-hero-right .hv3-toggles { margin-left: auto; }
 
     /* 窄屏同样跟着图片比例浮动，只是区间收一档 */
     .hv3-shot {
         min-height: 200px;
         max-height: 300px;
-    }
-
-    /* 单列时工具卡压成一行：标题在左、三个圆钮在右 */
-    .hv3-tools {
-        flex-direction: row;
-        align-items: center;
-        justify-content: space-between;
     }
 
     .hv3-news { height: 216px; }

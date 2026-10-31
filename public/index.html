@@ -15,7 +15,7 @@
     <meta property="og:image" content="https://ravennull.work/images/Default/web-logo.webp">
     <meta property="og:locale" content="zh_CN">
     <meta name="twitter:card" content="summary">
-    <link rel="stylesheet" href="css/bundle.css?v=5cdac706b3">
+    <link rel="stylesheet" href="css/bundle.css?v=581d224806">
     <title>渡鸦 NULL · 日光与暮色之间</title>
     <link rel="icon" id="siteFavicon" href="/images/Default/web-logo.webp" type="image/webp">
     <link rel="apple-touch-icon" href="/images/Default/web-logo.webp">
@@ -332,6 +332,27 @@
                                         <b id="homeCtaProjects">—</b><span>项目</span>
                                     </button>
                                 </div>
+
+                                <!-- 显示工具：主题 / 手写体 / 屏保 -->
+                                <div class="hv3-toggles">
+                                    <button class="hv3-toggle" id="hvThemeBtn" type="button" title="切换浅色 / 深色" aria-label="切换主题">
+                                        <span id="hvThemeIcon">○</span>
+                                    </button>
+                                    <button class="hv3-toggle" id="hvHandBtn" type="button" title="切换手写体（全站）" aria-label="切换手写体" aria-pressed="false">
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                            <path d="M4 20h4L18.5 9.5a2.5 2.5 0 0 0-3.5-3.5L4.5 16.5V20z"></path>
+                                            <path d="M13.5 7.5l3 3"></path>
+                                        </svg>
+                                    </button>
+                                    <button class="hv3-toggle hv3-toggle-screen" id="hvScreenBtn" type="button" title="屏保模式（Esc 退出）" aria-label="切换屏保模式">
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                            <path d="M4 9V4h5"></path>
+                                            <path d="M20 9V4h-5"></path>
+                                            <path d="M4 15v5h5"></path>
+                                            <path d="M20 15v5h-5"></path>
+                                        </svg>
+                                    </button>
+                                </div>
                             </div>
                         </header>
 
@@ -377,7 +398,7 @@
                             </div>
                         </section>
 
-                        <!-- 右侧 8 栏：照片墙海报 +（今日拾光 + 显示工具） -->
+                        <!-- 右侧 8 栏：照片墙海报 + 今日拾光 -->
                         <div class="hv3-col-right hv3-span-8">
                             <div class="hv3-shot" id="hv3Shots" aria-label="生活切片">
                                 <img class="hv3-shot-img" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">
@@ -389,30 +410,6 @@
                                 <!-- 今日拾光：内容浏览，自动滚动 -->
                                 <section class="hv3-box hv3-news" aria-label="今日拾光">
                                     <div class="hv3-ticker" id="hv3News" aria-label="今日拾光，自动滚动"></div>
-                                </section>
-
-                                <!-- 显示工具：主题 / 手写体 / 屏保，原本挤在个人信息条里 -->
-                                <section class="hv3-tools hv3-card" aria-label="显示设置">
-                                    <span class="hv3-tools-title">显示</span>
-                                    <div class="hv3-toggles">
-                                        <button class="hv3-toggle" id="hvThemeBtn" type="button" title="切换浅色 / 深色" aria-label="切换主题">
-                                            <span id="hvThemeIcon">○</span>
-                                        </button>
-                                        <button class="hv3-toggle" id="hvHandBtn" type="button" title="切换手写体（全站）" aria-label="切换手写体" aria-pressed="false">
-                                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                                <path d="M4 20h4L18.5 9.5a2.5 2.5 0 0 0-3.5-3.5L4.5 16.5V20z"></path>
-                                                <path d="M13.5 7.5l3 3"></path>
-                                            </svg>
-                                        </button>
-                                        <button class="hv3-toggle hv3-toggle-screen" id="hvScreenBtn" type="button" title="屏保模式（Esc 退出）" aria-label="切换屏保模式">
-                                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                                <path d="M4 9V4h5"></path>
-                                                <path d="M20 9V4h-5"></path>
-                                                <path d="M4 15v5h5"></path>
-                                                <path d="M20 15v5h-5"></path>
-                                            </svg>
-                                        </button>
-                                    </div>
                                 </section>
                             </div>
                         </div>
