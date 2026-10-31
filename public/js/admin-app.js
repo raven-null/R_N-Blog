@@ -2364,6 +2364,8 @@
             document.querySelectorAll('.settings-tab').forEach(b=>b.classList.toggle('active',b.dataset.stab===tab));
             document.querySelectorAll('.settings-section').forEach(s=>s.classList.toggle('active',s.dataset.section===tab));
         }
+        // 桌宠朗读音色的预设值（后台下拉用；访客本机没有对应声音就退回自动）
+        const PET_VOICE_PRESETS=['','Xiaoxiao','Xiaoyi','Yaoyao','Huihui','Yunxi','Yunjian','Kangkang','Google'];
         async function loadSettings(){
             const r=await apiFetch('action=settings');
             const s=r.status==='success'&&r.data?r.data:{};
@@ -2409,8 +2411,30 @@
             setPet('setPetTts',el=>{el.checked=pet.tts===true});
             setPet('setPetTtsRate',el=>{el.value=pet.ttsRate===undefined||pet.ttsRate===null?'':pet.ttsRate});
             setPet('setPetTtsPitch',el=>{el.value=pet.ttsPitch===undefined||pet.ttsPitch===null?'':pet.ttsPitch});
-            setPet('setPetTtsVoice',el=>{el.value=pet.ttsVoice||''});
+            setPet('setPetTtsVoice',el=>{
+                const preset=PET_VOICE_PRESETS;
+                const v=pet.ttsVoice||'';
+                el.value=preset.includes(v)?v:'__custom';
+                const custom=document.getElementById('setPetTtsVoiceCustom');
+                if(custom){
+                    const isCustom=!preset.includes(v);
+                    custom.style.display=isCustom?'':'none';
+                    custom.value=isCustom?v:'';
+                }
+                // 选「自定义」时露出输入框（只绑一次）
+                if(!el.dataset.voiceBound){
+                    el.dataset.voiceBound='1';
+                    el.addEventListener('change',()=>{
+                        const box=document.getElementById('setPetTtsVoiceCustom');
+                        if(!box)return;
+                        const on=el.value==='__custom';
+                        box.style.display=on?'':'none';
+                        if(on)box.focus();
+                    });
+                }
+            });
             setPet('setPetWakeWord',el=>{el.value=pet.wakeWord||''});
+            setPet('setPetWakeEnabled',el=>{el.checked=pet.wakeEnabled!==false});
             setPet('setPetWakeAction',el=>{el.value=['panel','voice','line'].includes(pet.wakeAction)?pet.wakeAction:'panel'});
             setPet('setPetTalkRate',el=>{el.value=['quiet','normal','chatty'].includes(pet.talkRate)?pet.talkRate:'normal'});
             setPet('setPetName',el=>{el.value=pet.name||''});
@@ -2638,7 +2662,14 @@
                         talkRate:rate&&rate.value?rate.value:'normal',
                         ttsRate:(()=>{const el=g('setPetTtsRate');const n=el?parseFloat(el.value):NaN;return Number.isFinite(n)?n:null})(),
                         ttsPitch:(()=>{const el=g('setPetTtsPitch');const n=el?parseFloat(el.value):NaN;return Number.isFinite(n)?n:null})(),
-                        ttsVoice:(()=>{const el=g('setPetTtsVoice');return el?(el.value||'').trim():''})(),
+                        ttsVoice:(()=>{
+                            const sel=g('setPetTtsVoice');
+                            const custom=g('setPetTtsVoiceCustom');
+                            const v=sel?sel.value:'';
+                            if(v==='__custom')return custom?(custom.value||'').trim():'';
+                            return v||'';
+                        })(),
+                        wakeEnabled:(g('setPetWakeEnabled')||{}).checked!==false,
                         wakeWord:(()=>{const el=g('setPetWakeWord');return el?(el.value||'').trim():''})(),
                         wakeAction:(()=>{const el=g('setPetWakeAction');return el&&el.value?el.value:'panel'})(),
                         name:nameEl?(nameEl.value||'').trim():'',

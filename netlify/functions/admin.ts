@@ -1467,6 +1467,7 @@ export default async (req: Request) => {
         ttsPitch: 1.1,
         ttsVoice: "",
         wakeWord: "渡鸦",
+        wakeEnabled: true,
         wakeAction: "panel",
         persona: "",
       },
@@ -1638,6 +1639,7 @@ export default async (req: Request) => {
             ttsPitch: clampNum(p.ttsPitch, DEFAULT_SETTINGS.pet.ttsPitch, 0.6, 1.6),
             ttsVoice: String(p.ttsVoice || "").trim().slice(0, 40),
             wakeWord: String(p.wakeWord || DEFAULT_SETTINGS.pet.wakeWord).trim().slice(0, 20),
+            wakeEnabled: p.wakeEnabled !== false,
             wakeAction: ["panel", "voice", "line"].includes(String(p.wakeAction)) ? String(p.wakeAction) : DEFAULT_SETTINGS.pet.wakeAction,
             persona: String(p.persona || "").trim().slice(0, 300),
           }

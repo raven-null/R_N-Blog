@@ -879,6 +879,7 @@
     ttsPitch: 1.1,
     ttsVoice: '',
     wakeWord: '渡鸦',
+    wakeEnabled: true,
     wakeAction: 'panel',
     persona: '',
     loaded: false,
@@ -923,6 +924,7 @@
       mind.state.ttsVoice = CONFIG.ttsVoice || '';
       mind.state.wakeWord = CONFIG.wakeWord || '渡鸦';
       mind.state.wakeAction = CONFIG.wakeAction || 'panel';
+      if (typeof mind.setWakeAllowed === 'function') mind.setWakeAllowed(CONFIG.wakeEnabled !== false);
       // 朗读默认值：只在本机还没选过时应用
       if (CONFIG.tts) {
         let local = null;
@@ -952,6 +954,7 @@
         CONFIG.ttsPitch = Number.isFinite(Number(pet.ttsPitch)) ? Math.min(1.6, Math.max(0.6, Number(pet.ttsPitch))) : 1.1;
         CONFIG.ttsVoice = String(pet.ttsVoice || '').slice(0, 40);
         CONFIG.wakeWord = String(pet.wakeWord || '渡鸦').slice(0, 20);
+        CONFIG.wakeEnabled = pet.wakeEnabled !== false;
         CONFIG.wakeAction = ['panel', 'voice', 'line'].includes(pet.wakeAction) ? pet.wakeAction : 'panel';
         CONFIG.persona = String(pet.persona || '').slice(0, 300);
         applyConfig();

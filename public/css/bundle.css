@@ -14658,11 +14658,62 @@ body.island-mode.nav-dock-open:not(.view-music-active) .now-island {
 }
 
 .now-island.show {
-    width: 340px;
-    padding: 4px 12px 4px 4px;
+    width: 400px;
+    padding: 4px 10px 4px 4px;
     gap: 9px;
     opacity: 1;
     pointer-events: auto;
+}
+
+/* 岛上的控制按钮：上一首 / 播放暂停 / 下一首 */
+.now-island-controls {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    flex: none;
+}
+
+.now-ctl {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.86);
+    cursor: pointer;
+    transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
+}
+
+.now-ctl:hover {
+    background: rgba(255, 255, 255, 0.18);
+    color: #fff;
+}
+
+.now-ctl:active {
+    transform: scale(0.9);
+}
+
+.now-ctl svg {
+    display: block;
+    width: 14px;
+    height: 14px;
+}
+
+/* 暂停时才露出播放三角 */
+.now-ctl .icon-play {
+    display: none;
+}
+
+.now-island.paused .now-ctl .icon-pause {
+    display: none;
+}
+
+.now-island.paused .now-ctl .icon-play {
+    display: block;
 }
 
 /* 音乐视图里自己是全屏播放器，岛让位 */
@@ -14770,8 +14821,18 @@ body.view-music-active .now-island {
     }
 
     .now-island.show {
-        width: min(320px, calc(100vw - 24px));
-        padding: 5px 12px 5px 5px;
+        width: min(360px, calc(100vw - 24px));
+        padding: 5px 8px 5px 5px;
+    }
+
+    .now-ctl {
+        width: 24px;
+        height: 24px;
+    }
+
+    .now-ctl svg {
+        width: 13px;
+        height: 13px;
     }
 
     .now-island-cover { width: 30px; height: 30px; }

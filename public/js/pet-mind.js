@@ -613,7 +613,7 @@
   // ---------- 召唤词（语音唤醒） ----------
   // 常驻识别里匹配关键词；命中后按后台设置唤出对话框 / 直接进实时对话 / 只应一声。
   // 注意：这是"一直听着"的，耗电也涉及隐私，所以默认关闭、15 分钟没被叫到自动关。
-  const WAKE = { enabled: false, hitAt: 0, listenTimer: 0, idleTimer: 0, button: null };
+  const WAKE = { enabled: false, allowed: true, hitAt: 0, listenTimer: 0, idleTimer: 0, button: null };
   const WAKE_ALIASES = ['渡鸦', '渡鸭', '渡亚', '度鸦', '杜鸦', '毒鸦'];
   const WAKE_ACTIONS = ['panel', 'voice', 'line'];
 
@@ -650,11 +650,20 @@
   function updateWakeUI() {
     const btn = WAKE.button || doc.getElementById('petWakeToggle');
     if (!btn) return;
+    // 后台关掉「允许语音召唤」后，这颗 👂 直接不显示
+    btn.style.display = WAKE.allowed ? '' : 'none';
     const word = STATE.wakeWord || '渡鸦';
     btn.classList.toggle('is-on', WAKE.enabled);
     btn.setAttribute('aria-pressed', String(WAKE.enabled));
     btn.title = WAKE.enabled ? '停止召唤词监听（喊「' + word + '」就能叫我）' : '开启召唤词（喊「' + word + '」叫我）';
     btn.setAttribute('aria-label', btn.title);
+  }
+
+  // 由 pet-core 按后台设置调用：站主关掉后访客就看不到这个入口
+  function setWakeAllowed(allowed) {
+    WAKE.allowed = allowed !== false;
+    if (!WAKE.allowed && WAKE.enabled) stopWake(true);
+    updateWakeUI();
   }
 
   function onWakeWord() {
@@ -678,6 +687,10 @@
 
   function startWake() {
     if (WAKE.enabled) return true;
+    if (!WAKE.allowed) {
+      say('站主把语音召唤关掉了', 4000, { log: false });
+      return false;
+    }
     if (!recognition) {
       say('这个浏览器听不见我…换 Chrome / Edge 再说', 5000, { log: false });
       return false;
@@ -1135,6 +1148,7 @@
     startWake,
     stopWake,
     toggleWake,
+    setWakeAllowed,
     matchWake,
     wakeWords,
     isSleeping,

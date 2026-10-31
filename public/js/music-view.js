@@ -351,6 +351,32 @@
     });
   }
 
+  // ---------- 岛上的控制按钮：上一首 / 播放暂停 / 下一首 ----------
+  // 播放器在 iframe 里、是另一个源，只能把指令 postMessage 塞回去，
+  // Folia 侧用 useParentFrameBroadcast 接 folia:control（prev / toggle / next）。
+  var musicFrame = document.getElementById('musicFrame');
+
+  function sendPlayerControl(action) {
+    if (!musicFrame || !musicFrame.contentWindow) return;
+    try {
+      musicFrame.contentWindow.postMessage(
+        { type: 'folia:control', action: action },
+        FOLIA_ORIGIN
+      );
+    } catch (e) { /* iframe 还没挂上，忽略 */ }
+  }
+
+  if (island) {
+    var ctlButtons = island.querySelectorAll('.now-ctl');
+    for (var ci = 0; ci < ctlButtons.length; ci++) {
+      ctlButtons[ci].addEventListener('click', function (e) {
+        // 别冒泡到岛本身——那是「回到播放器」
+        e.stopPropagation();
+        sendPlayerControl(this.getAttribute('data-ctl'));
+      });
+    }
+  }
+
   // ---------- 对外接口 ----------
   window.MusicView = {
     // app.js 每次切到音乐视图时调用

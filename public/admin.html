@@ -1225,6 +1225,9 @@
                                 <label>召唤词（喊这个词叫它出来）</label>
                                 <input type="text" id="setPetWakeWord" placeholder="渡鸦" maxlength="20">
                             </div>
+                            <div class="settings-toggle-list">
+                                <div class="settings-toggle-item"><span>允许语音召唤（👂）</span><label class="switch"><input type="checkbox" id="setPetWakeEnabled" checked><span class="slider"></span></label></div>
+                            </div>
                             <div class="settings-field">
                                 <label>听到召唤词后</label>
                                 <select id="setPetWakeAction">
@@ -1245,8 +1248,20 @@
                                 <input type="number" id="setPetTtsPitch" min="0.6" max="1.6" step="0.05" placeholder="1.1">
                             </div>
                             <div class="settings-field">
-                                <label>音色关键词（留空 = 自动挑中文语音）</label>
-                                <input type="text" id="setPetTtsVoice" placeholder="如 Xiaoxiao / Yaoyao / Yunjian / Google" maxlength="40">
+                                <label>音色（本机没有的会自动退回自动）</label>
+                                <select id="setPetTtsVoice">
+                                    <option value="">自动（挑本机一个中文语音）</option>
+                                    <option value="Xiaoxiao">晓晓 · 女声（Xiaoxiao）</option>
+                                    <option value="Xiaoyi">晓伊 · 女声（Xiaoyi）</option>
+                                    <option value="Yaoyao">瑶瑶 · 女声（Yaoyao）</option>
+                                    <option value="Huihui">慧慧 · 女声（Huihui）</option>
+                                    <option value="Yunxi">云希 · 男声（Yunxi）</option>
+                                    <option value="Yunjian">云健 · 男声（Yunjian）</option>
+                                    <option value="Kangkang">康康 · 男声（Kangkang）</option>
+                                    <option value="Google">Google 普通话</option>
+                                    <option value="__custom">自定义关键词…</option>
+                                </select>
+                                <input type="text" id="setPetTtsVoiceCustom" placeholder="比如 Xiaoxiao / Yaoyao / Yunjian" maxlength="40" style="margin-top:8px;display:none">
                             </div>
                             <div class="settings-tip">对话走上面「AI 助手」的厂商 / 模型 / 密钥（`/api/ai`），这里的 AI 关闭时桌宠也不会回话。<br>朗读用系统自带的语音合成（Chrome / Edge 中文声音最好）；音色取决于访客本机的语音列表，关键词做模糊匹配、匹配不到就退回自动，访客也能在对话面板里自己换。</div>
                         </div>
@@ -1475,7 +1490,7 @@
     </div>
 
         <script src="js/tag-picker.js?v=1.1.2"></script>
-        <script src="js/admin-app.js?v=1.24.0"></script>
+        <script src="js/admin-app.js?v=1.25.0"></script>
 
     <!-- 前台预览抽屉（iframe 内嵌，零跳出） -->
     <style>
