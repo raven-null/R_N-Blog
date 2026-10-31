@@ -34,7 +34,7 @@
     <script src="/js/site-icon.js?v=1.0.1" defer></script>
     
     <!-- 主样式 -->
-    <link rel="stylesheet" href="css/style.css?v=5d33caf4f3">
+    <link rel="stylesheet" href="css/style.css?v=044036301d">
     <link rel="stylesheet" href="css/glass.css?v=f39363ceac">
 
     <!-- 共享胶囊样式：文章正文里的白板嵌入块由白板编辑器渲染
@@ -2309,8 +2309,7 @@
                     <span class="reader-island-meta">
                         <span class="reader-island-title" id="readerIslandTitle">正在播放</span>
                         <span class="reader-island-lyric" id="readerIslandLyric">
-                            <span class="reader-island-lyric-row is-current" id="readerIslandLyricNow"></span>
-                            <span class="reader-island-lyric-row is-next" id="readerIslandLyricNext"></span>
+                            <span class="reader-island-run" id="readerIslandRun"></span>
                         </span>
                     </span>
                     <span class="reader-island-ctls">
@@ -2505,13 +2504,60 @@
 
     var cover = document.getElementById('readerIslandCover');
     var titleEl = document.getElementById('readerIslandTitle');
-    var lyricNowEl = document.getElementById('readerIslandLyricNow');
-    var lyricNextEl = document.getElementById('readerIslandLyricNext');
+    var lyricEl = document.getElementById('readerIslandLyric');
+    var lyricRun = document.getElementById('readerIslandRun');
     var toggleBtn = island.querySelector('[data-ctl="toggle"]');
+
+    var lastLyricText = null;
+    var lastLyricSwapAt = 0;
+    var lyricSwapTimer = 0;
+    var marqueeTimer = 0;
 
     var show = function (on) {
         island.hidden = !on;
         if (sep) sep.hidden = !on;
+    };
+
+    // ---- 跑马灯：文字比容器宽才滚（和首页灵动岛同一个判断与同一套 CSS 变量）----
+    var updateMarquee = function () {
+        if (!lyricRun || !lyricEl) return;
+        lyricRun.classList.remove('is-scrolling');
+        lyricRun.style.removeProperty('--marquee-x');
+        lyricRun.style.removeProperty('--marquee-duration');
+        void lyricRun.offsetWidth;
+        if (lyricEl.clientWidth < 20) return;
+        var overflow = lyricRun.scrollWidth - lyricEl.clientWidth;
+        if (overflow > 6) {
+            var shift = overflow + 12;
+            lyricRun.style.setProperty('--marquee-x', '-' + shift + 'px');
+            lyricRun.style.setProperty('--marquee-duration', Math.max(6, Math.round(shift / 28)) + 's');
+            lyricRun.classList.add('is-scrolling');
+        }
+    };
+
+    var setLyricText = function (text) {
+        if (!lyricRun || lyricRun.textContent === text) return;
+        lyricRun.textContent = text;
+    };
+
+    // 换句先淡出再换字；两句挨得近（<600ms）就不淡出了，免得看着在抽搐
+    var setLyric = function (text) {
+        if (text === lastLyricText) return;
+        var gap = Date.now() - lastLyricSwapAt;
+        lastLyricSwapAt = Date.now();
+        lastLyricText = text;
+        clearTimeout(lyricSwapTimer);
+        if (gap < 600) {
+            setLyricText(text);
+            updateMarquee();
+            return;
+        }
+        lyricEl.classList.add('is-flipping');
+        lyricSwapTimer = setTimeout(function () {
+            setLyricText(text);
+            updateMarquee();
+            lyricEl.classList.remove('is-flipping');
+        }, 140);
     };
 
     var render = function (payload) {
@@ -2523,27 +2569,18 @@
         show(true);
         titleEl.textContent = song.name || '正在播放';
 
-        var nowText = payload.lyric && payload.lyric.text ? String(payload.lyric.text).trim() : '';
-        if (!nowText) nowText = song.artist || '';
-        var nextText = payload.next && payload.next.text ? String(payload.next.text).trim() : '';
-
-        var changed = lyricNowEl.dataset.text !== nowText;
-        lyricNowEl.dataset.text = nowText;
-        lyricNowEl.textContent = nowText;
-        lyricNextEl.textContent = nextText;
-
-        // 换句：当前行从下方滚上来，下一行顺势顶替（和首页卡片的歌词一个意思）
-        if (changed && nowText) {
-            lyricNowEl.classList.remove('is-rolling');
-            void lyricNowEl.offsetWidth;
-            lyricNowEl.classList.add('is-rolling');
-        }
+        var lyricText = payload.lyric && payload.lyric.text ? String(payload.lyric.text).trim() : '';
+        setLyric(lyricText || song.artist || '');
 
         if (cover) {
             if (song.cover) cover.src = song.cover;
             else cover.removeAttribute('src');
         }
         if (toggleBtn) toggleBtn.textContent = payload.playing ? '❚❚' : '▶';
+
+        // 岛刚显示时宽度还没量准，等一拍再判断要不要滚
+        clearTimeout(marqueeTimer);
+        marqueeTimer = setTimeout(updateMarquee, 380);
     };
 
     window.addEventListener('message', function (e) {

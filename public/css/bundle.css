@@ -2917,7 +2917,8 @@ html.reader-serif .article-content {
     display: flex;
     flex-direction: column;
     gap: 2px;
-    min-width: 0;
+    /* 给个下限：短歌名/短歌词时岛不会缩成一条，跑马灯也才有稳定的容器宽度可量 */
+    min-width: 150px;
     flex: 1 1 auto;
 }
 
@@ -2930,50 +2931,50 @@ html.reader-serif .article-content {
     text-overflow: ellipsis;
 }
 
-/* 歌词两行：当前句在上面，下一句淡一点垫在下面；换句时当前行从下方滚上来 */
+/* 歌词单行：和首页灵动岛同一套——文字比容器宽时跑马灯，换句只淡出换字 */
 .reader-island-lyric {
     position: relative;
     display: block;
-    height: 27px;
+    height: 15px;
     overflow: hidden;
     font-size: 12px;
-    line-height: 13.5px;
+    line-height: 15px;
     color: var(--text-muted);
+    transition: opacity 0.16s ease, transform 0.16s ease;
 }
 
-.reader-island-lyric-row {
-    position: absolute;
-    left: 0;
-    right: 0;
+.reader-island-run {
+    display: inline-block;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    transition: opacity 0.35s ease, color 0.35s ease;
+    will-change: transform;
 }
 
-.reader-island-lyric-row.is-current {
-    top: 0;
-    color: var(--text-secondary);
+.reader-island-run.is-scrolling {
+    animation: reader-island-marquee var(--marquee-duration, 10s) linear infinite;
+    animation-delay: 1.4s;
 }
 
-.reader-island-lyric-row.is-next {
-    top: 13.5px;
-    opacity: 0.55;
+/* 换句：先淡出、稍微往下一沉，换完字再淡入（和灵动岛一致的节奏） */
+.reader-island-lyric.is-flipping {
+    opacity: 0;
+    transform: translateY(3px);
 }
 
-.reader-island-lyric-row.is-rolling {
-    animation: readerLyricRoll 0.45s cubic-bezier(0.2, 0.7, 0.3, 1);
-}
-
-@keyframes readerLyricRoll {
-    from {
-        transform: translateY(13.5px);
-        opacity: 0;
+@keyframes reader-island-marquee {
+    0%,
+    12% {
+        transform: translateX(0);
     }
 
-    to {
-        transform: translateY(0);
-        opacity: 1;
+    88%,
+    100% {
+        transform: translateX(var(--marquee-x, -40px));
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .reader-island-run.is-scrolling {
+        animation: none;
     }
 }
 
