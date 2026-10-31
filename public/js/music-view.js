@@ -210,13 +210,22 @@
   var lyricSwapTimer = 0;
 
   // ---------- 岛模式：岛和导航栏互斥 ----------
-  // 有歌在放 → 进入岛模式（导航栏整个收走，只留「圆按钮 + 岛」）；
-  // 点圆按钮 → 导航栏接管，岛让位；再点一次 / 点空白 / Esc → 导航收回，岛回来。
+  // 有歌在放 → 进入岛模式（导航栏整个收走，只留「圆按钮 + 岛」）。
+  // 切换方式以鼠标悬停为准：指到圆按钮上 → 导航栏接管、岛让位；
+  // 离开圆按钮和导航栏 → 延迟一下收回、岛回来。点击/键盘仍保留（触屏与无障碍）。
   var dockOrb = document.getElementById('dockOrb');
   var topBarPillEl = document.getElementById('topBarPill');
 
   function setNavDockOpen(open) {
     document.body.classList.toggle('nav-dock-open', open);
+    // 导航从隐藏变成显示时，滑块要重新量一次位置
+    if (open) {
+      setTimeout(function () {
+        if (window.BlogApp && typeof BlogApp.moveIndicator === 'function') {
+          BlogApp.moveIndicator(BlogApp.currentView);
+        }
+      }, 60);
+    }
   }
 
   function setIslandMode(on) {
@@ -224,20 +233,42 @@
     if (!on) setNavDockOpen(false);
   }
 
+  // ---- 悬停切换 ----
+  var navHoverTimer = 0;
+  var NAV_CLOSE_DELAY = 180;   // 够鼠标从圆按钮挪到导航栏上（中间只隔 8px）
+
+  function openNavByHover() {
+    if (!document.body.classList.contains('island-mode')) return;
+    clearTimeout(navHoverTimer);
+    setNavDockOpen(true);
+  }
+
+  function scheduleNavClose() {
+    if (!document.body.classList.contains('island-mode')) return;
+    clearTimeout(navHoverTimer);
+    navHoverTimer = setTimeout(function () {
+      // 鼠标其实还在圆按钮或导航栏上（比如从圆按钮挪到了导航栏），就别收
+      if (dockOrb && dockOrb.matches(':hover')) return;
+      if (topBarPillEl && topBarPillEl.matches(':hover')) return;
+      setNavDockOpen(false);
+    }, NAV_CLOSE_DELAY);
+  }
+
   if (dockOrb) {
+    dockOrb.addEventListener('mouseenter', openNavByHover);
+    dockOrb.addEventListener('mouseleave', scheduleNavClose);
+    // 点击也切换一次，方便触屏和键盘用户
     dockOrb.addEventListener('click', function (e) {
       e.stopPropagation();
-      var open = !document.body.classList.contains('nav-dock-open');
-      setNavDockOpen(open);
-      // 导航从隐藏变成显示时，滑块要重新量一次位置
-      if (open) {
-        setTimeout(function () {
-          if (window.BlogApp && typeof BlogApp.moveIndicator === 'function') {
-            BlogApp.moveIndicator(BlogApp.currentView);
-          }
-        }, 400);
-      }
+      setNavDockOpen(!document.body.classList.contains('nav-dock-open'));
     });
+  }
+
+  if (topBarPillEl) {
+    topBarPillEl.addEventListener('mouseenter', function () {
+      clearTimeout(navHoverTimer);
+    });
+    topBarPillEl.addEventListener('mouseleave', scheduleNavClose);
   }
 
   // 点导航以外的地方 / 按 Esc：把导航收回去，岛回来
