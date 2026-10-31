@@ -914,9 +914,9 @@
   };
 
   const TALK_RATE = {
-    quiet: [190000, 420000],
-    normal: [70000, 155000],
-    chatty: [35000, 85000],
+    quiet: [120000, 260000],
+    normal: [38000, 88000],
+    chatty: [20000, 45000],
   };
 
   function applyConfig() {

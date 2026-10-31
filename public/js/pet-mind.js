@@ -20,7 +20,7 @@
     ttsRate: 1.05,
     ttsPitch: 1.1,
     ttsVoice: '',
-    autoMs: [70000, 155000],   // 白天主动说话间隔
+    autoMs: [38000, 88000],    // 白天主动说话间隔（调快了）
     nightAutoMs: [150000, 300000], // 夜间：更安静
     minGap: 50000,             // 两次自动说话的最小间隔
     lastAutoAt: 0,
@@ -391,6 +391,11 @@
     if (ctx.lightboxOpen) bits.push('- 图库里正打开一张大图（第 ' + (ctx.photoIndex + 1) + ' 张 / 共 ' + ctx.photoTotal + ' 张）');
     else if (ctx.galleryCount) bits.push('- 图库共 ' + ctx.galleryCount + ' 张照片');
     if (ctx.projectNames && ctx.projectNames.length) bits.push('- 项目列表：' + ctx.projectNames.join(' / '));
+    if (MUSIC.name) {
+      bits.push('- 访客正在听：《' + MUSIC.name + '》'
+        + (MUSIC.artist ? '（' + MUSIC.artist + '）' : '')
+        + (MUSIC.lyric ? '，当前歌词「' + MUSIC.lyric + '」' : ''));
+    }
     bits.push('', '要求：日常聊天简短自然；用户要求解释文字或总结时，给出清晰、有依据的说明，必要时分点，不编造文章中未提供的信息。');
     return bits.join('\n');
   }
@@ -916,6 +921,98 @@
     syncTools();
   }
 
+  // ---------- 音乐感知：Folia 播放器（iframe）通过 postMessage 广播此刻在放什么 ----------
+  const MUSIC = { id: null, name: '', artist: '', lyric: '', playing: false, startedAt: 0, lastLineAt: 0, aiAt: 0 };
+
+  const MUSIC_LINES = [
+    '这首《{name}》，我跟着晃了一下',
+    '听着《{name}》有点走神',
+    '放歌呢？那我不吵你，我就听着',
+    '这段旋律挺抓人的',
+    '鼓点一下一下的，像有人在敲我的壳',
+    '{artist}的歌啊…我记下了',
+  ];
+  const MUSIC_LYRIC_LINES = [
+    '「{lyric}」——这句有点戳',
+    '刚那句「{lyric}」，我品了一下',
+    '「{lyric}」…写的人应该挺难受的吧',
+  ];
+
+  function musicLine() {
+    const withLyric = MUSIC.lyric && Math.random() < 0.45;
+    const pool = withLyric ? MUSIC_LYRIC_LINES : MUSIC_LINES;
+    return pool[Math.floor(Math.random() * pool.length)]
+      .replace(/{name}/g, MUSIC.name)
+      .replace(/{artist}/g, MUSIC.artist || '这位')
+      .replace(/{lyric}/g, MUSIC.lyric.slice(0, 20));
+  }
+
+  function musicCanTalk() {
+    return STATE.enabled && MUSIC.playing && MUSIC.name && !STATE.busy && !isSleeping() && !doc.hidden;
+  }
+
+  function musicComment(force) {
+    if (!musicCanTalk()) return false;
+    if (!force && Date.now() - STATE.lastUserAt < 15000) return false;
+    MUSIC.lastLineAt = Date.now();
+    say(musicLine(), 6500, { log: false });
+    petState('happy', 1800);
+    return true;
+  }
+
+  // 每首歌最多让 AI 感慨一次（带上歌名 / 歌手 / 当前歌词）
+  async function aiMusicThought() {
+    if (!MUSIC.name || STATE.busy || !STATE.enabled || isSleeping()) return;
+    const bits = ['我在陪访客听《' + MUSIC.name + '》'];
+    if (MUSIC.artist) bits.push('歌手是 ' + MUSIC.artist);
+    if (MUSIC.lyric) bits.push('现在这句歌词是「' + MUSIC.lyric + '」');
+    bits.push('用一句很短的话说说你听这首的感受，像自言自语，不超过 30 字，不要客套。');
+    try {
+      const reply = (await askAI(bits.join('，'), null)).trim();
+      if (reply && musicCanTalk()) say(reply.slice(0, 120), 8000, { log: false });
+    } catch (e) { /* 没接上就算了 */ }
+  }
+
+  function initMusic() {
+    if (typeof global.addEventListener !== 'function') return;
+    global.addEventListener('message', (event) => {
+      const data = event.data;
+      if (!data || data.type !== 'folia:now-playing') return;
+      const song = data.song || null;
+      const prevId = MUSIC.id;
+      MUSIC.playing = !!data.playing;
+      if (!song) {
+        MUSIC.id = null;
+        MUSIC.name = '';
+        MUSIC.artist = '';
+        MUSIC.lyric = '';
+        return;
+      }
+      MUSIC.id = song.id || song.name || '';
+      MUSIC.name = String(song.name || '');
+      MUSIC.artist = String(song.artist || '');
+      if (data.lyric && data.lyric.text) MUSIC.lyric = String(data.lyric.text).trim().slice(0, 40);
+      if (MUSIC.id !== prevId) {              // 换歌：重新计时
+        MUSIC.startedAt = Date.now();
+        MUSIC.lastLineAt = 0;
+        MUSIC.aiAt = 0;
+        setTimeout(() => musicComment(true), 2600);
+      }
+    });
+  }
+
+  // 播放中的周期性反应（在 watchView 的定时器里顺手检查）
+  function tickMusic() {
+    if (!musicCanTalk()) return;
+    const now = Date.now();
+    if (!MUSIC.lastLineAt) MUSIC.lastLineAt = now;
+    else if (now - MUSIC.lastLineAt > 150000) musicComment(false);
+    if (!MUSIC.aiAt && MUSIC.startedAt && now - MUSIC.startedAt > 30000) {
+      MUSIC.aiAt = now;
+      aiMusicThought();
+    }
+  }
+
   // ---------- 启动 ----------
   function start() {
     if (STATE.started) return;
@@ -927,6 +1024,7 @@
     initPanel();
     initVoicePicker();
     initVoice();
+    initMusic();
     clearHistory();
     scheduleAuto();
 
@@ -977,6 +1075,7 @@
       } else {
         lastProgress = -1;
       }
+      tickMusic();
     };
     setInterval(watchView, 2000);
     watchView();
@@ -1054,6 +1153,8 @@
     toggleVoiceMode,
     isSleeping,
     get voiceMode() { return voiceMode; },
+    get music() { return MUSIC; },
+    musicComment,
     get listening() { return !!listening; },
     get recognition() { return recognition; },
     state: STATE,
