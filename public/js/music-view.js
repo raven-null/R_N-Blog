@@ -514,11 +514,54 @@
   // 歌词层里的行：只在「窗口内容真的变了」时重画，避免每句都重建 DOM
   var lyricsSignature = '';
 
+  // 兜底：老版本 Folia 只推「当前这一句」，不推前后窗口。那就把从这一刻起收到的每句攒起来
+  // （换歌就清空），也能翻出滚动歌词，只是开头缺进入页面之前的那几句。
+  var lyricHistory = [];
+  var lyricHistorySong = null;
+
+  function accumulateLyric(song, data) {
+    if (!song) {
+      lyricHistory = [];
+      lyricHistorySong = null;
+      return;
+    }
+    if (lyricHistorySong !== song.id) {
+      lyricHistory = [];
+      lyricHistorySong = song.id;
+    }
+    var text = data && data.lyric && data.lyric.text ? String(data.lyric.text).trim() : '';
+    if (!text) return;
+    var translation = data.lyric.translation ? String(data.lyric.translation) : '';
+    var last = lyricHistory[lyricHistory.length - 1];
+    if (last && last.text === text) {
+      if (translation) last.translation = translation;
+      return;
+    }
+    lyricHistory.push({ text: text, translation: translation });
+    if (lyricHistory.length > 16) lyricHistory.shift();
+  }
+
+  // 画歌词：优先用 Folia 推的窗口（完整的前后文），没有就用攒下来的历史
   function renderCardLyrics(data) {
     if (!lyricsTrack) return false;
     var win = data && data.lyricsWindow;
-    var lines = win && Array.isArray(win.lines) ? win.lines : null;
-    if (!lines || !lines.length) {
+    var rows = null;
+    var activeIndex = 0;
+
+    if (win && Array.isArray(win.lines) && win.lines.length) {
+      rows = win.lines.map(function (l) {
+        return {
+          text: l.text == null ? '' : String(l.text),
+          translation: l.translation == null ? '' : String(l.translation)
+        };
+      });
+      activeIndex = Math.max(0, Math.min(Number(win.active) || 0, rows.length - 1));
+    } else if (lyricHistory.length > 1) {
+      rows = lyricHistory.slice();
+      activeIndex = rows.length - 1;
+    }
+
+    if (!rows || !rows.length) {
       if (lyricsSignature !== '') {
         lyricsSignature = '';
         lyricsTrack.innerHTML = '';
@@ -526,27 +569,26 @@
       return false;
     }
 
-    var signature = lines.map(function (l) { return l.index + '|' + l.text; }).join('\u0001') + '#' + win.active;
+    var signature = rows.map(function (r, i) {
+      return i + '|' + r.text + '|' + r.translation;
+    }).join('\u0001') + '#' + activeIndex;
     if (signature === lyricsSignature) return true;
     lyricsSignature = signature;
 
     var html = '';
-    for (var i = 0; i < lines.length; i++) {
-      var line = lines[i];
-      var text = line.text == null ? '' : String(line.text);
-      var trans = line.translation == null ? '' : String(line.translation);
-      var cls = 'hv3-music-lyric-line' + (i === win.active ? ' is-active' : '');
-      html += '<div class="' + cls + '" data-i="' + i + '">' + escapeHtml(text || '·') +
-        (trans ? '<span class="hv3-music-lyric-trans">' + escapeHtml(trans) + '</span>' : '') + '</div>';
+    for (var i = 0; i < rows.length; i++) {
+      var row = rows[i];
+      var cls = 'hv3-music-lyric-line' + (i === activeIndex ? ' is-active' : '');
+      html += '<div class="' + cls + '" data-i="' + i + '">' + escapeHtml(row.text || '·') +
+        (row.translation ? '<span class="hv3-music-lyric-trans">' + escapeHtml(row.translation) + '</span>' : '') + '</div>';
     }
     lyricsTrack.innerHTML = html;
 
-    // 让当前行停在歌词层中间（整首歌词都在一个可滚动的列里，跟着歌往下走）
+    // 让当前行停在歌词层中间
     var activeEl = lyricsTrack.querySelector('.is-active');
     if (activeEl && lyricsBox) {
       var boxHeight = lyricsBox.clientHeight || 0;
-      var target = activeEl.offsetTop - boxHeight / 2 + activeEl.offsetHeight / 2;
-      lyricsBox.scrollTop = Math.max(0, target);
+      lyricsBox.scrollTop = Math.max(0, activeEl.offsetTop - boxHeight / 2 + activeEl.offsetHeight / 2);
     }
     return true;
   }
@@ -573,6 +615,7 @@
     var song = data && data.song;
 
     syncLoopButton(data && data.loopMode);
+    accumulateLyric(song, data);
     var hasLyrics = renderCardLyrics(data);
 
     if (!song) {
