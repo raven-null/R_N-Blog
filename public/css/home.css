@@ -495,15 +495,22 @@ html[data-theme="dark"] .hv3-card {
 }
 
 /* ============================================================
-   02 · 生活切片：8 栏宽的海报块，固定高度、图片 cover 铺满
-   （JS 照样会写 --shot-w / --shot-h，但那套「盒子跟图片比例变大小」
-     的玩法在矩阵里会撑歪整行，所以这里改成铺满容器 + 裁切）
+   02 · 生活切片：8 栏宽的海报块
+   宽度固定吃满 8 栏，**高度跟着图片比例走**，但夹在 240–360px 之间：
+   横图矮一点、竖图高一点，下方的今日拾光 / 显示工具就跟着上下补位，
+   整行高度和左边的文章卡也一起收放（不会留下空档）。
+   --shot-h 由 JS 的 fitShotBoxTo 按图片真实比例算好写进来。
    ============================================================ */
 
 .hv3-shot {
     position: relative;
     width: 100%;
-    height: 260px;
+    /* 高度 = 8 栏宽 ÷ 图片真实比例（--shot-ar 由 fitShotBoxTo 写），
+       再夹在 240–360px 之间：横图偏矮、竖图偏高，超出的部分 cover 裁掉 */
+    aspect-ratio: var(--shot-ar, 1.6);
+    height: auto;
+    min-height: 240px;
+    max-height: 360px;
     margin-inline: 0;
     border-radius: 18px;
     overflow: hidden;
@@ -1173,7 +1180,11 @@ html[data-theme="dark"] .hv3-shot {
 
     .hv3-hero-right { justify-content: space-between; }
 
-    .hv3-shot { height: 240px; }
+    /* 窄屏同样跟着图片比例浮动，只是区间收一档 */
+    .hv3-shot {
+        min-height: 200px;
+        max-height: 300px;
+    }
 
     /* 单列时工具卡压成一行：标题在左、三个圆钮在右 */
     .hv3-tools {
