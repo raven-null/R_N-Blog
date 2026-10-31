@@ -2881,10 +2881,15 @@ html.reader-serif .article-content {
     font-family: 'Courier New', monospace;
 }
 
-/* 阅读工具栏里的「正在播放」：首页的播放器把状态同步到这里（见 article.html 底部脚本） */
+/* 阅读工具栏里的「正在播放」：首页的播放器把状态同步到这里（见 article.html 底部脚本）。
+   贴在工具栏最右边，前面那条分隔线一起推过去。 */
+#readerIslandSep {
+    margin-left: auto;
+}
+
 .reader-island {
     gap: 8px;
-    flex: 1 1 240px;
+    flex: 0 1 auto;
     max-width: 440px;
     min-width: 0;
     padding-left: 2px;
@@ -13576,11 +13581,21 @@ html[data-theme="dark"] .hv3-card {
 }
 
 /* ============================================================
-   04 · 创造与探索：两列小卡（封面 + 名称 + 域名）
+   第三行：今天卡（左日历 / 右任务+日记）在上，项目横向条在下
+   （项目不再挤在右边一列，改成整宽的横向条）
+   ============================================================ */
+.hv3-row-bottom {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    min-width: 0;
+}
+
+/* ============================================================
+   04 · 创造与探索：横向一条（封面 + 名称 + 域名）
    ============================================================ */
 .hv3-projects {
-    /* 第三行右侧：卡内两列小卡，高度跟着左侧「今天」卡走 */
-    min-height: 240px;
+    min-height: 0;
     min-width: 0;
 }
 
@@ -13624,7 +13639,8 @@ html[data-theme="dark"] .hv3-card {
 }
 
 .hv3-project {
-    flex: 0 0 clamp(170px, 22%, 236px);
+    flex: 0 0 clamp(170px, 16%, 236px);
+    height: 208px;
     display: flex;
     flex-direction: column;
     gap: 3px;
@@ -13981,12 +13997,25 @@ html[data-theme="dark"] .hv3-today-panel {
     grid-template-columns: minmax(0, 1fr);
 }
 
-/* 当天任务：条数多了自己滚 */
+/* 当天任务在上：吃掉右栏剩下的高度，条数多了自己滚 */
 .hv3-today-tasks {
-    flex: 0 1 auto;
+    /* style.css 里有一条 .view-home .home-life { order: 9 }（旧仪表盘的遗留），
+       会把任务排到日记后面去，这里按新布局拉回第一位 */
+    order: 0;
+    flex: 1 1 auto;
     min-height: 0;
     overflow-y: auto;
     overscroll-behavior: contain;
+}
+
+/* 任务项不许被压扁（否则条数多了只会变矮，不会滚动） */
+.hv3-today-tasks .life-task-list {
+    max-height: none;
+    overflow-y: visible;
+}
+
+.hv3-today-tasks .life-task {
+    flex: none;
 }
 
 .hv3-today-tasks::-webkit-scrollbar {
@@ -13997,11 +14026,16 @@ html[data-theme="dark"] .hv3-today-panel {
     scrollbar-width: none;
 }
 
-/* 日记：吃掉右栏剩下的高度，内容多了在内部滚 */
+/* 日记在下：默认收起只留一行标题；展开时占掉半栏，把上面的任务压小
+   （任务被压后超出的部分隐藏，在内部滚动） */
 .hv3-journals {
-    flex: 1 1 auto;
+    flex: 0 0 auto;
     min-height: 0;
     overflow: hidden;
+}
+
+.hv3-journals:not(.is-collapsed) {
+    flex: 0 0 52%;
 }
 
 .hv3-journals .hv3-stack {

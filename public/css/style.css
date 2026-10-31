@@ -2878,10 +2878,15 @@ html.reader-serif .article-content {
     font-family: 'Courier New', monospace;
 }
 
-/* 阅读工具栏里的「正在播放」：首页的播放器把状态同步到这里（见 article.html 底部脚本） */
+/* 阅读工具栏里的「正在播放」：首页的播放器把状态同步到这里（见 article.html 底部脚本）。
+   贴在工具栏最右边，前面那条分隔线一起推过去。 */
+#readerIslandSep {
+    margin-left: auto;
+}
+
 .reader-island {
     gap: 8px;
-    flex: 1 1 240px;
+    flex: 0 1 auto;
     max-width: 440px;
     min-width: 0;
     padding-left: 2px;
