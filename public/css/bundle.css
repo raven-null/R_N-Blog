@@ -14870,8 +14870,15 @@ body.view-music-active .now-island {
     }
 }
 
+/* 当前句：底层暗字、上层强调色字、下面小字翻译，三者用 grid 叠在同一个格子里，
+   两层歌词必然像素级重合（之前用 absolute 铺满整行，会被翻译行挤得错开成重影）。 */
 .hv3-music-lyric-line.is-current {
-    position: relative;
+    display: grid;
+    grid-template-rows: auto auto;
+    grid-template-columns: 100%;
+    align-content: center;
+    justify-items: center;
+    row-gap: 2px;
     font-size: 21px;
     font-weight: 650;
     letter-spacing: 0.08em;
@@ -14882,21 +14889,28 @@ body.view-music-active .now-island {
 }
 
 /* 当前句两层：底层暗字 + 上层强调色字，按唱到的比例从上层的左边裁出来 */
+.hv3-music-lyric-base,
+.hv3-music-lyric-fill {
+    grid-row: 1;
+    grid-column: 1;
+}
+
 .hv3-music-lyric-base {
     color: var(--text-muted);
     opacity: 0.6;
 }
 
 .hv3-music-lyric-fill {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     color: var(--accent, var(--text));
     clip-path: inset(0 calc(100% - var(--lyric-progress, 100%)) 0 0);
     transition: clip-path 0.25s linear;
     pointer-events: none;
+}
+
+/* 翻译单独占下面那一行，不参与两层的叠放 */
+.hv3-music-lyric-line.is-current .hv3-music-lyric-trans {
+    grid-row: 2;
+    grid-column: 1;
 }
 
 /* 入场时先滑上来，落定后再接呼吸；两个动画叠在一起，不用等 JS 来摘类 */
