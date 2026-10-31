@@ -1465,6 +1465,7 @@ export default async (req: Request) => {
         tts: false,
         ttsRate: 1.05,
         ttsPitch: 1.1,
+        ttsVoice: "",
         persona: "",
       },
     }
@@ -1633,6 +1634,7 @@ export default async (req: Request) => {
             tts: p.tts === true,
             ttsRate: clampNum(p.ttsRate, DEFAULT_SETTINGS.pet.ttsRate, 0.6, 1.6),
             ttsPitch: clampNum(p.ttsPitch, DEFAULT_SETTINGS.pet.ttsPitch, 0.6, 1.6),
+            ttsVoice: String(p.ttsVoice || "").trim().slice(0, 40),
             persona: String(p.persona || "").trim().slice(0, 300),
           }
         })(),

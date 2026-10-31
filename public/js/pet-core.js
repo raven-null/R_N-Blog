@@ -700,6 +700,7 @@
     tts: false,
     ttsRate: 1.05,
     ttsPitch: 1.1,
+    ttsVoice: '',
     persona: '',
     loaded: false,
   };
@@ -740,6 +741,7 @@
       // 朗读参数（语速 / 音调）
       if (typeof CONFIG.ttsRate === 'number') mind.state.ttsRate = CONFIG.ttsRate;
       if (typeof CONFIG.ttsPitch === 'number') mind.state.ttsPitch = CONFIG.ttsPitch;
+      mind.state.ttsVoice = CONFIG.ttsVoice || '';
       // 朗读默认值：只在本机还没选过时应用
       if (CONFIG.tts) {
         let local = null;
@@ -767,6 +769,7 @@
         CONFIG.tts = pet.tts === true;
         CONFIG.ttsRate = Number.isFinite(Number(pet.ttsRate)) ? Math.min(1.6, Math.max(0.6, Number(pet.ttsRate))) : 1.05;
         CONFIG.ttsPitch = Number.isFinite(Number(pet.ttsPitch)) ? Math.min(1.6, Math.max(0.6, Number(pet.ttsPitch))) : 1.1;
+        CONFIG.ttsVoice = String(pet.ttsVoice || '').slice(0, 40);
         CONFIG.persona = String(pet.persona || '').slice(0, 300);
         applyConfig();
       })

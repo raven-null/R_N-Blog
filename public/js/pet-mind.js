@@ -19,6 +19,7 @@
     persona: '',
     ttsRate: 1.05,
     ttsPitch: 1.1,
+    ttsVoice: '',
     autoMs: [70000, 155000],   // 白天主动说话间隔
     nightAutoMs: [150000, 300000], // 夜间：更安静
     minGap: 50000,             // 两次自动说话的最小间隔
@@ -321,6 +322,31 @@
   }
 
   // ---------- 语音朗读 ----------
+  // 音色是本机资源：优先访客在面板里选的，其次后台设置的关键词，最后自动挑中文语音
+  function voiceList() {
+    const synth = global.speechSynthesis;
+    if (!synth || typeof synth.getVoices !== 'function') return [];
+    const all = synth.getVoices() || [];
+    const zh = all.filter((v) => /^zh/i.test(v.lang || ''));
+    return zh.length ? zh : all;
+  }
+
+  function savedVoice() {
+    try { return ls ? ls.getItem('pet-tts-voice') : null; } catch (e) { return null; }
+  }
+
+  function pickVoice() {
+    const list = voiceList();
+    if (!list.length) return null;
+    const saved = savedVoice();
+    const want = (saved && saved !== 'auto' ? saved : (STATE.ttsVoice || '')).trim().toLowerCase();
+    if (want) {
+      const hit = list.find((v) => (v.name || '').toLowerCase().includes(want));
+      if (hit) return hit;
+    }
+    return list.find((v) => v.default) || list[0] || null;
+  }
+
   function speak(text) {
     if (!global.speechSynthesis || !text) return;
     try {
@@ -330,6 +356,8 @@
       const pitch = Number(STATE.ttsPitch);
       u.rate = Number.isFinite(rate) ? Math.min(1.6, Math.max(0.6, rate)) : 1.05;
       u.pitch = Number.isFinite(pitch) ? Math.min(1.6, Math.max(0.6, pitch)) : 1.1;
+      const voice = pickVoice();
+      if (voice) u.voice = voice;
       global.speechSynthesis.cancel();
       global.speechSynthesis.speak(u);
     } catch (e) { /* 忽略 */ }
@@ -634,6 +662,65 @@
       tts.textContent = STATE.ttsOn ? '🔊' : '🔈';
       tts.title = STATE.ttsOn ? '关掉朗读' : '朗读回复';
     }
+    // 朗读开着才显示音色选择
+    const row = doc.getElementById('petVoiceRow');
+    if (row) {
+      row.hidden = !STATE.ttsOn;
+      if (STATE.ttsOn && doc.getElementById('petVoiceSelect')) {
+        fillVoiceOptions(doc.getElementById('petVoiceSelect'));
+      }
+    }
+  }
+
+  // 面板里的音色下拉（只有朗读打开时才出现）
+  function fillVoiceOptions(sel) {
+    if (!sel || typeof doc.createElement !== 'function') return;
+    const list = voiceList();
+    const current = pickVoice();
+    const saved = savedVoice();
+    sel.textContent = '';
+    const auto = doc.createElement('option');
+    auto.value = 'auto';
+    auto.textContent = current ? '自动（' + current.name + '）' : '自动';
+    sel.appendChild(auto);
+    list.forEach((v) => {
+      const opt = doc.createElement('option');
+      opt.value = v.name;
+      opt.textContent = v.name + (v.lang ? ' · ' + v.lang : '');
+      sel.appendChild(opt);
+    });
+    sel.value = saved && saved !== 'auto' ? saved : 'auto';
+    if (!sel.value) sel.value = 'auto';
+  }
+
+  function initVoicePicker() {
+    const form = doc.getElementById('petChatForm');
+    if (!form || !form.parentNode || doc.getElementById('petVoiceRow')) return;
+    if (typeof doc.createElement !== 'function') return;
+    const row = doc.createElement('div');
+    row.className = 'pet-voice-row';
+    row.id = 'petVoiceRow';
+    row.hidden = true;
+    const label = doc.createElement('label');
+    label.textContent = '音色';
+    label.setAttribute('for', 'petVoiceSelect');
+    const sel = doc.createElement('select');
+    sel.id = 'petVoiceSelect';
+    row.appendChild(label);
+    row.appendChild(sel);
+    form.parentNode.insertBefore(row, form);
+    sel.addEventListener('change', () => {
+      try { if (ls) ls.setItem('pet-tts-voice', sel.value || 'auto'); } catch (e) { /* 忽略 */ }
+      const picked = pickVoice();
+      if (picked) speak('这样说话，' + (STATE.name || '我') + '在这儿');
+      else say('这台机器没装语音包…换 Chrome / Edge 试试', 4200, { log: false });
+    });
+    // 系统语音列表是异步的
+    const synth = global.speechSynthesis;
+    if (synth && typeof synth.addEventListener === 'function') {
+      synth.addEventListener('voiceschanged', () => fillVoiceOptions(sel));
+    }
+    fillVoiceOptions(sel);
   }
 
   function openPanel() {
@@ -719,6 +806,7 @@
       STATE.ttsOn = ls.getItem('pet-tts') === 'true';
     } catch (_) { /* 忽略 */ }
     initPanel();
+    initVoicePicker();
     initVoice();
     restoreHistory();
     scheduleAuto();

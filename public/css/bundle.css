@@ -7490,6 +7490,42 @@ body.canvas-on .reading-progress {
     font-size: 16px;
 }
 
+/* 朗读音色选择（只有朗读开着时才出现） */
+.pet-voice-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding-top: 6px;
+}
+
+.pet-voice-row[hidden] {
+    display: none;
+}
+
+.pet-voice-row label {
+    flex: none;
+    font-size: 11.5px;
+    color: var(--text-muted);
+}
+
+.pet-voice-row select {
+    flex: 1;
+    min-width: 0;
+    height: 26px;
+    padding: 0 8px;
+    font-family: inherit;
+    font-size: 11.5px;
+    color: var(--text);
+    background: var(--surface-2, rgba(0, 0, 0, 0.04));
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    outline: none;
+}
+
+.pet-voice-row select:focus {
+    border-color: var(--accent);
+}
+
 .pet-chat-log {
     display: flex;
     flex-direction: column;

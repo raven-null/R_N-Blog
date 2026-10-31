@@ -1238,7 +1238,11 @@
                                 <label>音调（0.6 - 1.6）</label>
                                 <input type="number" id="setPetTtsPitch" min="0.6" max="1.6" step="0.05" placeholder="1.1">
                             </div>
-                            <div class="settings-tip">用系统自带的语音合成（Chrome / Edge 中文声音最好）。访客自己点过面板上的 🔊 / 🔈 就以他的选择为准；这里只是默认值。</div>
+                            <div class="settings-field">
+                                <label>音色关键词（留空 = 自动挑中文语音）</label>
+                                <input type="text" id="setPetTtsVoice" placeholder="如 Xiaoxiao / Yaoyao / Yunjian / Google" maxlength="40">
+                            </div>
+                            <div class="settings-tip">用系统自带的语音合成（Chrome / Edge 中文声音最好）。音色取决于访客本机的语音列表，这里填的关键词会做模糊匹配，匹配不到就退回自动；访客也能在对话面板里自己换。他点过面板上的 🔊 / 🔈 就以他的选择为准。</div>
                         </div>
                         </div>
 
@@ -1465,7 +1469,7 @@
     </div>
 
         <script src="js/tag-picker.js?v=1.1.2"></script>
-        <script src="js/admin-app.js?v=1.22.0"></script>
+        <script src="js/admin-app.js?v=1.23.0"></script>
 
     <!-- 前台预览抽屉（iframe 内嵌，零跳出） -->
     <style>
