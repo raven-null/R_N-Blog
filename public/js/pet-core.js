@@ -709,7 +709,8 @@
     const dirY = cy < vh / 2 ? 1 : -1;
     const base = Math.atan2(dirY, dirX);
     const dist = 66;
-    const spread = [-0.95, -0.05, 0.85];
+    // 两个圆（打开对话框 / 睡觉）对称铺在两侧；实时对话靠长按桌宠，不占圆位
+    const spread = [-0.62, 0.62];
     const half = 16;          // 按钮半宽（32px）
     const edge = 10;          // 与视口的最小距离
     const items = [...host.children];
@@ -774,12 +775,6 @@
     const NS = 'http://www.w3.org/2000/svg';
     const ICONS = {
       chat: ['M4.5 5.5h15v9.5h-9.6l-5.4 4.2z'],
-      // 麦克风：实时对话（不用开对话框，直接说）
-      voice: [
-        'M12 4.2a2.4 2.4 0 0 1 2.4 2.4v4.8a2.4 2.4 0 0 1-4.8 0V6.6A2.4 2.4 0 0 1 12 4.2z',
-        'M6.8 11.4a5.2 5.2 0 0 0 10.4 0',
-        'M12 16.7v3',
-      ],
       sleep: ['M20 14.4A8.4 8.4 0 0 1 9.6 4a7 7 0 1 0 10.4 10.4z'],
     };
     const makeIcon = (key) => {
@@ -796,7 +791,6 @@
 
     const actions = [
       { key: 'chat', label: '打开对话框', run: () => openChat() },
-      { key: 'voice', label: '实时对话（直接说话，不弹对话框）', run: () => global.PetMind?.toggleVoiceMode?.() },
       { key: 'sleep', label: '睡觉 / 唤醒', run: () => toggleSleep() },
     ];
     actions.forEach((a) => {
