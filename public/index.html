@@ -15,7 +15,7 @@
     <meta property="og:image" content="https://ravennull.work/images/Default/web-logo.webp">
     <meta property="og:locale" content="zh_CN">
     <meta name="twitter:card" content="summary">
-    <link rel="stylesheet" href="css/bundle.css?v=204517158d">
+    <link rel="stylesheet" href="css/bundle.css?v=d64ae3ae1d">
     <title>渡鸦 NULL · 日光与暮色之间</title>
     <link rel="icon" id="siteFavicon" href="/images/Default/web-logo.webp" type="image/webp">
     <link rel="apple-touch-icon" href="/images/Default/web-logo.webp">
@@ -443,13 +443,8 @@
 
                     <!-- ③ 第三行 -->
                     <div class="hv3-row-bottom">
-                        <!-- 「今天」卡：日历 + 任务 + 日记合在一张；点日期就能写 -->
+                        <!-- 「今天」卡：左边日历，右边默认项目栏（点日期换成任务+日记） -->
                         <div class="hv3-box hv3-today-panel" id="hv3TodayPanel">
-                            <div class="hv3-today-bar">
-                                <span class="hv3-today-date" id="todayDateLabel"></span>
-                                <div class="hv3-today-acts"></div>
-                            </div>
-
                             <!-- 左边日历，右边任务 + 日记；右栏高度不会超过日历 -->
                             <div class="hv3-today-main">
                                 <div class="hv3-cal-block">
@@ -653,7 +648,7 @@
     <!-- 桌宠动效引擎（spring-driven character，见 public/vendor/grok/README.md） -->
 
     <!-- /js/* 是 immutable 长缓存：app.js 一改就必须换 ?v=，否则线上一直吃旧文件 -->
-    <script src="js/app.js?v=20261106a" defer></script>
+    <script src="js/app.js?v=20261106e" defer></script>
     <script src="js/animations.js?v=3.14.0" defer></script>
 
     <script>

@@ -13724,6 +13724,12 @@ html[data-theme="dark"] .hv3-card {
     min-width: 0;
 }
 
+/* 简报占用日历右边时，项目栏会被挪到日历卡下面 —— 那里没有行高可借，给个高度下限 */
+.hv3-row-bottom > .hv3-projects {
+    min-height: 200px;
+    flex: 0 0 auto;
+}
+
 .hv3-stack {
     position: relative;
     flex: 1 1 auto;
@@ -13745,6 +13751,15 @@ html[data-theme="dark"] .hv3-card {
     scrollbar-width: none !important;
     -ms-overflow-style: none !important;
     cursor: grab;
+    /* 拖动时别选中文字（那层蓝色就是文本选区） */
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+/* 封面图也别被浏览器拖成幽灵图 */
+.hv3-project-grid img {
+    -webkit-user-drag: none;
+    user-select: none;
 }
 
 .hv3-project-grid::-webkit-scrollbar {

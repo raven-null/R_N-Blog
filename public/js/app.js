@@ -3296,24 +3296,37 @@ const BlogApp = {
          就把简报挪进来，让它在日历旁边铺开 —— 比缩成一条缝好看。 */
     syncTodaySideSlot() {
         const side = document.querySelector('.hv3-today-side');
+        const row = document.querySelector('.hv3-row-bottom');
         const proj = document.getElementById('hv3ProjectsBox');
         const day = document.getElementById('hv3DayPane');
         const news = document.querySelector('.hv3-news');
-        if (!side || !proj || !day || !news) return;
+        if (!side || !row || !proj || !day || !news) return;
         if (!day.hidden) return;   // 点了日期，交给任务/日记
 
-        const h = news.getBoundingClientRect().height;
-        const cramped = h > 0 && h < 140;
+        // 判断依据用「第二行右列的高度」而不是简报自己的高度：
+        // 简报一旦搬进日历右边，高度会变，拿它判断会来回抽搐。
+        const col = document.querySelector('.hv3-row-main .hv3-col-right');
+        const colH = col ? col.getBoundingClientRect().height : 0;
+        const cramped = colH > 0 && colH < 420;
         if (this._crampedNews === cramped) return;   // 状态没变就别反复搬 DOM
         this._crampedNews = cramped;
 
-        proj.hidden = cramped;
         if (cramped) {
+            // 右列太矮，简报会被挤成一条缝 → 挪到日历右边铺开；项目栏让到日历卡下面，别凭空消失
             if (!this._newsHome) this._newsHome = { parent: news.parentElement, next: news.nextSibling };
             side.appendChild(news);
-        } else if (this._newsHome && news.parentElement === side) {
-            this._newsHome.parent.insertBefore(news, this._newsHome.next);
+            proj.hidden = false;
+            if (proj.parentElement !== row) row.appendChild(proj);
+        } else {
+            // 右列高度够 → 简报回原位；项目栏回到日历右边
+            if (proj.parentElement !== side) side.insertBefore(proj, side.firstChild);
+            proj.hidden = false;
+            if (this._newsHome && news.parentElement === side) {
+                this._newsHome.parent.insertBefore(news, this._newsHome.next);
+            }
         }
+        // 右栏高度跟着重算（搬进/搬出简报后都要）
+        this.syncTodaySideHeight();
     },
 
     // 更新日历选中态
@@ -5003,6 +5016,8 @@ const BlogApp = {
 
         grid.addEventListener('pointerdown', (e) => {
             if (e.pointerType !== 'mouse' || e.button !== 0) return;
+            // 别让浏览器顺手把卡片文字选中、把封面图拖出个幽灵图（拖动时那层蓝底就是选框）
+            e.preventDefault();
             dragging = true;
             moved = false;
             startX = e.clientX;
