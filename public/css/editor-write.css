@@ -1881,6 +1881,12 @@ html body .vditor-wysiwyg__block[data-type="code-block"] .ee-codeedit-btn {
 .ee-picker-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    /* 行高必须由格子自己撑开：格子高度来自 aspect-ratio，不写 max-content 时
+       grid 行按「边框高度」（2px）计算，图库图片一多（行数超过弹窗 80vh）整片格子
+       就会压成细条互相重叠 —— 图库 400+ 张时必现。 */
+    grid-auto-rows: max-content;
+    /* 行数少时不要被 stretch 拉开间距 */
+    align-content: start;
     gap: 10px;
     padding: 14px;
     overflow-y: auto;
