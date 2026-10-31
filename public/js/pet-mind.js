@@ -397,7 +397,32 @@
     waiters.forEach((fn) => { try { fn(); } catch (e) { /* 忽略 */ } });
     // 上一轮按住说话正在等朗读：被打断就直接收工
     if (was && pttBusy) endVoiceMode();
+    duckMusic(false);          // 朗读被打断，音乐该恢复了
     return was;
+  }
+
+  // ---------- 朗读时压低音乐 ----------
+  // 音乐在跨域 iframe 里，父页面改不了它的音量；Folia 只接了 folia:control（prev/toggle/next）。
+  // 所以朗读期间先把它暂停，说完再继续（只在"确实在播"时暂停，且只恢复我们自己暂停的那次）。
+  let musicDucked = false;
+
+  function duckMusic(on) {
+    const frame = doc.getElementById('musicFrame');
+    if (!frame || !frame.contentWindow) return false;
+    if (on) {
+      if (musicDucked || !MUSIC.playing || MUSIC.loading) return false;
+      musicDucked = true;
+    } else {
+      if (!musicDucked) return false;
+      musicDucked = false;
+    }
+    try {
+      frame.contentWindow.postMessage({ type: 'folia:control', action: 'toggle' }, '*');
+      return true;
+    } catch (e) {
+      musicDucked = false;
+      return false;
+    }
   }
 
   function speak(text) {
@@ -411,6 +436,9 @@
       u.pitch = Number.isFinite(pitch) ? Math.min(1.6, Math.max(0.6, pitch)) : 1.1;
       const voice = pickVoice();
       if (voice) u.voice = voice;
+      duckMusic(true);                       // 先让音乐避一避
+      u.onend = () => duckMusic(false);
+      u.onerror = () => duckMusic(false);
       global.speechSynthesis.cancel();
       global.speechSynthesis.speak(u);
     } catch (e) { /* 忽略 */ }
@@ -971,7 +999,7 @@
   }
 
   // ---------- 音乐感知：Folia 播放器（iframe）通过 postMessage 广播此刻在放什么 ----------
-  const MUSIC = { id: null, name: '', artist: '', lyric: '', playing: false, startedAt: 0, lastLineAt: 0, aiAt: 0 };
+  const MUSIC = { id: null, name: '', artist: '', lyric: '', playing: false, loading: false, startedAt: 0, lastLineAt: 0, aiAt: 0 };
 
   const MUSIC_LINES = [
     '这首《{name}》，我跟着晃了一下',
@@ -1030,6 +1058,7 @@
       const song = data.song || null;
       const prevId = MUSIC.id;
       MUSIC.playing = !!data.playing;
+      MUSIC.loading = !!data.loading;
       if (!song) {
         MUSIC.id = null;
         MUSIC.name = '';
