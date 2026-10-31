@@ -512,6 +512,25 @@ body.view-music-active .now-island {
     opacity: 0.38;
 }
 
+/* 唱完的那一句：从当前句的位置往上飘、散开一点，落到「上一句」该在的地方 */
+.hv3-music-lyric-line.is-prev.is-ghost {
+    animation: hv3LyricGhost 0.62s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+@keyframes hv3LyricGhost {
+    from {
+        transform: translateY(16px) scale(1.04);
+        opacity: 0;
+        filter: blur(3px);
+    }
+
+    to {
+        transform: translateY(-5px) scale(0.92);
+        opacity: 0.38;
+        filter: blur(0);
+    }
+}
+
 .hv3-music-lyric-line.is-current {
     position: relative;
     font-size: 21px;
@@ -549,6 +568,25 @@ body.view-music-active .now-island {
 .hv3-music-lyric-line.is-next {
     transform: translateY(5px) scale(0.96);
     opacity: 0.42;
+}
+
+/* 下一句：从更下面带一点模糊浮上来，落定在「下一句」的位置 */
+.hv3-music-lyric-line.is-next.is-ghost {
+    animation: hv3LyricGhostIn 0.6s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+@keyframes hv3LyricGhostIn {
+    from {
+        transform: translateY(42px) scale(0.9);
+        opacity: 0;
+        filter: blur(3px);
+    }
+
+    to {
+        transform: translateY(5px) scale(0.96);
+        opacity: 0.42;
+        filter: blur(0);
+    }
 }
 
 /* 当前句的呼吸：极轻的亮度与缩放起伏，像在跟着唱 */

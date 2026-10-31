@@ -588,6 +588,14 @@
     lyricCurrentEl.style.setProperty('--lyric-progress', (ratio * 100).toFixed(1) + '%');
   }
 
+  // 上下两句换内容时重放一次"飘"的动画（同一个类要摘掉再加重启，否则不会重播）
+  function replayGhost(el) {
+    if (!el) return;
+    el.classList.remove('is-ghost');
+    void el.offsetWidth;
+    el.classList.add('is-ghost');
+  }
+
   function renderCardLyrics(data) {
     if (!lyricCurrentEl) return false;
     var win = data && data.lyricsWindow;
@@ -627,8 +635,12 @@
     lyricTiming = { startMs: startMs, endMs: endMs };
 
     var changed = setCurrentLyric(currentText, translation);
-    setLyricLine(lyricPrevEl, prevText, '');
-    setLyricLine(lyricNextEl, nextText, '');
+    var prevChanged = setLyricLine(lyricPrevEl, prevText, '');
+    var nextChanged = setLyricLine(lyricNextEl, nextText, '');
+
+    // 换句时上下两句各飘一下：唱完的那句从下方散上来，下一句从更下方浮起来
+    if (prevChanged) replayGhost(lyricPrevEl);
+    if (nextChanged) replayGhost(lyricNextEl);
 
     // 没拿到这句的时间范围时，直接当作「整句已唱完」，不做填充动画
     syncLyricProgress(progressState.positionMs);
