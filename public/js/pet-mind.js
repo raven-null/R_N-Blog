@@ -228,7 +228,6 @@
   function logEl() { return doc.getElementById('petChatLog'); }
 
   function logPush(role, text) {
-    if (!logEl()) return;
     appendMsg(role, text);
     if (role === 'user' || role === 'assistant') {
       STATE.history.push({ role, content: text });
@@ -237,7 +236,7 @@
     }
   }
 
-  // 只写面板、不进 AI 上下文（用于开场白之类）
+  // 只写面板、不进 AI 上下文（用于开场白之类）；没有消息区时什么都不做
   function appendMsg(role, text) {
     const box = logEl();
     if (!box) return;
@@ -261,19 +260,19 @@
     return item;
   }
 
+  // 注意：历史记录和 DOM 解耦 —— 极简输入条没有消息区，但多轮上下文仍要保留
   function logStreamEnd(text) {
     const item = STATE.streamEl;
     STATE.streamEl = null;
-    if (!item) return;
-    item.classList.remove('is-streaming');
+    if (item) item.classList.remove('is-streaming');
     if (text) {
-      item.textContent = text;
+      if (item) item.textContent = text;
       STATE.history.push({ role: 'assistant', content: text });
       if (STATE.history.length > 16) STATE.history = STATE.history.slice(-16);
       saveHistory();
       const box = logEl();
       if (box) box.scrollTop = box.scrollHeight;
-    } else {
+    } else if (item) {
       item.remove();
     }
   }
@@ -893,6 +892,8 @@
   function initVoicePicker() {
     const form = doc.getElementById('petChatForm');
     if (!form || !form.parentNode || doc.getElementById('petVoiceRow')) return;
+    // 极简输入条里没有音色下拉的位置，只在带标题栏的完整面板里才插入
+    if (!doc.querySelector('.pet-chat-head')) return;
     if (typeof doc.createElement !== 'function') return;
     const row = doc.createElement('div');
     row.className = 'pet-voice-row';

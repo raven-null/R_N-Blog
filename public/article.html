@@ -34,7 +34,7 @@
     <script src="/js/site-icon.js?v=1.0.0" defer></script>
     
     <!-- 主样式 -->
-    <link rel="stylesheet" href="css/style.css?v=b9e5f887ad">
+    <link rel="stylesheet" href="css/style.css?v=7fa9185327">
     <link rel="stylesheet" href="css/glass.css?v=f39363ceac">
 
     <!-- 共享胶囊样式：文章正文里的白板嵌入块由白板编辑器渲染
@@ -2389,28 +2389,16 @@
             <span class="deskpet-zzz" aria-hidden="true"><i>z</i><i>z</i><i>z</i></span>
         </button>
 
-        <div class="pet-chat" id="petChat" role="dialog" aria-label="和渡鸦聊天">
-            <div class="pet-chat-head">
-                <span class="pet-chat-title">渡鸦</span>
-                <div class="pet-chat-tools">
-                    <button type="button" class="pet-tool" id="petTtsToggle" title="朗读回复" aria-pressed="false">
-                        <svg class="pet-ico-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 9.5h3.4l4.6-4v13l-4.6-4H4.5z"/><path d="M15.4 9.2a4 4 0 0 1 0 5.6"/><path d="M17.9 6.6a7.4 7.4 0 0 1 0 10.8"/></svg>
-                        <svg class="pet-ico-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 9.5h3.4l4.6-4v13l-4.6-4H4.5z"/><path d="M4 20L20 4"/></svg>
-                    </button>
-                    <button type="button" class="pet-tool" id="petQuietToggle" title="安静一会儿" aria-pressed="false">
-                        <svg class="pet-ico-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.2a4.6 4.6 0 0 0-4.6 4.6v3.4L5.8 15h12.4l-1.6-2.8V8.8A4.6 4.6 0 0 0 12 4.2z"/><path d="M10.2 18a1.9 1.9 0 0 0 3.6 0"/><path d="M4 20L20 4"/></svg>
-                        <svg class="pet-ico-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.2a4.6 4.6 0 0 0-4.6 4.6v3.4L5.8 15h12.4l-1.6-2.8V8.8A4.6 4.6 0 0 0 12 4.2z"/><path d="M10.2 18a1.9 1.9 0 0 0 3.6 0"/></svg>
-                    </button>
-                    <button type="button" class="pet-chat-close" id="petChatClose" title="收起">
-                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12"/><path d="M18 6L6 18"/></svg>
-                    </button>
-                </div>
-            </div>
-            <div class="pet-chat-log" id="petChatLog" aria-live="polite"></div>
+        <!-- 对话：只弹一个输入条，回复直接走桌宠气泡 -->
+        <div class="pet-chat pet-chat-compact" id="petChat" role="dialog" aria-label="和渡鸦说话">
             <form class="pet-chat-form" id="petChatForm">
-                <button type="button" class="pet-mic" id="petMic" title="点一下说话（需要麦克风权限）">🎙</button>
+                <button type="button" class="pet-mic" id="petMic" title="点一下说话（需要麦克风权限）" aria-label="语音输入">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.2a2.4 2.4 0 0 1 2.4 2.4v4.8a2.4 2.4 0 0 1-4.8 0V6.6A2.4 2.4 0 0 1 12 4.2z"/><path d="M6.8 11.4a5.2 5.2 0 0 0 10.4 0"/><path d="M12 16.7v3"/></svg>
+                </button>
                 <input type="text" id="petChatInput" placeholder="和我说点什么…" maxlength="300" autocomplete="off">
-                <button type="submit" class="pet-send" title="发送">↑</button>
+                <button type="submit" class="pet-send" title="发送" aria-label="发送">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V6"/><path d="M6 12l6-6 6 6"/></svg>
+                </button>
             </form>
         </div>
     </div>
@@ -2428,7 +2416,7 @@
             '/vendor/grok/eyes.js?v=1.0.0',
             '/vendor/grok/character.js?v=1.0.2',
             '/js/pet-core.js?v=2.0.16',
-            '/js/pet-mind.js?v=2.0.12'
+            '/js/pet-mind.js?v=2.0.13'
         ];
         var started = false;
         function load() {

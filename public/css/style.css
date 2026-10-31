@@ -6169,6 +6169,29 @@ body.screensaver-on .deskpet {
     display: none !important;
 }
 
+/* 极简对话条：只弹一个输入框，回复走桌宠气泡 */
+.pet-chat.pet-chat-compact {
+    width: min(320px, calc(100vw - 32px));
+    padding: 8px;
+    gap: 0;
+}
+
+.pet-chat-compact .pet-chat-form {
+    padding-top: 0;
+    border-top: 0;
+}
+
+.pet-mic svg,
+.pet-send svg {
+    width: 14px;
+    height: 14px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
 /* ===== 悬停浮出的三个圆（聊天 / 朗读 / 睡觉） ===== */
 .deskpet-orbit {
     position: absolute;
