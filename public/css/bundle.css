@@ -14695,6 +14695,43 @@ body.view-music-active .now-island {
     pointer-events: auto;
 }
 
+/* 两侧各一道很淡的光带，缓慢呼吸——把左右空白撑起来，不抢文字 */
+.hv3-music-lyrics::before,
+.hv3-music-lyrics::after {
+    content: '';
+    position: absolute;
+    top: 20%;
+    bottom: 20%;
+    width: 1px;
+    background: linear-gradient(to bottom, transparent, var(--accent, #f0a20c), transparent);
+    opacity: 0;
+    pointer-events: none;
+}
+
+.hv3-music-lyrics::before {
+    left: 9px;
+}
+
+.hv3-music-lyrics::after {
+    right: 9px;
+}
+
+.hv3-music.is-lyric .hv3-music-lyrics::before,
+.hv3-music.is-lyric .hv3-music-lyrics::after {
+    animation: hv3LyricEdge 4s ease-in-out infinite;
+}
+
+@keyframes hv3LyricEdge {
+    0%,
+    100% {
+        opacity: 0.1;
+    }
+
+    50% {
+        opacity: 0.3;
+    }
+}
+
 /* 三行歌词：每行各占三分之一高度，文字水平居中——左右留白对称，不会一边空 */
 .hv3-music-lyric-line {
     flex: 1 1 0;
@@ -14705,11 +14742,12 @@ body.view-music-active .now-island {
     min-height: 0;
     padding: 0 4px;
     text-align: center;
-    font-size: 12.5px;
+    font-size: 14px;
     line-height: 1.4;
+    letter-spacing: 0.06em;
     color: var(--text-muted);
     transition: transform 0.5s cubic-bezier(0.2, 0.7, 0.3, 1), opacity 0.5s ease,
-        color 0.3s ease, font-size 0.4s ease;
+        color 0.3s ease, font-size 0.4s ease, letter-spacing 0.4s ease;
     will-change: transform, opacity;
 }
 
@@ -14719,16 +14757,37 @@ body.view-music-active .now-island {
 }
 
 .hv3-music-lyric-line.is-current {
-    font-size: 17px;
+    font-size: 21px;
     font-weight: 650;
+    letter-spacing: 0.08em;
     color: var(--accent, var(--text));
     opacity: 1;
     text-shadow: 0 2px 14px rgba(0, 0, 0, 0.35);
+    animation: hv3LyricBreath 3.2s ease-in-out infinite;
+}
+
+/* 入场时先滑上来，落定后再接呼吸；两个动画叠在一起，不用等 JS 来摘类 */
+.hv3-music-lyric-line.is-current.is-entering {
+    animation: hv3LyricIn 0.5s cubic-bezier(0.2, 0.7, 0.3, 1), hv3LyricBreath 3.2s ease-in-out 0.5s infinite;
 }
 
 .hv3-music-lyric-line.is-next {
     transform: translateY(5px) scale(0.96);
     opacity: 0.42;
+}
+
+/* 当前句的呼吸：极轻的亮度与缩放起伏，像在跟着唱 */
+@keyframes hv3LyricBreath {
+    0%,
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0.88;
+        transform: scale(1.015);
+    }
 }
 
 /* 换句时当前句从下方顶上来 */
