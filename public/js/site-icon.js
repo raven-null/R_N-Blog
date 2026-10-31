@@ -14,6 +14,11 @@
         if (!url) return;
         var links = document.querySelectorAll('link[rel="icon"],link[rel="apple-touch-icon"],link[rel="shortcut icon"]');
         for (var i = 0; i < links.length; i++) links[i].setAttribute('href', url);
+        /* 页面里露出来的站点图标也跟着换：
+           移动端「站点导航」面板头部的 logo、顶部 dock 里的圆形按钮（.dock-orb）。
+           不然会出现「浏览器标签页是自定义图标、面板里还是默认 web-logo」的不一致。 */
+        var imgs = document.querySelectorAll('.site-nav-logo, .dock-orb img, [data-site-icon]');
+        for (var j = 0; j < imgs.length; j++) imgs[j].setAttribute('src', url);
     }
 
     // 兜底：页面若漏写 link 声明，这里补上默认图标，保证不会出现浏览器默认图标
