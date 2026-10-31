@@ -680,6 +680,8 @@ const BlogApp = {
         document.querySelectorAll('.view-btn').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.view === view);
         });
+        // 移动端导航面板里的同名项也跟着高亮
+        this.syncWheelActive?.();
 
         // 滑块指示器动画
         this.moveIndicator(view);
@@ -4196,11 +4198,11 @@ const BlogApp = {
         }
     },
 
-    // ===================== 移动端轮盘菜单 =====================
+    // ===================== 移动端导航面板 =====================
 
     wheelOpen: false,
 
-    // 打开 / 收起轮盘
+    // 打开 / 收起导航
     toggleWheel() {
         if (this.wheelOpen) this.closeWheel();
         else this.openWheel();
@@ -4210,9 +4212,6 @@ const BlogApp = {
         const layer = document.getElementById('wheelLayer');
         const trigger = document.getElementById('wheelTrigger');
         if (!layer) return;
-        // 环半径按屏幕短边自适应（88–168px）
-        const radius = Math.round(Math.min(window.innerWidth, window.innerHeight) * 0.31);
-        layer.style.setProperty('--wheel-r', Math.max(88, Math.min(radius, 168)) + 'px');
         layer.classList.add('open');
         this.wheelOpen = true;
         if (trigger) {
@@ -4222,9 +4221,9 @@ const BlogApp = {
         document.body.classList.add('wheel-open');
         this.syncWheelActive();
 
-        // 焦点进菜单（键盘用户可用 Tab/方向遍历），并记住来处以便关闭时归还
+        // 焦点进导航（键盘用户可用 Tab / 方向遍历），并记住来处以便关闭时归还
         this._wheelPrevFocus = document.activeElement;
-        const firstItem = layer.querySelector('.wheel-item, .wheel-center');
+        const firstItem = layer.querySelector('.site-nav-btn, .site-nav-close');
         if (firstItem && firstItem.focus) firstItem.focus();
 
         // Escape 关闭；打开期间把 Tab 圈在菜单内（简易焦点陷阱）
@@ -4275,14 +4274,12 @@ const BlogApp = {
         if (target && target.focus) target.focus();
     },
 
-    // 高亮当前视图对应的轮盘选项
+    // 高亮当前视图对应的导航项（与顶部导航栏的 .view-btn 同一套视图 id）
     syncWheelActive() {
         const layer = document.getElementById('wheelLayer');
         if (!layer) return;
-        layer.querySelectorAll('.wheel-item').forEach(el => {
-            const m = /runWheelAction\('([^']+)'\)/.exec(el.getAttribute('onclick') || '');
-            const action = m ? m[1] : '';
-            el.classList.toggle('is-active', action === this.currentView);
+        layer.querySelectorAll('.site-nav-btn').forEach(el => {
+            el.classList.toggle('is-active', el.dataset.view === this.currentView);
         });
     },
 
@@ -4544,7 +4541,7 @@ const BlogApp = {
         return Math.round(diff / (365 * day)) + ' 年前';
     },
 
-    // 执行轮盘选项
+    // 执行导航面板里的选项（与顶部导航栏的按钮走同一套视图切换）
     runWheelAction(action) {
         this.closeWheel();
         switch (action) {
@@ -4556,6 +4553,12 @@ const BlogApp = {
                 break;
             case 'gallery':
                 this.goView('gallery');
+                break;
+            case 'music':
+                this.goView('music');
+                break;
+            case 'projects':
+                this.goView('projects');
                 break;
             case 'news':
                 // 简报已并入主页：切回主页并滚到简报卡

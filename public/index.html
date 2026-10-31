@@ -15,7 +15,7 @@
     <meta property="og:image" content="https://ravennull.work/images/Default/web-logo.webp">
     <meta property="og:locale" content="zh_CN">
     <meta name="twitter:card" content="summary">
-    <link rel="stylesheet" href="css/bundle.css?v=3e271a11e7">
+    <link rel="stylesheet" href="css/bundle.css?v=6e684ee8c2">
     <title>渡鸦 NULL · 日光与暮色之间</title>
     <link rel="icon" id="siteFavicon" href="/images/Default/web-logo.webp" type="image/webp">
     <link rel="apple-touch-icon" href="/images/Default/web-logo.webp">
@@ -542,58 +542,58 @@
         </div>
     </div>
 
-    <!-- 移动端轮盘菜单：右侧半圆按钮 → 环形选项 -->
+    <!-- 移动端导航：右侧半圆按钮 → 弹出的站点导航面板（等同桌面顶部导航栏） -->
     <button class="wheel-trigger" id="wheelTrigger" onclick="BlogApp.toggleWheel()"
-        aria-label="打开站点菜单" aria-expanded="false" aria-controls="wheelLayer">
+        aria-label="打开站点导航" aria-expanded="false" aria-controls="wheelLayer">
         <i></i><i></i><i></i>
     </button>
 
     <div class="wheel-layer" id="wheelLayer" onclick="BlogApp.closeWheel()">
-        <div class="wheel" id="wheel" role="menu" aria-label="站点导航">
-            <button class="wheel-center" aria-label="关闭菜单" onclick="event.stopPropagation(); BlogApp.closeWheel()">✕</button>
+        <nav class="site-nav" id="wheel" role="menu" aria-label="站点导航">
+            <div class="site-nav-head">
+                <img class="site-nav-logo" src="/images/Default/web-logo.webp" alt="" width="46" height="46">
+                <span class="site-nav-name">
+                    <b>渡鸦 NULL</b>
+                    <span>站点导航</span>
+                </span>
+                <button class="site-nav-close" type="button" aria-label="关闭导航"
+                    onclick="event.stopPropagation(); BlogApp.closeWheel()">✕</button>
+            </div>
 
-            <button class="wheel-item" role="menuitem" style="--a:0deg;--d:0.02s"
-                onclick="event.stopPropagation(); BlogApp.runWheelAction('home')">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5 12 3.5l8 7"/><path d="M6 9.5V20h12V9.5"/></svg>
-                <span class="wheel-label">主页</span>
-            </button>
+            <div class="site-nav-list">
+                <button class="site-nav-btn" type="button" role="menuitem" data-view="home"
+                    onclick="event.stopPropagation(); BlogApp.runWheelAction('home')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5 12 3.5l8 7"/><path d="M6 9.5V20h12V9.5"/></svg>
+                    <span>主页</span>
+                </button>
 
-            <button class="wheel-item" role="menuitem" style="--a:51.43deg;--d:0.06s"
-                onclick="event.stopPropagation(); BlogApp.runWheelAction('blog')">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
-                <span class="wheel-label">文章</span>
-            </button>
+                <button class="site-nav-btn" type="button" role="menuitem" data-view="blog"
+                    onclick="event.stopPropagation(); BlogApp.runWheelAction('blog')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+                    <span>文章</span>
+                </button>
 
-            <button class="wheel-item" role="menuitem" style="--a:102.86deg;--d:0.10s"
-                onclick="event.stopPropagation(); BlogApp.runWheelAction('gallery')">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="m20 16-5-5-9 9"/></svg>
-                <span class="wheel-label">图库</span>
-            </button>
+                <button class="site-nav-btn" type="button" role="menuitem" data-view="gallery"
+                    onclick="event.stopPropagation(); BlogApp.runWheelAction('gallery')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="m20 16-5-5-9 9"/></svg>
+                    <span>图库</span>
+                </button>
 
-            <button class="wheel-item" role="menuitem" style="--a:154.29deg;--d:0.14s"
-                onclick="event.stopPropagation(); BlogApp.runWheelAction('projects')">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="7" height="7" rx="1.5"/><rect x="14" y="4" width="7" height="7" rx="1.5"/><rect x="3" y="15" width="7" height="7" rx="1.5"/><rect x="14" y="15" width="7" height="7" rx="1.5"/></svg>
-                <span class="wheel-label">项目</span>
-            </button>
+                <button class="site-nav-btn" type="button" role="menuitem" data-view="music"
+                    onclick="event.stopPropagation(); BlogApp.runWheelAction('music')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17V6l10-2v11"/><circle cx="6.5" cy="17.5" r="2.5"/><circle cx="16.5" cy="15.5" r="2.5"/></svg>
+                    <span>音乐</span>
+                </button>
 
-            <button class="wheel-item" role="menuitem" style="--a:205.71deg;--d:0.18s"
-                onclick="event.stopPropagation(); BlogApp.runWheelAction('news')">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 3 5 14h6l-1 7 8-11h-6z"/></svg>
-                <span class="wheel-label">简报</span>
-            </button>
+                <button class="site-nav-btn" type="button" role="menuitem" data-view="projects"
+                    onclick="event.stopPropagation(); BlogApp.runWheelAction('projects')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="7" height="7" rx="1.5"/><rect x="14" y="4" width="7" height="7" rx="1.5"/><rect x="3" y="15" width="7" height="7" rx="1.5"/><rect x="14" y="15" width="7" height="7" rx="1.5"/></svg>
+                    <span>项目</span>
+                </button>
+            </div>
 
-            <button class="wheel-item" role="menuitem" style="--a:257.14deg;--d:0.22s"
-                onclick="event.stopPropagation(); BlogApp.runWheelAction('theme')">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6 7 7M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4"/></svg>
-                <span class="wheel-label">主题</span>
-            </button>
-
-            <button class="wheel-item" role="menuitem" style="--a:308.57deg;--d:0.26s"
-                onclick="event.stopPropagation(); BlogApp.runWheelAction('top')">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V6M6 12l6-6 6 6"/></svg>
-                <span class="wheel-label">置顶</span>
-            </button>
-        </div>
+            <a class="site-nav-admin" href="/admin.html" onclick="event.stopPropagation()">进入后台</a>
+        </nav>
     </div>
 
     <!-- 图库灯箱 -->
@@ -621,7 +621,7 @@
     <!-- 桌宠动效引擎（spring-driven character，见 public/vendor/grok/README.md） -->
 
     <!-- /js/* 是 immutable 长缓存：app.js 一改就必须换 ?v=，否则线上一直吃旧文件 -->
-    <script src="js/app.js?v=20261104c" defer></script>
+    <script src="js/app.js?v=20261104d" defer></script>
     <script src="js/animations.js?v=3.14.0" defer></script>
 
     <script>

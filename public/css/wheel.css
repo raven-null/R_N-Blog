@@ -1,4 +1,4 @@
-/* ===== 移动端轮盘菜单（右侧半圆按钮 → 环形选项） ===== */
+/* ===== 移动端导航面板（右侧半圆按钮 → 弹出的站点导航，等同桌面顶部导航栏） ===== */
 
 /* --- 触发按钮：右侧边缘中部半圆竖条 --- */
 .wheel-trigger {
@@ -68,112 +68,187 @@
     visibility: visible;
 }
 
-/* 打开时锁住内容区滚动（避免轮盘下方滚动穿透） */
+/* 打开时锁住内容区滚动（避免面板下方滚动穿透） */
 body.wheel-open #scrollArea {
     overflow: hidden;
 }
 
-/* --- 轮盘：以 (50%, 42%) 为圆心的 0×0 锚点 --- */
-.wheel {
+/* --- 导航面板：居中一张卡，上面是 logo 与站点名，下面是导航项 --- */
+.site-nav {
     position: absolute;
     left: 50%;
-    top: 42%;
-    width: 0;
-    height: 0;
-}
-
-/* --- 中心关闭按钮 --- */
-.wheel-center {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 64px;
-    height: 64px;
-    margin: -32px 0 0 -32px;
-    border-radius: 50%;
-    border: 1px solid var(--border);
-    background: var(--bg-card);
-    color: var(--text-secondary);
-    font-size: 20px;
-    line-height: 1;
-    cursor: pointer;
-    box-shadow: 0 10px 30px var(--shadow);
-    transform: scale(0.6);
-    opacity: 0;
-    transition: transform 0.4s cubic-bezier(0.22, 1.2, 0.36, 1), opacity 0.25s, color 0.2s, border-color 0.2s;
-    -webkit-tap-highlight-color: transparent;
-}
-
-.wheel-layer.open .wheel-center {
-    transform: scale(1);
-    opacity: 1;
-}
-
-.wheel-center:hover {
-    color: var(--accent);
-    border-color: var(--accent);
-}
-
-/* --- 环形选项 --- */
-.wheel-item {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 62px;
-    height: 62px;
-    margin: -31px 0 0 -31px;
+    top: 50%;
+    width: min(320px, calc(100vw - 44px));
+    max-height: calc(100vh - 56px);
+    overflow-y: auto;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 2px;
-    padding: 0;
-    border-radius: 50%;
-    border: 1px solid var(--border);
-    background: var(--bg-card);
-    backdrop-filter: blur(12px);
-    color: var(--text-secondary);
-    font-family: inherit;
-    font-size: 10px;
-    letter-spacing: 0.5px;
-    cursor: pointer;
-    box-shadow: 0 8px 24px var(--shadow);
+    gap: 12px;
+    padding: 14px 14px 12px;
+    border-radius: 22px;
+    background: var(--glass-card, rgba(255, 253, 248, 0.88));
+    border: 1px solid var(--glass-line, rgba(255, 255, 255, 0.6));
+    box-shadow: 0 18px 48px rgba(16, 20, 32, 0.28);
+    backdrop-filter: blur(18px) saturate(1.1);
+    -webkit-backdrop-filter: blur(18px) saturate(1.1);
     opacity: 0;
-    pointer-events: none;
-    /* 收起态：贴合圆心（与展开态保持相同 transform 结构，插值才平滑） */
-    transform: rotate(var(--a)) translateY(0px) rotate(calc(var(--a) * -1)) scale(0.4);
-    transition: transform 0.5s cubic-bezier(0.22, 1.2, 0.36, 1), opacity 0.3s, color 0.2s, border-color 0.2s;
-    transition-delay: var(--d, 0s);
+    transform: translate(-50%, -46%) scale(0.94);
+    transition: opacity 0.26s ease, transform 0.26s cubic-bezier(0.22, 1.2, 0.36, 1);
+}
+
+.wheel-layer.open .site-nav {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+}
+
+/* 头部：logo + 站点名 + 关闭 */
+.site-nav-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.site-nav-logo {
+    width: 46px;
+    height: 46px;
+    flex: none;
+    border-radius: 14px;
+    object-fit: cover;
+    background: var(--surface-2, rgba(0, 0, 0, 0.06));
+    box-shadow: 0 4px 14px rgba(16, 20, 32, 0.18);
+}
+
+.site-nav-name {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.site-nav-name b {
+    font-size: 15px;
+    font-weight: 650;
+    line-height: 1.2;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.site-nav-name span {
+    font-size: 10.5px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.site-nav-close {
+    width: 30px;
+    height: 30px;
+    flex: none;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+    transition: color 0.18s, border-color 0.18s;
     -webkit-tap-highlight-color: transparent;
 }
 
-.wheel-layer.open .wheel-item {
-    opacity: 1;
-    pointer-events: auto;
-    transform: rotate(var(--a)) translateY(calc(var(--wheel-r, 112px) * -1)) rotate(calc(var(--a) * -1)) scale(1);
-}
-
-.wheel-item:active {
+.site-nav-close:hover {
     color: var(--accent);
     border-color: var(--accent);
 }
 
-.wheel-item.is-active {
-    color: var(--accent);
+/* 导航项：与顶部导航栏同名的四个视图，一个一行 */
+.site-nav-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.site-nav-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 46px;
+    padding: 0 12px;
+    border: 1px solid transparent;
+    border-radius: 14px;
+    background: var(--surface-2, rgba(0, 0, 0, 0.04));
+    color: var(--text);
+    font-family: inherit;
+    font-size: 14px;
+    letter-spacing: 0.04em;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.18s, border-color 0.18s, color 0.18s, transform 0.18s;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.site-nav-btn svg {
+    width: 19px;
+    height: 19px;
+    flex: none;
+    color: var(--text-secondary);
+    transition: color 0.18s;
+}
+
+.site-nav-btn:hover {
     border-color: var(--accent);
 }
 
-.wheel-item svg {
-    width: 18px;
-    height: 18px;
-    flex-shrink: 0;
+.site-nav-btn:active {
+    transform: scale(0.985);
 }
 
-.wheel-label {
-    font-size: 9px;
-    line-height: 1;
-    white-space: nowrap;
-    transform: scale(0.95);
+.site-nav-btn.is-active {
+    color: var(--accent-strong, var(--accent));
+    background: var(--accent-soft, rgba(240, 162, 12, 0.13));
+    border-color: var(--accent);
+}
+
+.site-nav-btn.is-active svg {
+    color: var(--accent);
+}
+
+.site-nav-admin {
+    margin-top: 2px;
+    padding: 8px;
+    text-align: center;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    text-decoration: none;
+    border: 1px dashed var(--border);
+    border-radius: 12px;
+    transition: color 0.18s, border-color 0.18s;
+}
+
+.site-nav-admin:hover {
+    color: var(--text);
+    border-color: var(--accent);
+}
+
+/* 深色：面板与导航项都压深一档，别让背后的插画透出来 */
+html[data-theme="dark"] .site-nav {
+    background: rgba(22, 25, 34, 0.92);
+    border-color: rgba(255, 255, 255, 0.16);
+}
+
+html[data-theme="dark"] .site-nav-btn {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+html[data-theme="dark"] .site-nav-btn.is-active {
+    background: rgba(240, 162, 12, 0.16);
 }
 
 /* --- 仅窄屏显示触发按钮 --- */
@@ -183,25 +258,27 @@ body.wheel-open #scrollArea {
     }
 }
 
-/* --- 横屏矮视口：缩小半径与圆点尺寸 --- */
+/* --- 横屏矮视口：面板贴边、导航项收紧 --- */
 @media (max-height: 460px) {
-    .wheel-item {
-        width: 54px;
-        height: 54px;
-        margin: -27px 0 0 -27px;
+    .site-nav {
+        gap: 8px;
+        padding: 10px;
     }
 
-    .wheel-center {
-        width: 56px;
-        height: 56px;
-        margin: -28px 0 0 -28px;
+    .site-nav-btn {
+        min-height: 40px;
+        font-size: 13px;
+    }
+
+    .site-nav-logo {
+        width: 38px;
+        height: 38px;
     }
 }
 
 /* --- 减少动效偏好 --- */
 @media (prefers-reduced-motion: reduce) {
-    .wheel-item,
-    .wheel-center,
+    .site-nav,
     .wheel-layer {
         transition-duration: 0.01s;
         transition-delay: 0s !important;
