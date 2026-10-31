@@ -6164,10 +6164,7 @@ html.reader-focus .article-content {
     50% { opacity: 0.9; transform: translateY(-4px) scale(1.05); }
 }
 
-/* 屏保模式下不显示桌宠（否则它在屏保底下白跑动画） */
-body.screensaver-on .deskpet {
-    display: none !important;
-}
+
 
 /* 极简对话条：只弹一个输入框，回复走桌宠气泡 */
 .pet-chat.pet-chat-compact {
