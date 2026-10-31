@@ -1855,6 +1855,14 @@ const BlogApp = {
                 const w = img.naturalWidth;
                 const h = img.naturalHeight;
                 if (!w || !h) return;
+                // 横图（含正方）不在文章卡上占位：它们归「生活切片」那块播。
+                // 两边按同一个规则分工 —— 竖图进文章卡、横图进生活切片，一张图不会两头都占着。
+                if (w >= h) {
+                    const cover = img.closest('.hv3-cover');
+                    if (cover) cover.style.display = 'none';
+                    this.syncCarouselHeight();
+                    return;
+                }
                 let ratio = w / h;
                 ratio = Math.max(0.55, Math.min(2.4, ratio));   // 竖图/超宽图都能进来，交给容器尺寸去适配
                 const item = img.closest('.hv3-item');
@@ -2082,6 +2090,12 @@ const BlogApp = {
         const total = photos.length;
         let front = 0;
         let cur = -1;
+        // 图片方向缓存（id → 'landscape' | 'portrait'）：图库里没有宽高元数据，
+        // 只能等图片加载出来量 naturalWidth/Height。量过一次就记住，后面挑图直接跳过竖图。
+        this._shotOrient = this._shotOrient || new Map();
+        const orient = this._shotOrient;
+        // 竖图连续跳过太多次（说明图库几乎全是竖图）就认栽，别死循环
+        let skips = 0;
 
         // 尺寸算出来之前先把盒子藏住，避免用兜底比例先闪一下"大空框"
         stage.style.visibility = 'hidden';
@@ -2109,6 +2123,7 @@ const BlogApp = {
             const swap = () => {
                 if (done) return;
                 done = true;
+                skips = 0;
                 next.classList.add('is-front');
                 prev.classList.remove('is-front');
                 front = 1 - front;
@@ -2116,20 +2131,44 @@ const BlogApp = {
                 this._shotFrontImg = next;
                 if (meta) meta.textContent = '随机播放 · ' + (idx + 1) + ' / ' + total;
             };
-            if (next.dataset.src === src) { swap(); return; }
+            // 图片已经加载完（或本来就在这一层）才判方向：
+            // 竖图统一让给文章卡片的封面位，这里只播横图（宽 ≥ 高）。
+            const accept = () => {
+                if (done) return;
+                const nw = next.naturalWidth;
+                const nh = next.naturalHeight;
+                if (nw && nh) {
+                    const portrait = nw < nh;
+                    orient.set(p.id, portrait ? 'portrait' : 'landscape');
+                    if (portrait && skips < 24) { skips++; nextShot(); return; }
+                }
+                skips = 0;
+                swap();
+            };
+            if (next.dataset.src === src) { accept(); return; }
             next.dataset.src = src;
-            next.addEventListener('load', swap, { once: true });
+            next.addEventListener('load', accept, { once: true });
             next.addEventListener('error', () => {
                 // 坏图直接跳过，换下一张（节流避免连续失败刷屏）
                 setTimeout(() => { if (!done) nextShot(); }, 600);
             }, { once: true });
             next.src = src;
-            if (next.complete && next.naturalWidth) swap();
+            if (next.complete && next.naturalWidth) accept();
         };
 
         const nextShot = () => {
             if (total === 1) { show(0); return; }
-            let n = Math.floor(Math.random() * total);
+            // 已经量过方向的横图够多就只在它们里面挑，省掉「加载出来发现是竖图再跳过」的空转
+            const known = [];
+            for (let i = 0; i < total; i++) {
+                if (orient.get(photos[i].id) === 'landscape') known.push(i);
+            }
+            let n;
+            if (known.length >= 8) {
+                n = known[Math.floor(Math.random() * known.length)];
+            } else {
+                n = Math.floor(Math.random() * total);
+            }
             // 别连着放同一张
             for (let i = 0; i < 6 && n === cur; i++) n = Math.floor(Math.random() * total);
             cur = n;
@@ -2164,7 +2203,7 @@ const BlogApp = {
                 window.openGalleryLightbox(p.url || p.thumb, cur);
             }
         });
-        stage.title = '点击看大图（每 5 秒随机换一张）';
+        stage.title = '点击看大图（每 5 秒随机换一张横图）';
         stage.dataset.timer = String(timer);
     },
 
