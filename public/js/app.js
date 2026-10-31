@@ -860,6 +860,9 @@ const BlogApp = {
             rating: p.rating || 'general',
             tags: p.tags || [],
             categories: p.categories || [],
+            // 原始宽高：接口是给的，用它就能在下载前就判断横竖（首页两处按方向分图的依据）
+            width: Number(p.width) || 0,
+            height: Number(p.height) || 0,
             url: p.url || base + '/api/photos/' + encodeURIComponent(p.id) + '/raw' + rawQ,
             thumb: p.thumb || base + '/api/photos/' + encodeURIComponent(p.id) + '/thumb' + thumbQ,
         }));
@@ -1852,14 +1855,15 @@ const BlogApp = {
         }).join('');
 
         /* 每张卡的封面按方向决定「怎么播」：
-           · 自带封面是竖图 → 一直用它（静态显示）
-           · 自带封面是横图 → 让给「生活切片」播，这张卡改播图库里的竖图
-           · 没有封面 → 同样改播图库竖图
-           需要改播的卡记进 playCards，交给一个共享定时器统一换图（和图片区同一套节奏）。 */
+           · 自带封面是竖图 → 一直用它（静态显示），标题跟着这张图显示
+           · 自带封面是横图 → 图和标题一起让给「生活切片」播，这张卡改播图库竖图、标题不再显示
+           · 没有封面 → 同样改播图库竖图、不显示标题
+           （标题和封面是一体的：图在文章位就显示标题，换成通用图就不该再挂着这篇的标题） */
         const playCards = [];
         track.querySelectorAll('.hv3-item').forEach((item) => {
             const img = item.querySelector('.hv3-cover-img.is-front');
             const markPlay = () => {
+                item.classList.add('is-generic');
                 playCards.push(item);
             };
             if (!img || !img.getAttribute('src')) { markPlay(); return; }
@@ -1868,7 +1872,7 @@ const BlogApp = {
                 const h = img.naturalHeight;
                 if (!w || !h) return;
                 if (w >= h) {
-                    // 横图：不在文章卡上显示（交给图片区），这张卡换成竖图播放
+                    // 横图：图和标题一起交给图片区，这张卡换成竖图播放且不显示标题
                     img.removeAttribute('src');
                     img.classList.remove('is-front');
                     markPlay();
@@ -1932,56 +1936,108 @@ const BlogApp = {
         this.syncCarouselHeight();
     },
 
-    /* 横图封面和没有封面的卡：用图库竖图补一张封面。
-       这里只补一次 —— 整张卡本来就在 5 秒一换，卡内再定时换图会双重动。 */
+    /* 横图封面和没有封面的卡：用竖图补一张封面。
+       图库接口给了 width/height，所以竖图池是「确定」的，不是猜的 ——
+       宁可多等一会儿池子攒好，也不拿横图凑数（左竖右横是硬规则）。 */
     fillCoverPlay(cards) {
         if (!cards || !cards.length) return;
         this.portraitPool().then((pool) => {
-            if (!pool.length) return;
+            if (!pool.length) {
+                // 一张竖图都还没有：等池子攒够再来（图库还在加载时会出现）
+                if (!this._coverRetry) {
+                    this._coverRetry = setTimeout(() => {
+                        this._coverRetry = 0;
+                        this._portraitCache = null;
+                        this.fillCoverPlay(cards.filter((el) => el.isConnected));
+                    }, 4000);
+                }
+                return;
+            }
             cards.forEach((el) => this.swapCoverPlay(el, pool));
-        }).catch(() => { /* 图库拿不到就留空底 */ });
+        }).catch(() => { /* 图库整个拿不到就留空底 */ });
     },
 
-    // 竖图池：图库清单里方向为「高 > 宽」的那些（未知方向就加载一张量出来，量过记缓存）
-    async portraitPool() {
-        if (this._portraitCache) return this._portraitCache;
-        if (this._portraitPromise) return this._portraitPromise;
+    /* 把所有能用上的图按方向分成两池，左（文章）只用竖图、右（生活切片）只用横图。
+       方向优先看接口给的 width/height，缺尺寸的（老图、文章封面）才实际加载量一遍。
+       严格二选一：量不出来的直接丢掉，不塞进任何一边。 */
+    async orientationPools() {
+        if (this._orientPools) return this._orientPools;
+        if (this._orientPoolsPromise) return this._orientPoolsPromise;
         const orient = this._shotOrient = this._shotOrient || new Map();
-        this._portraitPromise = (async () => {
-            let list = [];
-            try { list = (await this.loadGalleryImages()) || []; } catch (e) { list = []; }
-            const out = [];
-            const queue = list.filter((p) => p && (p.thumb || p.url) && !this.isR18Image(p)).slice(0, 90);
+        this._orientPoolsPromise = (async () => {
+            let gallery = [];
+            try { gallery = (await this.loadGalleryImages()) || []; } catch (e) { gallery = []; }
+
+            // 文章的封面也算图源：横图封面去生活切片，竖图封面留在文章位
+            const postCovers = (Array.isArray(this.posts) ? this.posts : [])
+                .filter((p) => p && p.image)
+                .map((p) => ({
+                    id: 'post:' + (p.filename || p.title || ''),
+                    thumb: p.image,
+                    url: p.image,
+                    __cap: p.title || '',
+                }));
+
+            const portrait = [];
+            const landscape = [];
+            const unknown = [];
+            const seen = new Set();
+            for (const p of postCovers.concat(gallery)) {
+                const key = String((p && (p.thumb || p.url)) || '');
+                if (!key || seen.has(key)) continue;
+                if (this.isR18Image(p)) continue;
+                seen.add(key);
+                const w = Number(p.width) || 0;
+                const h = Number(p.height) || 0;
+                if (w > 0 && h > 0) {
+                    (w >= h ? landscape : portrait).push(p);
+                    orient.set(p.id, w >= h ? 'landscape' : 'portrait');
+                    continue;
+                }
+                const known = orient.get(p.id);
+                if (known === 'portrait') portrait.push(p);
+                else if (known === 'landscape') landscape.push(p);
+                else unknown.push(p);
+            }
+
+            // 缺尺寸的并发量一遍（文章封面基本都在这里，数量很少）
             let cursor = 0;
             const probeOne = (p) => new Promise((resolve) => {
-                const known = orient.get(p.id);
-                if (known === 'portrait') return resolve(p);
-                if (known === 'landscape') return resolve(null);
                 const im = new Image();
                 im.onload = () => {
-                    const portrait = im.naturalWidth < im.naturalHeight;
-                    orient.set(p.id, portrait ? 'portrait' : 'landscape');
-                    resolve(portrait ? p : null);
+                    const kind = im.naturalWidth >= im.naturalHeight ? 'landscape' : 'portrait';
+                    orient.set(p.id, kind);
+                    resolve(kind);
                 };
-                im.onerror = () => resolve(null);
+                im.onerror = () => resolve('');
                 im.src = String(p.thumb || p.url);
             });
             const worker = async () => {
-                while (cursor < queue.length) {
-                    const p = await probeOne(queue[cursor++]);
-                    if (p) out.push(p);
+                while (cursor < unknown.length) {
+                    const p = unknown[cursor++];
+                    const kind = await probeOne(p);
+                    if (kind === 'portrait') portrait.push(p);
+                    else if (kind === 'landscape') landscape.push(p);
                 }
             };
-            await Promise.all(new Array(6).fill(0).map(worker));
-            this._portraitCache = out;
-            return out;
+            await Promise.all(new Array(8).fill(0).map(worker));
+
+            this._orientPools = { portrait, landscape };
+            return this._orientPools;
         })();
         try {
-            const pool = await this._portraitPromise;
-            return pool;
+            return await this._orientPoolsPromise;
         } finally {
-            this._portraitPromise = null;
+            this._orientPoolsPromise = null;
         }
+    },
+
+    // 竖图池：文章位用
+    async portraitPool() {
+        if (this._portraitCache) return this._portraitCache;
+        const pools = await this.orientationPools();
+        this._portraitCache = pools.portrait;
+        return this._portraitCache;
     },
 
     swapCoverPlay(item, pool) {
@@ -2189,11 +2245,13 @@ const BlogApp = {
 
         let photos = [];
         try {
-            const list = await Promise.race([
-                this.loadGalleryImages(),
-                new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 15000)),
+            // 只播横图池：竖图一律留给左边的文章位（左竖右横，不再有模糊地带）。
+            // 池子是「确定」的（方向来自接口的 width/height），宁可等它攒好，也不拿竖图凑数。
+            const pools = await Promise.race([
+                this.orientationPools(),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 20000)),
             ]);
-            photos = (list || []).filter((p) => p && (p.thumb || p.url) && !this.isR18Image(p));
+            photos = pools.landscape.slice();
         } catch (e) {
             photos = [];
         }
@@ -2253,7 +2311,14 @@ const BlogApp = {
                 front = 1 - front;
                 fitShotBox(next);
                 this._shotFrontImg = next;
-                if (meta) meta.textContent = '随机播放 · ' + (idx + 1) + ' / ' + total;
+                // 播到「某篇文章的横图封面」时，把那篇文章的标题一起带过来；
+                // 普通图库照片没有标题，这个文字块就收起来
+                const capEl = document.getElementById('hv3ShotCap');
+                if (capEl) {
+                    const cap = p.__cap || '';
+                    capEl.textContent = cap;
+                    capEl.hidden = !cap;
+                }
             };
             // 图片已经加载完（或本来就在这一层）才判方向：
             // 竖图统一让给文章卡片的封面位，这里只播横图（宽 ≥ 高）。
@@ -2264,7 +2329,13 @@ const BlogApp = {
                 if (nw && nh) {
                     const portrait = nw < nh;
                     orient.set(p.id, portrait ? 'portrait' : 'landscape');
-                    if (portrait && skips < 24) { skips++; nextShot(); return; }
+                    // 池子里本来就只有横图，这里是兜底：万一量出来是竖图就换下一张，
+                    // 绝不将就着把竖图放到右边
+                    if (portrait) {
+                        skips++;
+                        if (skips < Math.max(4, total)) nextShot();
+                        return;
+                    }
                 }
                 skips = 0;
                 swap();

@@ -356,6 +356,12 @@ html[data-theme="dark"] .hv3-card {
     background: linear-gradient(to top, rgba(8, 10, 16, .88) 0%, rgba(8, 10, 16, .52) 52%, rgba(8, 10, 16, 0) 100%);
 }
 
+/* 封面被换成图库竖图（原封面是横图或没有封面）时，卡片上不挂这篇的标题：
+   那张图和这篇文章不对应，标题跟着横图封面一起挪到生活切片那边去了 */
+.hv3-item.is-generic .hv3-body {
+    display: none;
+}
+
 .hv3-item-title {
     font-size: 18px;
     font-weight: 600;
@@ -552,6 +558,31 @@ html[data-theme="dark"] .hv3-card {
 }
 
 .hv3-shot:hover .hv3-shot-meta { opacity: 1; }
+
+/* 播到「某篇文章的横图封面」时，把那篇文章的标题带过来一起显示 ——
+   文章的横图封面不在文章位出现，而是连同标题一起到这个海报块播。
+   普通图库照片没标题，这个块就隐藏。 */
+.hv3-shot-cap {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 3;
+    padding: 40px 16px 14px;
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.4;
+    color: #fff;
+    background: linear-gradient(to top, rgba(8, 10, 16, .86) 0%, rgba(8, 10, 16, .42) 55%, rgba(8, 10, 16, 0) 100%);
+    pointer-events: none;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.hv3-shot-cap[hidden] { display: none; }
 
 /* ============================================================
    03 · 今日拾光：默认自动滚，手动碰过就接管，离开几秒后接着自动
