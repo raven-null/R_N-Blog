@@ -1612,7 +1612,7 @@ const BlogApp = {
         this.homePostTimer = setInterval(() => {
             if (document.hidden) return;
             this.showHomePost(this.homePostIndex + 1);
-        }, 5000);
+        }, 60000);
     },
 
     stopHomePostTimer() {
@@ -2037,6 +2037,7 @@ const BlogApp = {
 
     startPostPlay() {
         this.stopPostPlay();
+        // 一分钟一篇：慢一点，看清封面再翻
         this._postTimer = setInterval(() => {
             if (document.hidden) return;
             const car = document.getElementById('hv3Car');
@@ -2044,7 +2045,7 @@ const BlogApp = {
             if (!car || !car.clientWidth) return;
             if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
             this.gotoPost((this._postPlay ? this._postPlay.idx : 0) + 1);
-        }, 5000);
+        }, 60000);
     },
 
     stopPostPlay() {
@@ -2395,7 +2396,7 @@ const BlogApp = {
                 // 面板被切到「照片」时轮播是 display:none，别白白翻页
                 const t = document.getElementById('hv3Track');
                 if (t && t.clientWidth) slide(1);
-            }, 8000);
+            }, 60000);
         };
         const restartAuto = () => startAuto();
         const carousel = document.getElementById('hv3Car');
@@ -2585,7 +2586,7 @@ const BlogApp = {
             if (document.hidden) return;
             if (!stage.clientWidth) return;
             nextShot();
-        }, 5000);
+        }, 60000);
 
         // 视口变化后可用宽度变了，尺寸要重算（与轮播 resize 一致）
         let resizePending = false;
@@ -2868,7 +2869,7 @@ const BlogApp = {
         this.homeSlideTimer = setInterval(() => {
             if (document.hidden) return; // 页面不可见时跳过，省流量
             this.showHomeSlide(this.homeSlideIndex + 1);
-        }, 5000);
+        }, 60000);
     },
 
     stopHomeSlideTimer() {
@@ -3009,10 +3010,14 @@ const BlogApp = {
         if (!cal || !side) return;
         // 手机上是竖排（任务/日记在日历下面），不需要限高
         if (window.innerWidth <= 900 || panel.classList.contains('is-guest')) {
+            side.style.height = '';
             side.style.maxHeight = '';
             return;
         }
         const h = Math.round(cal.getBoundingClientRect().height);
+        // 同时写 height 和 max-height：只写 max-height 时右栏的 height 仍是 auto，
+        // 里面「日记展开占 52%」这类百分比 flex-basis 会失效（变成按内容高度）。
+        side.style.height = h > 0 ? h + 'px' : '';
         side.style.maxHeight = h > 0 ? h + 'px' : '';
     },
 
