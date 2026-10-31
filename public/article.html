@@ -34,7 +34,7 @@
     <script src="/js/site-icon.js?v=1.0.1" defer></script>
     
     <!-- 主样式 -->
-    <link rel="stylesheet" href="css/style.css?v=497dd007b3">
+    <link rel="stylesheet" href="css/style.css?v=5d33caf4f3">
     <link rel="stylesheet" href="css/glass.css?v=f39363ceac">
 
     <!-- 共享胶囊样式：文章正文里的白板嵌入块由白板编辑器渲染
@@ -2308,7 +2308,10 @@
                     <img class="reader-island-cover" id="readerIslandCover" alt="" decoding="async">
                     <span class="reader-island-meta">
                         <span class="reader-island-title" id="readerIslandTitle">正在播放</span>
-                        <span class="reader-island-lyric" id="readerIslandLyric"></span>
+                        <span class="reader-island-lyric" id="readerIslandLyric">
+                            <span class="reader-island-lyric-row is-current" id="readerIslandLyricNow"></span>
+                            <span class="reader-island-lyric-row is-next" id="readerIslandLyricNext"></span>
+                        </span>
                     </span>
                     <span class="reader-island-ctls">
                         <button class="reader-btn reader-island-btn" type="button" data-ctl="prev" title="上一首" aria-label="上一首">‹</button>
@@ -2502,7 +2505,8 @@
 
     var cover = document.getElementById('readerIslandCover');
     var titleEl = document.getElementById('readerIslandTitle');
-    var lyricEl = document.getElementById('readerIslandLyric');
+    var lyricNowEl = document.getElementById('readerIslandLyricNow');
+    var lyricNextEl = document.getElementById('readerIslandLyricNext');
     var toggleBtn = island.querySelector('[data-ctl="toggle"]');
 
     var show = function (on) {
@@ -2518,8 +2522,23 @@
         }
         show(true);
         titleEl.textContent = song.name || '正在播放';
-        var line = payload.lyric && payload.lyric.text ? String(payload.lyric.text).trim() : '';
-        lyricEl.textContent = line || song.artist || '';
+
+        var nowText = payload.lyric && payload.lyric.text ? String(payload.lyric.text).trim() : '';
+        if (!nowText) nowText = song.artist || '';
+        var nextText = payload.next && payload.next.text ? String(payload.next.text).trim() : '';
+
+        var changed = lyricNowEl.dataset.text !== nowText;
+        lyricNowEl.dataset.text = nowText;
+        lyricNowEl.textContent = nowText;
+        lyricNextEl.textContent = nextText;
+
+        // 换句：当前行从下方滚上来，下一行顺势顶替（和首页卡片的歌词一个意思）
+        if (changed && nowText) {
+            lyricNowEl.classList.remove('is-rolling');
+            void lyricNowEl.offsetWidth;
+            lyricNowEl.classList.add('is-rolling');
+        }
+
         if (cover) {
             if (song.cover) cover.src = song.cover;
             else cover.removeAttribute('src');

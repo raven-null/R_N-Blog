@@ -504,11 +504,23 @@
   // 只发文章页要用的几个字段：整份歌词窗口每秒传一次太重
   function slimNowPlaying(data) {
     var song = data && data.song;
+    // 下一句：优先从窗口里取（能对上前后文），老版播放器只有 nextLyric
+    var nextText = '';
+    var win = data && data.lyricsWindow;
+    if (win && Array.isArray(win.lines) && win.lines.length) {
+      var active = Math.max(0, Math.min(Number(win.active) || 0, win.lines.length - 1));
+      var following = win.lines[active + 1];
+      nextText = following && following.text ? String(following.text) : '';
+    }
+    if (!nextText && data && data.nextLyric && data.nextLyric.text) {
+      nextText = String(data.nextLyric.text);
+    }
     return {
       playing: !!(data && data.playing),
       loading: !!(data && data.loading),
       song: song ? { name: song.name || '', artist: song.artist || '', cover: song.cover || '' } : null,
-      lyric: data && data.lyric ? { text: data.lyric.text || '' } : null
+      lyric: data && data.lyric ? { text: data.lyric.text || '' } : null,
+      next: nextText ? { text: nextText } : null
     };
   }
 

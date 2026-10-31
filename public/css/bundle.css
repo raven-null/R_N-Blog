@@ -2930,13 +2930,51 @@ html.reader-serif .article-content {
     text-overflow: ellipsis;
 }
 
+/* 歌词两行：当前句在上面，下一句淡一点垫在下面；换句时当前行从下方滚上来 */
 .reader-island-lyric {
+    position: relative;
+    display: block;
+    height: 27px;
+    overflow: hidden;
     font-size: 12px;
-    line-height: 1.3;
+    line-height: 13.5px;
     color: var(--text-muted);
+}
+
+.reader-island-lyric-row {
+    position: absolute;
+    left: 0;
+    right: 0;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    transition: opacity 0.35s ease, color 0.35s ease;
+}
+
+.reader-island-lyric-row.is-current {
+    top: 0;
+    color: var(--text-secondary);
+}
+
+.reader-island-lyric-row.is-next {
+    top: 13.5px;
+    opacity: 0.55;
+}
+
+.reader-island-lyric-row.is-rolling {
+    animation: readerLyricRoll 0.45s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+@keyframes readerLyricRoll {
+    from {
+        transform: translateY(13.5px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
 }
 
 .reader-island-ctls {
