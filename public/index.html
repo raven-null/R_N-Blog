@@ -1026,6 +1026,10 @@
                     _startView = _valid.find(v => _views[v] !== false) || 'home';
                 }
                 if (_hasRoute) _startView = 'blog';
+                // 从别的页面（如音乐页顶栏）带 #blog / #gallery / #projects 进来时直达对应视图。
+                // 显式 hash 的优先级高于默认主页，但不能越过「该视图被后台禁用」这条。
+                const _hashView = /^#(home|blog|gallery|projects)$/.exec(window.location.hash || '');
+                if (_hashView && _views[_hashView[1]] !== false) _startView = _hashView[1];
                 setTimeout(() => BlogApp.moveIndicator(BlogApp.currentView || _startView), 0);
                 if (BlogApp.currentView !== _startView && _views[_startView] !== false) {
                     BlogApp.switchView(_startView);
