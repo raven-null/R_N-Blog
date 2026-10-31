@@ -356,6 +356,27 @@ html[data-theme="dark"] .hv3-card {
     background: linear-gradient(to top, rgba(8, 10, 16, .88) 0%, rgba(8, 10, 16, .52) 52%, rgba(8, 10, 16, 0) 100%);
 }
 
+/* 竖图还没到位时的占位：一层柔和的呼吸，比一整块空白好看，也说明"正在等图"。
+   图一到就摘掉这个类（见 fillCoverPlay）。 */
+.hv3-item.is-waiting-cover .hv3-cover {
+    background: linear-gradient(100deg,
+        var(--surface-2, #f3eee1) 20%,
+        var(--surface-3, #e9e3d4) 40%,
+        var(--surface-2, #f3eee1) 60%);
+    background-size: 200% 100%;
+    animation: hv3-cover-wait 2.2s linear infinite;
+}
+
+@keyframes hv3-cover-wait {
+    to { background-position: -200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .hv3-item.is-waiting-cover .hv3-cover {
+        animation: none;
+    }
+}
+
 /* 封面被换成图库竖图（原封面是横图或没有封面）时，卡片上不挂这篇的标题：
    那张图和这篇文章不对应，标题跟着横图封面一起挪到生活切片那边去了 */
 .hv3-item.is-generic .hv3-body {

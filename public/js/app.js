@@ -1944,30 +1944,45 @@ const BlogApp = {
 
     /* 横图封面和没有封面的卡：用竖图补一张封面。
        图库接口给了 width/height，所以竖图池是「确定」的，不是猜的 ——
-       宁可多等一会儿池子攒好，也不拿横图凑数（左竖右横是硬规则）。 */
+       宁可多等一会儿池子攒好，也不拿横图凑数（左竖右横是硬规则）。
+       关键是「一定要有图」：池子还没好就挂个占位、隔一会儿接着补，不放弃。 */
     fillCoverPlay(cards) {
-        if (!cards || !cards.length) return;
+        const live = (cards || []).filter((el) => el && el.isConnected);
+        if (!live.length) return;
+        // 先把还没图的卡打上占位（避免一大块空白）
+        live.forEach((el) => {
+            const f = el.querySelector('.hv3-cover-img.is-front');
+            if (!f || !f.getAttribute('src')) el.classList.add('is-waiting-cover');
+        });
         this.portraitPool().then((pool) => {
-            if (!pool.length) {
-                // 一张竖图都还没有：等池子攒够再来（图库还在加载时会出现）
-                if (!this._coverRetry) {
-                    this._coverRetry = setTimeout(() => {
-                        this._coverRetry = 0;
-                        this._portraitCache = null;
-                        this.fillCoverPlay(cards.filter((el) => el.isConnected));
-                    }, 4000);
-                }
+            if (pool.length) {
+                live.forEach((el) => this.swapCoverPlay(el, pool));
+                live.forEach((el) => {
+                    const f = el.querySelector('.hv3-cover-img.is-front');
+                    if (f && f.getAttribute('src')) el.classList.remove('is-waiting-cover');
+                });
                 return;
             }
-            cards.forEach((el) => this.swapCoverPlay(el, pool));
-        }).catch(() => { /* 图库整个拿不到就留空底 */ });
+            // 一张竖图都还没有：过一会儿再来（图库可能还在路上/这次超时了）
+            if (this._coverRetry) clearTimeout(this._coverRetry);
+            this._coverRetry = setTimeout(() => {
+                this._coverRetry = 0;
+                // 清掉「空池」缓存，下次重新去图库要一次
+                this._orientPools = null;
+                this._portraitCache = null;
+                this.fillCoverPlay(live);
+            }, 2500);
+        }).catch(() => { /* 图库整个拿不到：占位留着，不影响页面 */ });
     },
 
     /* 把所有能用上的图按方向分成两池，左（文章）只用竖图、右（生活切片）只用横图。
        方向优先看接口给的 width/height，缺尺寸的（老图、文章封面）才实际加载量一遍。
-       严格二选一：量不出来的直接丢掉，不塞进任何一边。 */
+       严格二选一：量不出来的直接丢掉，不塞进任何一边。
+       注意：空结果不缓存 —— 图库还没回来时缓存了空池，就永远补不上图了。 */
     async orientationPools() {
-        if (this._orientPools) return this._orientPools;
+        if (this._orientPools && (this._orientPools.portrait.length || this._orientPools.landscape.length)) {
+            return this._orientPools;
+        }
         if (this._orientPoolsPromise) return this._orientPoolsPromise;
         const orient = this._shotOrient = this._shotOrient || new Map();
         this._orientPoolsPromise = (async () => {
@@ -2028,8 +2043,10 @@ const BlogApp = {
             };
             await Promise.all(new Array(8).fill(0).map(worker));
 
-            this._orientPools = { portrait, landscape };
-            return this._orientPools;
+            const pools = { portrait, landscape };
+            // 空池不缓存：图库还没回来时缓存了空结果，后面就再也补不上图
+            if (portrait.length || landscape.length) this._orientPools = pools;
+            return pools;
         })();
         try {
             return await this._orientPoolsPromise;
@@ -2038,18 +2055,20 @@ const BlogApp = {
         }
     },
 
-    // 竖图池：文章位用
+    // 竖图池：文章位用（同样不缓存空结果）
     async portraitPool() {
-        if (this._portraitCache) return this._portraitCache;
+        if (this._portraitCache && this._portraitCache.length) return this._portraitCache;
         const pools = await this.orientationPools();
-        this._portraitCache = pools.portrait;
-        return this._portraitCache;
+        if (pools.portrait.length) this._portraitCache = pools.portrait;
+        return pools.portrait;
     },
 
     swapCoverPlay(item, pool) {
         const imgs = [...item.querySelectorAll('.hv3-cover-img')];
         if (imgs.length < 2) return;
         const front = imgs.find((i) => i.classList.contains('is-front')) || imgs[0];
+        // 已经有图的卡不再动（重试时只补空着的那些）
+        if (front && front.getAttribute('src')) return;
         const back = imgs.find((i) => i !== front) || imgs[1];
         const p = pool[Math.floor(Math.random() * pool.length)];
         const src = String(p && (p.thumb || p.url) || '');
@@ -2064,6 +2083,8 @@ const BlogApp = {
             const w = back.naturalWidth;
             const h = back.naturalHeight;
             if (w && h) item.style.setProperty('--cover-ratio', String(Math.max(0.55, Math.min(2.4, w / h))));
+            // 图真的上来了才摘占位（之前在这里同步判断 src，图片还没加载完就摘不掉）
+            item.classList.remove('is-waiting-cover');
         };
         back.addEventListener('load', swap, { once: true });
         back.src = src;
