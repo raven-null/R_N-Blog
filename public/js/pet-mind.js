@@ -609,7 +609,7 @@
     // 实时对话：不打开对话框，直接在桌宠气泡里说
     if (!STATE.ttsOn) toggleTTS(true);
     doc.getElementById('deskPet')?.classList.add('is-voice-mode');
-    say('直接说话就行，不用开对话框；再长按我一次就退出', 6500, { log: false });
+    say('按住我不放就能说话，松手就结束', 6500, { log: false });
     petState('listening', 0);
     restartRecognition(0);
     return true;

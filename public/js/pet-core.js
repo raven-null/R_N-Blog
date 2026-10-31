@@ -453,6 +453,8 @@
       if (mind && typeof mind.toggleVoiceMode === 'function') mind.toggleVoiceMode();
       else speakRandom();
     };
+    // 标记"这次实时对话是按住桌宠开的"，松手时要负责关掉
+    let voiceByLongPress = false;
     let vx = 0;
     let vy = 0;
     let lastX = 0;
@@ -486,18 +488,28 @@
       // 注意：三个圆要等真的开始拖动才收（见 onMove），否则双击的第一下就会把它们收掉
       try { body.setPointerCapture(e.pointerId); } catch (err) { /* 忽略 */ }
       if (e.cancelable) e.preventDefault();
-      // 长按不放 → 进 / 退实时对话（松手后不再当点击处理）
+      // 按住不放 → 激活实时对话（松开就结束，按住说话）
       clearTimeout(longPressTimer);
       longPressTimer = setTimeout(() => {
         longPressTimer = 0;
         longPressed = true;
+        pet.classList.remove('is-dragging');
         if (S.orbit) hideOrbit();
-        toggleVoiceMode();
+        const mind = global.PetMind;
+        if (mind && typeof mind.startVoiceMode === 'function' && typeof mind.stopVoiceMode === 'function') {
+          if (!mind.voiceMode) {
+            mind.startVoiceMode();
+            voiceByLongPress = true;
+          }
+        } else {
+          speakRandom();
+        }
       }, LONG_PRESS);
     };
 
     const onMove = (e) => {
       if (!drag) return;
+      if (longPressed) return;          // 按住说话期间不拖拽
       const dx = e.clientX - startX;
       const dy = e.clientY - startY;
       if (!moved && Math.abs(dx) + Math.abs(dy) > 3) {
@@ -534,9 +546,14 @@
       pet.classList.remove('is-dragging');
       pet.style.removeProperty('--pet-tilt');
 
-      if (longPressed) {                   // 长按已经处理过（进/退实时对话），这次不算点击
+      if (longPressed) {                   // 按住说话：松手就结束，这次不算点击
         longPressed = false;
         lastTap = 0;
+        if (voiceByLongPress) {
+          voiceByLongPress = false;
+          const mind = global.PetMind;
+          if (mind && typeof mind.stopVoiceMode === 'function') mind.stopVoiceMode();
+        }
         return;
       }
 
