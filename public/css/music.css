@@ -5,6 +5,34 @@
    但内容是全屏 iframe，所以要摆脱 main-content 的限宽与内边距。
    ============================================================ */
 
+/* 音乐视图：导航栏浮在播放器之上（不占文档流），播放器顶到最上面 */
+body.view-music-active .top-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 200;
+    background: transparent !important;
+    /* 只有胶囊本身吃鼠标，别让整条挡住播放器顶部的点击 */
+    pointer-events: none;
+}
+
+body.view-music-active .top-bar-pill {
+    pointer-events: auto;
+    /* 浮在深色播放器上：玻璃底给足对比 */
+    background: rgba(18, 20, 28, 0.72) !important;
+    border-color: rgba(255, 255, 255, 0.14) !important;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35) !important;
+    backdrop-filter: blur(20px) saturate(160%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(160%) !important;
+}
+
+/* 常显态下胶囊比 .top-bar-inner 的 40px 高一点，撑开容器，别让顶部被切掉 */
+body.view-music-active .top-bar-inner {
+    height: auto;
+    padding-block: 6px;
+}
+
 /* 音乐视图不吃 main-content 的盒子，铺满整个可滚动区 */
 body.view-music-active .scroll-area {
     overflow: hidden;
