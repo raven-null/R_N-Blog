@@ -607,8 +607,9 @@
   let recognition = null;
   let listening = false;
   let voiceMode = false;
-  let pttMode = false;      // 按住说话：松手时把听到的最后一句话发出去
+  let pttMode = false;      // 按住说话：只攒不发送，松手时整句发出
   let pttBusy = false;      // 松手后仍在跑这一轮任务（等回复 + 朗读）
+  let pttText = '';         // 按住期间已经定稿的部分（换气停顿也不会中途发出）
   let lastHeard = '';       // 最近一次未定稿的识别文本
   let recRestartTimer = 0;
 
@@ -647,14 +648,21 @@
       if (!live) return;
       const el = bubbleEl();
       if (el) {
-        el.textContent = live;
+        // 按住说话时，气泡里要把"已经定稿的 + 正在说的"连起来显示
+        el.textContent = pttMode ? (pttText + (finalText ? finalText : interim)).trim() : live;
         el.classList.remove('is-below');
         el.classList.add('is-show');
         placeBubble();
       }
       const input = doc.getElementById('petChatInput');
-      if (input) input.value = live.slice(0, 300);
+      if (input) input.value = (pttMode ? pttText + live : live).trim().slice(0, 300);
       if (finalText) {
+        if (pttMode) {
+          // 按住说话：换气/停顿也会来一条 final，这里只攒着，等松手再整句发出去
+          pttText += finalText;
+          lastHeard = '';
+          return;
+        }
         lastHeard = '';
         STATE.lastUserAt = Date.now();
         send(finalText.trim());
@@ -682,6 +690,8 @@
       if (!STATE.busy) petState(voiceMode ? 'listening' : 'idle', 0);
       // 对话模式：浏览器自己停了就接上（等回复期间先别抢麦克风）
       if (voiceMode && !pttMode && !pttBusy && !doc.hidden) restartRecognition(400);
+      // 按住说话：一次识别到 final 后浏览器会自动结束，只要手还按着就接着听
+      if (voiceMode && pttMode && !doc.hidden) restartRecognition(120, false);
     };
 
     mic.addEventListener('click', (e) => {
@@ -715,6 +725,7 @@
     }
     stopSpeaking();              // 抢话：先停掉正在念的那句
     pttMode = !!(opts && opts.ptt);
+    pttText = '';
     lastHeard = '';
     voiceMode = true;
     STATE.lastUserAt = Date.now();
@@ -730,9 +741,11 @@
 
   function stopVoiceMode(reason) {
     if (!voiceMode) return;
-    const pending = pttMode ? lastHeard : '';
+    // 按住说话：把「已定稿的」和「最后还没定稿的」拼起来，整句发出
+    const pending = pttMode ? (pttText + lastHeard).trim() : '';
     const wasPtt = pttMode;
     pttMode = false;
+    pttText = '';
     lastHeard = '';
     clearTimeout(recRestartTimer);
     try { recognition && recognition.stop(); } catch (e) { /* 忽略 */ }
