@@ -14500,6 +14500,27 @@ body.screensaver-on > *:not(.screensaver) {
 
 /* music.css */
 /* ============================================================
+   导航栏的默认状态
+   ------------------------------------------------------------
+   1. 没有岛（没在放歌）：导航栏也完全藏起来，连收起态那条 6px 小边都不留，
+      鼠标移进顶部那条带子才滑出来；
+   2. 有岛：岛展开，导航栏让位（显示时机交给圆按钮，见下面的岛模式规则）。
+   ============================================================ */
+body:not(.view-music-active):not(.island-mode) .top-bar-pill {
+    transform: translateY(-100%) !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    transition: transform 0.32s cubic-bezier(0.2, 0.7, 0.3, 1), opacity 0.22s ease !important;
+}
+
+/* 鼠标进入顶部带子 → 导航滑出来（这条特异性更高，能压住上面的隐藏规则） */
+body:not(.view-music-active):not(.island-mode) .top-bar:hover .top-bar-pill {
+    transform: translateY(0) !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+}
+
+/* ============================================================
    顶部 dock：岛模式与导航栏互斥，绝不同时并排
    ------------------------------------------------------------
    岛模式（有歌在放、且不在音乐视图）：
@@ -14550,25 +14571,56 @@ body.screensaver-on > *:not(.screensaver) {
     transform: scale(0.94);
 }
 
-/* 岛模式：圆按钮出现，导航栏整个不占位（不是隐形——它若还占着宽度，岛会被挤偏） */
+/* 岛模式：圆按钮出现 */
 body.island-mode:not(.view-music-active) .dock-orb {
     display: inline-flex;
 }
 
+/* 岛模式：导航胶囊收成 0 宽并淡出。
+   这里刻意不用 display:none —— display 不能过渡，切换会硬闪一下；
+   收宽度 + 淡出才能和岛的收放交叉成一段动画。 */
 body.island-mode:not(.view-music-active) .top-bar-pill {
-    display: none !important;
+    max-width: 0 !important;
+    padding-inline: 0 !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    overflow: hidden !important;
+    transform: translateY(-2px) scale(0.96) !important;
+    transition:
+        max-width 0.34s cubic-bezier(0.34, 1.4, 0.64, 1),
+        padding 0.3s ease,
+        opacity 0.2s ease,
+        transform 0.32s cubic-bezier(0.34, 1.4, 0.64, 1) !important;
 }
 
-/* 点了圆按钮：导航栏接管，岛让位——两者永远只有一个在场 */
+/* 悬停圆按钮后：导航胶囊展开、内部品牌与视图一起展开，岛同时收成 0 宽 —— 两边交叉过渡 */
 body.island-mode.nav-dock-open:not(.view-music-active) #topBarPill {
-    display: flex !important;
+    max-width: 680px !important;
+    padding-inline: 10px 14px !important;
     opacity: 1 !important;
     pointer-events: auto !important;
-    transform: translateY(0) !important;
+    transform: none !important;
 }
 
+body.island-mode.nav-dock-open:not(.view-music-active) #topBarPill .top-bar-brand {
+    max-width: 160px !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+}
+
+body.island-mode.nav-dock-open:not(.view-music-active) #topBarPill .top-bar-views {
+    max-width: 480px !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+}
+
+/* 导航接管时岛让位：也收成 0 宽（有过渡），而不是 display 直接消失 */
 body.island-mode.nav-dock-open:not(.view-music-active) .now-island {
-    display: none;
+    width: 0 !important;
+    padding: 4px !important;
+    gap: 0 !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
 }
 
 /* ============================================================
