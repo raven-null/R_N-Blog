@@ -15,7 +15,7 @@
     <meta property="og:image" content="https://ravennull.work/images/Default/web-logo.webp">
     <meta property="og:locale" content="zh_CN">
     <meta name="twitter:card" content="summary">
-    <link rel="stylesheet" href="css/bundle.css?v=dc25cb8ed1">
+    <link rel="stylesheet" href="css/bundle.css?v=4fb000bc3e">
     <title>渡鸦 NULL · 日光与暮色之间</title>
     <link rel="icon" id="siteFavicon" href="/images/Default/web-logo.webp" type="image/webp">
     <link rel="apple-touch-icon" href="/images/Default/web-logo.webp">
@@ -643,7 +643,7 @@
     <!-- 桌宠动效引擎（spring-driven character，见 public/vendor/grok/README.md） -->
 
     <!-- /js/* 是 immutable 长缓存：app.js 一改就必须换 ?v=，否则线上一直吃旧文件 -->
-    <script src="js/app.js?v=20261105r" defer></script>
+    <script src="js/app.js?v=20261105s" defer></script>
     <script src="js/animations.js?v=3.14.0" defer></script>
 
     <script>
@@ -1030,6 +1030,8 @@
 
         // ===== Init =====
         document.addEventListener('DOMContentLoaded', async () => {
+            // 图库预热：尽早把图库列表和前几张缩略图拉起来，别等渲染到那一步才开始下载
+            if (window.BlogApp && typeof BlogApp.warmGallery === 'function') BlogApp.warmGallery();
             // 加载博客设置并应用（需在 BlogApp.init 前）
             await loadBlogSettings();
             applyBlogSettings();

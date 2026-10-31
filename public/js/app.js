@@ -1924,9 +1924,11 @@ const BlogApp = {
             const date = this.formatDate ? this.formatDate(post.date) : (post.date || '');
             const tag = (post.tags && post.tags[0]) ? '<span class="hv3-tag">' + this.esc(post.tags[0]) + '</span>' : '';
             // 封面固定两层：和生活切片一样靠交叉淡入换图（swapCoverPlay 往里灌图）
+            // 第一张是要立刻显示的，用 eager 抢优先级；其余懒加载
+            const eager = i === 0 ? 'eager' : 'lazy';
             const img0 = post.image
-                ? '<img class="hv3-cover-img is-front" src="' + this.escAttr(post.image) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">'
-                : '<img class="hv3-cover-img is-front" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">';
+                ? '<img class="hv3-cover-img is-front" src="' + this.escAttr(post.image) + '" alt="" loading="' + eager + '" decoding="async" referrerpolicy="no-referrer" fetchpriority="high">'
+                : '<img class="hv3-cover-img is-front" alt="" loading="' + eager + '" decoding="async" referrerpolicy="no-referrer">';
             const cover = '<span class="hv3-cover">' + img0 + '<img class="hv3-cover-img" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"></span>';
             return '<a class="hv3-item' + (i === 0 ? ' is-front' : '') + '" href="' + href + '" data-has-cover="' + (post.image ? '1' : '') + '">'
                 + cover
@@ -2207,6 +2209,8 @@ const BlogApp = {
         const src = String(p && (p.thumb || p.url) || '');
         if (!src || back.dataset.src === src) return;
         back.dataset.src = src;
+        // 这张图马上要显示，别走懒加载的观察队列
+        back.loading = 'eager';
         let done = false;
         const swap = () => {
             if (done) return;
@@ -2238,6 +2242,28 @@ const BlogApp = {
         }, { once: true });
         back.src = src;
         if (back.complete && back.naturalWidth) swap();
+    },
+
+    // 图库预热：页面一进来就拉列表，并把前几张竖图/横图的缩略图先下进浏览器缓存。
+    // 首页那两块（文章位竖图、生活切片横图）渲染时就直接命中缓存，不用干等下载。
+    // 注意这里用的 URL 必须和渲染时完全一致（都是 p.thumb 原样），否则命中不了缓存。
+    warmGallery() {
+        if (this._galleryWarm) return;
+        this._galleryWarm = true;
+        this.loadGalleryImages().then((list) => {
+            if (!Array.isArray(list) || !list.length) return;
+            const sized = list.filter((p) => p && Number(p.width) > 0 && Number(p.height) > 0 && (p.thumb || p.url));
+            const take = (arr, n) => arr.slice(0, n).forEach((p) => {
+                const src = String(p.thumb || p.url || '');
+                if (!src) return;
+                const img = new Image();
+                img.decoding = 'async';
+                img.referrerPolicy = 'no-referrer';
+                img.src = src;
+            });
+            take(sized.filter((p) => Number(p.height) > Number(p.width)), 12);   // 备给文章位
+            take(sized.filter((p) => Number(p.width) >= Number(p.height)), 4);   // 备给生活切片
+        }).catch(() => { /* 预热失败不影响正常加载 */ });
     },
 
     // 整块轮播的尺寸跟着当前封面走：竖图窄而高、横图宽而扁（宽高都由封面比例算）
