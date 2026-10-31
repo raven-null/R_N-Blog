@@ -13020,6 +13020,14 @@ html[data-theme="dark"] .hv3-card {
     flex-direction: column;
     gap: 18px;
     min-width: 0;
+    min-height: 0;
+    /* 实际高度由 syncMainRowHeight() 按左边文章盒子的高度写进来 */
+}
+
+/* 切片保持自己的比例，空间不够时可以收缩，别把整列顶出界 */
+.hv3-shot {
+    flex: 0 1 auto;
+    min-height: 0;
 }
 
 .hv3-sub-grid {
@@ -13027,6 +13035,9 @@ html[data-theme="dark"] .hv3-card {
     grid-template-columns: minmax(0, 1fr);
     gap: 18px;
     align-items: stretch;
+    /* 吃掉右列剩下的高度 —— 左边文章盒子变矮时，这里跟着缩 */
+    flex: 1 1 auto;
+    min-height: 0;
 }
 
 .hv3-box {
@@ -13431,8 +13442,11 @@ html[data-theme="dark"] .hv3-card {
    03 · 今日拾光：默认自动滚，手动碰过就接管，离开几秒后接着自动
    ============================================================ */
 .hv3-news {
-    /* 右侧只剩它一块，占满 8 栏；高度写死才能让内部列表滚动 */
-    height: 176px;
+    /* 高度不写死：占满右列剩下的空间，底边跟左边的文章盒子对齐。
+       左边盒子因为封面比例变矮时，这块跟着缩，里面的列表自己滚。 */
+    height: auto;
+    min-height: 70px;
+    overflow: hidden;
 }
 
 .hv3-ticker {
@@ -13512,18 +13526,40 @@ html[data-theme="dark"] .hv3-card {
     margin: 2px 8px 10px 2px;
 }
 
-/* 项目排成 2 列网格，行高自动吃掉容器剩余高度 */
+/* 项目：横向一条，鼠标按住拖动，滚动条藏起来 */
 .hv3-project-grid {
     flex: 1 1 auto;
     min-height: 0;
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-auto-rows: minmax(96px, 1fr);
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
     gap: 10px;
-    align-content: stretch;
+    overflow-x: auto;
+    overflow-y: hidden;
+    /* 不要滚动条，靠拖拽（触屏走原生滑动） */
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+    cursor: grab;
+}
+
+.hv3-project-grid::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+    display: none !important;
+}
+
+.hv3-project-grid.is-dragging {
+    cursor: grabbing;
+    user-select: none;
+}
+
+/* 拖动过程中别让卡片抢走指针/触发跳转 */
+.hv3-project-grid.is-dragging .hv3-project {
+    pointer-events: none;
 }
 
 .hv3-project {
+    flex: 0 0 clamp(170px, 22%, 236px);
     display: flex;
     flex-direction: column;
     gap: 3px;
@@ -13856,6 +13892,67 @@ html[data-theme="dark"] .hv3-today-panel {
     -webkit-backdrop-filter: blur(18px) saturate(1.2);
 }
 
+/* 「今天」卡：左日历 / 右任务+日记 */
+.hv3-today-main {
+    display: grid;
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+    gap: 14px;
+    align-items: start;
+    min-height: 0;
+}
+
+.hv3-today-side {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 0;
+    /* 实际高度由 syncTodaySideHeight() 按日历高度写进来 —— 右栏不能比日历高 */
+    max-height: 100%;
+    overflow: hidden;
+}
+
+/* 未登录时右栏（任务/日记）整块隐藏：日历直接占满整行，不留空列 */
+.hv3-today-panel.is-guest .hv3-today-main {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+/* 当天任务：条数多了自己滚 */
+.hv3-today-tasks {
+    flex: 0 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+.hv3-today-tasks::-webkit-scrollbar {
+    width: 0 !important;
+}
+
+.hv3-today-tasks {
+    scrollbar-width: none;
+}
+
+/* 日记：吃掉右栏剩下的高度，内容多了在内部滚 */
+.hv3-journals {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.hv3-journals .hv3-stack {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+.hv3-journals .hv3-stack::-webkit-scrollbar {
+    width: 0 !important;
+}
+
+.hv3-journals .hv3-stack {
+    scrollbar-width: none;
+}
+
 /* 「今天」卡：日期 + 写作按钮 + 日历 + 任务 + 日记，合在一张卡里 */
 .hv3-today-panel {
     flex: 0 0 auto;
@@ -14041,6 +14138,16 @@ html[data-theme="dark"] .hv3-shot {
     .hv3-grid {
         grid-template-columns: minmax(0, 1fr);
         gap: 14px;
+    }
+
+    /* 手机上左右两栏太窄：任务/日记回到日历下面竖排，右栏不再限高 */
+    .hv3-today-main {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 12px;
+    }
+
+    .hv3-today-side {
+        max-height: none !important;
     }
 
     /* 手机上的文章位只播竖图：盒子宽高都按封面真实比例来（--car-w / --car-h 由

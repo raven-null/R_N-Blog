@@ -2001,6 +2001,15 @@ const BlogApp = {
         // 鼠标停上去就暂停自动切换，走开再继续
         car.addEventListener('mouseenter', () => this.stopPostPlay());
         car.addEventListener('mouseleave', () => this.startPostPlay());
+        // 窗口尺寸变了：文章盒子宽高要重算，右列（切片 + 简报）也跟着重新对齐 ——
+        // 盒子变高时简报要一起撑高，变矮时一起缩，两边底边始终齐平。
+        if (!this._postResizeBound) {
+            this._postResizeBound = true;
+            window.addEventListener('resize', () => {
+                clearTimeout(this._postResizeTimer);
+                this._postResizeTimer = setTimeout(() => this.syncCarouselHeight(), 120);
+            }, { passive: true });
+        }
         // 卡片上显示的是「图库竖图」（is-generic）时，点开就该看大图，不能跳到文章去 ——
         // 那张图和文章本来就不对应。显示自己封面的卡照旧进文章。
         car.addEventListener('click', (e) => {
@@ -2279,6 +2288,23 @@ const BlogApp = {
             carousel.dataset.w = String(w);
             carousel.dataset.h = String(h);
         }
+        // 左边盒子高度变了，右边（切片 + 简报）跟着对齐
+        this.syncMainRowHeight();
+    },
+
+    /* 第二行右侧（生活切片 + 今日拾光）的总高度 = 左边文章盒子的高度：
+       文章盒子因为封面比例变矮时，简报那块跟着缩、内容在内部滚，
+       不会把整行撑高、也不会在左下留一块空白。 */
+    syncMainRowHeight() {
+        const car = document.getElementById('hv3Car');
+        const col = document.querySelector('.hv3-row-main .hv3-col-right');
+        if (!car || !col) return;
+        if (window.innerWidth <= 900) {
+            col.style.maxHeight = '';
+            return;
+        }
+        const h = Math.round(car.getBoundingClientRect().height);
+        col.style.maxHeight = h > 0 ? h + 'px' : '';
     },
 
     // 轮播：按钮翻页 + 自动播放（尊重系统"减少动效"，tab 隐藏时暂停）
@@ -2889,6 +2915,13 @@ const BlogApp = {
         this.bindLifeEvents();
 
         await this.loadLifeMonth(this.lifeState.month);
+
+        // 窗口尺寸变了，日历高度跟着变，右栏的上限也要重算
+        if (!this._todaySideResizeBound) {
+            this._todaySideResizeBound = true;
+            window.addEventListener('resize', () => this.syncTodaySideHeight(), { passive: true });
+        }
+        this.syncTodaySideHeight();
     },
 
     // 日历滚轮切换月份：登录时连带切换任务/日记归档，未登录只翻日历
@@ -2963,6 +2996,24 @@ const BlogApp = {
         this.updateTodayHeader();
         this.renderLifeTasks();
         this.renderJournalStack();
+        this.syncTodaySideHeight();
+    },
+
+    /* 右栏（任务 + 日记）不能比左边日历高：把日历实际高度写进 max-height，
+       超出的部分留给任务区/日记区自己滚。 */
+    syncTodaySideHeight() {
+        const panel = document.getElementById('hv3TodayPanel');
+        if (!panel) return;
+        const cal = document.getElementById('homeCalendar');
+        const side = panel.querySelector('.hv3-today-side');
+        if (!cal || !side) return;
+        // 手机上是竖排（任务/日记在日历下面），不需要限高
+        if (window.innerWidth <= 900 || panel.classList.contains('is-guest')) {
+            side.style.maxHeight = '';
+            return;
+        }
+        const h = Math.round(cal.getBoundingClientRect().height);
+        side.style.maxHeight = h > 0 ? h + 'px' : '';
     },
 
     // 「今天」卡头部的日期（日历选中哪天就写哪天）
@@ -4739,6 +4790,8 @@ const BlogApp = {
         }
 
         box.innerHTML = items.map(p => this.hv3DeployedCard(p)).join('');
+        // 横向一条：鼠标按住可拖动，滚动条藏起来
+        this.bindProjectsDragScroll(box);
     },
 
     // 首页已上线项目卡片：封面截图 + 名称/标签 + 域名
