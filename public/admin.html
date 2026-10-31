@@ -653,7 +653,7 @@
     <link rel="stylesheet" href="/css/tokens.css?v=1.6.0">
     <link rel="stylesheet" href="/css/admin-skin.css?v=1.2.0">
     <script src="/js/tone.js?v=20261030" defer></script>
-<script src="/js/experience.js?v=20261031b" defer></script>
+<script src="/js/experience.js?v=20261103a" defer></script>
 </head>
 <body>
     <!-- ===== 登录页（动画角色版，改造自 MIT 协议的 animated-characters-login-page）=====
@@ -1098,6 +1098,33 @@
                                 <input type="text" id="setAboutUpdated" placeholder="输入更新日期">
                             </div>
                         </div>
+                        <!-- 8. 桌宠（右下角的枯梦） -->
+                        <div class="settings-group">
+                            <h3><span class="settings-title">桌宠（右下角的枯梦）</span><span class="settings-grip" title="拖动排序">⠿</span><span class="settings-chevron" title="展开/收起">▾</span></h3>
+                            <div class="settings-toggle-list">
+                                <div class="settings-toggle-item"><span>显示桌宠</span><label class="switch"><input type="checkbox" id="setPetEnabled" checked><span class="slider"></span></label></div>
+                                <div class="settings-toggle-item"><span>主动搭话</span><label class="switch"><input type="checkbox" id="setPetAutoTalk" checked><span class="slider"></span></label></div>
+                                <div class="settings-toggle-item"><span>眼睛跟着鼠标</span><label class="switch"><input type="checkbox" id="setPetGaze" checked><span class="slider"></span></label></div>
+                                <div class="settings-toggle-item"><span>默认朗读回复</span><label class="switch"><input type="checkbox" id="setPetTts"><span class="slider"></span></label></div>
+                            </div>
+                            <div class="settings-field">
+                                <label>说话频率</label>
+                                <select id="setPetTalkRate">
+                                    <option value="quiet">安静（很少开口）</option>
+                                    <option value="normal">正常</option>
+                                    <option value="chatty">话多</option>
+                                </select>
+                            </div>
+                            <div class="settings-field">
+                                <label>名字</label>
+                                <input type="text" id="setPetName" placeholder="枯梦" maxlength="20">
+                            </div>
+                            <div class="settings-field">
+                                <label>性格 / 口吻（追加到 AI 提示词）</label>
+                                <textarea id="setPetPersona" rows="3" placeholder="例如：说话简短，偶尔用「喵」，别把每句都写成卖萌"></textarea>
+                            </div>
+                            <div class="settings-tip">这里的开关对所有访客生效；访客自己点过的「朗读 / 安静」状态存在他本机，优先于此处的默认值。</div>
+                        </div>
                         </div>
 
                         <div class="settings-section" data-section="ai">
@@ -1421,7 +1448,7 @@
     </div>
 
         <script src="js/tag-picker.js?v=1.1.2"></script>
-        <script src="js/admin-app.js?v=1.20.0"></script>
+        <script src="js/admin-app.js?v=1.21.0"></script>
 
     <!-- 前台预览抽屉（iframe 内嵌，零跳出） -->
     <style>
@@ -1456,6 +1483,6 @@
 <script src="js/login.js?v=1.0.0"></script>
     <script src="/js/theme.js?v=20261030c" defer></script>
     <script>document.addEventListener("DOMContentLoaded", function () { if (window.ThemeManager) ThemeManager.init(); });</script>
-<link rel="stylesheet" href="/css/renewal.css?v=20261030b">
+<link rel="stylesheet" href="/css/renewal.css?v=20261103a">
 </body>
 </html>

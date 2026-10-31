@@ -2400,6 +2400,16 @@
             document.getElementById('setAiWriteTemperature').value=(wrTemp===undefined||wrTemp===null||wrTemp==='')?'':wrTemp;
             renderSettingsModels('AiWrite',wr.provider,wr.model,wr.apiUrl,wr.model);
             renderSettingsModels('Ai',ai.provider,ai.model,ai.apiUrl,ai.model);
+            // 桌宠（右下角的枯梦）：元素可能来自旧缓存的后台页面，取不到就跳过
+            const pet=s.pet||{};
+            const setPet=(id,fn)=>{const el=document.getElementById(id);if(el)fn(el)};
+            setPet('setPetEnabled',el=>{el.checked=pet.enabled!==false});
+            setPet('setPetAutoTalk',el=>{el.checked=pet.autoTalk!==false});
+            setPet('setPetGaze',el=>{el.checked=pet.gaze!==false});
+            setPet('setPetTts',el=>{el.checked=pet.tts===true});
+            setPet('setPetTalkRate',el=>{el.value=['quiet','normal','chatty'].includes(pet.talkRate)?pet.talkRate:'normal'});
+            setPet('setPetName',el=>{el.value=pet.name||''});
+            setPet('setPetPersona',el=>{el.value=pet.persona||''});
         }
         // 头像预览
         function renderSettingsAvatar(src){
@@ -2609,6 +2619,22 @@
                         temperature:document.getElementById('setAiWriteTemperature').value!==''?parseFloat(document.getElementById('setAiWriteTemperature').value):0.7,
                     },
                 },
+                // 桌宠（右下角的枯梦）
+                pet:(()=>{
+                    const g=id=>document.getElementById(id);
+                    const rate=g('setPetTalkRate');
+                    const nameEl=g('setPetName');
+                    const personaEl=g('setPetPersona');
+                    return {
+                        enabled:(g('setPetEnabled')||{}).checked!==false,
+                        autoTalk:(g('setPetAutoTalk')||{}).checked!==false,
+                        gaze:(g('setPetGaze')||{}).checked!==false,
+                        tts:(g('setPetTts')||{}).checked===true,
+                        talkRate:rate&&rate.value?rate.value:'normal',
+                        name:nameEl?(nameEl.value||'').trim():'',
+                        persona:personaEl?(personaEl.value||'').trim():'',
+                    };
+                })(),
             };
             const r=await apiFetch('action=settings',{method:'POST',body:JSON.stringify(body)});
             if(r.status==='success'){

@@ -15,6 +15,8 @@
   const STATE = {
     enabled: true,
     ttsOn: false,
+    name: '枯梦',
+    persona: '',
     autoMs: [70000, 155000],   // 白天主动说话间隔
     nightAutoMs: [150000, 300000], // 夜间：更安静
     minGap: 50000,             // 两次自动说话的最小间隔
@@ -331,8 +333,9 @@
 
   // ---------- 问 AI ----------
   function buildPrompt(ctx) {
+    const name = STATE.name || '枯梦';
     const bits = [
-      '你是这个个人博客站里的桌宠「枯梦」，一只住在网页右下角的小生物。',
+      '你是这个个人博客站里的桌宠「' + name + '」，一只住在网页右下角的小生物。',
       '说话短、口语、有点小情绪，可以偶尔用「喵」，但不要每句都卖萌，不要长篇大论。',
       '你能看到访客此刻正在看的页面，回答时优先结合下面的现场信息，不要编造没看到的内容。',
       '被问身份时，说自己是站里的桌宠，不要说自己是大模型。',
@@ -342,6 +345,7 @@
       '- 本地时间：' + ctx.time + (ctx.period ? '，天色：' + (PERIOD[ctx.period] || ctx.period) : ''),
       '- 在这个页面已经待了：' + ctx.stuckSec + ' 秒',
     ];
+    if (STATE.persona) bits.push('', '【站主给的人设补充】', STATE.persona);
     if (ctx.posts && ctx.posts.length) bits.push('- 首页精选文章：' + ctx.posts.join(' / '));
     if (ctx.news && ctx.news.length) bits.push('- 今日简报：' + ctx.news.join(' / '));
     if (ctx.statPosts) bits.push('- 站点数字：' + ctx.statPosts + ' 篇文章 / ' + ctx.statPhotos + ' 张照片 / ' + ctx.statProjects + ' 个项目');
@@ -640,7 +644,7 @@
         STATE.history.slice(-6).forEach((m) => appendMsg(m.role, m.content));
       } else {
         const ctx = collect();
-        appendMsg('assistant', '我是枯梦，住在右下角。' + (ctx.view === 'article' && ctx.article ? '你正在读《' + ctx.article + '》。' : '') + '想聊什么？');
+        appendMsg('assistant', '我是' + (STATE.name || '枯梦') + '，住在右下角。' + (ctx.view === 'article' && ctx.article ? '你正在读《' + ctx.article + '》。' : '') + '想聊什么？');
       }
     }
     // 面板跟着桌宠走（放不下会自己翻到另一侧）
@@ -676,14 +680,6 @@
     bubble && bubble.addEventListener('click', () => openPanel());
 
     // 桌宠本体单击（短按）也打开面板？——不，单击是摸摸，保持安静；双击是睡觉。
-
-    // 快捷问题
-    doc.querySelectorAll('#petChips [data-prompt]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        if (STATE.busy) return;
-        send(btn.getAttribute('data-prompt') || '');
-      });
-    });
 
     // 安静模式 / 朗读
     doc.getElementById('petQuietToggle')?.addEventListener('click', (e) => {
@@ -785,11 +781,14 @@
     }
   }
 
-  function setQuiet(quiet) {
+  // persist=false：后台设置下发的默认值，不写进访客的 localStorage（否则会覆盖他自己的选择）
+  function setQuiet(quiet, opts) {
     STATE.enabled = !quiet;
     clearTimeout(STATE.timer);
     clearTimeout(STATE.bubbleTimer);
-    try { ls.setItem('pet-quiet', String(!!quiet)); } catch (_) { /* 忽略 */ }
+    if (!opts || opts.persist !== false) {
+      try { ls.setItem('pet-quiet', String(!!quiet)); } catch (_) { /* 忽略 */ }
+    }
     if (quiet) {
       bubbleEl()?.classList.remove('is-show');
       global.PetCore?.setState('drowsy', 1800);
@@ -800,14 +799,25 @@
     syncTools();
   }
 
-  function toggleTTS(on) {
+  function toggleTTS(on, opts) {
     STATE.ttsOn = on === undefined ? !STATE.ttsOn : !!on;
-    try { ls.setItem('pet-tts', String(STATE.ttsOn)); } catch (_) { /* 忽略 */ }
+    if (!opts || opts.persist !== false) {
+      try { ls.setItem('pet-tts', String(STATE.ttsOn)); } catch (_) { /* 忽略 */ }
+    }
     if (!STATE.ttsOn && global.speechSynthesis) {
       try { global.speechSynthesis.cancel(); } catch (_) { /* 忽略 */ }
     }
     syncTools();
     return STATE.ttsOn;
+  }
+
+  // 后台设置里的名字 / 口吻
+  function setName(name) {
+    const next = String(name || '').trim().slice(0, 20);
+    if (!next || next === STATE.name) return;
+    STATE.name = next;
+    const title = doc.querySelector('.pet-chat-title');
+    if (title) title.textContent = next;
   }
 
   global.PetMind = {
@@ -822,6 +832,7 @@
     closePanel,
     setQuiet,
     toggleTTS,
+    setName,
     isSleeping,
     get listening() { return !!listening; },
     get recognition() { return recognition; },

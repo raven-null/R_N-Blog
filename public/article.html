@@ -2123,7 +2123,7 @@
     <link rel="stylesheet" href="/css/tokens.css?v=1.7.0">
     <link rel="stylesheet" href="/css/sky.css?v=20261101a">
     <script src="/js/tone.js?v=20261030" defer></script>
-<script src="/js/experience.js?v=20261031b" defer></script>
+<script src="/js/experience.js?v=20261103a" defer></script>
 </head>
 <body>
     <!-- 昼夜天色背景层（按真实时间变化） -->
@@ -2399,11 +2399,6 @@
                 </div>
             </div>
             <div class="pet-chat-log" id="petChatLog" aria-live="polite"></div>
-            <div class="pet-chips" id="petChips">
-                <button type="button" data-prompt="这页有什么值得看的？">这页有什么</button>
-                <button type="button" data-prompt="总结一下我正在读的这段">总结这段</button>
-                <button type="button" data-prompt="随便聊两句吧">陪我聊聊</button>
-            </div>
             <form class="pet-chat-form" id="petChatForm">
                 <button type="button" class="pet-mic" id="petMic" title="点一下说话（需要麦克风权限）">🎙</button>
                 <input type="text" id="petChatInput" placeholder="和我说点什么…" maxlength="300" autocomplete="off">
@@ -2424,8 +2419,8 @@
             '/vendor/grok/fx.js?v=1.0.0',
             '/vendor/grok/eyes.js?v=1.0.0',
             '/vendor/grok/character.js?v=1.0.2',
-            '/js/pet-core.js?v=2.0.3',
-            '/js/pet-mind.js?v=2.0.2'
+            '/js/pet-core.js?v=2.0.4',
+            '/js/pet-mind.js?v=2.0.3'
         ];
         var started = false;
         function load() {
@@ -2466,6 +2461,6 @@
             } catch (e) { /* 读不到就按默认 */ }
         })();
     </script>
-<link rel="stylesheet" href="/css/renewal.css?v=20261030b">
+<link rel="stylesheet" href="/css/renewal.css?v=20261103a">
 </body>
 </html>

@@ -1455,6 +1455,16 @@ export default async (req: Request) => {
         // 写作页的 AI：独立的一套（见文件顶部 DEFAULT_AI_WRITE）
         write: { ...DEFAULT_AI_WRITE },
       },
+      // 桌宠「枯梦」：前台右下角那只小生物的行为开关
+      pet: {
+        enabled: true,
+        name: "枯梦",
+        autoTalk: true,
+        talkRate: "normal",
+        gaze: true,
+        tts: false,
+        persona: "",
+      },
     }
 
     // GET: 读取设置（公开，首页需要）
@@ -1504,6 +1514,14 @@ export default async (req: Request) => {
           write: { ...writeMerged, hasKey: writeHasKey },
         },
         navTags: data.navTags && data.navTags.length ? data.navTags : DEFAULT_SETTINGS.navTags,
+        // 桌宠设置：公开字段，没有密钥，直接跟着设置返回给前台
+        pet: {
+          ...DEFAULT_SETTINGS.pet,
+          ...(data.pet && typeof data.pet === "object" ? data.pet : {}),
+          talkRate: ["quiet", "normal", "chatty"].includes(String((data.pet || {}).talkRate))
+            ? String((data.pet || {}).talkRate)
+            : DEFAULT_SETTINGS.pet.talkRate,
+        },
       }
       return json(200, { status: "success", data: merged }, req)
     }
@@ -1514,7 +1532,7 @@ export default async (req: Request) => {
     }
     if (req.method === "POST") {
       const body = await req.json().catch(() => ({}))
-      const { siteTitle, favicon, siteName, avatar, authorName, bio, views, stats, navTags, about, ai } = body
+      const { siteTitle, favicon, siteName, avatar, authorName, bio, views, stats, navTags, about, ai, pet } = body
 
       // 修改密码操作
       if (body.oldPassword !== undefined || body.newPassword !== undefined) {
@@ -1540,6 +1558,10 @@ export default async (req: Request) => {
         try { return (JSON.parse(prevRaw || "{}").ai || {}).write } catch { return undefined }
       })()
       const writeIncoming = (ai && typeof ai === "object" && ai.write) ? ai.write : null
+      // 桌宠设置同理：请求没带 pet 时沿用库里的值
+      const prevPet = (() => {
+        try { return JSON.parse(prevRaw || "{}").pet } catch { return undefined }
+      })()
       const settings = {
         siteTitle: String(siteTitle || "").trim(),
         favicon: String(favicon || "").trim(),
@@ -1592,6 +1614,20 @@ export default async (req: Request) => {
             }
           })(),
         },
+        // 桌宠「枯梦」：行为开关 + 名字 + 追加口吻（都不含敏感信息）
+        // 老客户端（缓存了旧 admin-app.js）保存时不会带 pet，这里沿用库里已有的值，免得被重置
+        pet: (() => {
+          const p = ((pet && typeof pet === "object" ? pet : null) || prevPet || {}) as any
+          return {
+            enabled: p.enabled !== false,
+            name: String(p.name || DEFAULT_SETTINGS.pet.name).trim().slice(0, 20),
+            autoTalk: p.autoTalk !== false,
+            talkRate: ["quiet", "normal", "chatty"].includes(String(p.talkRate)) ? String(p.talkRate) : DEFAULT_SETTINGS.pet.talkRate,
+            gaze: p.gaze !== false,
+            tts: p.tts === true,
+            persona: String(p.persona || "").trim().slice(0, 300),
+          }
+        })(),
       }
       await settingsStore.set("site", JSON.stringify(settings))
       return json(200, { status: "success", data: settings }, req)

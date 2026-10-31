@@ -184,7 +184,7 @@
         color: 'black',
         scheme: 'light',
         mode: 'hold',                                   // 状态由我们手动切
-        followPointer: true,                            // 眼睛一直跟着鼠标
+        followPointer: CONFIG.gaze,                     // 眼睛一直跟着鼠标（后台可关）
         reduceMotion: S.reduceMotion,
         // 58px 的小身板下默认幅度几乎看不见，放大注视范围（眼睛会明确转向鼠标），
         // falloff 放大后「多远算看得很偏」从 120px 变成约 700px，鼠标在半个屏幕上移动时
@@ -582,6 +582,12 @@
 
     const apply = () => {
       raf = 0;
+      if (S.gazeOff) {
+        pet.style.setProperty('--pet-shift-x', '0px');
+        pet.style.setProperty('--pet-shift-y', '0px');
+        pet.style.setProperty('--pet-lean', '0deg');
+        return;
+      }
       const svg = doc.getElementById('grokPet');
       if (!svg) return;
       const r = svg.getBoundingClientRect();
@@ -683,6 +689,83 @@
     }, 1800);
   }
 
+  // ---------- 后台设置（后台「前台设置 → 桌宠」下发） ----------
+  // /api/admin?action=settings 的 GET 是公开的（首页本来就在读），pet 段不含密钥。
+  const CONFIG = {
+    enabled: true,
+    name: '枯梦',
+    autoTalk: true,
+    talkRate: 'normal',
+    gaze: true,
+    tts: false,
+    persona: '',
+    loaded: false,
+  };
+
+  const TALK_RATE = {
+    quiet: [190000, 420000],
+    normal: [70000, 155000],
+    chatty: [35000, 85000],
+  };
+
+  function applyConfig() {
+    const pet = petEl();
+    if (!pet) return;
+    const mind = global.PetMind;
+
+    if (!CONFIG.enabled) {
+      pet.style.display = 'none';
+      if (S.engine) S.engine.paused = true;
+      if (mind) mind.setQuiet(true, { persist: false });
+      return;
+    }
+
+    if (S.engine && typeof S.engine.setFollowPointer === 'function') {
+      S.engine.setFollowPointer(!!CONFIG.gaze);
+    }
+    S.gazeOff = !CONFIG.gaze;
+
+    if (mind) {
+      if (!CONFIG.autoTalk) {
+        mind.setQuiet(true, { persist: false });
+      } else {
+        const [lo, hi] = TALK_RATE[CONFIG.talkRate] || TALK_RATE.normal;
+        mind.state.autoMs = [lo, hi];
+        mind.state.nightAutoMs = [Math.round(lo * 1.8), Math.round(hi * 1.8)];
+      }
+      if (CONFIG.name && typeof mind.setName === 'function') mind.setName(CONFIG.name);
+      mind.state.persona = CONFIG.persona || '';
+      // 朗读默认值：只在本机还没选过时应用
+      if (CONFIG.tts) {
+        let local = null;
+        try { local = global.localStorage.getItem('pet-tts'); } catch (e) { local = null; }
+        if (local === null && typeof mind.toggleTTS === 'function') mind.toggleTTS(true, { persist: false });
+      }
+    } else {
+      S.pendingConfig = true;
+    }
+  }
+
+  function loadConfig() {
+    if (CONFIG.loaded || typeof global.fetch !== 'function') return;
+    CONFIG.loaded = true;
+    global.fetch('/api/admin?action=settings', { headers: { Accept: 'application/json' } })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((json) => {
+        const pet = json && json.data && json.data.pet;
+        if (!pet || typeof pet !== 'object') return;
+        CONFIG.enabled = pet.enabled !== false;
+        CONFIG.name = String(pet.name || '枯梦').slice(0, 20);
+        CONFIG.autoTalk = pet.autoTalk !== false;
+        CONFIG.talkRate = ['quiet', 'normal', 'chatty'].includes(pet.talkRate) ? pet.talkRate : 'normal';
+        CONFIG.gaze = pet.gaze !== false;
+        CONFIG.tts = pet.tts === true;
+        CONFIG.persona = String(pet.persona || '').slice(0, 300);
+        applyConfig();
+      })
+      .catch(() => { /* 没有后端（静态预览）就用默认值 */ });
+  }
+
   // ---------- 启动 ----------
   function init() {
     if (S.ready) return global.PetCore;
@@ -708,6 +791,7 @@
     bindFocus();
     bindReflow();
     bindVisibility();
+    loadConfig();
     if (!S.sleeping) scheduleIdle();
     greet();
 
@@ -750,6 +834,8 @@
     get ready() { return S.ready; },
     bounds,
     state: S,
+    config: CONFIG,
+    applyConfig,
   };
 
   // 自举：脚本一加载就把交互接上（引擎若还没到会自己等）
