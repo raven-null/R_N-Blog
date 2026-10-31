@@ -397,7 +397,7 @@
       clearTimeout(S.stateTimer);
       clearTimeout(S.tapTimer);
       hideBubble();
-      if (S.orbit) S.orbit.hideLater(0);
+      hideOrbit();
       engineState('sleeping');
       try { global.dispatchEvent(new global.CustomEvent('pet:sleep', { detail: { sleeping: true } })); } catch (e) { /* 忽略 */ }
     } else {
@@ -443,9 +443,9 @@
     let pending = null;
     let frame = 0;
     let lastTap = 0;
-    // 单击立刻开对话框；第二下先等 DOUBLE_DELAY 看有没有第三下，
-    // 免得「连点三下进实时对话」被误判成双击睡觉
-    const TRIPLE_WINDOW = 1200;
+    // 380ms 内：1 下=开对话框、2 下=召唤三个圆、3 下=实时对话。
+    // 窗口收窄到和双击确认延迟一致，两次双击之间不会串成三连击。
+    const TRIPLE_WINDOW = 380;
     const DOUBLE_DELAY = 380;
     const tapTimes = [];
     const toggleVoiceMode = () => {
@@ -486,7 +486,7 @@
       originY = rect.top;
       pet.classList.add('is-dragging');
       setState('dragging', 0);
-      if (S.orbit) S.orbit.hideLater(0);   // 拖动时别让三个圆跟着乱飘
+      // 注意：三个圆要等真的开始拖动才收（见 onMove），否则双击的第一下就会把它们收掉
       try { body.setPointerCapture(e.pointerId); } catch (err) { /* 忽略 */ }
       if (e.cancelable) e.preventDefault();
     };
@@ -495,7 +495,7 @@
       if (!drag) return;
       const dx = e.clientX - startX;
       const dy = e.clientY - startY;
-      if (!moved && Math.abs(dx) + Math.abs(dy) > 3) moved = true;
+      if (!moved && Math.abs(dx) + Math.abs(dy) > 3) { moved = true; hideOrbit(); }
       if (!moved) return;
       // 速度采样：只留最近一段，松手时才像被甩出去
       const now = Date.now();
@@ -541,21 +541,23 @@
       while (tapTimes.length && now - tapTimes[0] > TRIPLE_WINDOW) tapTimes.shift();
       react();                             // 立刻给动作反馈
 
-      if (tapTimes.length >= 3) {          // 三连击：实时对话
+      if (tapTimes.length >= 3) {          // 三连击：实时对话（不弹对话框）
         clearTimeout(S.tapTimer);
         S.tapTimer = 0;
         tapTimes.length = 0;
+        closeChat();
+        hideOrbit();
         toggleVoiceMode();
         return;
       }
-      if (tapTimes.length === 2) {         // 第二下：先别睡，等一等看有没有第三下
+      if (tapTimes.length === 2) {         // 双击：召唤三个圆（等一等看有没有第三下）
         clearTimeout(S.tapTimer);
         S.tapTimer = setTimeout(() => {
           S.tapTimer = 0;
           if (tapTimes.length !== 2) return;
           tapTimes.length = 0;
           closeChat();
-          toggleSleep();
+          toggleOrbit();
         }, DOUBLE_DELAY);
         return;
       }
@@ -656,12 +658,7 @@
     });
   }
 
-  // ---------- 悬停浮出的三个圆：聊天 / 朗读 / 睡觉 ----------
-  // 触屏没有 hover，不创建（触屏靠三连击进对话模式）
-  function hoverCapable() {
-    try { return !global.matchMedia || global.matchMedia('(hover: hover)').matches; } catch (e) { return true; }
-  }
-
+  // ---------- 双击召唤的三个圆：打开对话框 / 实时对话 / 睡觉 ----------
   // 三个圆的位置：以桌宠中心为原点，朝屏幕内侧扇形铺开。
   // 注意要「整组平移」进视口 —— 逐点 clamp 会在窄屏/贴边时把三个圆夹到同一条线，
   // 挤成一根竖条（文章页窄窗口下就是这样变形的）。
@@ -714,10 +711,34 @@
     });
   }
 
+  // 显示 / 收起 / 切换三个圆（双击召唤；点外部或 Esc 收起）
+  function showOrbit() {
+    const host = doc.getElementById('deskpetOrbit');
+    if (!host || S.sleeping || S.dragging) return false;
+    layoutOrbit();
+    host.classList.add('is-show');
+    // 布局刚变化（滚动条 / 字体 / 图片加载）时下一帧再校一次
+    useRaf(() => { if (host.classList.contains('is-show')) layoutOrbit(); });
+    return true;
+  }
+
+  function hideOrbit() {
+    doc.getElementById('deskpetOrbit')?.classList.remove('is-show');
+  }
+
+  function toggleOrbit() {
+    const host = doc.getElementById('deskpetOrbit');
+    if (!host) return false;
+    if (host.classList.contains('is-show')) {
+      hideOrbit();
+      return false;
+    }
+    return showOrbit();
+  }
+
   function bindOrbit() {
     const pet = petEl();
-    const body = bodyEl();
-    if (!pet || !body || typeof doc.createElement !== 'function' || !hoverCapable()) return;
+    if (!pet || typeof doc.createElement !== 'function') return;
     if (doc.getElementById('deskpetOrbit')) return;
 
     const host = doc.createElement('div');
@@ -766,42 +787,27 @@
         e.stopPropagation();
         e.preventDefault();
         a.run();
-        hideLater(1400);
       });
       host.appendChild(btn);
     });
     pet.appendChild(host);
 
-    let showTimer = 0;
-    let hideTimer = 0;
-    const show = (delay) => {
-      clearTimeout(hideTimer);
-      clearTimeout(showTimer);
-      const paint = () => {
-        if (S.dragging) return;
-        layoutOrbit();
-        host.classList.add('is-show');
-        // 布局刚变化（滚动条 / 字体 / 图片加载）时下一帧再校一次
-        useRaf(() => { if (host.classList.contains('is-show')) layoutOrbit(); });
-      };
-      if (!delay) { paint(); return; }
-      showTimer = setTimeout(paint, delay);
-    };
-    const hideLater = (ms) => {
-      clearTimeout(showTimer);
-      clearTimeout(hideTimer);
-      hideTimer = setTimeout(() => host.classList.remove('is-show'), ms === undefined ? 1200 : ms);
-    };
-
-    body.addEventListener('pointerenter', () => { if (!S.sleeping) show(0); });
-    body.addEventListener('pointerleave', () => hideLater());
-    host.addEventListener('pointerenter', () => clearTimeout(hideTimer));
-    host.addEventListener('pointerleave', () => hideLater());
-
+    // 点页面其它地方就把三个圆收起来
+    doc.addEventListener('pointerdown', (e) => {
+      if (!host.classList.contains('is-show')) return;
+      const t = e.target;
+      if (!t || !t.closest) return;
+      if (t.closest('#deskPet')) return;
+      hideOrbit();
+    });
+    doc.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && host.classList.contains('is-show')) hideOrbit();
+    });
     global.addEventListener('resize', () => {
       if (host.classList.contains('is-show')) layoutOrbit();
     });
-    S.orbit = { host, layoutOrbit, hideLater };
+
+    S.orbit = { host, layoutOrbit, showOrbit, hideOrbit, toggleOrbit };
   }
 
   // 你在输入框打字时它竖起来听
