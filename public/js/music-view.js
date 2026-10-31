@@ -209,6 +209,56 @@
   var lastCover = null;
   var lyricSwapTimer = 0;
 
+  // ---------- 岛模式：岛和导航栏互斥 ----------
+  // 有歌在放 → 进入岛模式（导航栏整个收走，只留「圆按钮 + 岛」）；
+  // 点圆按钮 → 导航栏接管，岛让位；再点一次 / 点空白 / Esc → 导航收回，岛回来。
+  var dockOrb = document.getElementById('dockOrb');
+  var topBarPillEl = document.getElementById('topBarPill');
+
+  function setNavDockOpen(open) {
+    document.body.classList.toggle('nav-dock-open', open);
+  }
+
+  function setIslandMode(on) {
+    document.body.classList.toggle('island-mode', on);
+    if (!on) setNavDockOpen(false);
+  }
+
+  if (dockOrb) {
+    dockOrb.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var open = !document.body.classList.contains('nav-dock-open');
+      setNavDockOpen(open);
+      // 导航从隐藏变成显示时，滑块要重新量一次位置
+      if (open) {
+        setTimeout(function () {
+          if (window.BlogApp && typeof BlogApp.moveIndicator === 'function') {
+            BlogApp.moveIndicator(BlogApp.currentView);
+          }
+        }, 400);
+      }
+    });
+  }
+
+  // 点导航以外的地方 / 按 Esc：把导航收回去，岛回来
+  document.addEventListener('click', function (e) {
+    if (!document.body.classList.contains('nav-dock-open')) return;
+    if (dockOrb && dockOrb.contains(e.target)) return;
+    // 点了视图按钮就说明用户要走了，直接收起导航
+    if (e.target && e.target.closest && e.target.closest('#viewSwitch .view-btn')) {
+      setNavDockOpen(false);
+      return;
+    }
+    if (topBarPillEl && topBarPillEl.contains(e.target)) return;
+    setNavDockOpen(false);
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && document.body.classList.contains('nav-dock-open')) {
+      setNavDockOpen(false);
+    }
+  });
+
   // 换句先淡出再换字，避免文字硬闪
   function setIslandLyric(text) {
     if (!islandLyric || text === lastLyricText) return;
@@ -226,10 +276,12 @@
     var song = data.song;
     if (!song) {
       island.classList.remove('show');
+      setIslandMode(false);
       return;
     }
 
     island.classList.add('show');
+    setIslandMode(true);
     island.classList.toggle('paused', !data.playing && !data.loading);
 
     var title = song.name || '';

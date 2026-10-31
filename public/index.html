@@ -15,7 +15,7 @@
     <meta property="og:image" content="https://ravennull.work/images/Default/web-logo.webp">
     <meta property="og:locale" content="zh_CN">
     <meta name="twitter:card" content="summary">
-    <link rel="stylesheet" href="css/bundle.css?v=2049c4ecb1">
+    <link rel="stylesheet" href="css/bundle.css?v=25c16f07e2">
     <title>渡鸦 NULL · 日光与暮色之间</title>
     <link rel="icon" id="siteFavicon" href="/images/Default/web-logo.webp" type="image/webp">
     <link rel="apple-touch-icon" href="/images/Default/web-logo.webp">
@@ -75,7 +75,7 @@
     <script src="/js/tone.js?v=20261030" defer></script>
 <script src="/js/experience.js?v=20261103a" defer></script>
     <!-- 音乐视图：iframe 的加载 / 遮罩 / 探活 / 降级都归它管，defer 保证在 DOM 解析后拿到节点 -->
-    <script src="/js/music-view.js?v=1.1.0" defer></script>
+    <script src="/js/music-view.js?v=1.2.0" defer></script>
 </head>
 
 <body class="home-layout">
@@ -94,9 +94,15 @@
         <!-- 顶部导航栏：品牌 + 视图切换合一行居中；桌面端闲置收起、悬浮展开 -->
         <header class="top-bar">
             <div class="top-bar-inner">
-                <!-- 顶部 dock：灵动岛在左、导航胶囊在右，两个并排居中。
-                     导航展开时岛缩成一颗圆点让位，导航收起时岛恢复成带歌词的长条。 -->
+                <!-- 顶部 dock：岛模式和导航栏互斥，不同时并排出现。
+                     岛模式（正在播放）→ 只显示「圆按钮 + 岛」；
+                     点圆按钮 → 导航栏接管，岛让位；导航收起 → 岛回来。 -->
                 <div class="top-dock">
+                    <!-- 岛模式下的圆形按钮：放站点图标，点它唤出/收起导航栏 -->
+                    <button class="dock-orb" id="dockOrb" type="button" title="显示导航" aria-label="显示导航">
+                        <img src="/images/Default/web-logo.webp" alt="">
+                    </button>
+
                     <!-- 灵动岛：离开音乐视图后显示当前歌与歌词行（数据来自 Folia 的 postMessage 推送） -->
                     <div class="now-island" id="nowIsland" role="button" tabindex="0" title="回到播放器">
                         <span class="now-island-cover"><img id="nowIslandCover" alt="" loading="lazy" decoding="async"></span>

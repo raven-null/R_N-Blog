@@ -14500,7 +14500,11 @@ body.screensaver-on > *:not(.screensaver) {
 
 /* music.css */
 /* ============================================================
-   顶部 dock：导航胶囊 + 灵动岛并排居中
+   顶部 dock：岛模式与导航栏互斥，绝不同时并排
+   ------------------------------------------------------------
+   岛模式（有歌在放、且不在音乐视图）：
+     [圆按钮(站点图标)] [灵动岛]
+     导航栏整个收走，点圆按钮才唤出来；导航出来时岛让位。
    ============================================================ */
 .top-dock {
     display: flex;
@@ -14511,12 +14515,65 @@ body.screensaver-on > *:not(.screensaver) {
     min-width: 0;
 }
 
+/* 岛模式下的圆形按钮：放站点图标，点它唤出/收起导航栏 */
+.dock-orb {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    flex: none;
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 50%;
+    background: rgba(12, 12, 16, 0.82);
+    backdrop-filter: blur(22px) saturate(180%);
+    -webkit-backdrop-filter: blur(22px) saturate(180%);
+    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.55);
+    cursor: pointer;
+    overflow: hidden;
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
+}
+
+.dock-orb img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.dock-orb:hover {
+    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.55), 0 0 0 3px rgba(255, 255, 255, 0.10);
+}
+
+.dock-orb:active {
+    transform: scale(0.94);
+}
+
+/* 岛模式：圆按钮出现，导航栏整个不占位（不是隐形——它若还占着宽度，岛会被挤偏） */
+body.island-mode:not(.view-music-active) .dock-orb {
+    display: inline-flex;
+}
+
+body.island-mode:not(.view-music-active) .top-bar-pill {
+    display: none !important;
+}
+
+/* 点了圆按钮：导航栏接管，岛让位——两者永远只有一个在场 */
+body.island-mode.nav-dock-open:not(.view-music-active) #topBarPill {
+    display: flex !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    transform: translateY(0) !important;
+}
+
+body.island-mode.nav-dock-open:not(.view-music-active) .now-island {
+    display: none;
+}
+
 /* ============================================================
-   灵动岛：离开音乐视图后，在导航左边显示当前歌 + 正在唱的那句词
+   灵动岛：离开音乐视图后，显示当前歌 + 正在唱的那句词
    ------------------------------------------------------------
-   两种形态，跟导航互斥：
-     - 导航收起（默认）：拉长成带歌词的长条
-     - 鼠标移到导航胶囊上（导航要展开、要空间）：缩成一颗圆点让位
    数据来自 iframe 里的 Folia（postMessage 的 folia:now-playing，
    见 js/music-view.js）。音乐视图内不显示——那边本身是全屏播放器。
    ============================================================ */
@@ -14556,13 +14613,6 @@ body.screensaver-on > *:not(.screensaver) {
     pointer-events: auto;
 }
 
-/* 鼠标压在导航胶囊上（导航正在展开、需要横向空间）时，岛缩成圆点 */
-.top-dock:has(.top-bar-pill:hover) .now-island.show {
-    width: 38px;
-    padding: 4px;
-    gap: 0;
-}
-
 /* 音乐视图里自己是全屏播放器，岛让位 */
 body.view-music-active .now-island {
     display: none;
@@ -14590,13 +14640,6 @@ body.view-music-active .now-island {
     gap: 1px;
     min-width: 0;
     flex: 1 1 auto;
-    transition: opacity 0.2s ease;
-}
-
-/* 缩成圆点时，文字和波形一起淡出（宽度由 .now-island 自己收，这里只管透明度） */
-.top-dock:has(.top-bar-pill:hover) .now-island-text,
-.top-dock:has(.top-bar-pill:hover) .now-island-wave {
-    opacity: 0;
 }
 
 .now-island-title {
@@ -14660,9 +14703,9 @@ body.view-music-active .now-island {
     .now-island-wave i { animation: none; height: 8px; }
 }
 
-/* 手机上没有 hover，dock 也塞不下：岛恢复成顶部独立浮层，始终是带歌词的长条 */
+/* 手机上没有 hover、dock 也塞不下：岛恢复成顶部独立浮层，导航靠圆按钮唤出 */
 @media (max-width: 760px) {
-    .top-dock { gap: 0; }
+    .top-dock { gap: 6px; }
 
     .now-island {
         position: fixed;
@@ -14677,12 +14720,6 @@ body.view-music-active .now-island {
     .now-island.show {
         width: min(320px, calc(100vw - 24px));
         padding: 5px 12px 5px 5px;
-    }
-
-    /* 移动端不做圆点态：那里没有 hover，岛就是岛 */
-    .now-island-text,
-    .now-island-wave {
-        opacity: 1 !important;
     }
 
     .now-island-cover { width: 30px; height: 30px; }
