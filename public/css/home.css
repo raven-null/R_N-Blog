@@ -321,6 +321,8 @@ html[data-theme="dark"] .hv3-card {
     width: 100%;
     height: 100%;
     overflow: hidden;
+    /* 竖图池还没到、或图库整个拿不到时的兜底色，别让卡片露白 */
+    background: var(--surface-2, #f3eee1);
 }
 
 .hv3-cover img {
@@ -328,6 +330,22 @@ html[data-theme="dark"] .hv3-card {
     width: 100%;
     height: 100%;
     object-fit: cover;
+}
+
+/* 封面两层交叉淡入（和生活切片同一套播放形式）：
+   两层都绝对铺满，谁带 is-front 谁可见，swapCoverPlay 换 src 后翻层 */
+.hv3-cover .hv3-cover-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0;
+    transition: opacity .6s ease;
+}
+
+.hv3-cover .hv3-cover-img.is-front {
+    opacity: 1;
 }
 
 /* 标题叠在封面下缘，用渐变遮罩保证可读 */

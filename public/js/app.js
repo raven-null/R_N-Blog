@@ -1832,15 +1832,17 @@ const BlogApp = {
         }
         track.dataset.empty = '';
 
-        track.innerHTML = posts.slice(0, 4).map((post) => {
+        track.innerHTML = posts.map((post) => {
             const href = 'article.html?post=' + encodeURIComponent(post.filename || '');
             const title = this.esc(post.title || '无标题');
             const date = this.formatDate ? this.formatDate(post.date) : (post.date || '');
             const tag = (post.tags && post.tags[0]) ? '<span class="hv3-tag">' + this.esc(post.tags[0]) + '</span>' : '';
-            const cover = post.image
-                ? '<span class="hv3-cover"><img src="' + this.escAttr(post.image) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.parentNode.style.display=\'none\'"></span>'
-                : '';
-            return '<a class="hv3-item" href="' + href + '">'
+            // 封面固定两层：和生活切片一样靠交叉淡入换图（setCoverPlay 往里灌图）
+            const img0 = post.image
+                ? '<img class="hv3-cover-img is-front" src="' + this.escAttr(post.image) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">'
+                : '<img class="hv3-cover-img is-front" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">';
+            const cover = '<span class="hv3-cover">' + img0 + '<img class="hv3-cover-img" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"></span>';
+            return '<a class="hv3-item" href="' + href + '" data-has-cover="' + (post.image ? '1' : '') + '">'
                 + cover
                 + '<span class="hv3-body">'
                 + '<span class="hv3-item-title">' + title + '</span>'
@@ -1849,33 +1851,35 @@ const BlogApp = {
                 + '</a>';
         }).join('');
 
-        // 封面图读完原始尺寸后，按比例定封面高度（盒子跟着封面变）
-        track.querySelectorAll('.hv3-cover img').forEach((img) => {
-            const fix = () => {
+        /* 每张卡的封面按方向决定「怎么播」：
+           · 自带封面是竖图 → 一直用它（静态显示）
+           · 自带封面是横图 → 让给「生活切片」播，这张卡改播图库里的竖图
+           · 没有封面 → 同样改播图库竖图
+           需要改播的卡记进 playCards，交给一个共享定时器统一换图（和图片区同一套节奏）。 */
+        const playCards = [];
+        track.querySelectorAll('.hv3-item').forEach((item) => {
+            const img = item.querySelector('.hv3-cover-img.is-front');
+            const markPlay = () => {
+                playCards.push(item);
+            };
+            if (!img || !img.getAttribute('src')) { markPlay(); return; }
+            const decide = () => {
                 const w = img.naturalWidth;
                 const h = img.naturalHeight;
                 if (!w || !h) return;
-                // 横图（含正方）不在文章卡上占位：它们归「生活切片」那块播。
-                // 两边按同一个规则分工 —— 竖图进文章卡、横图进生活切片，一张图不会两头都占着。
                 if (w >= h) {
-                    const cover = img.closest('.hv3-cover');
-                    if (cover) cover.style.display = 'none';
+                    // 横图：不在文章卡上显示（交给图片区），这张卡换成竖图播放
+                    img.removeAttribute('src');
+                    img.classList.remove('is-front');
+                    markPlay();
+                } else {
+                    item.style.setProperty('--cover-ratio', String(Math.max(0.55, Math.min(2.4, w / h))));
                     this.syncCarouselHeight();
-                    return;
                 }
-                let ratio = w / h;
-                ratio = Math.max(0.55, Math.min(2.4, ratio));   // 竖图/超宽图都能进来，交给容器尺寸去适配
-                const item = img.closest('.hv3-item');
-                if (item) item.style.setProperty('--cover-ratio', String(ratio));
-                this.syncCarouselHeight();
             };
-            if (img.complete && img.naturalWidth) fix();
-            else img.addEventListener('load', fix, { once: true });
-            img.addEventListener('error', () => {
-                const cover = img.closest('.hv3-cover');
-                if (cover) cover.style.display = 'none';
-                this.syncCarouselHeight();
-            }, { once: true });
+            if (img.complete && img.naturalWidth) decide();
+            else img.addEventListener('load', decide, { once: true });
+            img.addEventListener('error', () => { markPlay(); }, { once: true });
         });
 
         this.bindCarousel();
@@ -1883,6 +1887,100 @@ const BlogApp = {
         this.syncCarouselDots();
         setTimeout(() => this.syncCarouselHeight(), 300);
         setTimeout(() => this.syncCarouselHeight(), 1200);
+
+        // 等方向判定完再启动封面播放（延迟一拍，让自带的竖图封面先落位）
+        setTimeout(() => this.startCoverPlay(playCards), 400);
+    },
+
+    /* ===== 文章卡封面：和生活切片一样的「随机播放」 =====
+       · 池子只放竖图（横图已经在图片区那边播了，两边不抢同一批图）
+       · 交叉淡入换图，5 秒一轮
+       · 只给视野附近的卡换图：横向轮播里其实就一张在眼前，
+         其余的卡不动，省掉几十张图同时下载 */
+    startCoverPlay(cards) {
+        this._coverPlayCards = cards || [];
+        if (this._coverTimer) { clearInterval(this._coverTimer); this._coverTimer = 0; }
+        const tick = () => {
+            if (document.hidden) return;
+            const live = this._coverPlayCards.filter((el) => {
+                if (!el.isConnected) return false;
+                const r = el.getBoundingClientRect();
+                return r.right > -240 && r.left < window.innerWidth + 240;
+            });
+            if (!live.length) return;
+            this.portraitPool().then((pool) => {
+                if (!pool.length) return;
+                live.forEach((el) => this.swapCoverPlay(el, pool));
+            }).catch(() => { /* 图库拿不到就不播 */ });
+        };
+        tick();
+        this._coverTimer = setInterval(tick, 5000);
+    },
+
+    // 竖图池：图库清单里方向为「高 > 宽」的那些（未知方向就加载一张量出来，量过记缓存）
+    async portraitPool() {
+        if (this._portraitCache) return this._portraitCache;
+        if (this._portraitPromise) return this._portraitPromise;
+        const orient = this._shotOrient = this._shotOrient || new Map();
+        this._portraitPromise = (async () => {
+            let list = [];
+            try { list = (await this.loadGalleryImages()) || []; } catch (e) { list = []; }
+            const out = [];
+            const queue = list.filter((p) => p && (p.thumb || p.url) && !this.isR18Image(p)).slice(0, 90);
+            let cursor = 0;
+            const probeOne = (p) => new Promise((resolve) => {
+                const known = orient.get(p.id);
+                if (known === 'portrait') return resolve(p);
+                if (known === 'landscape') return resolve(null);
+                const im = new Image();
+                im.onload = () => {
+                    const portrait = im.naturalWidth < im.naturalHeight;
+                    orient.set(p.id, portrait ? 'portrait' : 'landscape');
+                    resolve(portrait ? p : null);
+                };
+                im.onerror = () => resolve(null);
+                im.src = String(p.thumb || p.url);
+            });
+            const worker = async () => {
+                while (cursor < queue.length) {
+                    const p = await probeOne(queue[cursor++]);
+                    if (p) out.push(p);
+                }
+            };
+            await Promise.all(new Array(6).fill(0).map(worker));
+            this._portraitCache = out;
+            return out;
+        })();
+        try {
+            const pool = await this._portraitPromise;
+            return pool;
+        } finally {
+            this._portraitPromise = null;
+        }
+    },
+
+    swapCoverPlay(item, pool) {
+        const imgs = [...item.querySelectorAll('.hv3-cover-img')];
+        if (imgs.length < 2) return;
+        const front = imgs.find((i) => i.classList.contains('is-front')) || imgs[0];
+        const back = imgs.find((i) => i !== front) || imgs[1];
+        const p = pool[Math.floor(Math.random() * pool.length)];
+        const src = String(p && (p.thumb || p.url) || '');
+        if (!src || back.dataset.src === src) return;
+        back.dataset.src = src;
+        let done = false;
+        const swap = () => {
+            if (done) return;
+            done = true;
+            back.classList.add('is-front');
+            front.classList.remove('is-front');
+            const w = back.naturalWidth;
+            const h = back.naturalHeight;
+            if (w && h) item.style.setProperty('--cover-ratio', String(Math.max(0.55, Math.min(2.4, w / h))));
+        };
+        back.addEventListener('load', swap, { once: true });
+        back.src = src;
+        if (back.complete && back.naturalWidth) swap();
     },
 
     // 整块轮播的尺寸跟着当前封面走：竖图窄而高、横图宽而扁（宽高都由封面比例算）
