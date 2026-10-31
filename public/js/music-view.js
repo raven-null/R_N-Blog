@@ -212,6 +212,9 @@
   var lastLyricText = null;
   var lastCover = null;
   var lyricSwapTimer = 0;
+  var lastLyricSwapAt = 0;
+  var lastSongId = null;
+  var lyricGapTimer = 0;
 
   // ---------- 岛模式：岛和导航栏互斥 ----------
   // 有歌在放 → 进入岛模式（导航栏整个收走，只留「圆按钮 + 岛」）。
@@ -355,11 +358,20 @@
     }
   }
 
-  // 换句先淡出再换字，避免文字硬闪
+  // 换句先淡出再换字，避免文字硬闪。
+  // 但句与句挨得很近时（<600ms）不再走淡出——否则连着的两句会各闪一次，看着像在抽搐。
   function setIslandLyric(text) {
     if (!islandLyric || text === lastLyricText) return;
+    var gap = Date.now() - lastLyricSwapAt;
+    lastLyricSwapAt = Date.now();
     lastLyricText = text;
+
     clearTimeout(lyricSwapTimer);
+    if (gap < 600) {
+      setRunText(islandLyric, text);
+      updateMarquee(islandLyric);
+      return;
+    }
     islandLyric.classList.add('is-flipping');
     lyricSwapTimer = setTimeout(function () {
       setRunText(islandLyric, text);
@@ -402,10 +414,31 @@
       islandCover.src = song.cover;
     }
 
+    // 换歌判定要放在歌词处理之前：换歌时新歌的歌词可能还没到
+    var songChanged = song.id !== lastSongId;
+    lastSongId = song.id;
+
     var lyric = data.lyric && data.lyric.text ? String(data.lyric.text).trim() : '';
-    // 有歌词就只显示歌词，没有才显示「歌名 · 歌手」——两行叠在一起，靠 has-lyric 切换
-    island.classList.toggle('has-lyric', !!lyric);
-    if (lyric) setIslandLyric(lyric);
+    // 有歌词就只显示歌词，没有才显示「歌名 · 歌手」。
+    // 关键是句与句之间会有一小段 lyric 为空：这时候不能立刻切回标题，
+    // 否则每句结束都闪一下歌名，下一句又闪回来——就是「文字快速切换」的来源。
+    if (lyric) {
+      clearTimeout(lyricGapTimer);
+      island.classList.add('has-lyric');
+      setIslandLyric(lyric);
+    } else if (songChanged) {
+      // 换歌且新歌暂时没词：直接露标题，别留着上一首的歌词
+      clearTimeout(lyricGapTimer);
+      lastLyricText = null;
+      island.classList.remove('has-lyric');
+    } else {
+      // 同一首歌的句间空档：先保持这句，等一小会儿还是没词才露标题
+      clearTimeout(lyricGapTimer);
+      lyricGapTimer = setTimeout(function () {
+        lastLyricText = null;
+        island.classList.remove('has-lyric');
+      }, 2600);
+    }
 
     // 岛刚展开时宽度还是 0，量不出溢出；等过渡走完再判定一次跑马灯
     updateMusicCard(data);
