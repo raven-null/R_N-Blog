@@ -14307,33 +14307,8 @@ body.view-blog-active .nav-bar {
     background: var(--bg, #fffefb);
 }
 
-/* 返回键浮在文章左上角，用纸片底让它压在正文上也看得清 */
-.article-overlay-back {
-    position: fixed;
-    top: 14px;
-    left: 14px;
-    z-index: 2;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 14px;
-    font-family: inherit;
-    font-size: 13px;
-    letter-spacing: 0.04em;
-    color: var(--text-secondary);
-    background: var(--bg-card, #fffefb);
-    border: 1px solid var(--border);
-    border-radius: 999px;
-    box-shadow: 0 8px 24px var(--shadow, rgba(20, 26, 44, 0.14));
-    cursor: pointer;
-    transition: color 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
-}
-
-.article-overlay-back:hover {
-    color: var(--accent);
-    border-color: var(--accent);
-    transform: translateX(-1px);
-}
+/* 返回键用文章页自己那一颗（被嵌进来时它会 postMessage 通知这里关闭），
+   覆盖层不再画第二颗，免得两颗叠在一起 */
 
 /* 覆盖层打开时，主页自己的浮层别再压在文章上 */
 body.article-open .top-bar,

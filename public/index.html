@@ -15,7 +15,7 @@
     <meta property="og:image" content="https://ravennull.work/images/Default/web-logo.webp">
     <meta property="og:locale" content="zh_CN">
     <meta name="twitter:card" content="summary">
-    <link rel="stylesheet" href="css/bundle.css?v=de4fe3c0bb">
+    <link rel="stylesheet" href="css/bundle.css?v=bf9b60f977">
     <title>渡鸦 NULL · 日光与暮色之间</title>
     <link rel="icon" id="siteFavicon" href="/images/Default/web-logo.webp" type="image/webp">
     <link rel="apple-touch-icon" href="/images/Default/web-logo.webp">
@@ -27,7 +27,7 @@
     <!-- 音乐视图内嵌 Folia：同样提前建连 -->
     <link rel="preconnect" href="https://music.ravennull.work" crossorigin>
     <link rel="dns-prefetch" href="https://music.ravennull.work">
-    <script src="/js/site-icon.js?v=1.0.0" defer></script>
+    <script src="/js/site-icon.js?v=1.0.1" defer></script>
 
     <!-- Styles -->
 
@@ -1253,16 +1253,10 @@
 </script>
 
     <!-- 文章覆盖层：点文章时在首页里盖一层 iframe 加载 article.html，
-         主文档（含里面的音乐播放器）不销毁，所以翻文章时歌不会停。 -->
+         主文档（含里面的音乐播放器）不销毁，所以翻文章时歌不会停。
+         返回用文章页自己那颗按钮（它会 postMessage 通知这里关闭），这里不再重复放一个。 -->
     <div class="article-overlay" id="articleOverlay" hidden>
         <iframe class="article-overlay-frame" id="articleFrame" title="文章内容" src="about:blank"></iframe>
-        <button class="article-overlay-back" id="articleOverlayBack" type="button" title="返回（Esc）">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <line x1="19" y1="12" x2="5" y2="12"></line>
-                <polyline points="12 19 5 12 12 5"></polyline>
-            </svg>
-            <span>返回</span>
-        </button>
     </div>
 
 </body>
