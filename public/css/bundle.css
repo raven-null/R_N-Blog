@@ -12763,21 +12763,20 @@ html[data-theme="dark"] .hv3-card {
 }
 
 /* ============================================================
-   个人信息卡：左列自上而下 头像/名字/简介 → 时间与日期 → 文章·照片·项目三个数字；
-              右列三个圆钮跟随整卡高度贴在右下角
-              —— 时间落在三个数字按钮的正上方
+   个人信息卡：左上头像 / 名字 / 简介，右上时间与日期；
+              左下文章·照片·项目三个数字，右下三个圆钮
+              —— 时间落在三个圆钮的正上方并居中对齐
    ============================================================ */
 .hv3-hero {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
-    /* 时间与日期独占左列第二行，正好压在「文章 / 照片 / 项目」三个数字上方；
-       右列只有三个圆钮，跨满三行贴右下角 */
+    /* 右列上下两格：上格时间与日期、下格三个圆钮。时钟居中，正好压在圆钮正中上方
+       （原来右对齐，时钟右缘贴边，看上去偏出圆钮中心一个身位） */
     grid-template-areas:
-        "who    toggles"
-        "clock  toggles"
-        "stats  toggles";
+        "who clock"
+        "stats toggles";
     align-items: center;
-    gap: 10px 18px;
+    gap: 14px 18px;
     min-width: 0;
 }
 
@@ -12788,8 +12787,8 @@ html[data-theme="dark"] .hv3-card {
 
 .hv3-who { grid-area: who; }
 .hv3-stats { grid-area: stats; justify-self: start; }
-.hv3-toggles { grid-area: toggles; justify-self: end; align-self: end; }
-.hv3-clock { grid-area: clock; justify-self: start; text-align: left; }
+.hv3-toggles { grid-area: toggles; justify-self: end; }
+.hv3-clock { grid-area: clock; justify-self: center; text-align: center; }
 
 .hv3-who {
     display: flex;
