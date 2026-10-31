@@ -3167,284 +3167,66 @@ const BlogApp = {
         return swapped ? isPhotos : !isPhotos;
     },
 
-    // ===================== 桌面宠物：右下角的小幽灵猫 =====================
-    // 会飘、眨眼、跟着鼠标看；点一下说话，双击睡觉，可以拖着走（位置记住）
+    // ===================== 桌面宠物 =====================
+    // 形象与交互收口在 pet-core.js（引擎 / 拖拽惯性 / 睡眠 / 位置 / 气泡），
+    // 说话内容在 pet-mind.js。这里只留同名薄包装，老调用点（如后台未登录提示
+    // 的 this.petSay）继续可用。
 
-    petSleeping: false,
-    petSayTimer: null,
-    petIdleTimer: null,
-
-    petLines: [
-        '喵～欢迎回来',
-        '要不要去「文章」翻翻？',
-        '右上角能换主题色，试试看',
-        '「图库」会自己一张张滑过去',
-        '「项目」里有我做的小东西',
-        '把我拖到别的地方也可以喵',
-        '双击我，我就去睡觉',
-        '今天的简报在下面哦',
-        '累了吧？歇一会儿',
-        '这座站是我守着的喵',
-        '我什么都不用做，就很开心',
-        '你按键盘的时候我在看你',
-        '别熬夜太晚，喵会心疼',
-        '摸摸头也可以（我不躲）',
-    ],
-
-    initDeskPet() {
-        const pet = document.getElementById('deskPet');
-        const body = document.getElementById('deskPetBody');
-        if (!pet || !body || pet.dataset.bound) return;
-        pet.dataset.bound = '1';
-
-        this.restorePetPos();
-
-        // 桌宠动效引擎（spring-driven character）：弹簧动画 + 多边形眼睛 + 状态机
-        this.petEngine = window.GrokCharacter
-            ? new window.GrokCharacter(document.getElementById('grokPet'), {
-                shape: 'blob',
-                color: 'black',
-                scheme: 'light',
-                mode: 'hold',        // hold：我们手动切状态，不让它自己轮播
-                followPointer: true, // 眼睛跟鼠标
-            })
-            : null;
-        if (this.petEngine) {
-            // 纯黑：引擎默认的 black 调色板是「#585858 → #000」渐变，这里直接压成纯色
-            if (typeof this.petEngine.setInk === 'function') this.petEngine.setInk('#000000');
-            this.petEngine.setState('idle');
-            this.petEngine.__petIdleTimer = 0;
-        }
-
-        let dragging = false;
-        let moved = false;
-        let startX = 0;
-        let startY = 0;
-        let originX = 0;
-        let originY = 0;
-        let lastTap = 0;
-
-        const onDown = (e) => {
-            if (e.button !== undefined && e.button !== 0) return;
-            const rect = pet.getBoundingClientRect();
-            dragging = true;
-            moved = false;
-            startX = e.clientX;
-            startY = e.clientY;
-            originX = rect.left;
-            originY = rect.top;
-            pet.classList.add('is-dragging');
-            this.petPlay('dragging', 0);
-            try { body.setPointerCapture(e.pointerId); } catch (err) { /* 忽略 */ }
-        };
-
-        const onMove = (e) => {
-            if (!dragging) return;
-            const dx = e.clientX - startX;
-            const dy = e.clientY - startY;
-            if (!moved && Math.abs(dx) + Math.abs(dy) > 4) moved = true;
-            if (!moved) return;
-            this.movePet(originX + dx, originY + dy);
-        };
-
-        const onUp = (e) => {
-            if (!dragging) return;
-            dragging = false;
-            pet.classList.remove('is-dragging');
-            this.petPlay('idle', 0);
-            try { body.releasePointerCapture(e.pointerId); } catch (err) { /* 忽略 */ }
-            if (moved) {
-                this.savePetPos();
-                return;
-            }
-            const now = Date.now();
-            if (now - lastTap < 320) {
-                lastTap = 0;
-                this.togglePetSleep();
-                return;
-            }
-            lastTap = now;
-            this.petReact();
-        };
-
-        body.addEventListener('pointerenter', () => {
-            if (this.petEngine && !this.petSleeping && !dragging) this.petPlay('curious', 0);
-        });
-        body.addEventListener('pointerleave', () => {
-            if (this.petEngine && !this.petSleeping && !dragging) this.petPlay('idle', 0);
-        });
-
-        // 你在输入框里打字时，它会竖起来听
-        document.addEventListener('focusin', (e) => {
-            if (!this.petEngine || this.petSleeping) return;
-            if (e.target.closest('input, textarea')) this.petPlay('listening', 0);
-        });
-        document.addEventListener('focusout', (e) => {
-            if (!this.petEngine || this.petSleeping) return;
-            if (e.target.closest('input, textarea')) this.petPlay('idle', 0);
-        });
-
-        body.addEventListener('pointerdown', onDown);
-        body.addEventListener('pointermove', onMove);
-        body.addEventListener('pointerup', onUp);
-        body.addEventListener('pointercancel', onUp);
-        body.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                this.petReact();
-            }
-        });
-
-        // 眼睛跟着鼠标：只有鼠标设备才需要
-        if (window.matchMedia('(pointer: fine)').matches) {
-            document.addEventListener('mousemove', (e) => this.aimPetEyes(e.clientX, e.clientY), { passive: true });
-        }
-
-        this.startPetIdle();
-        window.addEventListener('resize', () => {
-            const rect = pet.getBoundingClientRect();
-            if (rect.left > window.innerWidth - 40 || rect.top > window.innerHeight - 40) {
-                pet.style.left = '';
-                pet.style.top = '';
-                pet.style.right = '';
-                pet.style.bottom = '';
-            }
-        });
+    get petEngine() {
+        return (window.PetCore && window.PetCore.engine) || null;
     },
 
-    // 把宠物定位到视口内（留出边距）
+    get petSleeping() {
+        return !!(window.PetCore && window.PetCore.sleeping);
+    },
+
+    initDeskPet() {
+        const core = window.PetCore;
+        if (core) { core.init(); return; }
+        // 首页的桌宠脚本是空闲时注入的：等它起来再初始化
+        window.addEventListener('pet:engine', () => {
+            if (window.PetCore) window.PetCore.init();
+        }, { once: true });
+    },
+
+    petSay(text, ms) {
+        if (window.PetCore) window.PetCore.say(text, ms);
+    },
+
+    petPlay(state, backMs) {
+        if (window.PetCore) window.PetCore.setState(state, backMs);
+    },
+
+    petReact() {
+        if (window.PetCore) window.PetCore.react();
+    },
+
+    placePetBubble() {
+        if (window.PetCore) window.PetCore.placeBubble();
+    },
+
     movePet(x, y) {
-        const pet = document.getElementById('deskPet');
-        if (!pet) return;
-        const w = pet.offsetWidth || 92;
-        const h = pet.offsetHeight || 120;
-        const maxX = Math.max(8, window.innerWidth - w - 8);
-        const maxY = Math.max(8, window.innerHeight - h - 8);
-        pet.style.left = Math.round(Math.min(Math.max(x, 8), maxX)) + 'px';
-        pet.style.top = Math.round(Math.min(Math.max(y, 8), maxY)) + 'px';
-        pet.style.right = 'auto';
-        pet.style.bottom = 'auto';
-        this.placePetBubble();
+        if (window.PetCore) window.PetCore.moveTo(x, y);
     },
 
     savePetPos() {
-        const pet = document.getElementById('deskPet');
-        if (!pet) return;
-        try {
-            localStorage.setItem('deskpet_pos', JSON.stringify({
-                x: pet.offsetLeft,
-                y: pet.offsetTop,
-            }));
-        } catch (e) { /* 隐私模式忽略 */ }
+        if (window.PetCore) window.PetCore.savePos();
     },
 
     restorePetPos() {
-        const pet = document.getElementById('deskPet');
-        if (!pet) return;
-        let pos = null;
-        try {
-            pos = JSON.parse(localStorage.getItem('deskpet_pos') || 'null');
-        } catch (e) { pos = null; }
-        if (!pos || typeof pos.x !== 'number' || typeof pos.y !== 'number') return;
-        this.movePet(pos.x, pos.y);
-    },
-
-    // 点一下：跳一下 + 说一句话
-    petReact() {
-        const pet = document.getElementById('deskPet');
-        if (!pet) return;
-        if (this.petSleeping) {
-            this.togglePetSleep(false);
-            this.petSay('喵…醒了');
-            return;
-        }
-        if (this.petEngine) this.petPlay('excited', 1300);
-        else {
-            pet.classList.remove('is-hop');
-            void pet.offsetWidth;
-            pet.classList.add('is-hop');
-        }
-        const lines = this.petLines;
-        this.petSay(lines[Math.floor(Math.random() * lines.length)]);
-    },
-
-    petSay(text, ms = 3400) {
-        const bubble = document.getElementById('deskPetBubble');
-        if (!bubble) return;
-        bubble.textContent = text;
-        bubble.classList.remove('is-below');
-        bubble.classList.add('is-show');
-        this.placePetBubble();
-        clearTimeout(this.petSayTimer);
-        this.petSayTimer = setTimeout(() => bubble.classList.remove('is-show'), ms);
-    },
-
-    // 气泡贴在宠物上方（放不下就翻到下方），并夹在视口内
-    placePetBubble() {
-        const bubble = document.getElementById('deskPetBubble');
-        const pet = document.getElementById('deskPet');
-        if (!bubble || !pet || !bubble.classList.contains('is-show')) return;
-        const rect = pet.getBoundingClientRect();
-        const bw = bubble.offsetWidth;
-        const bh = bubble.offsetHeight;
-        const cx = Math.min(
-            Math.max(rect.left + rect.width / 2, bw / 2 + 10),
-            window.innerWidth - bw / 2 - 10
-        );
-        let top = rect.top - bh - 12;
-        const below = top < 10;
-        if (below) top = rect.bottom + 12;
-        bubble.classList.toggle('is-below', below);
-        bubble.style.left = Math.round(cx) + 'px';
-        bubble.style.top = Math.round(top) + 'px';
+        if (window.PetCore) window.PetCore.restorePos();
     },
 
     togglePetSleep(force) {
-        const pet = document.getElementById('deskPet');
-        if (!pet) return;
-        this.petSleeping = force === undefined ? !this.petSleeping : !!force;
-        pet.dataset.state = this.petSleeping ? 'sleep' : 'awake';
-        if (this.petEngine) {
-            clearTimeout(this.petEngine.__petIdleTimer);
-            try { this.petEngine.setState(this.petSleeping ? 'sleeping' : 'idle', { resetEyes: true }); } catch (e) { /* 忽略 */ }
-        }
-        if (this.petSleeping) {
-            clearInterval(this.petIdleTimer);
-            this.petIdleTimer = null;
-        } else {
-            this.startPetIdle();
-        }
+        return window.PetCore ? window.PetCore.toggleSleep(force) : false;
     },
 
-    // 自己待着的时候，偶尔动一动
     startPetIdle() {
-        clearInterval(this.petIdleTimer);
-        this.petIdleTimer = setInterval(() => {
-            if (document.hidden || this.petSleeping || this.canvasDragging) return;
-            this.petPlay(['curious', 'excited', 'happy', 'thinking'][Math.floor(Math.random() * 4)], 1400);
-        }, 26000);
+        if (window.PetCore) window.PetCore.scheduleIdle();
     },
 
-    // 眼睛看向鼠标：引擎的 followPointer 已经接管，这里只留一个空实现
-    aimPetEyes(mouseX, mouseY) {
-        if (!this.petEngine || this.petSleeping) return;
-        if (typeof this.petEngine.setFollowPointer === 'function') {
-            this.petEngine.setFollowPointer(true);
-        }
-    },
-
-    // 切状态后过一会儿自己回 idle（引擎在 hold 模式下不会自动回落）
-    petPlay(state, backMs = 1200) {
-        if (!this.petEngine) return;
-        clearTimeout(this.petEngine.__petIdleTimer);
-        try { this.petEngine.setState(state, { resetEyes: true }); } catch (e) { return; }
-        if (backMs > 0) {
-            this.petEngine.__petIdleTimer = setTimeout(() => {
-                if (this.petSleeping) return;
-                try { this.petEngine.setState('idle'); } catch (e) { /* 忽略 */ }
-            }, backMs);
-        }
-    },
+    // 眼睛跟随由引擎的 followPointer 接管，这里为空实现（保留调用兼容）
+    aimPetEyes() {},
 
     // ===================== 主页：无限画布 =====================
     // 世界坐标：主页本体左上角 (0,0)，宽 1280；左 = 图片墙，右 = 文章墙，上 / 下留白待开发。

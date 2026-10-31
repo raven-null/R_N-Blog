@@ -2379,17 +2379,6 @@
     <script src="js/animations.js?v=3.14.0" defer></script>
 
     <script src="js/article-app.js?v=2.4.1" defer></script>
-    <script src="/vendor/grok/geometry-data.js?v=1.0.0" defer></script>
-    <script src="/vendor/grok/math.js?v=1.0.0" defer></script>
-    <script src="/vendor/grok/tables.js?v=1.0.0" defer></script>
-    <script src="/vendor/grok/pose.js?v=1.0.0" defer></script>
-    <script src="/vendor/grok/tricks.js?v=1.0.0" defer></script>
-    <script src="/vendor/grok/fx.js?v=1.0.0" defer></script>
-    <script src="/vendor/grok/eyes.js?v=1.0.0" defer></script>
-    <script src="/vendor/grok/character.js?v=1.0.0" defer></script>
-    <script src="/js/pet-boot.js?v=1.0.1" defer></script>
-    <script src="/js/pet-mind.js?v=20261030c" defer></script>
-    <script>document.addEventListener("DOMContentLoaded", function () { if (window.PetMind) PetMind.start(); });</script>
 
     <!-- 桌宠：看页面 / 主动说话 / 语音对话 -->
     <div class="deskpet" id="deskPet" data-state="awake">
@@ -2397,15 +2386,24 @@
         <button class="deskpet-body" id="deskPetBody" type="button" aria-label="摸摸桌宠">
             <span class="deskpet-plate" aria-hidden="true"></span>
             <svg class="deskpet-art" id="grokPet" role="img" aria-label="桌宠"></svg>
-            <span class="deskpet-zzz" aria-hidden="true">z</span>
+            <span class="deskpet-zzz" aria-hidden="true"><i>z</i><i>z</i><i>z</i></span>
         </button>
 
-        <div class="pet-chat" id="petChat">
+        <div class="pet-chat" id="petChat" role="dialog" aria-label="和枯梦聊天">
             <div class="pet-chat-head">
                 <span class="pet-chat-title">枯梦</span>
-                <button type="button" class="pet-chat-close" id="petChatClose" title="收起">×</button>
+                <div class="pet-chat-tools">
+                    <button type="button" class="pet-tool" id="petTtsToggle" title="朗读回复" aria-pressed="false">🔈</button>
+                    <button type="button" class="pet-tool" id="petQuietToggle" title="安静一会儿" aria-pressed="false">🔔</button>
+                    <button type="button" class="pet-chat-close" id="petChatClose" title="收起">×</button>
+                </div>
             </div>
             <div class="pet-chat-log" id="petChatLog" aria-live="polite"></div>
+            <div class="pet-chips" id="petChips">
+                <button type="button" data-prompt="这页有什么值得看的？">这页有什么</button>
+                <button type="button" data-prompt="总结一下我正在读的这段">总结这段</button>
+                <button type="button" data-prompt="随便聊两句吧">陪我聊聊</button>
+            </div>
             <form class="pet-chat-form" id="petChatForm">
                 <button type="button" class="pet-mic" id="petMic" title="点一下说话（需要麦克风权限）">🎙</button>
                 <input type="text" id="petChatInput" placeholder="和我说点什么…" maxlength="300" autocomplete="off">
@@ -2413,6 +2411,50 @@
             </form>
         </div>
     </div>
+
+    <script>
+    /* DSH-LAZY: 桌宠引擎（约 200KB）空闲时再注入，别挡住文章首屏 */
+    (function () {
+        var DEPS = [
+            '/vendor/grok/geometry-data.js?v=1.0.0',
+            '/vendor/grok/math.js?v=1.0.0',
+            '/vendor/grok/tables.js?v=1.0.0',
+            '/vendor/grok/pose.js?v=1.0.0',
+            '/vendor/grok/tricks.js?v=1.0.0',
+            '/vendor/grok/fx.js?v=1.0.0',
+            '/vendor/grok/eyes.js?v=1.0.0',
+            '/vendor/grok/character.js?v=1.0.2',
+            '/js/pet-core.js?v=2.0.3',
+            '/js/pet-mind.js?v=2.0.2'
+        ];
+        var started = false;
+        function load() {
+            if (started) return;
+            started = true;
+            DEPS.forEach(function (src) {
+                var s = document.createElement('script');
+                s.src = src;
+                s.async = false;   // 保持顺序：grok 引擎有依赖链
+                s.onload = function () {
+                    if (src.indexOf('pet-core') !== -1 && window.PetCore) PetCore.init();
+                    if (src.indexOf('pet-mind') !== -1 && window.PetMind) PetMind.start();
+                };
+                document.body.appendChild(s);
+            });
+        }
+        function schedule() {
+            // 空闲回调 + 超时兜底：后台标签可能一直不"空闲"（load 内有 started 守卫）
+            if ('requestIdleCallback' in window) requestIdleCallback(load, { timeout: 1500 });
+            setTimeout(load, 'requestIdleCallback' in window ? 2100 : 700);
+        }
+        if (document.readyState === 'complete') schedule();
+        else {
+            window.addEventListener('load', function () { setTimeout(schedule, 200); });
+            // 兜底：load 迟迟不来（后台标签 / 慢资源）也照样注入
+            setTimeout(schedule, 1500);
+        }
+    })();
+    </script>
 
     <script>
         // 手写体是「首页 hero 的笔形按钮」在全站总开关，文章页只跟随设置、不再自己开一个开关：

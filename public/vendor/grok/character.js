@@ -42,6 +42,11 @@
       this.sizePx = opts.sizePx || null;
       this.eyeColor = opts.eyeColor || null;
       this.inkFlat = opts.inkFlat || null;
+      // LOCAL PATCH：注视幅度可调（默认值与原实现一致）
+      this.gazeRangeX = opts.gazeRange?.x ?? 22;
+      this.gazeRangeY = opts.gazeRange?.y ?? 14;
+      this.gazeClamp = opts.gazeClamp ?? 0.6;
+      this.gazeFalloff = opts.gazeFalloff ?? 2;
 
       this.spin = spring(0);
       this.tx = spring(0);
@@ -485,15 +490,20 @@
     _updatePointer(now) {
       const src = this.gazeTarget || (this.followPointer ? this.pointerRaw : null);
       if (src && this.svg.getBoundingClientRect) {
+        // LOCAL PATCH：rectAt 置 0 可强制刷新缓存（桌宠被拖动时眼球不会看错方向）
         if (now - this.rectAt > 200) {
           this.rectCache = this.svg.getBoundingClientRect();
           this.rectAt = now;
         }
         const rect = this.rectCache;
         if (rect && rect.width > 0) {
-          const mapped = this.gazeTarget ? src : mapPointer(rect, src);
-          this.pointer.tx = clamp((mapped.x - (rect.left + rect.width / 2)) / rect.width, -0.6, 0.6) * 22;
-          this.pointer.ty = clamp((mapped.y - (rect.top + rect.height / 2)) / rect.height, -0.6, 0.6) * 14;
+          const gx = this.gazeRangeX ?? 22;    // LOCAL PATCH：可调注视幅度
+          const gy = this.gazeRangeY ?? 14;
+          const gc = this.gazeClamp ?? 0.6;
+          const gf = this.gazeFalloff ?? 2;    // LOCAL PATCH：多远算"看得很偏"（越大越跟手）
+          const mapped = this.gazeTarget ? src : mapPointer(rect, src, 0.6, 22, 14, gf);
+          this.pointer.tx = clamp((mapped.x - (rect.left + rect.width / 2)) / rect.width, -gc, gc) * gx;
+          this.pointer.ty = clamp((mapped.y - (rect.top + rect.height / 2)) / rect.height, -gc, gc) * gy;
         }
       } else {
         this.pointer.tx = 0;

@@ -53,6 +53,79 @@ const startup=environment();startup.document.readyState='interactive';let inject
 startup.document.createElement=()=>{injected++;throw new Error('Premature dynamic script injection');};
 startup.run('experience');assert.equal(injected,0,'shared experience waits until all deferred scripts have run');
 
+// 桌宠内核：单击 / 双击睡觉 / 拖拽记忆 / 气泡不越界
+const core=environment();
+const classListFor=()=>{const set=new Set();return{add:(...c)=>c.forEach(x=>set.add(x)),remove:(...c)=>c.forEach(x=>set.delete(x)),toggle:(c,on)=>{const v=on===undefined?!set.has(c):!!on;if(v)set.add(c);else set.delete(c);return v;},contains:c=>set.has(c)};};
+function fakeNode(id,extra){
+  const handlers=new Map();
+  return Object.assign({
+    id,classList:classListFor(),dataset:{},textContent:'',offsetWidth:58,offsetHeight:58,offsetLeft:0,offsetTop:0,
+    style:{values:{},setProperty(k,v){this.values[k]=v;},removeProperty(k){delete this.values[k];}},
+    addEventListener(name,fn){if(!handlers.has(name))handlers.set(name,[]);handlers.get(name).push(fn);},
+    dispatch(name,ev){for(const fn of handlers.get(name)||[])fn(ev);},
+    getBoundingClientRect(){const w=core.context.window.innerWidth,h=core.context.window.innerHeight;return{left:w-90,top:h-90,width:58,height:58,right:w-32,bottom:h-32};},
+  },extra);
+}
+const rafQueue=[];
+core.context.window.innerWidth=1200;core.context.window.innerHeight=800;
+core.context.window.requestAnimationFrame=fn=>{rafQueue.push(fn);return rafQueue.length;};
+core.context.window.cancelAnimationFrame=()=>{};
+const winHandlers=new Map();
+core.context.window.addEventListener=(name,fn)=>{if(!winHandlers.has(name))winHandlers.set(name,[]);winHandlers.get(name).push(fn);};
+const fireWin=(name,ev)=>{for(const fn of winHandlers.get(name)||[])fn(ev);};
+const flushRaf=()=>{while(rafQueue.length)rafQueue.shift()(0);};
+const petNode=fakeNode('deskPet'),bodyNode=fakeNode('deskPetBody',{setPointerCapture(){},releasePointerCapture(){}});
+const bubbleNode=fakeNode('deskPetBubble',{offsetWidth:200,offsetHeight:60});
+core.nodes.set('deskPet',petNode);core.nodes.set('deskPetBody',bodyNode);core.nodes.set('deskPetBubble',bubbleNode);
+core.nodes.set('grokPet',fakeNode('grokPet'));
+core.document.readyState='complete';
+const engineStates=[];
+core.context.window.GrokCharacter=class{constructor(){this.reduceMotion=false;}setState(name){engineStates.push(name);}setInk(){}};
+core.run('pet-core');
+const PetCore=core.context.window.PetCore;
+assert.equal(PetCore.ready,true,'pet core boots without waiting for a page hook');
+assert.ok(PetCore.engine,'engine is created as soon as the character script exists');
+assert.ok(engineStates.includes('idle'),'engine starts in idle');
+assert.ok(!core.storage.get('pet-asleep'),'default state is awake');
+
+const press=(x=500,y=500)=>{bodyNode.dispatch('pointerdown',{button:0,pointerType:'mouse',clientX:x,clientY:y,cancelable:true,preventDefault(){}});};
+const release=()=>fireWin('pointerup',{pointerId:1});
+
+// 单击：立刻给动作反馈，不睡觉
+press();release();flushRaf();
+assert.equal(PetCore.sleeping,false,'single tap does not sleep');
+assert.ok(engineStates.includes('excited'),'single tap plays a reaction');
+
+// 拖拽：位置被夹在视口内并记住（按比例存）
+press(500,500);fireWin('pointermove',{clientX:300,clientY:300});flushRaf();
+assert.equal(petNode.style.left,'910px','drag moves the pet with the pointer');
+assert.equal(petNode.style.top,'510px','drag moves the pet vertically');
+release();flushRaf();
+const saved=JSON.parse(core.storage.get('deskpet_pos_v2')||'null');
+assert.ok(saved&&typeof saved.rx==='number','drag position is stored as a viewport ratio');
+
+// 双击：睡觉并记住（先等过双击判定窗口，避免上一次单击被算进来）
+await new Promise(resolve=>setTimeout(resolve,360));
+press();release();            // 第 1 下：单击（记录点击时间）
+press();release();            // 第 2 下：落在 340ms 窗口内 → 睡觉
+flushRaf();
+assert.equal(PetCore.sleeping,true,'double tap puts the pet to sleep');
+assert.equal(petNode.dataset.state,'sleep');
+assert.equal(core.storage.get('pet-asleep'),'1','sleep state survives reloads');
+assert.ok(engineStates.includes('sleeping'));
+
+// 睡着时不主动搭话（心智层负责抑制，这里确认状态可见）
+assert.equal(PetCore.sleeping,true);
+
+// 气泡：始终落在视口内，箭头跟着宠物
+PetCore.say('测试一下气泡会不会跑出屏幕');
+flushRaf();
+const bubbleLeft=parseFloat(bubbleNode.style.left),bubbleTop=parseFloat(bubbleNode.style.top);
+assert.ok(bubbleLeft>0&&bubbleLeft<1200,'bubble stays inside the viewport horizontally');
+assert.ok(bubbleTop>=0&&bubbleTop+60<=800,'bubble stays inside the viewport vertically');
+assert.ok(bubbleNode.style.values['--deskpet-arrow-x'],'bubble arrow is aligned to the pet');
+assert.ok(PetCore.bounds().maxX<=1200-58,'bounds keep the pet clear of the right edge');
+
 const chat=environment(), handlers={};let resolveRequest;
 const sendButton={disabled:false,setAttribute(){}}, form={setAttribute(){},querySelector:()=>sendButton,addEventListener:(name,fn)=>handlers[name]=fn};
 const input={value:'第一条',focus(){}};

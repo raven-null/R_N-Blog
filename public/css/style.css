@@ -5963,13 +5963,16 @@ html.reader-focus .article-content {
 .view-home .home-life { order: 9; }
 .view-home .home-journal-box { order: 10; }
 
-/* ===== 桌面宠物：右下角的小幽灵猫 ===== */
+/* ===== 桌面宠物：右下角的黑色弹簧小生物 =====
+   形象由 grok 引擎在 #grokPet 里绘制（弹簧动画 / 多边形眼睛 / 状态机），
+   这里只负责底座、悬浮、睡觉、悬停与拖拽的视觉反馈。 */
+
 .deskpet {
     position: fixed;
-    right: 22px;
-    bottom: 20px;
+    right: 24px;
+    bottom: 22px;
     z-index: 70;
-    width: 44px;
+    width: 58px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -5981,19 +5984,22 @@ html.reader-focus .article-content {
 
 .deskpet-body {
     position: relative;
-    width: 44px;
-    height: 44px;
+    width: 58px;
+    height: 58px;
     padding: 0;
     border: 0;
     background: none;
     cursor: grab;
-    filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.24));
-    animation: dpFloat 4.2s ease-in-out infinite;
+    filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.26));
+    animation: dpFloat 5.2s ease-in-out infinite;
+    will-change: transform;
+    -webkit-touch-callout: none;
 }
 
 .deskpet.is-dragging .deskpet-body {
     cursor: grabbing;
     animation: none;
+    filter: drop-shadow(0 12px 22px rgba(0, 0, 0, 0.32));
 }
 
 .deskpet.is-hop .deskpet-body {
@@ -6003,133 +6009,133 @@ html.reader-focus .article-content {
 .deskpet-body:focus-visible {
     outline: 2px solid var(--accent, #6c8cff);
     outline-offset: 6px;
-    border-radius: 20px;
+    border-radius: 24px;
+}
+
+/* 底座：半透明软盘，深浅主题下都衬得出黑色剪影 */
+.deskpet-plate {
+    position: absolute;
+    inset: 4px 1px 6px;
+    border-radius: 50%;
+    background:
+        radial-gradient(circle at 50% 30%, rgba(255, 255, 255, 0.26) 0%, rgba(255, 255, 255, 0.05) 42%, rgba(20, 22, 34, 0) 74%),
+        radial-gradient(circle at 50% 62%, rgba(78, 82, 104, 0.42) 0%, rgba(30, 33, 48, 0.26) 56%, rgba(10, 12, 22, 0.10) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    box-shadow:
+        0 10px 22px rgba(10, 14, 32, 0.28),
+        inset 0 -6px 12px rgba(0, 0, 0, 0.22),
+        inset 0 1px 2px rgba(255, 255, 255, 0.16);
+    pointer-events: none;
+    transition: box-shadow 0.25s ease, opacity 0.25s ease, transform 0.25s ease;
+}
+
+@media (hover: hover) {
+    .deskpet-body:hover .deskpet-plate {
+        box-shadow:
+            0 12px 26px rgba(10, 14, 32, 0.32),
+            0 0 0 3px rgba(255, 255, 255, 0.08),
+            inset 0 -6px 12px rgba(0, 0, 0, 0.20),
+            inset 0 1px 2px rgba(255, 255, 255, 0.20);
+    }
+}
+
+/* 拖拽时整只轻轻倾斜，手感更"被拎起来" */
+.deskpet.is-dragging .deskpet-plate,
+.deskpet.is-dragging .deskpet-art {
+    transform: rotate(var(--pet-tilt, 0deg));
 }
 
 .deskpet-art {
+    position: relative;
     width: 100%;
     height: 100%;
     display: block;
     overflow: visible;
 }
 
-/* 身体与五官（黑色桌宠：深色剪影 + 浅色眼睛，暗背景下也能看清轮廓） */
-.dp-body {
-    fill: #1b1b22;
-    stroke: #3c3c4a;
-    stroke-width: 2.4;
-    stroke-linejoin: round;
+/* 引擎自己会设 --fg（形象色），这里给它一点柔和投影 */
+#grokPet {
+    filter: drop-shadow(0 1px 3px rgba(12, 16, 36, 0.22));
 }
 
-.dp-ear {
-    fill: #1b1b22;
-    stroke: #3c3c4a;
-    stroke-width: 2.4;
-    stroke-linejoin: round;
-}
-
-.dp-ear-in {
-    fill: #34343f;
-}
-
-.dp-eye {
-    fill: #f2f2f8;
-    transform-box: fill-box;
-    transform-origin: center;
-    animation: dpBlink 4.6s ease-in-out infinite;
-}
-
-.dp-shine {
-    fill: #1b1b22;
-}
-
-.dp-mouth {
-    fill: none;
-    stroke: #d8d8e4;
-    stroke-width: 2;
-    stroke-linecap: round;
-}
-
-.dp-cheek {
-    fill: rgba(255, 140, 175, 0.30);
-}
-
-.dp-shadow {
-    fill: rgba(30, 30, 50, 0.16);
-}
-
-.dp-eyes {
-    transition: transform 0.18s ease-out;
-}
-
-/* 睡觉：闭眼 + zZz */
-.deskpet[data-state="sleep"] .dp-eye {
-    animation: none;
-    transform: scaleY(0.1);
-}
-
-.deskpet[data-state="sleep"] .dp-mouth {
-    d: path("M56 89.5 h8");
-}
-
-.deskpet[data-state="sleep"] .deskpet-art {
-    animation: none;
-}
-
+/* 睡觉：zZz 三个字母依次飘起来 */
 .deskpet-zzz {
     position: absolute;
-    top: 2px;
-    right: 6px;
-    font-size: 13px;
+    top: -4px;
+    right: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-size: 10px;
     font-weight: 700;
+    line-height: 1;
     color: var(--text-secondary);
     opacity: 0;
     transition: opacity 0.3s;
     pointer-events: none;
 }
 
-.deskpet[data-state="sleep"] .deskpet-zzz {
-    opacity: 0.85;
-    animation: dpZzz 2.6s ease-in-out infinite;
+.deskpet-zzz i {
+    font-style: normal;
+    animation: dpZzz 2.8s ease-in-out infinite;
 }
 
-/* 气泡：独立定位，由 JS 夹在视口内 */
+.deskpet-zzz i:nth-child(2) { font-size: 12px; animation-delay: 0.35s; }
+.deskpet-zzz i:nth-child(3) { font-size: 14px; animation-delay: 0.7s; }
+
+.deskpet[data-state="sleep"] .deskpet-zzz {
+    opacity: 0.85;
+}
+
+.deskpet[data-state="sleep"] .deskpet-body {
+    animation: none;
+    filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.22));
+}
+
+.deskpet[data-state="sleep"] .deskpet-zzz i {
+    animation-play-state: running;
+}
+
+/* 气泡：独立定位（fixed），由 pet-core.js 夹在视口内 */
 .deskpet-bubble {
     position: fixed;
     left: 0;
     top: 0;
-    transform: translate(-50%, 4px);
     width: max-content;
-    font-size: 12px;
-    max-width: min(230px, calc(100vw - 32px));
-    padding: 8px 12px;
-    border-radius: 12px;
+    max-width: min(250px, calc(100vw - 28px));
+    padding: 9px 13px;
+    border-radius: 14px;
     border: 1px solid var(--border);
-    background: var(--card-bg, rgba(20, 20, 34, 0.92));
+    background: var(--card-bg, rgba(20, 20, 34, 0.94));
     color: var(--text);
     font-size: 12.5px;
-    line-height: 1.5;
-    text-align: center;
-    box-shadow: 0 10px 26px var(--shadow);
+    line-height: 1.55;
+    text-align: left;
+    text-wrap: pretty;
+    box-shadow: 0 12px 30px var(--shadow);
     opacity: 0;
+    transform: translate(-50%, 6px) scale(0.96);
     pointer-events: none;
-    transition: opacity 0.22s, transform 0.22s;
+    transition: opacity 0.2s ease, transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
     z-index: 2;
 }
 
 .deskpet-bubble.is-show {
     opacity: 1;
-    transform: translate(-50%, 0);
+    transform: translate(-50%, 0) scale(1);
+    pointer-events: auto;
+    cursor: pointer;
 }
 
+/* 小箭头：跟着宠物中心（--deskpet-arrow-x 由 JS 写入） */
 .deskpet-bubble::after {
     content: '';
     position: absolute;
     top: 100%;
-    left: 50%;
+    left: var(--deskpet-arrow-x, 50%);
     margin-left: -5px;
     border: 5px solid transparent;
-    border-top-color: var(--card-bg, rgba(20, 20, 34, 0.92));
+    border-top-color: var(--surface, var(--card-bg, rgba(20, 20, 34, 0.94)));
 }
 
 /* 气泡被顶到宠物下方时，箭头翻到上方 */
@@ -6137,46 +6143,47 @@ html.reader-focus .article-content {
     top: auto;
     bottom: 100%;
     border-top-color: transparent;
-    border-bottom-color: var(--card-bg, rgba(20, 20, 34, 0.92));
+    border-bottom-color: var(--surface, var(--card-bg, rgba(20, 20, 34, 0.94)));
 }
 
+/* 漂浮 + 朝鼠标方向的轻微探身 / 歪头（--pet-shift-* / --pet-lean 由 pet-core.js 写入） */
 @keyframes dpFloat {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-7px); }
+    0%, 100% { transform: translate(var(--pet-shift-x, 0px), var(--pet-shift-y, 0px)) rotate(var(--pet-lean, 0deg)); }
+    50% { transform: translate(var(--pet-shift-x, 0px), calc(var(--pet-shift-y, 0px) - 4px)) rotate(var(--pet-lean, 0deg)); }
 }
 
 @keyframes dpHop {
     0% { transform: translateY(0) scale(1, 1); }
-    35% { transform: translateY(-14px) scale(0.96, 1.05); }
-    70% { transform: translateY(0) scale(1.05, 0.95); }
+    35% { transform: translateY(-10px) scale(0.97, 1.04); }
+    70% { transform: translateY(0) scale(1.04, 0.96); }
     100% { transform: translateY(0) scale(1, 1); }
 }
 
-@keyframes dpBlink {
-    0%, 90%, 100% { transform: scaleY(1); }
-    94% { transform: scaleY(0.08); }
+@keyframes dpZzz {
+    0%, 100% { opacity: 0.2; transform: translateY(0) scale(0.85); }
+    50% { opacity: 0.9; transform: translateY(-4px) scale(1.05); }
 }
 
-@keyframes dpZzz {
-    0%, 100% { opacity: 0.3; transform: translateY(0) scale(0.9); }
-    50% { opacity: 0.9; transform: translateY(-4px) scale(1.05); }
+/* 屏保模式下不显示桌宠（否则它在屏保底下白跑动画） */
+body.screensaver-on .deskpet {
+    display: none !important;
 }
 
 /* 手机：缩小并避开底部区域 */
 @media (max-width: 900px) {
     .deskpet {
-        right: 10px;
-        bottom: 84px;
-        width: 38px;
+        right: 12px;
+        bottom: 88px;
+        width: 48px;
     }
 
     .deskpet-body {
-        width: 38px;
-        height: 38px;
+        width: 48px;
+        height: 48px;
     }
 
     .deskpet-bubble {
-        max-width: 168px;
+        max-width: min(210px, calc(100vw - 24px));
         font-size: 12px;
     }
 }
@@ -6184,8 +6191,13 @@ html.reader-focus .article-content {
 @media (prefers-reduced-motion: reduce) {
     .deskpet-body,
     .deskpet.is-hop .deskpet-body,
-    .deskpet[data-state="sleep"] .deskpet-zzz {
+    .deskpet[data-state="sleep"] .deskpet-zzz i {
         animation: none;
+    }
+
+    .deskpet-bubble {
+        transition: opacity 0.2s ease;
+        transform: translate(-50%, 0);
     }
 }
 
@@ -6830,97 +6842,6 @@ body.canvas-on .reading-progress {
     }
 }
 
-/* ===== 桌宠：自制弹簧生物（几何原创） ===== */
-.pet-root {
-    transform-box: fill-box;
-    transform-origin: 50% 92%;
-}
-
-.pet-body {
-    fill: #f7f8fc;
-    stroke: rgba(110, 120, 190, 0.85);
-    stroke-width: 2.4;
-    stroke-linejoin: round;
-    filter: drop-shadow(0 4px 10px rgba(20, 24, 50, 0.18));
-}
-
-.pet-antenna {
-    fill: none;
-    stroke: rgba(110, 120, 190, 0.85);
-    stroke-width: 2.2;
-    stroke-linecap: round;
-}
-
-.pet-antenna-dot {
-    fill: var(--accent, #6c8cff);
-    filter: drop-shadow(0 0 6px var(--accent, #6c8cff));
-}
-
-.pet-gloss {
-    fill: #ffffff;
-    opacity: 0.4;
-}
-
-.pet-eye {
-    fill: #22263a;
-    transition: opacity 0.1s linear;
-}
-
-.pet-eye-shine {
-    fill: #ffffff;
-    opacity: 0.92;
-}
-
-.pet-eyes-happy {
-    opacity: 0;
-    transition: opacity 0.14s linear;
-}
-
-.pet-eyes-happy path {
-    fill: none;
-    stroke: #22263a;
-    stroke-width: 3;
-    stroke-linecap: round;
-}
-
-.pet-mouth {
-    fill: none;
-    stroke: #3f4358;
-    stroke-width: 2.2;
-    stroke-linecap: round;
-}
-
-.pet-cheek {
-    fill: rgba(255, 150, 190, 0.42);
-}
-
-/* ===== 桌宠底盘（grok 引擎形象坐在浅色圆盘上，任何主题都看得清） ===== */
-.deskpet-plate {
-    position: absolute;
-    inset: 1px;
-    border-radius: 50%;
-    /* 黑色桌宠配深色底座，别再用白瓷盘 */
-    background: radial-gradient(circle at 50% 28%, #44444f 0%, #2a2a34 62%, #191920 100%);
-    box-shadow:
-        0 6px 16px rgba(8, 12, 30, 0.34),
-        inset 0 -5px 12px rgba(0, 0, 0, 0.28),
-        inset 0 1px 3px rgba(255, 255, 255, 0.16);
-    pointer-events: none;
-}
-
-.deskpet-art {
-    position: relative;
-    width: 100%;
-    height: 100%;
-    display: block;
-    overflow: visible;
-}
-
-/* 引擎自己会设 --fg（形象色），这里给它一点柔和投影 */
-#grokPet {
-    filter: drop-shadow(0 1px 3px rgba(12, 16, 36, 0.2));
-}
-
 /* ===== 主页：仪表盘（单页滚动，信息优先） =====
    取代原来的无限画布版。所有尺寸/颜色取自 tokens.css。 */
 
@@ -7478,10 +7399,10 @@ body.canvas-on .reading-progress {
 /* ===== 桌宠对话面板 ===== */
 .pet-chat {
     position: fixed;
-    right: 22px;
-    bottom: 92px;
+    right: 24px;
+    bottom: 96px;
     z-index: 72;
-    width: min(320px, calc(100vw - 32px));
+    width: min(330px, calc(100vw - 32px));
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -7523,31 +7444,83 @@ body.canvas-on .reading-progress {
     color: var(--text-secondary);
 }
 
+.pet-chat-tools {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.pet-tool,
 .pet-chat-close {
-    width: 22px;
-    height: 22px;
+    width: 24px;
+    height: 24px;
+    display: grid;
+    place-items: center;
     padding: 0;
-    font-size: 15px;
+    font-size: 13px;
     line-height: 1;
     color: var(--text-muted);
     background: transparent;
     border: 0;
     border-radius: 50%;
     cursor: pointer;
+    transition: color 0.18s, background 0.18s, transform 0.18s;
 }
 
+.pet-tool:hover,
 .pet-chat-close:hover {
     color: var(--text);
     background: var(--surface-2);
+}
+
+.pet-tool.is-on {
+    color: var(--accent, #f0a20c);
+    background: var(--accent-soft, rgba(240, 162, 12, 0.14));
+}
+
+.pet-tool:active,
+.pet-chat-close:active {
+    transform: scale(0.92);
+}
+
+.pet-chat-close {
+    font-size: 16px;
+}
+
+/* 快捷问题 */
+.pet-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.pet-chips button {
+    padding: 5px 10px;
+    font: inherit;
+    font-size: 11.5px;
+    line-height: 1.4;
+    color: var(--text-secondary);
+    background: var(--surface-2, rgba(0, 0, 0, 0.04));
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: color 0.18s, border-color 0.18s, background 0.18s;
+}
+
+.pet-chips button:hover {
+    color: var(--text);
+    border-color: var(--accent);
+    background: var(--accent-soft, rgba(240, 162, 12, 0.10));
 }
 
 .pet-chat-log {
     display: flex;
     flex-direction: column;
     gap: 6px;
-    max-height: 240px;
-    min-height: 40px;
+    max-height: 260px;
+    min-height: 44px;
     overflow-y: auto;
+    overscroll-behavior: contain;
     padding: 2px;
 }
 
@@ -7558,6 +7531,7 @@ body.canvas-on .reading-progress {
     line-height: 1.55;
     border-radius: 10px;
     word-break: break-word;
+    white-space: pre-wrap;
 }
 
 .pet-msg-assistant {
@@ -7572,6 +7546,14 @@ body.canvas-on .reading-progress {
     color: var(--text-on-accent, #2a1a02);
     background: var(--accent, #f0a20c);
     border-bottom-right-radius: 3px;
+}
+
+/* 流式回复时的光标 */
+.pet-msg.is-streaming::after {
+    content: '▍';
+    margin-left: 1px;
+    opacity: 0.55;
+    animation: petCaret 1s steps(2) infinite;
 }
 
 .pet-chat-form {
@@ -7643,6 +7625,11 @@ body.canvas-on .reading-progress {
     50% { box-shadow: 0 0 0 8px rgba(224, 83, 83, 0); }
 }
 
+@keyframes petCaret {
+    0%, 49% { opacity: 0.55; }
+    50%, 100% { opacity: 0; }
+}
+
 .pet-send {
     color: var(--text-on-accent, #2a1a02);
     background: var(--accent, #f0a20c);
@@ -7654,17 +7641,29 @@ body.canvas-on .reading-progress {
     border-color: transparent;
 }
 
-/* 气泡可点（用来展开对话） */
-.deskpet-bubble.is-show {
-    pointer-events: auto;
-    cursor: pointer;
+.pet-send:disabled {
+    opacity: 0.6;
+    cursor: progress;
 }
 
 @media (max-width: 900px) {
     .pet-chat {
-        right: 10px;
-        bottom: 150px;
-        width: calc(100vw - 20px);
+        right: 12px;
+        bottom: 148px;
+        width: calc(100vw - 24px);
+    }
+
+    .pet-chat-log {
+        max-height: 210px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .pet-chat,
+    .pet-mic.is-listening,
+    .pet-msg.is-streaming::after {
+        transition: none;
+        animation: none;
     }
 }
 
