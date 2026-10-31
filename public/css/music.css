@@ -252,12 +252,15 @@ body.view-music-active .now-island {
 }
 
 .now-island-cover {
+    position: relative;
     width: 34px;
     height: 34px;
     border-radius: 50%;
     overflow: hidden;
     flex: none;
     background: #23232b;
+    /* 黑胶的感觉：外圈一点深色盘沿 + 内阴影 */
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.45), 0 1px 4px rgba(0, 0, 0, 0.35);
 }
 
 .now-island-cover img {
@@ -265,6 +268,35 @@ body.view-music-active .now-island {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    animation: now-island-spin 9s linear infinite;
+}
+
+/* 暂停时唱片也停，跟真的唱机一样 */
+.now-island.paused .now-island-cover img {
+    animation-play-state: paused;
+}
+
+/* 中心那圈小孔，转起来更像黑胶 */
+.now-island-cover::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 8px;
+    height: 8px;
+    margin: -4px 0 0 -4px;
+    border-radius: 50%;
+    background: rgba(10, 10, 14, 0.72);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+    pointer-events: none;
+}
+
+@keyframes now-island-spin {
+    to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .now-island-cover img { animation: none; }
 }
 
 /* 文本区：标题和歌词叠在同一行 ——
@@ -355,44 +387,13 @@ body.view-music-active .now-island {
    换歌/换行跟着变，三个按钮直接控制播放器。
    ============================================================ */
 .hv3-music {
-    padding: 14px 16px 13px;
+    padding: 16px 16px 13px;
     cursor: pointer;
     transition: box-shadow 0.22s ease, transform 0.22s ease;
 }
 
 .hv3-music:hover {
     transform: translateY(-1px);
-}
-
-.hv3-music-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    margin-bottom: 11px;
-}
-
-.hv3-music-title {
-    font-size: 12px;
-    letter-spacing: 0.08em;
-    color: var(--text-secondary);
-}
-
-.hv3-music-open {
-    font-family: inherit;
-    font-size: 11px;
-    color: var(--text-secondary);
-    background: none;
-    border: 0;
-    padding: 3px 6px;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: color 0.18s ease, background 0.18s ease;
-}
-
-.hv3-music-open:hover {
-    color: var(--text);
-    background: rgba(0, 0, 0, 0.06);
 }
 
 .hv3-music-body {
