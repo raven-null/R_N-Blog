@@ -504,6 +504,8 @@
   let recognition = null;
   let listening = false;
   let voiceMode = false;
+  let pttMode = false;      // 按住说话：松手时把听到的最后一句话发出去
+  let lastHeard = '';       // 最近一次未定稿的识别文本
   let recRestartTimer = 0;
 
   function initVoice() {
@@ -549,8 +551,11 @@
       const input = doc.getElementById('petChatInput');
       if (input) input.value = live.slice(0, 300);
       if (finalText) {
+        lastHeard = '';
         STATE.lastUserAt = Date.now();
         send(finalText.trim());
+      } else {
+        lastHeard = live;
       }
     };
     rec.onerror = (e) => {
@@ -572,7 +577,7 @@
       // 正在等 AI 回复时别把 thinking 顶掉
       if (!STATE.busy) petState(voiceMode ? 'listening' : 'idle', 0);
       // 对话模式：浏览器自己停了就接上（等回复期间先别抢麦克风）
-      if (voiceMode && !doc.hidden) restartRecognition(400);
+      if (voiceMode && !pttMode && !doc.hidden) restartRecognition(400);
     };
 
     mic.addEventListener('click', (e) => {
@@ -584,44 +589,57 @@
     recognition = rec;
   }
 
-  // ---------- 对话模式（连点三下桌宠 / 悬停选「聊天」后开）：边说边答 ----------
-  function restartRecognition(delay) {
+  // ---------- 语音对话：按住说话（松手发送） / 点 🎙 圆进入持续对话 ----------
+  function restartRecognition(delay, continuous) {
     clearTimeout(recRestartTimer);
     if (!recognition || !voiceMode) return;
     recRestartTimer = setTimeout(() => {
       if (!voiceMode || !recognition || doc.hidden) return;
       try {
-        recognition.continuous = true;
+        recognition.continuous = continuous !== false;
         recognition.interimResults = true;
         recognition.start();
       } catch (e) { /* 可能已经在跑 */ }
     }, delay || 0);
   }
 
-  function startVoiceMode() {
+  function startVoiceMode(opts) {
     if (voiceMode) return true;
     if (!recognition) {
       say('这个浏览器听不见我…换 Chrome / Edge 再说', 5000, { log: false });
       return false;
     }
+    pttMode = !!(opts && opts.ptt);
+    lastHeard = '';
     voiceMode = true;
     STATE.lastUserAt = Date.now();
-    // 实时对话：不打开对话框，直接在桌宠气泡里说
-    if (!STATE.ttsOn) toggleTTS(true);
+    // 不打开对话框，直接在桌宠气泡里说
+    if (!STATE.ttsOn) toggleTTS(true, { persist: false });
     doc.getElementById('deskPet')?.classList.add('is-voice-mode');
-    say('按住我不放就能说话，松手就结束', 6500, { log: false });
+    say(pttMode ? '听着呢，说完松手' : '直接说话就行；再长按我一次就退出', 6000, { log: false, speak: false });
     petState('listening', 0);
-    restartRecognition(0);
+    // 按住说话只识别一次；持续对话才连着听
+    restartRecognition(0, !pttMode);
     return true;
   }
 
   function stopVoiceMode(reason) {
     if (!voiceMode) return;
     voiceMode = false;
+    const pending = pttMode ? lastHeard : '';
+    const wasPtt = pttMode;
+    pttMode = false;
+    lastHeard = '';
     clearTimeout(recRestartTimer);
     doc.getElementById('deskPet')?.classList.remove('is-voice-mode');
     try { recognition && recognition.stop(); } catch (e) { /* 忽略 */ }
     if (!STATE.busy) petState('idle', 0);
+    // 按住说话：松手时把还没定稿的那句发出去（类似语音输入）
+    if (wasPtt && pending) {
+      STATE.lastUserAt = Date.now();
+      send(pending);
+      return;
+    }
     if (reason) say(reason, 4200, { log: false, speak: false });
   }
 

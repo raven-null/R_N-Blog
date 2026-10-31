@@ -498,7 +498,7 @@
         const mind = global.PetMind;
         if (mind && typeof mind.startVoiceMode === 'function' && typeof mind.stopVoiceMode === 'function') {
           if (!mind.voiceMode) {
-            mind.startVoiceMode();
+            mind.startVoiceMode({ ptt: true });
             voiceByLongPress = true;
           }
         } else {
