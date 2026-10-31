@@ -2282,6 +2282,15 @@ const BlogApp = {
         }).catch(() => { /* 预热失败不影响正常加载 */ });
     },
 
+    // 方图盒子和左边的横图等高：把横图的实际高度写成方盒的宽度（方形）
+    syncSquareSize() {
+        const shot = document.getElementById('hv3Shots');
+        const sq = document.getElementById('hv3Square');
+        if (!shot || !sq) return;
+        const h = Math.round(shot.getBoundingClientRect().height);
+        if (h > 0) sq.style.width = Math.min(h, 240) + 'px';
+    },
+
     // 整块轮播的尺寸跟着当前封面走：竖图窄而高、横图宽而扁（宽高都由封面比例算）
     syncCarouselHeight() {
         const carousel = document.getElementById('hv3Car');
@@ -2289,12 +2298,11 @@ const BlogApp = {
         if (!carousel || !track) return;
         const items = [...track.querySelectorAll('.hv3-item')];
         if (!items.length) return;
-        // 可用宽度取外面那层 .hv3-stage-body（4 栏的容器）。
-        // 不能用 track.parentElement —— 那就是 .hv3-car 自己，而 car 的宽度正是
-        // 下面算出来的 --car-w，会自己算自己、越算越窄。
-        const host = carousel.parentElement;
-        const availW = (host && host.clientWidth) || track.clientWidth;
-        if (!availW) return;
+        // 可用宽度取整行（.hv3-row-main）的宽度。
+        // 不能用 carousel.parentElement / track —— 左边那张卡的宽度正是下面算出来的
+        // --car-w，拿它当基准就是自己算自己，会一直塌到 0。
+        const row = document.querySelector('.hv3-row-main');
+        const rowW = (row && row.clientWidth) || window.innerWidth;
         // 当前是第几张由播放器决定（不再是横向滚动位置）
         const idx = this._postPlay ? this._postPlay.idx : 0;
         const card = items[Math.min(items.length - 1, Math.max(0, idx))] || items[0];
@@ -2313,18 +2321,18 @@ const BlogApp = {
             // 先按「占满可用宽度」摆（盒子比原来大得多），太高再收窄；
             // 配合 CSS 里同一断点的 object-fit: contain，整张竖图完整可见、不裁边。
             const maxH = Math.min(window.innerHeight * 0.72, 620);
-            w = Math.round(availW);
+            w = Math.round(rowW);
             h = Math.round(w / ratio);
             if (h > maxH) { h = Math.round(maxH); w = Math.round(h * ratio); }
         } else {
-            // 桌面：宽度吃满 4 栏（左右不动），高度按封面比例**上下伸缩** ——
-            // 这样盒子和图片永远同比例，图片正好铺满、四角一致都是圆角，
-            // 不会再出现「有的图圆角、有的图方角」。高度只做个很宽的兜底上限，
-            // 免得极端长图把整页顶到天上去。
-            const maxH = Math.min(window.innerHeight * 1.1, 900);
-            w = Math.round(availW);
-            h = Math.round(w / ratio);
-            if (h > maxH) { h = Math.round(maxH); w = Math.round(h * ratio); }
+            // 桌面：先定高度基准，宽度按封面比例算 ——
+            // 竖图越窄，左边卡片越窄，右边那块（flex:1）就自动变长；
+            // 宽度上限按整行宽度减掉右列底线来算，别把右边挤没了。
+            const baseH = Math.min(window.innerHeight * 0.62, 560);
+            h = Math.round(baseH);
+            w = Math.round(h * ratio);
+            const maxW = Math.max(220, rowW - 260);
+            if (w > maxW) { w = maxW; h = Math.round(w / ratio); }
         }
         if (h < 120 || w < 120) return;
 
@@ -2671,7 +2679,14 @@ const BlogApp = {
         const nw = img.naturalWidth;
         const nh = img.naturalHeight;
         if (!nw || !nh) return false;
-        const availW = (stage.parentElement && stage.parentElement.clientWidth) || stage.clientWidth;
+        const parent = stage.parentElement;
+        let availW = (parent && parent.clientWidth) || stage.clientWidth;
+        // 右边还有个方图盒子：可用宽度要把它和间距扣掉，否则横图会顶到它身上
+        const sq = document.getElementById('hv3Square');
+        if (sq && sq.getBoundingClientRect().width > 0) {
+            availW -= sq.getBoundingClientRect().width + 14;
+        }
+        if (!availW || availW <= 0) availW = stage.clientWidth;
         if (!availW) return false;
         const ratio = nw / nh; // 真实宽高比，不 clamp
         // 高度上限与 CSS 的 --shot-max-h 保持一致（窄屏收一档），否则 max-height 会把比例压歪
@@ -2686,7 +2701,10 @@ const BlogApp = {
             w = Math.round(h * ratio);
         }
         if (h < 60 || w < 60) return false;
-        if (w === Number(stage.dataset.w) && h === Number(stage.dataset.h)) return true;
+        if (w === Number(stage.dataset.w) && h === Number(stage.dataset.h)) {
+            this.syncSquareSize();
+            return true;
+        }
 
         stage.style.setProperty('--shot-w', w + 'px');
         stage.style.setProperty('--shot-h', h + 'px');
@@ -2694,6 +2712,8 @@ const BlogApp = {
         stage.style.setProperty('--shot-ar', String(Math.round(ratio * 10000) / 10000));
         stage.dataset.w = String(w);
         stage.dataset.h = String(h);
+        // 方图盒子和它等高
+        this.syncSquareSize();
         return true;
     },
 
