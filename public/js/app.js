@@ -1196,14 +1196,18 @@ const BlogApp = {
             list.innerHTML = '<div class="hv3-empty">暂无资讯</div>';
             return;
         }
-        const html = pool.map((it) => this.hv3NewsItemHTML(it)).join('');
+        // 循环播放只取最近的一批：全部塞进去时线上实测有 600 多条 × 2 份 = 8 万多像素，
+        // 滚一整轮要二十多分钟，看着就像「不循环」。40 条约半分钟一轮，才像在循环。
+        const LOOP_MAX = 40;
+        const loopPool = pool.slice(0, LOOP_MAX);
+        const loopHtml = loopPool.map((it) => this.hv3NewsItemHTML(it)).join('');
         // 复制两份：滚过一半时把 scrollTop 减回去，接缝看不出来
-        list.innerHTML = '<div class="hv3-ticker-track">' + html + html + '</div>';
+        list.innerHTML = '<div class="hv3-ticker-track">' + loopHtml + loopHtml + '</div>';
         const track = list.firstElementChild;
         if (!track) return;
 
-        // 一条约 3.2px/帧 ≈ 60fps 下 190px/s，读起来不快不慢
-        const SPEED = 0.55;
+        // 一帧 0.45px ≈ 60fps 下 27px/s：慢慢走，读标题不赶
+        const SPEED = 0.45;
         let raf = 0;
         let paused = false;
         let resumeTimer = 0;
@@ -1821,14 +1825,16 @@ const BlogApp = {
 
     // ---------- 主页仪表盘：精选文章 / 照片带 ----------
 
-    // 文章轮播：全部文章都在里面，自动切换 + 左右按钮（home.css 的 hv3-* 结构）
+    // 文章位：全部「有封面图」的文章轮流播放（封面和标题一体，没图的文章不参与）
     renderHvPosts() {
         const track = document.getElementById('hv3Track');
         if (!track) return;
-        const posts = Array.isArray(this.posts) ? this.posts : [];
+        // 没有封面图的文章两边都不出现：文章位不播它（图和标题是一体的，没图就没内容可播），
+        // 图片位那边也拿不到它的图，自然也不会出现。
+        const posts = (Array.isArray(this.posts) ? this.posts : []).filter((p) => p && p.image);
         if (!posts.length) {
             if (!track.dataset.empty) {
-                track.innerHTML = '<div class="hv3-empty">还没有文章</div>';
+                track.innerHTML = '<div class="hv3-empty">还没有带封面的文章</div>';
                 track.dataset.empty = '1';
             }
             return;
