@@ -15,7 +15,7 @@
     <meta property="og:image" content="https://ravennull.work/images/Default/web-logo.webp">
     <meta property="og:locale" content="zh_CN">
     <meta name="twitter:card" content="summary">
-    <link rel="stylesheet" href="css/bundle.css?v=40095d98cd">
+    <link rel="stylesheet" href="css/bundle.css?v=6d0c77eafe">
     <title>渡鸦 NULL · 日光与暮色之间</title>
     <link rel="icon" id="siteFavicon" href="/images/Default/web-logo.webp" type="image/webp">
     <link rel="apple-touch-icon" href="/images/Default/web-logo.webp">
@@ -97,6 +97,9 @@
                         <button class="view-btn" data-view="blog" onclick="BlogApp.switchView('blog')">文章</button>
                         <button class="view-btn" data-view="gallery" onclick="BlogApp.switchView('gallery')">图库</button>
                         <button class="view-btn" data-view="projects" onclick="BlogApp.switchView('projects')">项目</button>
+                        <!-- 音乐：站内独立页（内嵌 Folia 播放器），不是视图，所以不带 data-view，
+                             也不参与 switchView 白名单；滑块指示器按 [data-view] 定位，不受影响。 -->
+                        <a class="view-btn view-btn--link" href="/music" title="音乐播放器">音乐</a>
                     </div>
                 </div>
             </div>

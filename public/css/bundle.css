@@ -12452,6 +12452,8 @@ html[data-theme=dark] .sky{filter:brightness(.7)!important}
 .top-bar{background:transparent!important;border-bottom:1px solid transparent!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
 .top-bar-inner{max-width:1200px!important;margin:auto;padding-inline:28px!important;justify-content:center!important}.top-bar-brand{letter-spacing:.03em;font-weight:650!important}
 .top-bar-views{background:transparent!important;border:none;padding:0;border-radius:30px}.view-btn{min-height:34px;color:var(--text-secondary)!important}.view-btn.active{color:var(--text)!important}.view-indicator{background:var(--surface)!important;box-shadow:0 2px 7px #0000000a!important}
+/* 音乐入口是 <a> 而不是 <button>：补上 button 自带的居中布局，并去掉链接下划线 */
+.view-btn--link{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;cursor:pointer;}
 body.home-layout .main-content{max-width:1200px!important;width:100%!important;margin:auto!important;padding:32px 28px 72px!important}
 body.home-layout .hv{max-width:none!important;width:100%!important;padding:0!important;display:block!important}
 body.home-layout .hv-hero{position:relative;display:block!important;padding:38px 40px 28px!important;min-height:440px;border:1px solid var(--glass-line);border-radius:28px!important;background:linear-gradient(110deg,var(--glass-card) 0%,var(--glass-card) 48%,transparent 100%)!important;overflow:hidden;margin-bottom:40px!important}

@@ -15,6 +15,12 @@
   to = "/excalidraw.html"
   status = 200
 
+# 音乐页：/music（无后缀）→ /music.html（内嵌 Folia 播放器）
+[[redirects]]
+  from = "/music"
+  to = "/music.html"
+  status = 200
+
 # ===== API 路由 → Netlify Functions =====
 [[redirects]]
   from = "/api/news"
