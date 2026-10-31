@@ -232,7 +232,6 @@
     if (role === 'user' || role === 'assistant') {
       STATE.history.push({ role, content: text });
       if (STATE.history.length > 16) STATE.history = STATE.history.slice(-16);
-      saveHistory();
     }
   }
 
@@ -269,7 +268,6 @@
       if (item) item.textContent = text;
       STATE.history.push({ role: 'assistant', content: text });
       if (STATE.history.length > 16) STATE.history = STATE.history.slice(-16);
-      saveHistory();
       const box = logEl();
       if (box) box.scrollTop = box.scrollHeight;
     } else if (item) {
@@ -277,25 +275,12 @@
     }
   }
 
-  // ---------- 对话历史（同一个标签页内跨页面延续） ----------
-  const KEY_HISTORY = 'pet-history';
-
-  function saveHistory() {
-    if (!ls) return;
-    try { ls.setItem(KEY_HISTORY, JSON.stringify(STATE.history.slice(-16))); } catch (e) { /* 隐私模式忽略 */ }
-  }
-
-  function restoreHistory() {
-    if (!ls) return;
-    try {
-      const raw = ls.getItem(KEY_HISTORY);
-      const arr = raw ? JSON.parse(raw) : null;
-      if (!Array.isArray(arr)) return;
-      STATE.history = arr
-        .filter((m) => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string')
-        .slice(-16);
-    } catch (e) {
-      STATE.history = [];
+  // ---------- 对话历史：只存在内存里，刷新 / 换页就清空 ----------
+  function clearHistory() {
+    STATE.history = [];
+    // 顺便把旧版本留在本机的那份也抹掉
+    if (ls) {
+      try { ls.removeItem('pet-history'); } catch (e) { /* 隐私模式忽略 */ }
     }
   }
 
@@ -1012,7 +997,7 @@
     initPanel();
     initVoicePicker();
     initVoice();
-    restoreHistory();
+    clearHistory();
     scheduleAuto();
 
     doc.addEventListener('visibilitychange', () => {
