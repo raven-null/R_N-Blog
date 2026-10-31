@@ -14579,6 +14579,11 @@ body:not(.view-music-active):not(.island-mode) .top-bar:hover .top-bar-pill {
         padding-left: 46px;   /* 给圆按钮留出固定位置 */
     }
 
+    /* 岛模式下内容靠左：圆按钮钉在最左边，岛/导航紧挨着它，中间不留大缝 */
+    body.island-mode .top-dock {
+        justify-content: flex-start;
+    }
+
     .dock-orb {
         position: absolute;
         left: 0;
