@@ -364,6 +364,12 @@
 
   function speakRandom() {
     if (S.sleeping) return;
+    // 有 PetMind 就交给它：先本地随机一句，再让 AI 现场写一句替换
+    const mind = global.PetMind;
+    if (mind && typeof mind.poke === 'function') {
+      mind.poke();
+      return;
+    }
     say(randomLine(), 3800);
     setState('happy', 1400);
   }

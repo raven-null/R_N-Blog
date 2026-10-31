@@ -20,18 +20,51 @@
     width: 100%;
 }
 
+/* ------------------------------------------------------------
+   12 栏矩阵：三行，每行一个 grid，行内用 span-* 指定占几栏
+     第一行 信息卡 7 + 正在听 5
+     第二行 文章轮播 4 + 右 8（照片海报 + 今日拾光 2/3 + 工具 1/3）
+     第三行 今天 7 + 项目 5
+   900px 以下整体塌成单列（见文件末尾窄屏段）
+   ------------------------------------------------------------ */
+.hv3-grid {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: 18px;
+    align-items: stretch;
+}
+
+.hv3-span-4 { grid-column: span 4; }
+.hv3-span-5 { grid-column: span 5; }
+.hv3-span-7 { grid-column: span 7; }
+.hv3-span-8 { grid-column: span 8; }
+
+/* 卡片底：手写纸卡（与「今天」卡同一套变量），不用毛玻璃 */
+.hv3-card {
+    padding: 16px 18px;
+    border-radius: 20px;
+    background: var(--glass-card, rgba(255, 253, 248, .5));
+    border: 1px solid var(--glass-line, rgba(255, 255, 255, .5));
+    box-shadow: 0 10px 26px rgba(20, 26, 44, .08);
+}
+
+html[data-theme="dark"] .hv3-card {
+    background: rgba(22, 25, 34, .66);
+    border-color: rgba(255, 255, 255, .16);
+    backdrop-filter: blur(18px) saturate(1.2);
+    -webkit-backdrop-filter: blur(18px) saturate(1.2);
+}
+
 /* ============================================================
-   个人信息：一条，不加盒子
+   个人信息卡：上排头像 + 名字 + 简介，下排时钟 + 三个数字
    ============================================================ */
 .hv3-hero {
     display: flex;
-    align-items: center;
+    flex-direction: column;
+    align-items: stretch;
     justify-content: space-between;
-    gap: 22px;
-    padding: 2px 2px 4px;
-    background: none;
-    border: 0;
-    box-shadow: none;
+    gap: 20px;
+    min-width: 0;
 }
 
 .hv3-who {
@@ -87,14 +120,16 @@
 
 /* 口号区已移除：头像名字在左，时钟与数字在右 */
 
+/* 卡内下排：时钟在左，三个数字在右 */
 .hv3-hero-right {
     display: flex;
-    align-items: center;
+    align-items: flex-end;
+    justify-content: space-between;
     gap: 18px;
     flex: 0 0 auto;
 }
 
-.hv3-clock { text-align: right; }
+.hv3-clock { text-align: left; }
 
 .hv3-time {
     font-size: 20px;
@@ -166,23 +201,41 @@
 }
 
 /* ============================================================
-   两列骨架：容器全部透明，内容铺满
+   第二行右侧：照片海报在上（吃掉剩余高度），今日拾光 + 显示工具在下
    ============================================================ */
-.hv3-flow {
-    display: flex;
-    align-items: stretch;
-    gap: 18px;
-}
-
-.hv3-col {
+.hv3-col-right {
     display: flex;
     flex-direction: column;
     gap: 18px;
     min-width: 0;
 }
 
-.hv3-left { flex: 1.1 1 0; }
-.hv3-right { flex: 1 1 0; }
+.hv3-sub-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
+    align-items: stretch;
+}
+
+/* 显示工具卡：标题 + 三个圆钮（主题 / 手写体 / 屏保） */
+.hv3-tools {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 10px;
+    min-width: 0;
+}
+
+.hv3-tools-title {
+    font-size: 11px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.hv3-tools .hv3-toggles {
+    flex-wrap: wrap;
+}
 
 .hv3-box {
     position: relative;
@@ -200,63 +253,19 @@
 /* 区块标题（kicker + 中文名）已移除：内容直接铺，不留标题行 */
 
 /* ============================================================
-   00 · 文章 + 照片合成一张卡：顶部两个小切换，同一块位置轮换
+   00 · 文章轮播：整张卡就是一块海报，文字压在封面上
+   （照片已独立成右侧海报块，不再和文章共用一块位置切换）
    ============================================================ */
 .hv3-stage {
-    flex: 0 0 auto;
-    gap: 8px;
-}
-
-.hv3-stage-tabs {
-    display: flex;
-    gap: 6px;
-    padding: 0 2px;
-}
-
-.hv3-stage-tab {
-    padding: 4px 14px;
-    font-family: inherit;
-    font-size: 12px;
-    letter-spacing: .04em;
-    color: var(--text-secondary);
-    background: transparent;
-    border: 1px solid transparent;
-    border-radius: 999px;
-    cursor: pointer;
-    transition: color .2s ease, background .2s ease, border-color .2s ease;
-}
-
-.hv3-stage-tab:hover {
-    color: var(--text);
-}
-
-.hv3-stage-tab.is-on {
-    color: var(--text);
-    background: var(--surface-2, rgba(0, 0, 0, .05));
-    border-color: var(--border, rgba(0, 0, 0, .1));
-}
-
-.hv3-stage-tab:focus-visible {
-    outline: 2px solid var(--accent, #f0a20c);
-    outline-offset: 2px;
+    min-width: 0;
 }
 
 .hv3-stage-body {
     position: relative;
+    display: flex;
+    flex-direction: column;
     min-width: 0;
-}
-
-/* 一次只露一个：面板隐藏时不占高度，切回来再重算尺寸 */
-.hv3-stage-body > .hv3-shot {
-    display: none;
-}
-
-.hv3-stage-body[data-stage="shots"] > .hv3-car {
-    display: none;
-}
-
-.hv3-stage-body[data-stage="shots"] > .hv3-shot {
-    display: block;
+    flex: 1 1 auto;
 }
 
 /* ============================================================
@@ -548,8 +557,9 @@
    03 · 今日拾光：默认自动滚，手动碰过就接管，离开几秒后接着自动
    ============================================================ */
 .hv3-news {
-    flex: 0 0 auto;
-    height: 246px;
+    /* 右侧子网格里占 2/3，和工具卡同高；高度写死才能让内部列表滚动 */
+    grid-column: span 2;
+    height: 196px;
 }
 
 .hv3-ticker {
@@ -617,9 +627,9 @@
    04 · 创造与探索：两列小卡（封面 + 名称 + 域名）
    ============================================================ */
 .hv3-projects {
-    /* 右列最后一块：有富余高度就长高，把两列底部拉齐 */
-    flex: 1 1 auto;
+    /* 第三行右侧：卡内两列小卡，高度跟着左侧「今天」卡走 */
     min-height: 240px;
+    min-width: 0;
 }
 
 .hv3-stack {
@@ -1146,33 +1156,25 @@ html[data-theme="dark"] .hv3-shot {
    窄屏
    ============================================================ */
 @media (max-width: 900px) {
-    .hv3-hero {
-        flex-wrap: wrap;
-        gap: 12px;
+    /* 矩阵塌成单列，顺序保持：信息 → 音乐 → 文章 → 照片 → 拾光 → 今天 → 项目 */
+    .hv3-grid {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 14px;
     }
 
-    .hv3-hero-right {
-        width: 100%;
-        justify-content: space-between;
+    .hv3-grid > * { grid-column: auto; }
+
+    .hv3-sub-grid {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 14px;
     }
 
-    .hv3-flow { flex-direction: column; }
+    .hv3-sub-grid > * { grid-column: auto; }
 
-    .hv3-left,
-    .hv3-right {
-        flex: 1 1 auto;
-        width: 100%;
-    }
+    .hv3-hero { gap: 14px; }
 
-    /* 窄屏先给「今天」：写作入口排在最前面 */
-    .hv3-right { order: -1; }
+    .hv3-hero-right { justify-content: space-between; }
 
-    .hv3-shots {
-        flex: 0 0 auto;
-        min-height: 0;
-    }
-
-    /* 窄屏只收紧高度上限，比例仍然完全由图片决定（写死 min-height 会把横图压出留白） */
     .hv3-shot { --shot-max-h: min(52vh, 380px); }
 
     .hv3-news { height: 216px; }

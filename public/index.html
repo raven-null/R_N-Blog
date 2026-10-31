@@ -15,7 +15,7 @@
     <meta property="og:image" content="https://ravennull.work/images/Default/web-logo.webp">
     <meta property="og:locale" content="zh_CN">
     <meta name="twitter:card" content="summary">
-    <link rel="stylesheet" href="css/bundle.css?v=706459e9dc">
+    <link rel="stylesheet" href="css/bundle.css?v=1947ad46f5">
     <title>渡鸦 NULL · 日光与暮色之间</title>
     <link rel="icon" id="siteFavicon" href="/images/Default/web-logo.webp" type="image/webp">
     <link rel="apple-touch-icon" href="/images/Default/web-logo.webp">
@@ -298,184 +298,194 @@
                 </section>
 
             <!-- 视图：主页（个人信息通栏 + 左「文章轮播 / 图片」右「日历 / 简报 / 项目」） -->
+            <!-- 视图：主页（12 栏矩阵）
+                 第一行：个人信息 7 + 正在听 5
+                 第二行：文章轮播 4 + 右 8（照片墙海报 + 今日拾光 2/3 + 显示工具 1/3）
+                 第三行：今天（日历/任务/日记）7 + 创造与探索 5 -->
             <section class="view view-home" id="view-home">
                 <div class="hv3">
 
-                    <!-- ① 个人信息：压成一条，不再占半屏 -->
-                    <header class="hv3-hero">
-                        <div class="hv3-who">
-                            <img class="hv3-avatar" src="images/Default/profile -picture.webp" alt="博主">
-                            <div class="hv3-who-text">
-                                <span class="hv3-eyebrow"><span class="sun-dot"></span><span id="periodLabel">日光与暮色之间</span> · PERSONAL SPACE</span>
-                                <h1 class="hv3-name">博主</h1>
-                                <p class="hv3-bio">欢迎来到我的博客</p>
+                    <!-- ① 第一行 -->
+                    <div class="hv3-grid hv3-row-top">
+                        <header class="hv3-hero hv3-card hv3-span-7">
+                            <div class="hv3-who">
+                                <img class="hv3-avatar" src="images/Default/profile -picture.webp" alt="博主">
+                                <div class="hv3-who-text">
+                                    <span class="hv3-eyebrow"><span class="sun-dot"></span><span id="periodLabel">日光与暮色之间</span> · PERSONAL SPACE</span>
+                                    <h1 class="hv3-name">博主</h1>
+                                    <p class="hv3-bio">欢迎来到我的博客</p>
+                                </div>
                             </div>
-                        </div>
-                        <div class="hv3-hero-right">
-                            <div class="hv3-clock">
-                                <div class="hv3-time" id="hvClockTime">--:--</div>
-                                <div class="hv3-date" id="hvClockDate"></div>
-                            </div>
-                            <div class="hv3-stats">
-                                <button class="hv3-stat" type="button" onclick="BlogApp.goView('blog')">
-                                    <b id="homeCtaPosts">—</b><span>文章</span>
-                                </button>
-                                <button class="hv3-stat" type="button" onclick="BlogApp.goView('gallery')">
-                                    <b id="homeCtaPhotos">—</b><span>照片</span>
-                                </button>
-                                <button class="hv3-stat" type="button" onclick="BlogApp.goView('projects')">
-                                    <b id="homeCtaProjects">—</b><span>项目</span>
-                                </button>
-                            </div>
-                            <div class="hv3-toggles">
-                                <button class="hv3-toggle" id="hvThemeBtn" type="button" title="切换浅色 / 深色" aria-label="切换主题">
-                                    <span id="hvThemeIcon">○</span>
-                                </button>
-                                <button class="hv3-toggle" id="hvHandBtn" type="button" title="切换手写体（全站）" aria-label="切换手写体" aria-pressed="false">
-                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                        <path d="M4 20h4L18.5 9.5a2.5 2.5 0 0 0-3.5-3.5L4.5 16.5V20z"></path>
-                                        <path d="M13.5 7.5l3 3"></path>
-                                    </svg>
-                                </button>
-                                <button class="hv3-toggle hv3-toggle-screen" id="hvScreenBtn" type="button" title="屏保模式（Esc 退出）" aria-label="切换屏保模式">
-                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                        <path d="M4 9V4h5"></path>
-                                        <path d="M20 9V4h-5"></path>
-                                        <path d="M4 15v5h5"></path>
-                                        <path d="M20 15v5h-5"></path>
-                                    </svg>
-                                </button>
-                            </div>
-                        </div>
-                    </header>
-
-                    <!-- 两列：左「文章 + 图片」，右「日历 + 简报 + 项目」 -->
-                    <div class="hv3-flow">
-                        <div class="hv3-col hv3-left">
-                            <!-- 文章 + 照片合成一张卡：顶部切换，同一块位置轮换显示 -->
-                            <section class="hv3-box hv3-stage" aria-label="文章与照片">
-                                <div class="hv3-stage-tabs" role="tablist" aria-label="切换文章 / 照片">
-                                    <button class="hv3-stage-tab is-on" type="button" role="tab" aria-selected="true" data-stage="posts">文章</button>
-                                    <button class="hv3-stage-tab" type="button" role="tab" aria-selected="false" data-stage="shots">照片</button>
+                            <div class="hv3-hero-right">
+                                <div class="hv3-clock">
+                                    <div class="hv3-time" id="hvClockTime">--:--</div>
+                                    <div class="hv3-date" id="hvClockDate"></div>
                                 </div>
-
-                                <div class="hv3-stage-body" id="hv3StageBody" data-stage="posts">
-                                    <div class="hv3-car" id="hv3Car">
-                                        <div class="hv3-track" id="hv3Track">
-                                            <div class="hv3-skeleton"></div>
-                                        </div>
-                                        <button class="hv3-nav hv3-prev" type="button" data-car-dir="-1" aria-label="上一张">‹</button>
-                                        <button class="hv3-nav hv3-next" type="button" data-car-dir="1" aria-label="下一张">›</button>
-                                        <div class="hv3-dots" id="hv3Dots" role="group" aria-label="轮播页码" hidden></div>
-                                    </div>
-
-                                    <div class="hv3-shot" id="hv3Shots">
-                                        <img class="hv3-shot-img" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">
-                                        <img class="hv3-shot-img" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">
-                                        <span class="hv3-shot-meta" id="hv3ShotMeta"></span>
-                                    </div>
-                                </div>
-                            </section>
-
-                            <!-- 今日拾光：内容浏览，归到「看图」这一列 -->
-                            <section class="hv3-box hv3-news" aria-label="今日拾光">
-                                <div class="hv3-ticker" id="hv3News" aria-label="今日拾光，自动滚动"></div>
-                            </section>
-                        </div>
-
-                        <div class="hv3-col hv3-right">
-                            <!-- 「今天」卡：日历 + 任务 + 日记合成一张；点日期就能写，不再单独放写作按钮 -->
-                            <div class="hv3-box hv3-today-panel" id="hv3TodayPanel">
-                                <div class="hv3-today-bar">
-                                    <span class="hv3-today-date" id="todayDateLabel"></span>
-                                    <div class="hv3-today-acts">
-                                        <a class="cal-login" href="admin.html" title="去后台登录">登录后可写任务和日记</a>
-                                    </div>
-                                </div>
-
-                                <div class="hv3-cal-block">
-                                    <div class="home-calendar" id="homeCalendar"></div>
-
-                                    <!-- 点日期后从日历下方浮出的编写弹窗 -->
-                                    <div class="home-editor-pop" id="homeEditorWrap">
-                                        <div class="home-editor-inner">
-                                            <div class="dash-panel home-editor" id="homeEditor">
-                                                <!-- 第一步：选择写任务还是日记 -->
-                                                <div class="editor-choice" id="editorChoice">
-                                                    <span class="editor-date" id="editorDateLabel"></span>
-                                                    <button class="editor-choice-btn" type="button" data-kind="task">任务</button>
-                                                    <button class="editor-choice-btn" type="button" data-kind="journal">日记</button>
-                                                    <button class="editor-close" type="button" data-close="1" title="关闭">×</button>
-                                                </div>
-
-                                                <!-- 第二步：任务编写 -->
-                                                <form class="editor-form" id="editorTaskForm" style="display:none;">
-                                                    <input type="text" id="editorTaskInput" placeholder="写下一个任务，回车或点提交保存" maxlength="120" autocomplete="off">
-                                                    <button class="editor-submit" type="submit">提交</button>
-                                                    <button class="editor-close" type="button" data-close="1" title="关闭">×</button>
-                                                </form>
-
-                                                <!-- 第二步：日记编写 -->
-                                                <form class="editor-form editor-form-journal" id="editorJournalForm" style="display:none;">
-                                                    <textarea id="editorJournalInput" placeholder="写下今天的日记…" maxlength="20000"></textarea>
-                                                    <div class="editor-form-actions">
-                                                        <button class="editor-delete" type="button" data-journal-delete="1" title="删除这天的日记" hidden>删除</button>
-                                                        <button class="editor-submit" type="submit">提交</button>
-                                                        <button class="editor-close" type="button" data-close="1" title="关闭">×</button>
-                                                    </div>
-                                                </form>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- 当天任务：直接贴在日历下面，不再单独一块标题 -->
-                                <div class="hv3-today-tasks home-life" id="homeLife">
-                                    <div class="life-task-list" id="lifeTaskList"></div>
-                                </div>
-
-                                <!-- 日记：默认收成一行，点标题展开；展开后是当月日记叠的一摞 -->
-                                <section class="hv3-journals is-collapsed" id="homeJournalBox" aria-label="日记，点标题展开">
-                                    <button class="hv3-journals-head" type="button" id="journalToggle" aria-expanded="false">
-                                        <span class="hv3-journals-title">日记</span>
-                                        <span class="hv3-journals-right">
-                                            <span class="hv3-journals-month" id="journalMonthLabel"></span>
-                                            <span class="hv3-journals-caret" aria-hidden="true">▾</span>
-                                        </span>
+                                <div class="hv3-stats">
+                                    <button class="hv3-stat" type="button" onclick="BlogApp.goView('blog')">
+                                        <b id="homeCtaPosts">—</b><span>文章</span>
                                     </button>
-                                    <div class="hv3-stack" id="hv3Journals"></div>
+                                    <button class="hv3-stat" type="button" onclick="BlogApp.goView('gallery')">
+                                        <b id="homeCtaPhotos">—</b><span>照片</span>
+                                    </button>
+                                    <button class="hv3-stat" type="button" onclick="BlogApp.goView('projects')">
+                                        <b id="homeCtaProjects">—</b><span>项目</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </header>
+
+                        <!-- 正在听：主页的音乐模块。数据来自 Folia 的 postMessage 推送，
+                             换歌/换句跟着变；点卡片进播放器，三个按钮直接控制播放。 -->
+                        <section class="hv3-music hv3-card hv3-span-5" id="hv3Music" aria-label="正在听的音乐">
+                            <div class="hv3-music-body">
+                                <div class="hv3-music-cover"><img id="hv3MusicCover" alt="" loading="lazy" decoding="async"></div>
+                                <div class="hv3-music-meta">
+                                    <span class="hv3-music-name" id="hv3MusicName">还没有在播放</span>
+                                    <span class="hv3-music-artist" id="hv3MusicArtist">去播放器里挑一首</span>
+                                    <span class="hv3-music-lyric" id="hv3MusicLyric"><span class="now-island-run"></span></span>
+                                </div>
+                            </div>
+                            <div class="hv3-music-ctls" id="hv3MusicCtls">
+                                <button type="button" data-ctl="prev" title="上一首" aria-label="上一首">
+                                    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 5h2v14H6zM20 5v14L9.5 12z"></path></svg>
+                                </button>
+                                <button type="button" data-ctl="toggle" title="播放 / 暂停" aria-label="播放或暂停">
+                                    <svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"></path></svg>
+                                    <svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"></path></svg>
+                                </button>
+                                <button type="button" data-ctl="next" title="下一首" aria-label="下一首">
+                                    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16 5h2v14h-2zM4 5v14l10.5-7z"></path></svg>
+                                </button>
+                            </div>
+                        </section>
+                    </div>
+
+                    <!-- ② 第二行 -->
+                    <div class="hv3-grid hv3-row-main">
+                        <!-- 文章轮播：文字压在封面上，整块跟着封面比例变 -->
+                        <section class="hv3-box hv3-stage hv3-span-4" aria-label="最近的文字">
+                            <div class="hv3-stage-body" id="hv3StageBody" data-stage="posts">
+                                <div class="hv3-car" id="hv3Car">
+                                    <div class="hv3-track" id="hv3Track">
+                                        <div class="hv3-skeleton"></div>
+                                    </div>
+                                    <button class="hv3-nav hv3-prev" type="button" data-car-dir="-1" aria-label="上一张">‹</button>
+                                    <button class="hv3-nav hv3-next" type="button" data-car-dir="1" aria-label="下一张">›</button>
+                                    <div class="hv3-dots" id="hv3Dots" role="group" aria-label="轮播页码" hidden></div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- 右侧 8 栏：照片墙海报 +（今日拾光 + 显示工具） -->
+                        <div class="hv3-col-right hv3-span-8">
+                            <div class="hv3-shot" id="hv3Shots" aria-label="生活切片">
+                                <img class="hv3-shot-img" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">
+                                <img class="hv3-shot-img" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">
+                                <span class="hv3-shot-meta" id="hv3ShotMeta"></span>
+                            </div>
+
+                            <div class="hv3-sub-grid">
+                                <!-- 今日拾光：内容浏览，自动滚动 -->
+                                <section class="hv3-box hv3-news" aria-label="今日拾光">
+                                    <div class="hv3-ticker" id="hv3News" aria-label="今日拾光，自动滚动"></div>
+                                </section>
+
+                                <!-- 显示工具：主题 / 手写体 / 屏保，原本挤在个人信息条里 -->
+                                <section class="hv3-tools hv3-card" aria-label="显示设置">
+                                    <span class="hv3-tools-title">显示</span>
+                                    <div class="hv3-toggles">
+                                        <button class="hv3-toggle" id="hvThemeBtn" type="button" title="切换浅色 / 深色" aria-label="切换主题">
+                                            <span id="hvThemeIcon">○</span>
+                                        </button>
+                                        <button class="hv3-toggle" id="hvHandBtn" type="button" title="切换手写体（全站）" aria-label="切换手写体" aria-pressed="false">
+                                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                                <path d="M4 20h4L18.5 9.5a2.5 2.5 0 0 0-3.5-3.5L4.5 16.5V20z"></path>
+                                                <path d="M13.5 7.5l3 3"></path>
+                                            </svg>
+                                        </button>
+                                        <button class="hv3-toggle hv3-toggle-screen" id="hvScreenBtn" type="button" title="屏保模式（Esc 退出）" aria-label="切换屏保模式">
+                                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                                <path d="M4 9V4h5"></path>
+                                                <path d="M20 9V4h-5"></path>
+                                                <path d="M4 15v5h5"></path>
+                                                <path d="M20 15v5h-5"></path>
+                                            </svg>
+                                        </button>
+                                    </div>
                                 </section>
                             </div>
+                        </div>
+                    </div>
 
-                            <!-- 正在听：主页的音乐模块。数据来自 Folia 的 postMessage 推送，
-                                 换歌/换句跟着变；点卡片进播放器，三个按钮直接控制播放。 -->
-                            <section class="hv3-box hv3-music" id="hv3Music" aria-label="正在听的音乐">
-                                <div class="hv3-music-body">
-                                    <div class="hv3-music-cover"><img id="hv3MusicCover" alt="" loading="lazy" decoding="async"></div>
-                                    <div class="hv3-music-meta">
-                                        <span class="hv3-music-name" id="hv3MusicName">还没有在播放</span>
-                                        <span class="hv3-music-artist" id="hv3MusicArtist">去播放器里挑一首</span>
-                                        <span class="hv3-music-lyric" id="hv3MusicLyric"><span class="now-island-run"></span></span>
+                    <!-- ③ 第三行 -->
+                    <div class="hv3-grid hv3-row-bottom">
+                        <!-- 「今天」卡：日历 + 任务 + 日记合在一张；点日期就能写 -->
+                        <div class="hv3-box hv3-today-panel hv3-span-7" id="hv3TodayPanel">
+                            <div class="hv3-today-bar">
+                                <span class="hv3-today-date" id="todayDateLabel"></span>
+                                <div class="hv3-today-acts">
+                                    <a class="cal-login" href="admin.html" title="去后台登录">登录后可写任务和日记</a>
+                                </div>
+                            </div>
+
+                            <div class="hv3-cal-block">
+                                <div class="home-calendar" id="homeCalendar"></div>
+
+                                <!-- 点日期后从日历下方浮出的编写弹窗 -->
+                                <div class="home-editor-pop" id="homeEditorWrap">
+                                    <div class="home-editor-inner">
+                                        <div class="dash-panel home-editor" id="homeEditor">
+                                            <!-- 第一步：选择写任务还是日记 -->
+                                            <div class="editor-choice" id="editorChoice">
+                                                <span class="editor-date" id="editorDateLabel"></span>
+                                                <button class="editor-choice-btn" type="button" data-kind="task">任务</button>
+                                                <button class="editor-choice-btn" type="button" data-kind="journal">日记</button>
+                                                <button class="editor-close" type="button" data-close="1" title="关闭">×</button>
+                                            </div>
+
+                                            <!-- 第二步：任务编写 -->
+                                            <form class="editor-form" id="editorTaskForm" style="display:none;">
+                                                <input type="text" id="editorTaskInput" placeholder="写下一个任务，回车或点提交保存" maxlength="120" autocomplete="off">
+                                                <button class="editor-submit" type="submit">提交</button>
+                                                <button class="editor-close" type="button" data-close="1" title="关闭">×</button>
+                                            </form>
+
+                                            <!-- 第二步：日记编写 -->
+                                            <form class="editor-form editor-form-journal" id="editorJournalForm" style="display:none;">
+                                                <textarea id="editorJournalInput" placeholder="写下今天的日记…" maxlength="20000"></textarea>
+                                                <div class="editor-form-actions">
+                                                    <button class="editor-delete" type="button" data-journal-delete="1" title="删除这天的日记" hidden>删除</button>
+                                                    <button class="editor-submit" type="submit">提交</button>
+                                                    <button class="editor-close" type="button" data-close="1" title="关闭">×</button>
+                                                </div>
+                                            </form>
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="hv3-music-ctls" id="hv3MusicCtls">
-                                    <button type="button" data-ctl="prev" title="上一首" aria-label="上一首">
-                                        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 5h2v14H6zM20 5v14L9.5 12z"></path></svg>
-                                    </button>
-                                    <button type="button" data-ctl="toggle" title="播放 / 暂停" aria-label="播放或暂停">
-                                        <svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"></path></svg>
-                                        <svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"></path></svg>
-                                    </button>
-                                    <button type="button" data-ctl="next" title="下一首" aria-label="下一首">
-                                        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16 5h2v14h-2zM4 5v14l10.5-7z"></path></svg>
-                                    </button>
-                                </div>
-                            </section>
+                            </div>
 
-                            <section class="hv3-box hv3-projects" aria-label="创造与探索">
-                                <div class="hv3-project-grid" id="hv3Projects" aria-label="已上线项目"></div>
+                            <!-- 当天任务：直接贴在日历下面 -->
+                            <div class="hv3-today-tasks home-life" id="homeLife">
+                                <div class="life-task-list" id="lifeTaskList"></div>
+                            </div>
+
+                            <!-- 日记：默认收成一行，点标题展开 -->
+                            <section class="hv3-journals is-collapsed" id="homeJournalBox" aria-label="日记，点标题展开">
+                                <button class="hv3-journals-head" type="button" id="journalToggle" aria-expanded="false">
+                                    <span class="hv3-journals-title">日记</span>
+                                    <span class="hv3-journals-right">
+                                        <span class="hv3-journals-month" id="journalMonthLabel"></span>
+                                        <span class="hv3-journals-caret" aria-hidden="true">▾</span>
+                                    </span>
+                                </button>
+                                <div class="hv3-stack" id="hv3Journals"></div>
                             </section>
                         </div>
+
+                        <section class="hv3-box hv3-projects hv3-span-5" aria-label="创造与探索">
+                            <div class="hv3-project-grid" id="hv3Projects" aria-label="已上线项目"></div>
+                        </section>
                     </div>
 
                 </div>
@@ -1192,8 +1202,8 @@
         'vendor/grok/eyes.js?v=1.0.0',
         'vendor/grok/character.js?v=1.0.2',
         'js/gallery-wall.js?v=1.3.0',
-        'js/pet-core.js?v=2.0.23',
-        'js/pet-mind.js?v=2.0.25'
+        'js/pet-core.js?v=2.0.24',
+        'js/pet-mind.js?v=2.0.26'
     ];
     var started = false;
     function load() {

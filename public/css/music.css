@@ -387,27 +387,33 @@ body.view-music-active .now-island {
    换歌/换行跟着变，三个按钮直接控制播放器。
    ============================================================ */
 .hv3-music {
-    padding: 16px 16px 13px;
+    /* 第一行右侧 5 栏的播放器卡：封面 + 歌名/歌词在上，控制按钮在下 */
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 18px 18px 16px;
     cursor: pointer;
-    transition: box-shadow 0.22s ease, transform 0.22s ease;
+    transition: box-shadow 0.22s ease, transform 0.22s ease, border-color 0.22s ease;
 }
 
 .hv3-music:hover {
     transform: translateY(-1px);
+    border-color: var(--accent, rgba(240, 162, 12, .45));
 }
 
 .hv3-music-body {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 14px;
     min-width: 0;
 }
 
 .hv3-music-cover {
-    width: 56px;
-    height: 56px;
+    width: 76px;
+    height: 76px;
     flex: none;
-    border-radius: 14px;
+    border-radius: 16px;
     overflow: hidden;
     background: rgba(0, 0, 0, 0.06);
     transition: opacity 0.25s ease;
@@ -433,7 +439,7 @@ body.view-music-active .now-island {
 }
 
 .hv3-music-name {
-    font-size: 14px;
+    font-size: 16px;
     font-weight: 600;
     color: var(--text);
     white-space: nowrap;
@@ -442,7 +448,7 @@ body.view-music-active .now-island {
 }
 
 .hv3-music-artist {
-    font-size: 12px;
+    font-size: 12.5px;
     color: var(--text-secondary);
     white-space: nowrap;
     overflow: hidden;
@@ -451,9 +457,9 @@ body.view-music-active .now-island {
 
 .hv3-music-lyric {
     position: relative;
-    height: 16px;
+    height: 17px;
     overflow: hidden;
-    font-size: 12px;
+    font-size: 12.5px;
     color: var(--text-secondary);
     opacity: 0;
     transition: opacity 0.22s ease;
@@ -465,8 +471,8 @@ body.view-music-active .now-island {
 
 .hv3-music-ctls {
     display: flex;
-    gap: 6px;
-    margin-top: 11px;
+    gap: 8px;
+    margin-top: 0;
     opacity: 0.32;
     transition: opacity 0.22s ease;
 }
@@ -479,8 +485,8 @@ body.view-music-active .now-island {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 30px;
-    height: 30px;
+    width: 34px;
+    height: 34px;
     padding: 0;
     border: 1px solid var(--border, rgba(0, 0, 0, 0.1));
     border-radius: 50%;

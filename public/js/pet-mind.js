@@ -111,6 +111,27 @@
       '我就在这儿，不吵你',
       '安静陪你一会儿',
     ],
+    // 点桌宠时用的闲聊池（跟视图台词混在一起抽，避免每次都那几句）
+    poke: [
+      '嗯？',
+      '在的在的',
+      '摸我干嘛…不过还行',
+      '你今天话有点少',
+      '我在这儿待着挺好的',
+      '刚才走神了一下',
+      '要不要听首歌？',
+      '我什么都不做也很开心',
+      '鼠标别乱晃，我看不住',
+      '你是不是有点累',
+      '有想法就写下来吧',
+      '我在这儿，不着急',
+      '今天过得怎么样',
+      '别一直盯着我，会害羞',
+      '有需要就喊我（点一下也行）',
+      '这页我陪你看着呢',
+      '偶尔发会儿呆也不错',
+      '要不要我陪你听会儿歌',
+    ],
   };
 
   // ---------- 采集当前页面在显示什么 ----------
@@ -591,9 +612,65 @@
     return line;
   }
 
+  // 点桌宠：用「洗牌袋」抽句 —— 一轮把所有候选（当前视图台词 + 闲聊池）打乱后逐个发，
+  // 抽完再重新洗，所以每次点都不重样，也不会像纯随机那样老是那几句。
+  let pokeBag = [];
+
+  function nextPokeLine() {
+    const ctx = collect();
+    if (!pokeBag.length) {
+      const base = poolFor(ctx).concat(LINES.idle, LINES.poke);
+      pokeBag = base.slice();
+      for (let i = pokeBag.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        const tmp = pokeBag[i];
+        pokeBag[i] = pokeBag[j];
+        pokeBag[j] = tmp;
+      }
+    }
+    const next = pokeBag.pop();
+    return fill(next, ctx);
+  }
+
   // 点桌宠时对外的一句话（PetCore 会来拿）
   function pickLine() {
-    return pickLocalLine(collect());
+    return nextPokeLine();
+  }
+
+  // 被点一下：先本地立刻冒一句，再让 AI 现场写一句替换（接不上就保持本地那句）
+  let pokeSeq = 0;
+  let pokeAt = 0;
+
+  function poke() {
+    if (isSleeping() || doc.hidden) return false;
+    const local = nextPokeLine();
+    STATE.recent.push(local);
+    if (STATE.recent.length > 6) STATE.recent = STATE.recent.slice(-6);
+    say(local, 0, { log: false, speak: false });
+    petState('happy', 1200);
+
+    if (!STATE.enabled || STATE.busy) return true;
+    const now = Date.now();
+    if (now - pokeAt < 1200) return true;     // 手速太快时不必每次都问
+    pokeAt = now;
+    const seq = ++pokeSeq;
+    const ctx = collect();
+    const recent = STATE.recent.slice(-4).join('；');
+    const bits = [
+      '（场景：访客刚点了你一下，像摸头，你要顺口回一句话）',
+      '现在页面：' + ctx.sectionLabel + '，本地时间 ' + ctx.time,
+    ];
+    if (MUSIC.name) bits.push('访客正在听《' + MUSIC.name + '》');
+    if (recent) bits.push('你最近说过：' + recent + '（别重复）');
+    bits.push('要求：一句话，不超过 20 字，口语、有情绪、每次都不一样，不要客套收尾。');
+
+    askAI(bits.join('\n'), null).then((reply) => {
+      if (seq !== pokeSeq) return;           // 又点了新的，丢弃这次
+      const text = String(reply || '').trim();
+      if (!text) return;
+      say(text.slice(0, 120), 0, { log: false, speak: true });
+    }).catch(() => { /* 没接上就保持本地那句 */ });
+    return true;
   }
 
   async function autoTalk(force) {
@@ -1269,6 +1346,8 @@
     get voiceMode() { return voiceMode; },
     get music() { return MUSIC; },
     get voicePick() { return voicePick; },
+    nextPokeLine,
+    poke,
     musicComment,
     get listening() { return !!listening; },
     get recognition() { return recognition; },
