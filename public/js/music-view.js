@@ -602,12 +602,12 @@
     });
   }
 
-  // 翻不翻：有歌就翻（不等歌词到齐——歌词层没内容时显示「歌词加载中…」），鼠标停在卡上就翻回
+  // 翻不翻：真在放（或正要开始放）才翻起来；暂停、没歌都停在正面，方便按播放键
   var cardHovered = false;
 
   function syncCardFlip() {
     if (!musicCard) return;
-    var canFlip = musicCard.classList.contains('is-playing');
+    var canFlip = musicCard.classList.contains('is-playing') && !musicCard.classList.contains('paused');
     musicCard.classList.toggle('is-lyric', canFlip && !cardHovered);
     if (lyricsBox) lyricsBox.setAttribute('aria-hidden', canFlip && !cardHovered ? 'false' : 'true');
   }
