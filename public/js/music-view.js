@@ -491,15 +491,96 @@
   var cardArtist = document.getElementById('hv3MusicArtist');
   var cardLyric = document.getElementById('hv3MusicLyric');
 
+  var lyricsBox = document.getElementById('hv3MusicLyrics');
+  var lyricsTrack = document.getElementById('hv3MusicLyricsTrack');
+  var loopBtn = document.getElementById('hv3MusicLoopBtn');
+  var lyricHoldTimer = 0;
+
+  // 循环键的三态：off → all → one → off，和播放器自己是同一套设置（Folia 那边改完会回推状态）
+  var LOOP_TEXT = {
+    off: { title: '循环：不循环', label: '不循环' },
+    all: { title: '循环：列表循环', label: '列表循环' },
+    one: { title: '循环：单曲循环', label: '单曲循环' }
+  };
+
+  function syncLoopButton(mode) {
+    if (!loopBtn) return;
+    var key = LOOP_TEXT[mode] ? mode : 'off';
+    loopBtn.setAttribute('data-loop', key);
+    loopBtn.title = LOOP_TEXT[key].title;
+    loopBtn.setAttribute('aria-label', '切换循环方式，当前 ' + LOOP_TEXT[key].label);
+  }
+
+  // 歌词层里的行：只在「窗口内容真的变了」时重画，避免每句都重建 DOM
+  var lyricsSignature = '';
+
+  function renderCardLyrics(data) {
+    if (!lyricsTrack) return false;
+    var win = data && data.lyricsWindow;
+    var lines = win && Array.isArray(win.lines) ? win.lines : null;
+    if (!lines || !lines.length) {
+      if (lyricsSignature !== '') {
+        lyricsSignature = '';
+        lyricsTrack.innerHTML = '';
+      }
+      return false;
+    }
+
+    var signature = lines.map(function (l) { return l.index + '|' + l.text; }).join('\u0001') + '#' + win.active;
+    if (signature === lyricsSignature) return true;
+    lyricsSignature = signature;
+
+    var html = '';
+    for (var i = 0; i < lines.length; i++) {
+      var line = lines[i];
+      var text = line.text == null ? '' : String(line.text);
+      var trans = line.translation == null ? '' : String(line.translation);
+      var cls = 'hv3-music-lyric-line' + (i === win.active ? ' is-active' : '');
+      html += '<div class="' + cls + '" data-i="' + i + '">' + escapeHtml(text || '·') +
+        (trans ? '<span class="hv3-music-lyric-trans">' + escapeHtml(trans) + '</span>' : '') + '</div>';
+    }
+    lyricsTrack.innerHTML = html;
+
+    // 让当前行停在歌词层中间（整首歌词都在一个可滚动的列里，跟着歌往下走）
+    var activeEl = lyricsTrack.querySelector('.is-active');
+    if (activeEl && lyricsBox) {
+      var boxHeight = lyricsBox.clientHeight || 0;
+      var target = activeEl.offsetTop - boxHeight / 2 + activeEl.offsetHeight / 2;
+      lyricsBox.scrollTop = Math.max(0, target);
+    }
+    return true;
+  }
+
+  function escapeHtml(value) {
+    return String(value).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  // 翻不翻：正在放 + 有歌词窗口 + 鼠标没悬停在卡上
+  var cardHovered = false;
+
+  function syncCardFlip() {
+    if (!musicCard) return;
+    var canFlip = musicCard.classList.contains('is-playing') && !!lyricsTrack && lyricsTrack.childElementCount > 0;
+    musicCard.classList.toggle('has-lyrics', canFlip);
+    musicCard.classList.toggle('is-lyric', canFlip && !cardHovered);
+    if (lyricsBox) lyricsBox.setAttribute('aria-hidden', canFlip && !cardHovered ? 'false' : 'true');
+  }
+
   function updateMusicCard(data) {
     if (!musicCard) return;
     var song = data && data.song;
+
+    syncLoopButton(data && data.loopMode);
+    var hasLyrics = renderCardLyrics(data);
 
     if (!song) {
       musicCard.classList.remove('is-playing', 'paused');
       if (cardName) cardName.textContent = '还没有在播放';
       if (cardArtist) cardArtist.textContent = '去播放器里挑一首';
       if (cardLyric) setRunText(cardLyric, '');
+      syncCardFlip();
       return;
     }
 
@@ -513,6 +594,10 @@
     var cardLyricText = data.lyric && data.lyric.text ? String(data.lyric.text).trim() : '';
     setRunText(cardLyric, cardLyricText);
     updateMarquee(cardLyric);
+
+    // 没歌词（纯音乐 / 还没匹配到）就不翻，卡片保持原样
+    if (!hasLyrics) musicCard.classList.remove('is-lyric');
+    syncCardFlip();
   }
 
   if (musicCard) {
@@ -531,6 +616,18 @@
         sendPlayerControl(this.getAttribute('data-ctl'));
       });
     }
+
+    // 鼠标移到卡上 → 立刻翻回正面（歌词收起）；移开一会儿再翻上去，别让路过也触发
+    musicCard.addEventListener('mouseenter', function () {
+      cardHovered = true;
+      clearTimeout(lyricHoldTimer);
+      syncCardFlip();
+    });
+    musicCard.addEventListener('mouseleave', function () {
+      cardHovered = false;
+      clearTimeout(lyricHoldTimer);
+      lyricHoldTimer = setTimeout(syncCardFlip, 900);
+    });
 
     var cardOpenBtn = document.getElementById('hv3MusicOpen');
     if (cardOpenBtn) {
