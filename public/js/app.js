@@ -1895,20 +1895,12 @@ const BlogApp = {
 
     /* ===== 文章位：整张卡交叉淡入播放 =====
        · 封面和标题是一张卡的两个部分，切换时一起淡出淡入（用户要的「两边一起切」）
-       · 5 秒一篇，全部文章轮流过；左右箭头手动切上一篇 / 下一篇
-       · 不再有横向滚动条和页码圆点 */
+       · 5 秒一篇，全部文章轮流过；没有左右按钮和页码圆点，纯自动播放
+       · 鼠标停上去暂停，走开继续 */
     bindPostPlay() {
         const car = document.getElementById('hv3Car');
         if (!car || car.dataset.playBound) return;
         car.dataset.playBound = '1';
-        car.addEventListener('click', (e) => {
-            const btn = e.target.closest('[data-car-dir]');
-            if (!btn) return;
-            e.preventDefault();
-            const dir = Number(btn.dataset.carDir) || 1;
-            this.gotoPost((this._postPlay ? this._postPlay.idx : 0) + dir);
-            this.startPostPlay();
-        });
         // 鼠标停上去就暂停自动切换，走开再继续
         car.addEventListener('mouseenter', () => this.stopPostPlay());
         car.addEventListener('mouseleave', () => this.startPostPlay());
