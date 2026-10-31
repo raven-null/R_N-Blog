@@ -2136,7 +2136,20 @@ const BlogApp = {
 
             const portrait = [];
             const landscape = [];
+            const square = [];
             const unknown = [];
+            // 按宽高比三分类：接近正方形的（0.85 ~ 1.18）单独给方图盒子，
+            // 明显更宽的给生活切片，更窄的给文章位 —— 三类互不重叠
+            const kindOf = (w, h) => {
+                const r = w / h;
+                if (r >= 0.85 && r <= 1.18) return 'square';
+                return r > 1.18 ? 'landscape' : 'portrait';
+            };
+            const pushKind = (p, kind) => {
+                if (kind === 'square') square.push(p);
+                else if (kind === 'landscape') landscape.push(p);
+                else portrait.push(p);
+            };
             const seen = new Set();
             for (const p of postCovers.concat(gallery)) {
                 const key = String((p && (p.thumb || p.url)) || '');
@@ -2146,13 +2159,13 @@ const BlogApp = {
                 const w = Number(p.width) || 0;
                 const h = Number(p.height) || 0;
                 if (w > 0 && h > 0) {
-                    (w >= h ? landscape : portrait).push(p);
-                    orient.set(p.id, w >= h ? 'landscape' : 'portrait');
+                    const kind = kindOf(w, h);
+                    pushKind(p, kind);
+                    orient.set(p.id, kind);
                     continue;
                 }
                 const known = orient.get(p.id);
-                if (known === 'portrait') portrait.push(p);
-                else if (known === 'landscape') landscape.push(p);
+                if (known === 'square' || known === 'portrait' || known === 'landscape') pushKind(p, known);
                 else unknown.push(p);
             }
 
@@ -2161,7 +2174,7 @@ const BlogApp = {
             const probeOne = (p) => new Promise((resolve) => {
                 const im = new Image();
                 im.onload = () => {
-                    const kind = im.naturalWidth >= im.naturalHeight ? 'landscape' : 'portrait';
+                    const kind = kindOf(im.naturalWidth, im.naturalHeight);
                     orient.set(p.id, kind);
                     resolve(kind);
                 };
@@ -2172,15 +2185,14 @@ const BlogApp = {
                 while (cursor < unknown.length) {
                     const p = unknown[cursor++];
                     const kind = await probeOne(p);
-                    if (kind === 'portrait') portrait.push(p);
-                    else if (kind === 'landscape') landscape.push(p);
+                    if (kind) pushKind(p, kind);
                 }
             };
             await Promise.all(new Array(8).fill(0).map(worker));
 
-            const pools = { portrait, landscape };
+            const pools = { portrait, landscape, square };
             // 空池不缓存：图库还没回来时缓存了空结果，后面就再也补不上图
-            if (portrait.length || landscape.length) this._orientPools = pools;
+            if (portrait.length || landscape.length || square.length) this._orientPools = pools;
             return pools;
         })();
         try {
@@ -2263,6 +2275,10 @@ const BlogApp = {
             });
             take(sized.filter((p) => Number(p.height) > Number(p.width)), 12);   // 备给文章位
             take(sized.filter((p) => Number(p.width) >= Number(p.height)), 4);   // 备给生活切片
+            take(sized.filter((p) => {
+                const r = Number(p.width) / Number(p.height);
+                return r >= 0.85 && r <= 1.18;                                    // 备给方图盒子
+            }), 4);
         }).catch(() => { /* 预热失败不影响正常加载 */ });
     },
 
@@ -2496,11 +2512,17 @@ const BlogApp = {
         }
 
         if (!photos.length) {
-            // 没有照片可播：收起照片面板和它的切换标签
-            stage.style.display = 'none';
-            document.querySelector('.hv3-stage-tab[data-stage="shots"]')?.remove();
+            // 没有横图：就一直停着等（不拿竖图/方图凑数），5 秒后再看一眼池子
+            stage.dataset.waiting = '1';
+            clearTimeout(this._hvPhotosRetry);
+            this._hvPhotosRetry = setTimeout(() => {
+                stage.dataset.loaded = '';
+                this._orientPools = null;
+                this.renderHvPhotos();
+            }, 5000);
             return;
         }
+        stage.dataset.waiting = '';
 
         const layers = [...stage.querySelectorAll('.hv3-shot-img')];
         if (layers.length < 2) return;
@@ -2566,11 +2588,12 @@ const BlogApp = {
                 const nw = next.naturalWidth;
                 const nh = next.naturalHeight;
                 if (nw && nh) {
-                    const portrait = nw < nh;
-                    orient.set(p.id, portrait ? 'portrait' : 'landscape');
-                    // 池子里本来就只有横图，这里是兜底：万一量出来是竖图就换下一张，
-                    // 绝不将就着把竖图放到右边
-                    if (portrait) {
+                    const r = nw / nh;
+                    const kind = r >= 0.85 && r <= 1.18 ? 'square' : (r > 1.18 ? 'landscape' : 'portrait');
+                    orient.set(p.id, kind);
+                    // 池子里本来就只有横图，这里是兜底：量出来不是横图就换下一张，
+                    // 绝不将就着把竖图/方图放到这块横图位上
+                    if (kind !== 'landscape') {
                         skips++;
                         if (skips < Math.max(4, total)) nextShot();
                         return;
@@ -2706,6 +2729,72 @@ const BlogApp = {
         });
     },
 
+    /* 方图盒子：只播「接近正方形」的图（宽高比 0.85~1.18）。
+       一张方图都没有时挂占位一直等，不拿横图/竖图凑数 —— 有图才播。 */
+    async renderHvSquare() {
+        const box = document.getElementById('hv3Square');
+        if (!box || box.dataset.ready) return;
+        box.dataset.ready = '1';
+        const layers = [...box.querySelectorAll('.hv3-square-img')];
+        if (layers.length < 2) return;
+
+        let pool = [];
+        try {
+            const pools = await this.orientationPools();
+            pool = pools.square || [];
+        } catch (e) { pool = []; }
+
+        if (!pool.length) {
+            box.dataset.waiting = '1';
+            clearTimeout(this._squareRetry);
+            this._squareRetry = setTimeout(() => {
+                box.dataset.ready = '';
+                this._orientPools = null;
+                this.renderHvSquare();
+            }, 5000);
+            return;
+        }
+        box.dataset.waiting = '';
+
+        let front = 0;
+        const show = () => {
+            if (document.hidden) return;
+            const p = pool[Math.floor(Math.random() * pool.length)];
+            const src = String((p && (p.thumb || p.url)) || '');
+            if (!src) return;
+            const prev = layers[front];
+            const next = layers[1 - front];
+            if (next.dataset.src === src) return;
+            next.dataset.src = src;
+            next.loading = 'eager';
+            let done = false;
+            const swap = () => {
+                if (done) return;
+                done = true;
+                next.classList.add('is-front');
+                prev.classList.remove('is-front');
+                front = 1 - front;
+            };
+            next.addEventListener('load', swap, { once: true });
+            next.src = src;
+            if (next.complete && next.naturalWidth) swap();
+        };
+        show();
+        clearInterval(this._squareTimer);
+        this._squareTimer = setInterval(show, 60000);
+
+        box.onclick = () => {
+            const cur = layers[front];
+            const src = cur ? (cur.currentSrc || cur.src || '') : '';
+            if (!src) return;
+            window.__galleryImages = pool;
+            const idx = pool.findIndex((p) => String(p.thumb || p.url) === src);
+            if (typeof window.openGalleryLightbox === 'function') {
+                window.openGalleryLightbox(src, idx >= 0 ? idx : 0);
+            }
+        };
+    },
+
     // 无限滚动：滚过一半时悄悄把位置减回去，看起来永远滚不完
     makeLoopScroll(el) {
         if (!el || el.dataset.loopBound) return;
@@ -2731,6 +2820,7 @@ const BlogApp = {
         this.renderHomeNews();
         this.renderHvPosts();
         this.renderHvPhotos();
+        this.renderHvSquare();
         this.renderHomeProjects();
         // 后台「项目管理」里维护的列表（见 loadProjectsData），先渲染内置那几项再替换
         this.loadProjectsData();

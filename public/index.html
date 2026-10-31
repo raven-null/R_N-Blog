@@ -15,7 +15,7 @@
     <meta property="og:image" content="https://ravennull.work/images/Default/web-logo.webp">
     <meta property="og:locale" content="zh_CN">
     <meta name="twitter:card" content="summary">
-    <link rel="stylesheet" href="css/bundle.css?v=215425821f">
+    <link rel="stylesheet" href="css/bundle.css?v=8252e8ae4c">
     <title>渡鸦 NULL · 日光与暮色之间</title>
     <link rel="icon" id="siteFavicon" href="/images/Default/web-logo.webp" type="image/webp">
     <link rel="apple-touch-icon" href="/images/Default/web-logo.webp">
@@ -415,13 +415,21 @@
                             </div>
                         </section>
 
-                        <!-- 右侧 8 栏：照片墙海报 + 今日拾光 -->
+                        <!-- 右侧 8 栏：照片墙海报（横图）+ 方图盒子 + 今日拾光 -->
                         <div class="hv3-col-right hv3-span-8">
-                            <div class="hv3-shot" id="hv3Shots" aria-label="生活切片">
-                                <img class="hv3-shot-img" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">
-                                <img class="hv3-shot-img" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">
-                                <!-- 播到「某篇文章的横图封面」时，在这里显示那篇文章的标题 -->
-                                <span class="hv3-shot-cap" id="hv3ShotCap" hidden></span>
+                            <div class="hv3-top-row">
+                                <div class="hv3-shot" id="hv3Shots" aria-label="生活切片">
+                                    <img class="hv3-shot-img" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">
+                                    <img class="hv3-shot-img" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">
+                                    <!-- 播到「某篇文章的横图封面」时，在这里显示那篇文章的标题 -->
+                                    <span class="hv3-shot-cap" id="hv3ShotCap" hidden></span>
+                                </div>
+
+                                <!-- 方图盒子：只放接近正方形的图（横图给左边海报、竖图给文章位） -->
+                                <div class="hv3-square" id="hv3Square" aria-label="方图，点击看大图">
+                                    <img class="hv3-square-img" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">
+                                    <img class="hv3-square-img" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">
+                                </div>
                             </div>
 
                             <div class="hv3-sub-grid">
@@ -643,7 +651,7 @@
     <!-- 桌宠动效引擎（spring-driven character，见 public/vendor/grok/README.md） -->
 
     <!-- /js/* 是 immutable 长缓存：app.js 一改就必须换 ?v=，否则线上一直吃旧文件 -->
-    <script src="js/app.js?v=20261105t" defer></script>
+    <script src="js/app.js?v=20261105u" defer></script>
     <script src="js/animations.js?v=3.14.0" defer></script>
 
     <script>

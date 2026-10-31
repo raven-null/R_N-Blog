@@ -211,6 +211,66 @@ html[data-theme="dark"] .hv3-card {
 /* ============================================================
    第二行右侧：照片海报在上（吃掉剩余高度），今日拾光 + 显示工具在下
    ============================================================ */
+/* ============================================================
+   第二行右侧：横图海报 + 方图盒子并排，下面是今日拾光
+   ============================================================ */
+.hv3-top-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    min-height: 0;
+    width: 100%;
+}
+
+/* 方图盒子：只放接近正方形的图；方形，跟左边海报顶部对齐 */
+.hv3-square {
+    position: relative;
+    flex: 0 0 auto;
+    width: clamp(150px, 26%, 240px);
+    aspect-ratio: 1;
+    border-radius: 18px;
+    overflow: hidden;
+    background: transparent;
+    box-shadow: 0 10px 30px rgba(16, 20, 32, .12);
+    cursor: zoom-in;
+    isolation: isolate;
+}
+
+.hv3-square-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0;
+    transition: opacity .9s ease;
+    pointer-events: none;
+}
+
+.hv3-square-img.is-front {
+    opacity: 1;
+}
+
+/* 还没等到方图时占位（不拿别的图凑数，就等） */
+.hv3-square[data-waiting="1"] {
+    background: linear-gradient(100deg,
+        var(--surface-2, #f3eee1) 20%,
+        var(--surface-3, #e9e3d4) 40%,
+        var(--surface-2, #f3eee1) 60%);
+    background-size: 200% 100%;
+    animation: hv3-square-wait 2.2s linear infinite;
+}
+
+@keyframes hv3-square-wait {
+    to { background-position: -200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .hv3-square[data-waiting="1"] {
+        animation: none;
+    }
+}
+
 .hv3-col-right {
     display: flex;
     flex-direction: column;
@@ -555,7 +615,10 @@ html[data-theme="dark"] .hv3-card {
 
 .hv3-shot {
     position: relative;
-    width: 100%;
+    /* 和方图盒子并排：吃掉剩下的宽度 */
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
     /* 高度 = 8 栏宽 ÷ 图片真实比例（--shot-ar 由 fitShotBoxTo 写），
        再夹在 240–360px 之间：横图偏矮、竖图偏高，超出的部分 cover 裁掉 */
     aspect-ratio: var(--shot-ar, 1.6);
