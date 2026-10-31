@@ -57,16 +57,33 @@ html[data-theme="dark"] .hv3-card {
 }
 
 /* ============================================================
-   个人信息卡：上排头像 + 名字 + 简介，下排时钟 + 三个数字
+   个人信息卡：左列自上而下 头像/名字/简介 → 时间与日期 → 文章·照片·项目三个数字；
+              右列三个圆钮跟随整卡高度贴在右下角
+              —— 时间落在三个数字按钮的正上方
    ============================================================ */
 .hv3-hero {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    justify-content: space-between;
-    gap: 20px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    /* 时间与日期独占左列第二行，正好压在「文章 / 照片 / 项目」三个数字上方；
+       右列只有三个圆钮，跨满三行贴右下角 */
+    grid-template-areas:
+        "who    toggles"
+        "clock  toggles"
+        "stats  toggles";
+    align-items: center;
+    gap: 10px 18px;
     min-width: 0;
 }
+
+/* 原来包着时钟 / 数字 / 圆钮的那层不再参与布局，让它们直接落进卡片的网格 */
+.hv3-hero-right {
+    display: contents;
+}
+
+.hv3-who { grid-area: who; }
+.hv3-stats { grid-area: stats; justify-self: start; }
+.hv3-toggles { grid-area: toggles; justify-self: end; align-self: end; }
+.hv3-clock { grid-area: clock; justify-self: start; text-align: left; }
 
 .hv3-who {
     display: flex;
@@ -119,18 +136,7 @@ html[data-theme="dark"] .hv3-card {
     text-overflow: ellipsis;
 }
 
-/* 口号区已移除：头像名字在左，时钟与数字在右 */
-
-/* 卡内下排：时钟 / 三个数字 / 三个圆钮 */
-.hv3-hero-right {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 18px;
-    flex: 0 0 auto;
-}
-
-.hv3-clock { text-align: left; }
+/* 口号区已移除：头像名字在左，时间与数字在右 */
 
 .hv3-time {
     font-size: 20px;
@@ -1152,22 +1158,21 @@ html[data-theme="dark"] .hv3-shot {
 
     .hv3-sub-grid > * { grid-column: auto; }
 
-    .hv3-hero { gap: 14px; }
-
-    /* 窄屏三块（时钟 / 数字 / 三个圆钮）挤不下，允许折到下一行 */
-    .hv3-hero-right {
-        flex-wrap: wrap;
+    /* 窄屏放不下左右两列：头像独占一行，时间一行，最后是数字 + 圆钮 */
+    .hv3-hero {
+        grid-template-areas:
+            "who who"
+            "clock clock"
+            "stats toggles";
         gap: 12px;
-        justify-content: space-between;
     }
+
+    .hv3-clock { justify-self: start; }
 
     .hv3-toggle {
         width: 34px;
         height: 34px;
     }
-
-    /* 折到第二行时靠右，和上面那排数字对齐 */
-    .hv3-hero-right .hv3-toggles { margin-left: auto; }
 
     /* 窄屏同样跟着图片比例浮动，只是区间收一档 */
     .hv3-shot {
