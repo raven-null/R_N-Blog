@@ -271,6 +271,28 @@
     topBarPillEl.addEventListener('mouseleave', scheduleNavClose);
   }
 
+  // 圆按钮的图标要跟站点真正的 favicon 走：后台可能设了自定义图标，
+  // site-icon.js 会异步把它写回 link[rel=icon]，这里跟着同步（别写死默认 logo）。
+  var orbImg = dockOrb ? dockOrb.querySelector('img') : null;
+
+  function syncOrbIcon() {
+    if (!orbImg) return;
+    var link = document.querySelector('link[rel="icon"]');
+    var href = link && link.getAttribute('href');
+    if (href && orbImg.getAttribute('src') !== href) orbImg.setAttribute('src', href);
+  }
+
+  syncOrbIcon();
+  var faviconLink = document.querySelector('link[rel="icon"]');
+  if (faviconLink && typeof MutationObserver === 'function') {
+    // site-icon.js 拉完后台设置会 setAttribute('href', ...)，这里接住那次改动
+    new MutationObserver(syncOrbIcon).observe(faviconLink, {
+      attributes: true,
+      attributeFilter: ['href'],
+    });
+  }
+  setTimeout(syncOrbIcon, 1500);   // 兜底：favicon 是异步取的，稍后再对一次
+
   // 点导航以外的地方 / 按 Esc：把导航收回去，岛回来
   document.addEventListener('click', function (e) {
     if (!document.body.classList.contains('nav-dock-open')) return;
@@ -325,7 +347,9 @@
     }
 
     var lyric = data.lyric && data.lyric.text ? String(data.lyric.text).trim() : '';
-    setIslandLyric(lyric || title);
+    // 有歌词就只显示歌词，没有才显示「歌名 · 歌手」——两行叠在一起，靠 has-lyric 切换
+    island.classList.toggle('has-lyric', !!lyric);
+    if (lyric) setIslandLyric(lyric);
   }
 
   window.addEventListener('message', function (event) {

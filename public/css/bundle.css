@@ -14566,6 +14566,30 @@ body:not(.view-music-active):not(.island-mode) .top-bar:hover .top-bar-pill {
     min-width: 0;
 }
 
+/* 桌面端把 dock 的宽度钉死、圆按钮绝对定位：
+   否则切换时岛和导航宽度不同 → 整行重新居中 → 圆按钮左右平移 →
+   鼠标一旦停在它的边缘就会「移出→关闭→移回→打开」无限抽搐。 */
+@media (min-width: 761px) {
+    .top-dock {
+        position: relative;
+        width: 470px;
+        max-width: calc(100vw - 32px);
+        padding-left: 46px;   /* 给圆按钮留出固定位置 */
+    }
+
+    .dock-orb {
+        position: absolute;
+        left: 0;
+        top: 50%;
+        transform: translateY(-50%);
+    }
+
+    /* 没有岛时圆按钮不显示，别留那 46px */
+    body:not(.island-mode) .top-dock {
+        padding-left: 0;
+    }
+}
+
 /* 岛模式下的圆形按钮：放站点图标，点它唤出/收起导航栏 */
 .dock-orb {
     display: none;
@@ -14767,37 +14791,59 @@ body.view-music-active .now-island {
     object-fit: cover;
 }
 
+/* 文本区：标题和歌词叠在同一行 ——
+   有歌词只显示歌词，没歌词才显示「歌名 · 歌手」，不做两行 */
 .now-island-text {
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
+    position: relative;
+    height: 17px;
     min-width: 0;
     flex: 1 1 auto;
-}
-
-.now-island-title {
-    font-size: 11px;
-    letter-spacing: 0.04em;
-    color: rgba(255, 255, 255, 0.52);
-    white-space: nowrap;
     overflow: hidden;
-    text-overflow: ellipsis;
 }
 
+.now-island-title,
 .now-island-lyric {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    min-width: 0;
     font-size: 13px;
     font-weight: 500;
     letter-spacing: 0.02em;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    transition: opacity 0.16s ease, transform 0.16s ease;
+    transition: opacity 0.18s ease;
 }
 
-/* 换句时先淡出再换字，避免文字硬闪 */
-.now-island-lyric.is-flipping {
+.now-island-title {
+    color: rgba(255, 255, 255, 0.92);
+    opacity: 1;
+}
+
+.now-island-lyric {
+    color: #fff;
+    opacity: 0;
+}
+
+/* 有歌词 → 只显示歌词；没歌词 → 只显示标题 */
+.now-island.has-lyric .now-island-title {
+    opacity: 0;
+}
+
+.now-island.has-lyric .now-island-lyric {
+    opacity: 1;
+}
+
+/* 换句先淡出再换字，避免文字硬闪（这条要压过 has-lyric 的 opacity:1） */
+.now-island.has-lyric .now-island-lyric.is-flipping {
     opacity: 0;
     transform: translateY(3px);
+    transition: opacity 0.16s ease, transform 0.16s ease;
 }
 
 .now-island-wave {
@@ -14866,8 +14912,9 @@ body.view-music-active .now-island {
     }
 
     .now-island-cover { width: 30px; height: 30px; }
+    .now-island-text { height: 16px; }
+    .now-island-title,
     .now-island-lyric { font-size: 12px; }
-    .now-island-title { font-size: 10px; }
 }
 
 /* ============================================================
