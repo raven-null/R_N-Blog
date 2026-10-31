@@ -269,7 +269,8 @@ html[data-theme="dark"] .hv3-card {
     margin-inline: 0;
     border-radius: 18px;
     overflow: hidden;
-    background: var(--surface-2, #f3eee1);
+    /* 图片按 contain 显示，留白处要透出页面背景，所以这里不铺底色 */
+    background: transparent;
     box-shadow: 0 10px 30px rgba(16, 20, 32, .12);
 }
 
@@ -293,7 +294,8 @@ html[data-theme="dark"] .hv3-card {
     text-decoration: none;
     color: #fff;
     overflow: hidden;
-    background: var(--surface-2, #f3eee1);
+    /* 图片是 contain，卡片本身不铺底色，留白处透出页面背景 */
+    background: transparent;
     opacity: 0;
     visibility: hidden;
     transition: opacity .6s ease, visibility 0s linear .6s;
@@ -308,22 +310,23 @@ html[data-theme="dark"] .hv3-card {
     z-index: 2;
 }
 
-/* 封面铺满整张卡（高度由 .hv3-car 控制） */
+/* 封面铺满整张卡（高度由 .hv3-car 控制）
+   图片一律 contain：宁可盒子边上有留白，也不把照片裁掉一块。
+   留白处的背景做成透明，所以看不出「一圈底色框」。 */
 .hv3-cover {
     position: absolute;
     inset: 0;
     width: 100%;
     height: 100%;
     overflow: hidden;
-    /* 竖图池还没到、或图库整个拿不到时的兜底色，别让卡片露白 */
-    background: var(--surface-2, #f3eee1);
+    background: transparent;
 }
 
 .hv3-cover img {
     display: block;
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
 }
 
 /* 封面两层交叉淡入（和生活切片同一套播放形式）：
@@ -333,7 +336,8 @@ html[data-theme="dark"] .hv3-card {
     inset: 0;
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
+    background: transparent;
     opacity: 0;
     transition: opacity .6s ease;
 }
@@ -1218,20 +1222,27 @@ html[data-theme="dark"] .hv3-shot {
         gap: 14px;
     }
 
-    /* 手机上的文章位只播竖图：盒子占满可用宽度、高度按封面的真实比例撑开
-       （--car-h 由 syncCarouselHeight 算），图片用 contain —— 整张竖图完整可见。
-       桌面端不受影响：那边高度跟着右侧照片列走。 */
+    /* 手机上的文章位只播竖图：盒子宽高都按封面真实比例来（--car-w / --car-h 由
+       syncCarouselHeight 算），图片 contain 之后正好铺满，不留边；
+       万一比例还没算准、暂时有空隙，背景也全透明，不会露出一圈难看的底色块。 */
     .hv3-stage-body { display: block; }
 
     .hv3-car {
         flex: none;
+        width: var(--car-w, 100%);
         height: var(--car-h, 320px);
+        margin-inline: auto;
         min-height: 0;
+        background: transparent;
+    }
+
+    .hv3-cover,
+    .hv3-cover .hv3-cover-img {
+        background: transparent;
     }
 
     .hv3-cover .hv3-cover-img {
         object-fit: contain;
-        background: var(--surface-2, #f3eee1);
     }
 
     .hv3-grid > * { grid-column: auto; }

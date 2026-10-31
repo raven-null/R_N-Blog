@@ -1728,7 +1728,10 @@ const BlogApp = {
 
         const down = (e) => {
             if (e.button !== undefined && e.button !== 0) return;
-            if (e.target.closest('.gw-hud, button, a, input, .gw-hint')) return;
+            // 注意：这里不能排除 button —— 照片本身是 <button class="gw-tile">，
+            // 一旦把它排除，指针落在照片上就拖不动墙了（只有空隙能拖，手感像坏了）。
+            // 工具条按钮都在 .gw-hud 里，已经被排除掉了。
+            if (e.target.closest('.gw-hud, .gw-hint, .gw-tip, a, input')) return;
             this.stopGwInertia();
             this.gw.dragging = true;
             this.gw.moved = 0;
@@ -1967,7 +1970,7 @@ const BlogApp = {
                     img.classList.remove('is-front');
                     markPlay();
                 } else {
-                    item.style.setProperty('--cover-ratio', String(Math.max(0.55, Math.min(2.4, w / h))));
+                    item.style.setProperty('--cover-ratio', String(w / h));
                     this.syncCarouselHeight();
                 }
             };
@@ -2202,7 +2205,7 @@ const BlogApp = {
             front.classList.remove('is-front');
             const w = back.naturalWidth;
             const h = back.naturalHeight;
-            if (w && h) item.style.setProperty('--cover-ratio', String(Math.max(0.55, Math.min(2.4, w / h))));
+            if (w && h) item.style.setProperty('--cover-ratio', String(w / h));
             // 图真的上来了才摘占位（之前在这里同步判断 src，图片还没加载完就摘不掉）
             item.classList.remove('is-waiting-cover');
         };
@@ -2238,8 +2241,11 @@ const BlogApp = {
         const card = items[Math.min(items.length - 1, Math.max(0, idx))] || items[0];
         if (!card) return;
         // --cover-ratio = 宽 / 高（renderHvPosts 按封面原始尺寸写入，缺省 1.6）
-        const ratio = Math.max(0.5, Math.min(2.4,
-            Number((card.style.getPropertyValue('--cover-ratio') || '').trim()) || 1.6));
+        // 手机上不夹得太死：竖图比例多极端都要按真实比例摆，盒子才能把图片刚好装下
+        const rawRatio = Number((card.style.getPropertyValue('--cover-ratio') || '').trim()) || 1.6;
+        const ratio = window.innerWidth <= 900
+            ? Math.max(0.2, Math.min(4, rawRatio))
+            : Math.max(0.5, Math.min(2.4, rawRatio));
 
         let w;
         let h;
@@ -4229,8 +4235,13 @@ const BlogApp = {
             }
         }
 
-        const blockH = rows * (cellH + GAP) - GAP;
-        this.photoWallLayout = { items, cols, cellW, cellH, blockW: W, blockH };
+        // 块宽高必须**含尾部那道间隙**，否则块与块平铺时上一块的右/下边缘正好压住
+        // 下一块的左/上边缘 —— 屏幕上就是「照片互相贴住、没有空隙」。
+        // 块内最后一列右缘 = (cols-1)*step + cellW = cols*step - GAP，
+        // 所以块宽取 cols*step，块高取 rows*step，接缝处才留得出一个 GAP。
+        const step = cellW + GAP;
+        const blockH = rows * (cellH + GAP);
+        this.photoWallLayout = { items, cols, cellW, cellH, blockW: cols * step, blockH };
     },
 
     // 瀑布流：同样把整池照片全部排出来，最后把各列补齐到同一高度
@@ -4357,7 +4368,8 @@ const BlogApp = {
             }
         }
 
-        this.photoWallLayout = { items, cols, cellW, blockW: W, blockH: blockH - GAP };
+        // 同方格那边：块宽高都要含尾部间隙，块与块平铺才留得出空隙
+        this.photoWallLayout = { items, cols, cellW, blockW: cols * step, blockH };
     },
 
     /* 渲染：块（blockW×blockH）在画布上无限平铺，只创建/保留视野内的 tile（虚拟化）。
