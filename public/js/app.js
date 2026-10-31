@@ -2359,6 +2359,8 @@ const BlogApp = {
         }
         const h = Math.round(car.getBoundingClientRect().height);
         col.style.maxHeight = h > 0 ? h + 'px' : '';
+        // 简报可能被挤得很小 —— 那样就把它挪到日历旁边去（见 syncTodaySideSlot）
+        this.syncTodaySideSlot();
     },
 
     // 轮播：按钮翻页 + 自动播放（尊重系统"减少动效"，tab 隐藏时暂停）
@@ -3221,22 +3223,15 @@ const BlogApp = {
             return;
         }
 
-        const list = (this.lifeState.journals || [])
-            .filter(j => j && j.date && j.content)
-            .sort((a, b) => String(a.date).localeCompare(String(b.date)));
-
-        if (!list.length) {
-            box.innerHTML = '<button class="hv3-journal is-empty" type="button" data-journal-new="1">'
-                + '<span class="hv3-journal-hint">这个月还没写日记</span>'
-                + '<span class="hv3-journal-tip">点这里写一篇</span></button>';
-        } else {
-            box.innerHTML = list.map(j => this.journalCard(j)).join('');
-        }
+        // 只显示「当前选中那天」的日记，不再把整月做成文件摞
+        const date = this.lifeState.date || '';
+        const item = (this.lifeState.journals || []).find(j => j && j.date === date && j.content);
+        box.innerHTML = item
+            ? this.journalCard(item)
+            : '<button class="hv3-journal is-empty" type="button" data-journal-new="1">'
+              + '<span class="hv3-journal-hint">这天还没写日记</span>'
+              + '<span class="hv3-journal-tip">点这里写一篇</span></button>';
         if (wrap) wrap.style.display = '';
-
-        // 重建后重新叠一摞：日记不自动翻，只跟手动滚轮
-        this.initFileStack(box, { autoMs: 0 });
-        this.syncJournalStack(this.lifeState.date);
     },
 
     // 单篇日记卡：日期 + 摘要（4 行截断）+ 字数
@@ -3263,15 +3258,15 @@ const BlogApp = {
         if (idx >= 0) box.hvStackGoTo(idx);
     },
 
-    // 选择日期（日历点击）：从日历下方弹出编写盒子
+    // 选择日期（日历点击）：右边换成「任务 + 当天日记」，并弹出编写盒子
     selectLifeDate(date) {
         if (!date) return;
         const month = date.slice(0, 7);
         this.lifeState.date = date;
+        this.showDayPane(true);
         const after = () => {
             this.renderLife();
             this.updateSelectedCalCell();
-            this.syncJournalStack(date);
             this.openEditor();
         };
         if (month !== this.lifeState.month) {
@@ -3279,6 +3274,46 @@ const BlogApp = {
             return;
         }
         after();
+    },
+
+    /* 日历右边那块地方切换：
+       on=true  → 显示「任务 + 日记」（点日期之后）
+       on=false → 显示项目栏（默认） */
+    showDayPane(on) {
+        const proj = document.getElementById('hv3ProjectsBox');
+        const day = document.getElementById('hv3DayPane');
+        if (!proj || !day) return;
+        proj.hidden = !!on;
+        day.hidden = !on;
+        this.syncTodaySideHeight();
+        if (!on) this.syncTodaySideSlot();
+    },
+
+    /* 日历右边那块地方到底放什么：
+       · 用户点了日期 → 放「任务 + 当天日记」（showDayPane 负责）
+       · 没点日期时 → 默认放项目栏；
+         但如果第二行的简报被挤得非常小（高度 < 140px），说明右边这列高度不够用了，
+         就把简报挪进来，让它在日历旁边铺开 —— 比缩成一条缝好看。 */
+    syncTodaySideSlot() {
+        const side = document.querySelector('.hv3-today-side');
+        const proj = document.getElementById('hv3ProjectsBox');
+        const day = document.getElementById('hv3DayPane');
+        const news = document.querySelector('.hv3-news');
+        if (!side || !proj || !day || !news) return;
+        if (!day.hidden) return;   // 点了日期，交给任务/日记
+
+        const h = news.getBoundingClientRect().height;
+        const cramped = h > 0 && h < 140;
+        if (this._crampedNews === cramped) return;   // 状态没变就别反复搬 DOM
+        this._crampedNews = cramped;
+
+        proj.hidden = cramped;
+        if (cramped) {
+            if (!this._newsHome) this._newsHome = { parent: news.parentElement, next: news.nextSibling };
+            side.appendChild(news);
+        } else if (this._newsHome && news.parentElement === side) {
+            this._newsHome.parent.insertBefore(news, this._newsHome.next);
+        }
     },
 
     // 更新日历选中态

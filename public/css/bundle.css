@@ -13764,8 +13764,9 @@ html[data-theme="dark"] .hv3-card {
 }
 
 .hv3-project {
-    flex: 0 0 clamp(170px, 16%, 236px);
-    height: 208px;
+    flex: 0 0 clamp(170px, 40%, 236px);
+    /* 高度跟着右边这块区域走（stretch），不再写死 */
+    align-self: stretch;
     display: flex;
     flex-direction: column;
     gap: 3px;
@@ -14114,6 +14115,26 @@ html[data-theme="dark"] .hv3-today-panel {
     min-height: 0;
     /* 实际高度由 syncTodaySideHeight() 按日历高度写进来 —— 右栏不能比日历高 */
     max-height: 100%;
+    overflow: hidden;
+}
+
+/* 这块里有两个互斥内容：项目栏（默认）/ 当天任务+日记（点日期后） */
+.hv3-today-side > [hidden] {
+    display: none !important;
+}
+
+.hv3-today-side .hv3-projects {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.hv3-today-side-day {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
     overflow: hidden;
 }
 
