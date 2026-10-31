@@ -195,6 +195,79 @@
 
   // 触屏没有 mousemove：保持 bundle.css 的「触屏常显」行为，这里不做拦截
 
+  // ---------- 灵动岛：接收 Folia 推来的播放状态 ----------
+  // iframe 里是另一个源，父页面读不到它的 DOM。Folia 侧在检测到自己被嵌入时，
+  // 会用 postMessage 推出 { type: 'folia:now-playing', song, lyric, playing, loading }
+  // （见那边的 src/hooks/useParentFrameBroadcast.ts）。
+  // 这里校验 event.origin，别让任何页面都能往这颗岛上写字。
+  var FOLIA_ORIGIN_PATTERN = /^https:\/\/music\.ravennull\.work$/;
+  var island = document.getElementById('nowIsland');
+  var islandCover = document.getElementById('nowIslandCover');
+  var islandTitle = document.getElementById('nowIslandTitle');
+  var islandLyric = document.getElementById('nowIslandLyric');
+  var lastLyricText = null;
+  var lastCover = null;
+  var lyricSwapTimer = 0;
+
+  // 换句先淡出再换字，避免文字硬闪
+  function setIslandLyric(text) {
+    if (!islandLyric || text === lastLyricText) return;
+    lastLyricText = text;
+    clearTimeout(lyricSwapTimer);
+    islandLyric.classList.add('is-flipping');
+    lyricSwapTimer = setTimeout(function () {
+      islandLyric.textContent = text;
+      islandLyric.classList.remove('is-flipping');
+    }, 140);
+  }
+
+  function applyNowPlaying(data) {
+    if (!island) return;
+    var song = data.song;
+    if (!song) {
+      island.classList.remove('show');
+      return;
+    }
+
+    island.classList.add('show');
+    island.classList.toggle('paused', !data.playing && !data.loading);
+
+    var title = song.name || '';
+    if (song.artist) title += ' · ' + song.artist;
+    if (islandTitle && islandTitle.textContent !== title) islandTitle.textContent = title;
+
+    if (islandCover && song.cover && song.cover !== lastCover) {
+      lastCover = song.cover;
+      islandCover.src = song.cover;
+    }
+
+    var lyric = data.lyric && data.lyric.text ? String(data.lyric.text).trim() : '';
+    setIslandLyric(lyric || title);
+  }
+
+  window.addEventListener('message', function (event) {
+    if (!FOLIA_ORIGIN_PATTERN.test(event.origin)) return;
+    var data = event.data;
+    if (!data || data.type !== 'folia:now-playing') return;
+    applyNowPlaying(data);
+  });
+
+  // 点岛（或键盘回车）→ 回到音乐视图
+  if (island) {
+    var goToPlayer = function () {
+      if (window.BlogApp && typeof window.BlogApp.switchView === 'function') {
+        window.BlogApp.switchView('music');
+      }
+    };
+    island.addEventListener('click', goToPlayer);
+    island.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        goToPlayer();
+      }
+    });
+  }
+
   // ---------- 对外接口 ----------
   window.MusicView = {
     // app.js 每次切到音乐视图时调用
