@@ -215,12 +215,25 @@
     el.classList.add('is-show');
     placeBubble();
     clearTimeout(STATE.bubbleTimer);
-    STATE.bubbleTimer = setTimeout(
-      () => el.classList.remove('is-show'),
-      ms || Math.min(9000, 2400 + text.length * 70)
-    );
+
+    const hold = ms || Math.min(14000, 2800 + String(text).length * 95);
+    const close = () => el.classList.remove('is-show');
+    const canSpeak = !!(global.speechSynthesis && global.SpeechSynthesisUtterance);
+    const willSpeak = canSpeak && STATE.ttsOn && (!opts || opts.speak !== false) && STATE.busy;
+
     if (!opts || opts.log !== false) logPush('assistant', text);
-    if (STATE.ttsOn && (!opts || opts.speak !== false) && STATE.busy) speak(text);
+
+    if (willSpeak) {
+      // 朗读时：等它把整句念完再收气泡（念完再留一会儿），
+      // 另外挂一个很长的兜底，防止浏览器没回调 onend 导致气泡一直不消失
+      STATE.bubbleTimer = setTimeout(close, hold + 20000);
+      speak(text, () => {
+        clearTimeout(STATE.bubbleTimer);
+        STATE.bubbleTimer = setTimeout(close, 1200);
+      });
+      return;
+    }
+    STATE.bubbleTimer = setTimeout(close, hold);
   }
 
   function logEl() { return doc.getElementById('petChatLog'); }
@@ -425,8 +438,16 @@
     }
   }
 
-  function speak(text) {
-    if (!global.speechSynthesis || !text) return;
+  // onEnd：这句念完（或被取消/出错）时回调，用来决定气泡什么时候收
+  function speak(text, onEnd) {
+    const done = () => {
+      duckMusic(false);
+      if (typeof onEnd === 'function') onEnd();
+    };
+    if (!global.speechSynthesis || !global.SpeechSynthesisUtterance || !text) {
+      done();
+      return;
+    }
     try {
       const u = new global.SpeechSynthesisUtterance(text.replace(/[*_`#>|]/g, '').slice(0, 160));
       u.lang = 'zh-CN';
@@ -437,11 +458,13 @@
       const voice = pickVoice();
       if (voice) u.voice = voice;
       duckMusic(true);                       // 先让音乐避一避
-      u.onend = () => duckMusic(false);
-      u.onerror = () => duckMusic(false);
+      u.onend = done;
+      u.onerror = done;
       global.speechSynthesis.cancel();
       global.speechSynthesis.speak(u);
-    } catch (e) { /* 忽略 */ }
+    } catch (e) {
+      done();
+    }
   }
 
   // ---------- 问 AI ----------
