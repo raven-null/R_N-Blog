@@ -138,9 +138,10 @@ html[data-theme="dark"] .hv3-card {
 /* 口号区已移除：头像名字在左，时间与数字在右 */
 
 .hv3-time {
-    font-size: 20px;
-    font-weight: 600;
-    line-height: 1.1;
+    font-size: 28px;
+    font-weight: 650;
+    line-height: 1.05;
+    letter-spacing: -.01em;
     font-variant-numeric: tabular-nums;
     color: var(--text);
 }
