@@ -306,7 +306,9 @@
   }
 
   // ---------- 语音朗读 ----------
-  // 音色是本机资源：优先访客在面板里选的，其次后台设置的关键词，最后自动挑中文语音
+  // 音色是本机资源：后台设置优先，其次本机旧选择（localStorage），最后自动挑中文语音
+  let voicePick = { wanted: '', picked: null, matched: false, reason: 'init' };
+
   function voiceList() {
     const synth = global.speechSynthesis;
     if (!synth || typeof synth.getVoices !== 'function') return [];
@@ -321,14 +323,41 @@
 
   function pickVoice() {
     const list = voiceList();
-    if (!list.length) return null;
-    const saved = savedVoice();
-    const want = (saved && saved !== 'auto' ? saved : (STATE.ttsVoice || '')).trim().toLowerCase();
-    if (want) {
-      const hit = list.find((v) => (v.name || '').toLowerCase().includes(want));
-      if (hit) return hit;
+    if (!list.length) {
+      voicePick = { wanted: '', picked: null, matched: false, reason: '本机没有语音包' };
+      return null;
     }
-    return list.find((v) => v.default) || list[0] || null;
+    const saved = savedVoice();
+    // 后台设置优先：前台已经没有音色选择入口了，留着的旧选择只在后台没配时兜底
+    const wanted = String(STATE.ttsVoice || (saved && saved !== 'auto' ? saved : '') || '').trim();
+    const want = wanted.toLowerCase();
+    const norm = (s) => String(s || '').toLowerCase().replace(/^(microsoft|google|apple|baidu)\s*/i, '').trim();
+    if (want) {
+      const exact = list.find((v) => String(v.name || '').toLowerCase().includes(want));
+      if (exact) {
+        voicePick = { wanted, picked: exact.name, matched: true, reason: 'exact' };
+        return exact;
+      }
+      // 宽松：忽略厂商前缀再比一次（"Microsoft Yaoyao" ↔ "Yaoyao"）
+      const loose = list.find((v) => norm(v.name).includes(norm(want)));
+      if (loose) {
+        voicePick = { wanted, picked: loose.name, matched: true, reason: 'loose' };
+        return loose;
+      }
+      // 名字里根本没有这个音色：退回默认，并记下来（后台试听/排障能看到）
+      const fallback = list.find((v) => v.default) || list[0] || null;
+      voicePick = {
+        wanted,
+        picked: fallback ? fallback.name : null,
+        matched: false,
+        reason: '本机没有「' + wanted + '」，已退回默认',
+        available: list.map((v) => v.name),
+      };
+      return fallback;
+    }
+    const fallback = list.find((v) => v.default) || list[0] || null;
+    voicePick = { wanted: '自动', picked: fallback ? fallback.name : null, matched: true, reason: 'auto' };
+    return fallback;
   }
 
   // 正在朗读？点桌宠 / 按住说话都可以打断
@@ -510,7 +539,8 @@
     const ctx = collect();
     // Ambient greetings stay local; AI requests are reserved for explicit questions.
     say(pickLocalLine(ctx), 5200, { log: false });
-    petState(ctx.view === 'article' ? 'thinking' : 'curious', 2600);
+    // 不用 thinking 状态（那个眼型像省略号），抬头好奇就够了
+    petState('curious', 2600);
   }
 
   function scheduleAuto() {
@@ -664,8 +694,8 @@
     if (wasPtt && pending) {
       pttBusy = true;
       STATE.lastUserAt = Date.now();
-      petState('thinking', 0);
-      say('嗯，我看一下……', 4000, { log: false, speak: false });
+      // 不用 thinking 状态（那个眼型像省略号），只在气泡里出「……」
+      say('……', 6000, { log: false, speak: false });
       send(pending).then(finishPttTask, finishPttTask);
       return;
     }
@@ -715,13 +745,13 @@
     if (!word || STATE.busy) return;
     STATE.lastUserAt = Date.now();
     logPush('user', word);
-    petState('thinking', 0);
+    // 不用 thinking 状态（那个眼型像省略号），等待感只靠气泡里的「……」
     STATE.busy = true;
     setSending(true);
 
     const el = bubbleEl();
     if (el) {
-      el.textContent = '…';
+      el.textContent = '……';
       el.classList.remove('is-below');
       el.classList.add('is-show');
       placeBubble();
@@ -1154,6 +1184,7 @@
     isSleeping,
     get voiceMode() { return voiceMode; },
     get music() { return MUSIC; },
+    get voicePick() { return voicePick; },
     musicComment,
     get listening() { return !!listening; },
     get recognition() { return recognition; },
