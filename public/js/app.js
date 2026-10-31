@@ -2234,7 +2234,11 @@ const BlogApp = {
         if (!carousel || !track) return;
         const items = [...track.querySelectorAll('.hv3-item')];
         if (!items.length) return;
-        const availW = track.parentElement ? track.parentElement.clientWidth : track.clientWidth;
+        // 可用宽度取外面那层 .hv3-stage-body（4 栏的容器）。
+        // 不能用 track.parentElement —— 那就是 .hv3-car 自己，而 car 的宽度正是
+        // 下面算出来的 --car-w，会自己算自己、越算越窄。
+        const host = carousel.parentElement;
+        const availW = (host && host.clientWidth) || track.clientWidth;
         if (!availW) return;
         // 当前是第几张由播放器决定（不再是横向滚动位置）
         const idx = this._postPlay ? this._postPlay.idx : 0;
@@ -2258,11 +2262,14 @@ const BlogApp = {
             h = Math.round(w / ratio);
             if (h > maxH) { h = Math.round(maxH); w = Math.round(h * ratio); }
         } else {
-            // 桌面：先按高度上限摆，放不下就回退成占满可用宽
-            const maxH = Math.min(window.innerHeight * 0.56, 430);
-            h = maxH;
-            w = Math.round(h * ratio);
-            if (w > availW) { w = availW; h = Math.round(w / ratio); }
+            // 桌面：宽度吃满 4 栏（左右不动），高度按封面比例**上下伸缩** ——
+            // 这样盒子和图片永远同比例，图片正好铺满、四角一致都是圆角，
+            // 不会再出现「有的图圆角、有的图方角」。高度只做个很宽的兜底上限，
+            // 免得极端长图把整页顶到天上去。
+            const maxH = Math.min(window.innerHeight * 1.1, 900);
+            w = Math.round(availW);
+            h = Math.round(w / ratio);
+            if (h > maxH) { h = Math.round(maxH); w = Math.round(h * ratio); }
         }
         if (h < 120 || w < 120) return;
 

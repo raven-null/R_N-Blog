@@ -246,6 +246,8 @@ html[data-theme="dark"] .hv3-card {
    ============================================================ */
 .hv3-stage {
     min-width: 0;
+    /* 文章卡不再被整行拉满高度：盒子按封面比例走，顶部要和右侧生活切片对齐 */
+    align-self: start;
 }
 
 .hv3-stage-body {
@@ -257,16 +259,18 @@ html[data-theme="dark"] .hv3-card {
 }
 
 /* ============================================================
-   01 · 最近的文字：文字叠在封面上，封面铺满整块卡
-   （宽度吃满 4 栏，高度跟着所在行 —— 与右侧照片列等高，矩阵里不留白）
+   01 · 最近的文字：整张卡就是一块海报，文字压在封面上
+   盒子宽高跟着封面比例走（syncCarouselHeight 写进 --car-w / --car-h），
+   所以竖图是窄高的、横图是宽扁的；图片本身带圆角。
    ============================================================ */
 .hv3-car {
     position: relative;
-    flex: 1 1 auto;
-    width: 100%;
-    height: 100%;
-    min-height: 240px;
-    margin-inline: 0;
+    flex: none;
+    width: var(--car-w, 100%);
+    height: var(--car-h, 420px);
+    max-width: 100%;
+    min-height: 0;
+    margin-inline: auto;
     border-radius: 18px;
     overflow: hidden;
     /* 图片按 contain 显示，留白处要透出页面背景，所以这里不铺底色 */
@@ -320,6 +324,8 @@ html[data-theme="dark"] .hv3-card {
     height: 100%;
     overflow: hidden;
     background: transparent;
+    /* 跟着 .hv3-car 的 18px 圆角走，图片铺满时四角才一致 */
+    border-radius: inherit;
 }
 
 .hv3-cover img {
@@ -330,7 +336,9 @@ html[data-theme="dark"] .hv3-card {
 }
 
 /* 封面两层交叉淡入（和生活切片同一套播放形式）：
-   两层都绝对铺满，谁带 is-front 谁可见，swapCoverPlay 换 src 后翻层 */
+   两层都绝对铺满，谁带 is-front 谁可见，swapCoverPlay 换 src 后翻层。
+   圆角给在图片本身上 —— 盒子背景是透明的，只给容器圆角的话图片四角还是直角。
+   contain + 同比例盒子 = 图片正好铺满，四角一律是圆的。 */
 .hv3-cover .hv3-cover-img {
     position: absolute;
     inset: 0;
@@ -338,6 +346,7 @@ html[data-theme="dark"] .hv3-card {
     height: 100%;
     object-fit: contain;
     background: transparent;
+    border-radius: 18px;
     opacity: 0;
     transition: opacity .6s ease;
 }
@@ -853,16 +862,18 @@ html[data-theme="dark"] .hv3-card {
 }
 
 .hv3-journals {
-    flex: 0 0 auto;
+    /* 日记区吃掉「今天」卡里剩下来的高度：不再固定 240px，
+       这样右侧项目列把整行拉高时，左侧不会被撑出一大片空白。 */
+    flex: 1 1 auto;
+    min-height: 0;
     display: flex;
     flex-direction: column;
     gap: 6px;
-    height: 240px;
-    transition: height .28s cubic-bezier(.2, .7, .3, 1);
+    transition: flex-grow .28s cubic-bezier(.2, .7, .3, 1);
 }
 
 .hv3-journals.is-collapsed {
-    height: auto;
+    flex: 0 0 auto;
 }
 
 .hv3-journals.is-collapsed .hv3-stack {
@@ -1051,6 +1062,12 @@ html[data-theme="dark"] .hv3-today-panel {
     background: var(--glass-card, rgba(255, 253, 248, .5));
     border: 1px solid var(--glass-line, rgba(255, 255, 255, .5));
     box-shadow: 0 10px 26px rgba(20, 26, 44, .08);
+}
+
+/* 未登录时任务和日记整块是隐藏的（见 initLife），卡片就没必要被右侧项目列
+   拉到一样高 —— 按内容高度站住，否则下面会拖出一大片空白。 */
+.hv3-today-panel.is-guest {
+    align-self: start;
 }
 
 .hv3-today-bar {
