@@ -4422,25 +4422,26 @@ const BlogApp = {
 
     // ===================== 项目视图 =====================
 
-    // 已部署的站点（想加项目改这里即可；新站跑一次 scripts/build-project-covers.mjs 生成封面）
+    // 已部署的站点（后台「项目管理」里改过的那份优先；这里是没配过时的内置默认值。
+    //  新站跑一次 scripts/build-project-covers.mjs 生成封面）
     deployedProjects: [
         {
             name: '个人图床',
             desc: '图片托管与图库站点：分类浏览、灯箱查看、幻灯放映，支持访问密码与分级内容。',
-            url: 'https://r-gallery.netlify.app/',
-            host: 'r-gallery.netlify.app',
+            url: 'https://pic.ravennull.work/',
+            host: 'pic.ravennull.work',
             icon: '▦',
             tag: 'JavaScript',
-            cover: 'images/projects/gallery.webp',
+            cover: 'images/projects/pic.webp',
         },
         {
-            name: '个人资料库',
+            name: '个人数据库',
             desc: '资源与文档集中存放，按类目检索，随手取用。',
-            url: 'https://r-database.netlify.app/',
-            host: 'r-database.netlify.app',
+            url: 'https://db.ravennull.work/',
+            host: 'db.ravennull.work',
             icon: '▤',
             tag: 'JavaScript',
-            cover: 'images/projects/database.webp',
+            cover: 'images/projects/db.webp',
         },
         {
             name: '绳网模拟',
@@ -4452,13 +4453,22 @@ const BlogApp = {
             cover: 'images/projects/interknot.webp',
         },
         {
-            name: '创世',
+            name: '游戏中心',
             desc: '长夜城 · 网页游戏，TypeScript 构建的世界。',
-            url: 'https://ravennull.monster/',
-            host: 'ravennull.monster',
+            url: 'https://game.ravennull.work/',
+            host: 'game.ravennull.work',
             icon: '◈',
             tag: 'TypeScript',
-            cover: 'images/projects/world.webp',
+            cover: 'images/projects/game.webp',
+        },
+        {
+            name: '音乐播放器',
+            desc: '站内的播放器本体：歌单、歌词与灵动岛的数据都来自这里。',
+            url: 'https://music.ravennull.work/',
+            host: 'music.ravennull.work',
+            icon: '♪',
+            tag: 'React',
+            cover: 'images/projects/music.webp',
         },
     ],
 

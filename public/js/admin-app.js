@@ -2419,10 +2419,11 @@
         // 与 js/app.js 里 deployedProjects 的旧硬编码保持一致 —— 这样第一次进后台
         // 看到的就是线上正在显示的那几个项目，可以直接改、不用从空白开始。
         const PROJECT_DEFAULTS=[
-            {name:'个人图床',desc:'图片托管与图库站点：分类浏览、灯箱查看、幻灯放映，支持访问密码与分级内容。',url:'https://r-gallery.netlify.app/',host:'r-gallery.netlify.app',icon:'▦',tag:'JavaScript',cover:'images/projects/gallery.webp'},
-            {name:'个人资料库',desc:'资源与文档集中存放，按类目检索，随手取用。',url:'https://r-database.netlify.app/',host:'r-database.netlify.app',icon:'▤',tag:'JavaScript',cover:'images/projects/database.webp'},
+            {name:'个人图床',desc:'图片托管与图库站点：分类浏览、灯箱查看、幻灯放映，支持访问密码与分级内容。',url:'https://pic.ravennull.work/',host:'pic.ravennull.work',icon:'▦',tag:'JavaScript',cover:'images/projects/pic.webp'},
+            {name:'个人数据库',desc:'资源与文档集中存放，按类目检索，随手取用。',url:'https://db.ravennull.work/',host:'db.ravennull.work',icon:'▤',tag:'JavaScript',cover:'images/projects/db.webp'},
             {name:'绳网模拟',desc:'绳网社区的项目模拟开发，界面与交互用 Vue 实现。',url:'https://interknot.netlify.app/',host:'interknot.netlify.app',icon:'◇',tag:'Vue',cover:'images/projects/interknot.webp'},
-            {name:'创世',desc:'长夜城 · 网页游戏，TypeScript 构建的世界。',url:'https://ravennull.monster/',host:'ravennull.monster',icon:'◈',tag:'TypeScript',cover:'images/projects/world.webp'},
+            {name:'游戏中心',desc:'长夜城 · 网页游戏，TypeScript 构建的世界。',url:'https://game.ravennull.work/',host:'game.ravennull.work',icon:'◈',tag:'TypeScript',cover:'images/projects/game.webp'},
+            {name:'音乐播放器',desc:'站内的播放器本体：歌单、歌词与灵动岛的数据都来自这里。',url:'https://music.ravennull.work/',host:'music.ravennull.work',icon:'♪',tag:'React',cover:'images/projects/music.webp'},
         ];
         let projectList=[];
         let projectEditIndex=-1;

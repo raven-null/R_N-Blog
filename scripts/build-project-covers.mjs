@@ -20,12 +20,13 @@ import { existsSync } from 'node:fs'
 import path from 'node:path'
 import sharp from 'sharp'
 
-// 与 js/app.js 里 deployedProjects 的 slug 保持一致
+// 与 js/app.js 里 deployedProjects 的 cover 文件名保持一致
 const SITES = [
-  { slug: 'gallery', url: 'https://r-gallery.netlify.app/' },
-  { slug: 'database', url: 'https://r-database.netlify.app/' },
+  { slug: 'pic', url: 'https://pic.ravennull.work/' },
+  { slug: 'db', url: 'https://db.ravennull.work/' },
   { slug: 'interknot', url: 'https://interknot.netlify.app/' },
-  { slug: 'world', url: 'https://ravennull.monster/' },
+  { slug: 'game', url: 'https://game.ravennull.work/' },
+  { slug: 'music', url: 'https://music.ravennull.work/' },
 ]
 
 const OUT_DIR = path.resolve('public/images/projects')
