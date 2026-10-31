@@ -1152,6 +1152,7 @@ html[data-theme="dark"] .hv3-today-panel {
 }
 
 .hv3-today-tasks::-webkit-scrollbar {
+    display: none !important;
     width: 0 !important;
 }
 
@@ -1159,8 +1160,13 @@ html[data-theme="dark"] .hv3-today-panel {
     scrollbar-width: none;
 }
 
-/* 日记在下：默认收起只留一行标题；展开时占掉半栏，把上面的任务压小
-   （任务被压后超出的部分隐藏，在内部滚动） */
+/* 日记展开时把任务整块让开：右栏就那么高，任务被压到只剩两行还要挤一条滚动条，
+   根本看不了 —— 干脆收起任务，让日记占满整栏。日记收起时任务照常占满。 */
+.hv3-today-side:has(.hv3-journals:not(.is-collapsed)) .hv3-today-tasks {
+    display: none;
+}
+
+/* 日记在下：默认收起只留一行标题；展开时占满右栏（上面的任务已让开） */
 .hv3-journals {
     flex: 0 0 auto;
     min-height: 0;
@@ -1168,7 +1174,7 @@ html[data-theme="dark"] .hv3-today-panel {
 }
 
 .hv3-journals:not(.is-collapsed) {
-    flex: 0 0 52%;
+    flex: 1 1 auto;
 }
 
 .hv3-journals .hv3-stack {
@@ -1178,6 +1184,7 @@ html[data-theme="dark"] .hv3-today-panel {
 }
 
 .hv3-journals .hv3-stack::-webkit-scrollbar {
+    display: none !important;
     width: 0 !important;
 }
 
@@ -1197,11 +1204,8 @@ html[data-theme="dark"] .hv3-today-panel {
     box-shadow: 0 10px 26px rgba(20, 26, 44, .08);
 }
 
-/* 未登录时任务和日记整块是隐藏的（见 initLife），卡片就没必要被右侧项目列
-   拉到一样高 —— 按内容高度站住，否则下面会拖出一大片空白。 */
-.hv3-today-panel.is-guest {
-    align-self: start;
-}
+/* 注意：这里不能写 align-self: start。「今天」卡现在是第三行里唯一的整宽块
+   （项目条已经挪到它下面），一旦按内容宽度站住就会缩成日历那么窄 —— 之前就是这样塌的。 */
 
 .hv3-today-bar {
     display: flex;

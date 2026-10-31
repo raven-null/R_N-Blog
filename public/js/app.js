@@ -2218,6 +2218,9 @@ const BlogApp = {
             if (w && h) item.style.setProperty('--cover-ratio', String(w / h));
             // 图真的上来了才摘占位（之前在这里同步判断 src，图片还没加载完就摘不掉）
             item.classList.remove('is-waiting-cover');
+            // 换上去的图比例可能和上一张差很多：盒子宽高要跟着重算，
+            // 否则竖图会被塞进一个横向的框里、缩成一条
+            this.syncCarouselHeight();
         };
         back.addEventListener('load', swap, { once: true });
         // 这张图加载失败：从池子里另挑一张重试（最多 3 次），别让卡片停在空白
