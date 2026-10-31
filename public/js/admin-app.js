@@ -2366,6 +2366,34 @@
         }
         // 桌宠朗读音色的预设值（后台下拉用；访客本机没有对应声音就退回自动）
         const PET_VOICE_PRESETS=['','Xiaoxiao','Xiaoyi','Yaoyao','Huihui','Yunxi','Yunjian','Kangkang','Google'];
+        // 后台试听：用本机语音合成念一句，方便挑音色
+        function previewPetVoice(){
+            const synth=window.speechSynthesis;
+            if(!synth){showToast('这个浏览器不支持语音合成','error');return}
+            const sel=document.getElementById('setPetTtsVoice');
+            const custom=document.getElementById('setPetTtsVoiceCustom');
+            const rateEl=document.getElementById('setPetTtsRate');
+            const pitchEl=document.getElementById('setPetTtsPitch');
+            let key=sel?sel.value:'';
+            if(key==='__custom')key=custom?(custom.value||'').trim():'';
+            const rate=rateEl&&parseFloat(rateEl.value)?parseFloat(rateEl.value):1.05;
+            const pitch=pitchEl&&parseFloat(pitchEl.value)?parseFloat(pitchEl.value):1.1;
+            const all=synth.getVoices()||[];
+            const zh=all.filter(v=>/^zh/i.test(v.lang||''));
+            const pool=zh.length?zh:all;
+            const want=String(key||'').toLowerCase();
+            const voice=want?pool.find(v=>String(v.name||'').toLowerCase().includes(want)):(pool.find(v=>v.default)||pool[0]);
+            try{
+                const u=new SpeechSynthesisUtterance('你好，我是本站的桌宠，现在听到的是这个音色。');
+                u.lang='zh-CN';
+                u.rate=Math.min(1.6,Math.max(0.6,rate));
+                u.pitch=Math.min(1.6,Math.max(0.6,pitch));
+                if(voice)u.voice=voice;
+                synth.cancel();
+                synth.speak(u);
+                if(!voice&&want)showToast('本机没有名字里带「'+key+'」的语音，先用默认声音试听','error');
+            }catch(e){showToast('试听失败：'+((e&&e.message)||e),'error')}
+        }
         async function loadSettings(){
             const r=await apiFetch('action=settings');
             const s=r.status==='success'&&r.data?r.data:{};
@@ -2421,16 +2449,28 @@
                     custom.style.display=isCustom?'':'none';
                     custom.value=isCustom?v:'';
                 }
-                // 选「自定义」时露出输入框（只绑一次）
+                // 选「自定义」时露出输入框（只绑一次）+ 换音色自动试听
                 if(!el.dataset.voiceBound){
                     el.dataset.voiceBound='1';
                     el.addEventListener('change',()=>{
                         const box=document.getElementById('setPetTtsVoiceCustom');
-                        if(!box)return;
-                        const on=el.value==='__custom';
-                        box.style.display=on?'':'none';
-                        if(on)box.focus();
+                        if(box){
+                            const on=el.value==='__custom';
+                            box.style.display=on?'':'none';
+                            if(on)box.focus();
+                        }
+                        if(el.value!=='__custom')previewPetVoice();
                     });
+                    const previewBtn=document.getElementById('setPetTtsPreview');
+                    if(previewBtn&&!previewBtn.dataset.bound){
+                        previewBtn.dataset.bound='1';
+                        previewBtn.addEventListener('click',previewPetVoice);
+                    }
+                    const customBox=document.getElementById('setPetTtsVoiceCustom');
+                    if(customBox&&!customBox.dataset.voiceBound){
+                        customBox.dataset.voiceBound='1';
+                        customBox.addEventListener('change',previewPetVoice);
+                    }
                 }
             });
             setPet('setPetTalkRate',el=>{el.value=['quiet','normal','chatty'].includes(pet.talkRate)?pet.talkRate:'normal'});

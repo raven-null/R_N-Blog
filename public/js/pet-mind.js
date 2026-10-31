@@ -505,6 +505,7 @@
   let listening = false;
   let voiceMode = false;
   let pttMode = false;      // 按住说话：松手时把听到的最后一句话发出去
+  let pttBusy = false;      // 松手后仍在跑这一轮任务（等回复 + 朗读）
   let lastHeard = '';       // 最近一次未定稿的识别文本
   let recRestartTimer = 0;
 
@@ -577,7 +578,7 @@
       // 正在等 AI 回复时别把 thinking 顶掉
       if (!STATE.busy) petState(voiceMode ? 'listening' : 'idle', 0);
       // 对话模式：浏览器自己停了就接上（等回复期间先别抢麦克风）
-      if (voiceMode && !pttMode && !doc.hidden) restartRecognition(400);
+      if (voiceMode && !pttMode && !pttBusy && !doc.hidden) restartRecognition(400);
     };
 
     mic.addEventListener('click', (e) => {
@@ -625,22 +626,44 @@
 
   function stopVoiceMode(reason) {
     if (!voiceMode) return;
-    voiceMode = false;
     const pending = pttMode ? lastHeard : '';
     const wasPtt = pttMode;
     pttMode = false;
     lastHeard = '';
     clearTimeout(recRestartTimer);
-    doc.getElementById('deskPet')?.classList.remove('is-voice-mode');
     try { recognition && recognition.stop(); } catch (e) { /* 忽略 */ }
-    if (!STATE.busy) petState('idle', 0);
-    // 按住说话：松手时把还没定稿的那句发出去（类似语音输入）
+
+    // 按住说话：松手先别退出，把这轮任务做完（等回复 + 朗读结束）再收工
     if (wasPtt && pending) {
+      pttBusy = true;
       STATE.lastUserAt = Date.now();
-      send(pending);
+      petState('thinking', 0);
+      say('嗯，我看一下……', 4000, { log: false, speak: false });
+      send(pending).then(finishPttTask, finishPttTask);
       return;
     }
+    endVoiceMode(reason);
+  }
+
+  function endVoiceMode(reason) {
+    voiceMode = false;
+    pttBusy = false;
+    doc.getElementById('deskPet')?.classList.remove('is-voice-mode');
+    if (!STATE.busy) petState('idle', 0);
     if (reason) say(reason, 4200, { log: false, speak: false });
+  }
+
+  // 回复出完、朗读也念完，才算这次任务结束
+  function finishPttTask() {
+    const synth = global.speechSynthesis;
+    const waitTts = () => {
+      if (STATE.ttsOn && synth && synth.speaking) {
+        setTimeout(waitTts, 250);
+        return;
+      }
+      endVoiceMode();
+    };
+    waitTts();
   }
 
   function toggleVoiceMode() {
