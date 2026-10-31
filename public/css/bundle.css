@@ -14022,6 +14022,22 @@ html[data-theme="dark"] .hv3-shot {
         gap: 14px;
     }
 
+    /* 手机上的文章位只播竖图：盒子占满可用宽度、高度按封面的真实比例撑开
+       （--car-h 由 syncCarouselHeight 算），图片用 contain —— 整张竖图完整可见。
+       桌面端不受影响：那边高度跟着右侧照片列走。 */
+    .hv3-stage-body { display: block; }
+
+    .hv3-car {
+        flex: none;
+        height: var(--car-h, 320px);
+        min-height: 0;
+    }
+
+    .hv3-cover .hv3-cover-img {
+        object-fit: contain;
+        background: var(--surface-2, #f3eee1);
+    }
+
     .hv3-grid > * { grid-column: auto; }
 
     .hv3-sub-grid {
