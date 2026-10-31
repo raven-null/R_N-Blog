@@ -1426,6 +1426,84 @@ export default async (req: Request) => {
     }
   }
 
+  // ===== 已上线项目 =====
+  // 「项目」视图的「已上线」区块。原先硬编码在 js/app.js 的 deployedProjects 里，
+  // 加一个项目要改源码再重新部署；现在存进 blob，由后台「项目管理」页直接编辑。
+  // 前台读不到（还没配过）时仍然回退到源码里的那几项，所以不配也不会空。
+
+  if (path === "projects") {
+    const projectStore = getBlobStore("blog-settings", "strong")
+    const PROJECT_KEY = "projects"
+
+    // GET：公开读取（「项目」是前台公开视图，不需要密钥）
+    if (req.method === "GET") {
+      const raw = await projectStore.get(PROJECT_KEY, { type: "text" })
+      let list: any = null
+      try { list = raw ? JSON.parse(raw) : null } catch { list = null }
+      // data 为 null 表示「没配过」，由调用方决定回退到内置默认值
+      return json(200, { status: "success", data: Array.isArray(list) ? list : null }, req)
+    }
+
+    if (!(await checkAuth(req))) return json(401, { status: "error", message: "未授权" }, req)
+
+    const body = await req.json().catch(() => ({}))
+    if (!Array.isArray(body.list)) return badRequest("list 必须是数组", req)
+    if (body.list.length > 60) return badRequest("项目最多 60 个", req)
+
+    const clean = body.list.map((item: any, i: number) => {
+      const url = String(item?.url || "").trim().slice(0, 500)
+      let host = String(item?.host || "").trim()
+      // 没手填域名就从网址里取，省一次输入
+      if (!host && url) {
+        try { host = new URL(url).host } catch { host = "" }
+      }
+      return {
+        name: String(item?.name || "").trim().slice(0, 60) || `项目 ${i + 1}`,
+        desc: String(item?.desc || "").trim().slice(0, 300),
+        url,
+        host: host.slice(0, 120),
+        icon: String(item?.icon || "").trim().slice(0, 4) || "◆",
+        tag: String(item?.tag || "").trim().slice(0, 30),
+        cover: String(item?.cover || "").trim().slice(0, 500),
+      }
+    })
+
+    await projectStore.set(PROJECT_KEY, JSON.stringify(clean))
+    return json(200, { status: "success", data: clean }, req)
+  }
+
+  // ===== 项目封面自动截图 =====
+  // 后台点「自动截图」时调用：本机 Chrome 打开网址截首屏 → 800×500 webp → 存进图库 blob。
+  // 线上 Netlify 运行时没有 Chrome，会返回 501 并提示手填封面地址（见 _shared/project-cover.ts）。
+  if (path === "project-shot") {
+    if (req.method !== "POST") return badRequest("只支持 POST", req)
+    if (!(await checkAuth(req))) return json(401, { status: "error", message: "未授权" }, req)
+
+    const body = await req.json().catch(() => ({}))
+    const url = String(body.url || "").trim()
+    if (!/^https?:\/\/[^\s]+$/i.test(url)) return badRequest("请填写 http(s) 开头的完整网址", req)
+
+    const { captureProjectCover } = await import("./_shared/project-cover")
+    let shot: Buffer | null = null
+    try {
+      shot = await captureProjectCover(url)
+    } catch (err: any) {
+      return json(500, { status: "error", message: `截图失败：${err?.message || err}` }, req)
+    }
+    if (!shot) {
+      return json(501, {
+        status: "error",
+        message: "自动截图需要本机的 Chrome/Edge，线上环境用不了；请手动填写封面图地址",
+      }, req)
+    }
+
+    // 复用图库的 blob 与读取路径（/images/g/<key>），后台和前台都能直接显示
+    const imageStore = getBlobStore(IMAGE_STORE, "strong")
+    const key = `${randomUUID().slice(0, 8)}_project.webp`
+    await imageStore.set(key, shot.toString("base64"))
+    return json(200, { status: "success", cover: `/images/g/${key}` }, req)
+  }
+
   // ===== 博客设置 =====
 
   if (path === "settings") {

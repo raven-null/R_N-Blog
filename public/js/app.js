@@ -2272,6 +2272,8 @@ const BlogApp = {
         this.renderHvPosts();
         this.renderHvPhotos();
         this.renderHomeProjects();
+        // 后台「项目管理」里维护的列表（见 loadProjectsData），先渲染内置那几项再替换
+        this.loadProjectsData();
         this.renderHomeCta(force);
 
 
@@ -5079,6 +5081,24 @@ const BlogApp = {
     // 旧入口保留：项目已改成两列网格，不再叠一摞（保留空实现防旧调用报错）
     initProjectStack() {
         this.renderHomeProjects();
+    },
+
+    // 项目列表：优先用后台维护的那份，失败/空则保留内置默认
+    // _projectsFromApi 只在成功拉到数据后置位；离线或静态预览（接口 501）会下次首页再试一遍
+    async loadProjectsData() {
+        if (this._projectsFromApi) return;
+        try {
+            const r = await fetch('/api/admin?action=projects', { cache: 'no-store' });
+            if (!r.ok) return;
+            const j = await r.json();
+            const list = j && j.status === 'success' ? j.data : null;
+            if (Array.isArray(list) && list.length) {
+                this.deployedProjects = list;
+                this._projectsFromApi = true;
+                this.renderHomeProjects();
+                this.renderDeployedProjects();
+            }
+        } catch (e) { /* 保留内置默认值 */ }
     },
 
     // 照片：全部堆成一摞

@@ -2170,12 +2170,13 @@
             currentAdminTab=tab;
             document.querySelectorAll('.sidebar-item').forEach(el=>el.classList.toggle('active',el.dataset.tab===tab));
             document.querySelectorAll('.mobile-tab').forEach(el=>el.classList.toggle('active',el.dataset.tab===tab));
-            ['articles','comments','images','tags','settings'].forEach(t=>{
+            ['articles','comments','images','tags','projects','settings'].forEach(t=>{
                 const el=document.getElementById('tab-'+t);
                 if(el)el.style.display=t===tab?'block':'none';
             });
             if(tab==='articles')loadArticles();
             if(tab==='comments')loadComments();
+            if(tab==='projects')loadProjects();
             if(tab==='settings')loadSettings();
             if(tab==='images'){loadData();loadTags()}
             if(tab==='tags'){loadTags();loadData()}
@@ -2413,6 +2414,173 @@
                 if(note)showToast(note,'error');
             }catch(e){showToast('试听失败：'+((e&&e.message)||e),'error')}
         }
+        // ===== 项目管理（前台「项目」视图的「已上线」区块）=====
+        // 数据存在 blobs 的 blog-settings/projects 里。没配过时拿这里的内置默认值，
+        // 与 js/app.js 里 deployedProjects 的旧硬编码保持一致 —— 这样第一次进后台
+        // 看到的就是线上正在显示的那几个项目，可以直接改、不用从空白开始。
+        const PROJECT_DEFAULTS=[
+            {name:'个人图床',desc:'图片托管与图库站点：分类浏览、灯箱查看、幻灯放映，支持访问密码与分级内容。',url:'https://r-gallery.netlify.app/',host:'r-gallery.netlify.app',icon:'▦',tag:'JavaScript',cover:'images/projects/gallery.webp'},
+            {name:'个人资料库',desc:'资源与文档集中存放，按类目检索，随手取用。',url:'https://r-database.netlify.app/',host:'r-database.netlify.app',icon:'▤',tag:'JavaScript',cover:'images/projects/database.webp'},
+            {name:'绳网模拟',desc:'绳网社区的项目模拟开发，界面与交互用 Vue 实现。',url:'https://interknot.netlify.app/',host:'interknot.netlify.app',icon:'◇',tag:'Vue',cover:'images/projects/interknot.webp'},
+            {name:'创世',desc:'长夜城 · 网页游戏，TypeScript 构建的世界。',url:'https://ravennull.monster/',host:'ravennull.monster',icon:'◈',tag:'TypeScript',cover:'images/projects/world.webp'},
+        ];
+        let projectList=[];
+        let projectEditIndex=-1;
+
+        async function loadProjects(){
+            const box=document.getElementById('projectList');
+            if(box)box.innerHTML='<div class="empty">加载中…</div>';
+            closeProjectEditor();
+            try{
+                const r=await apiFetch('action=projects');
+                const list=r&&r.status==='success'?r.data:null;
+                projectList=(Array.isArray(list)?list:PROJECT_DEFAULTS).map(p=>({...p}));
+            }catch(e){
+                projectList=PROJECT_DEFAULTS.map(p=>({...p}));
+                showToast('读取项目失败，先显示内置默认值：'+(e.message||e),'error');
+            }
+            renderProjectList();
+        }
+
+        function renderProjectList(){
+            const box=document.getElementById('projectList');
+            if(!box)return;
+            if(!projectList.length){
+                box.innerHTML='<div class="empty">还没有项目，点右上角「新增项目」加一个。</div>';
+                return;
+            }
+            box.innerHTML=projectList.map((p,i)=>{
+                const cover=p.cover
+                    ?`<img src="${escHtml(p.cover)}" alt="" loading="lazy" onerror="this.style.display='none'">`
+                    :'<span class="project-admin-nocover">无封面</span>';
+                return `<div class="project-admin-card">
+                    <div class="project-admin-cover">${cover}</div>
+                    <div class="project-admin-meta">
+                        <div class="project-admin-name">${escHtml(p.name||'未命名')}${p.tag?`<span class="project-admin-tag">${escHtml(p.tag)}</span>`:''}</div>
+                        <div class="project-admin-desc">${escHtml(p.desc||'—')}</div>
+                        <div class="project-admin-host">${escHtml(p.host||p.url||'')}</div>
+                    </div>
+                    <div class="project-admin-ops">
+                        <button class="btn btn-ghost btn-sm" onclick="moveProject(${i},-1)" ${i===0?'disabled':''} title="上移">↑</button>
+                        <button class="btn btn-ghost btn-sm" onclick="moveProject(${i},1)" ${i===projectList.length-1?'disabled':''} title="下移">↓</button>
+                        <button class="btn btn-ghost btn-sm" onclick="openProjectEditor(${i})">编辑</button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteProject(${i})">删除</button>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function openProjectEditor(i){
+            projectEditIndex=i;
+            const p=i>=0&&projectList[i]?projectList[i]:{name:'',desc:'',url:'',host:'',icon:'',tag:'',cover:''};
+            document.getElementById('projectEditTitle').textContent=i>=0?'编辑项目':'新增项目';
+            document.getElementById('projName').value=p.name||'';
+            document.getElementById('projDesc').value=p.desc||'';
+            document.getElementById('projUrl').value=p.url||'';
+            document.getElementById('projHost').value=p.host||'';
+            document.getElementById('projIcon').value=p.icon||'';
+            document.getElementById('projTag').value=p.tag||'';
+            document.getElementById('projCover').value=p.cover||'';
+            renderProjectCover(p.cover||'');
+            document.getElementById('projectListView').style.display='none';
+            document.getElementById('projectEditView').style.display='block';
+            const f=document.getElementById('projName');
+            if(f)setTimeout(()=>f.focus(),60);
+        }
+
+        function closeProjectEditor(){
+            const list=document.getElementById('projectListView');
+            const edit=document.getElementById('projectEditView');
+            if(list)list.style.display='';
+            if(edit)edit.style.display='none';
+            projectEditIndex=-1;
+        }
+
+        function renderProjectCover(src){
+            const img=document.getElementById('projCoverImg');
+            const empty=document.getElementById('projCoverEmpty');
+            if(!img||!empty)return;
+            const url=String(src||'').trim();
+            if(url){img.src=url;img.style.display='block';empty.style.display='none';
+                img.onerror=()=>{img.style.display='none';empty.style.display='block';empty.textContent='图片加载失败'}}
+            else{img.removeAttribute('src');img.style.display='none';empty.style.display='block';empty.textContent='未设置'}
+        }
+
+        function clearProjectCover(){
+            document.getElementById('projCover').value='';
+            renderProjectCover('');
+        }
+
+        // 自动截图：服务端起本机 Chrome 打开网址截首屏，压成 800×500 存进图库，回一个 /images/g/<key>
+        async function shotProjectCover(){
+            const url=document.getElementById('projUrl').value.trim();
+            if(!/^https?:\/\//i.test(url)){showToast('先把「网址」填成 http(s) 开头的完整地址','error');return}
+            const btn=document.getElementById('projShotBtn');
+            const label=btn?btn.textContent:'';
+            if(btn){btn.disabled=true;btn.textContent='截图中…'}
+            try{
+                const r=await apiFetch('action=project-shot',{method:'POST',body:JSON.stringify({url})});
+                if(!r||r.status!=='success')throw new Error((r&&(r.message||r.error))||'截图失败');
+                document.getElementById('projCover').value=r.cover||'';
+                renderProjectCover(r.cover||'');
+                showToast('封面已生成','success');
+            }catch(e){
+                showToast(e.message||String(e),'error');
+            }finally{
+                if(btn){btn.disabled=false;btn.textContent=label}
+            }
+        }
+
+        async function saveProject(){
+            const v=id=>{const el=document.getElementById(id);return el?el.value.trim():''};
+            const name=v('projName');
+            const url=v('projUrl');
+            if(!name){showToast('名称不能为空','error');return}
+            if(!/^https?:\/\//i.test(url)){showToast('网址要以 http(s):// 开头','error');return}
+            const item={
+                name:name,
+                desc:document.getElementById('projDesc').value.trim(),
+                url:url,
+                host:v('projHost'),
+                icon:v('projIcon'),
+                tag:v('projTag'),
+                cover:v('projCover'),
+            };
+            if(projectEditIndex>=0)projectList[projectEditIndex]=item;
+            else projectList.push(item);
+            await persistProjects();
+        }
+
+        async function persistProjects(){
+            try{
+                const r=await apiFetch('action=projects',{method:'POST',body:JSON.stringify({list:projectList})});
+                if(!r||r.status!=='success')throw new Error((r&&(r.message||r.error))||'保存失败');
+                if(Array.isArray(r.data))projectList=r.data;
+                showToast('已保存，前台刷新即可看到','success');
+                closeProjectEditor();
+                renderProjectList();
+            }catch(e){
+                showToast('保存失败：'+(e.message||e),'error');
+            }
+        }
+
+        async function deleteProject(i){
+            const p=projectList[i];
+            if(!p)return;
+            if(!confirm(`删除项目「${p.name||'未命名'}」？\n（只删这条记录，封面图文件不会跟着删）`))return;
+            projectList.splice(i,1);
+            await persistProjects();
+        }
+
+        async function moveProject(i,delta){
+            const j=i+delta;
+            if(j<0||j>=projectList.length)return;
+            const tmp=projectList[i];
+            projectList[i]=projectList[j];
+            projectList[j]=tmp;
+            await persistProjects();
+        }
+
         async function loadSettings(){
             const r=await apiFetch('action=settings');
             const s=r.status==='success'&&r.data?r.data:{};
