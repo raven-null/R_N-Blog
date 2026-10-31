@@ -473,13 +473,16 @@
   // Folia 侧用 useParentFrameBroadcast 接 folia:control（prev / toggle / next）。
   var musicFrame = document.getElementById('musicFrame');
 
-  function sendPlayerControl(action) {
+  function sendPlayerControl(action, extra) {
     if (!musicFrame || !musicFrame.contentWindow) return;
     try {
-      musicFrame.contentWindow.postMessage(
-        { type: 'folia:control', action: action },
-        FOLIA_ORIGIN
-      );
+      var message = { type: 'folia:control', action: action };
+      if (extra) {
+        for (var key in extra) {
+          if (Object.prototype.hasOwnProperty.call(extra, key)) message[key] = extra[key];
+        }
+      }
+      musicFrame.contentWindow.postMessage(message, FOLIA_ORIGIN);
     } catch (e) { /* iframe 还没挂上，忽略 */ }
   }
 
@@ -651,10 +654,78 @@
   }
 
   setInterval(function () {
+    if (progressDragging) return;
     if (!progressState.shown || !progressState.playing || !progressState.durationMs) return;
     var advanced = progressState.positionMs + (Date.now() - progressState.at);
     paintProgress(Math.min(advanced, progressState.durationMs), progressState.durationMs);
   }, 250);
+
+  // ---------- 进度条拖动 ----------
+  // 拖动时只在本地画（不打断播放），松手才把目标位置发给播放器（folia:control 的 seek）。
+  var progressBarEl = progressWrap ? progressWrap.querySelector('.hv3-music-progress-bar') : null;
+  var progressDragging = false;
+  var progressJustDragged = false;
+
+  function ratioFromPointer(event) {
+    if (!progressBarEl) return 0;
+    var rect = progressBarEl.getBoundingClientRect();
+    if (!rect.width) return 0;
+    return Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+  }
+
+  function paintAtRatio(ratio) {
+    if (!progressState.durationMs) return null;
+    var positionMs = Math.round(ratio * progressState.durationMs);
+    paintProgress(positionMs, progressState.durationMs);
+    return positionMs;
+  }
+
+  if (progressBarEl) {
+    progressBarEl.addEventListener('pointerdown', function (e) {
+      if (!progressState.durationMs) return;
+      e.preventDefault();
+      e.stopPropagation();
+      progressDragging = true;
+      progressJustDragged = true;
+      progressBarEl.classList.add('is-dragging');
+      try { progressBarEl.setPointerCapture(e.pointerId); } catch (err) { /* 老浏览器没有就算了 */ }
+      paintAtRatio(ratioFromPointer(e));
+    });
+
+    progressBarEl.addEventListener('pointermove', function (e) {
+      if (!progressDragging) return;
+      e.preventDefault();
+      e.stopPropagation();
+      paintAtRatio(ratioFromPointer(e));
+    });
+
+    progressBarEl.addEventListener('pointerup', function (e) {
+      if (!progressDragging) return;
+      progressDragging = false;
+      progressBarEl.classList.remove('is-dragging');
+      e.preventDefault();
+      e.stopPropagation();
+      var positionMs = paintAtRatio(ratioFromPointer(e));
+      if (positionMs === null) return;
+      // 本地先把位置认下来，等播放器推回来再校准
+      progressState.positionMs = positionMs;
+      progressState.at = Date.now();
+      sendPlayerControl('seek', { positionMs: positionMs });
+    });
+
+    progressBarEl.addEventListener('pointercancel', function () {
+      if (!progressDragging) return;
+      progressDragging = false;
+      progressBarEl.classList.remove('is-dragging');
+    });
+
+    // 拖完别让这一次点击冒到卡片上（否则会顺带切到音乐视图）
+    progressBarEl.addEventListener('click', function (e) {
+      if (!progressJustDragged) return;
+      progressJustDragged = false;
+      e.stopPropagation();
+    });
+  }
 
   function updateMusicCard(data) {
     if (!musicCard) return;

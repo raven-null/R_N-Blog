@@ -14798,7 +14798,16 @@ body.view-music-active .now-island {
     min-width: 40px;
     border-radius: 999px;
     background: var(--surface-2, rgba(0, 0, 0, 0.08));
-    overflow: hidden;
+    overflow: visible;
+    cursor: pointer;
+    touch-action: none;
+}
+
+/* 加高点击/拖动热区（视觉上仍是一条细线） */
+.hv3-music-progress-bar::after {
+    content: '';
+    position: absolute;
+    inset: -7px 0;
 }
 
 .hv3-music-progress-bar i {
@@ -14806,10 +14815,13 @@ body.view-music-active .now-island {
     top: 0;
     bottom: 0;
     left: 0;
-    width: 0;
     border-radius: inherit;
     background: var(--accent, #f0a20c);
     transition: width 0.25s linear;
+}
+
+.hv3-music-progress-bar.is-dragging i {
+    transition: none;
 }
 
 .hv3-music-progress-time {
