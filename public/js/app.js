@@ -696,8 +696,11 @@ const BlogApp = {
         // 首次进入渲染内容
         if (view === 'home') this.renderHome();
         if (view === 'gallery') {
-            if (window.GalleryWall) window.GalleryWall.open();
-            else this.initGalleryWall();
+            // 画布墙走 app.js 这一套 —— 它是参考项目 private-gallery 的完整移植：
+            // 整块布局 + 无限平铺 + 视口虚拟化，单击就地放大成 2×2、周围的照片整片顺移挤开。
+            // js/gallery-wall.js 是早期简化版（格子取模、点击只给自己加个类、邻居不动），
+            // 属于「没抄全」，所以不再优先接管。
+            this.initGalleryWall();
         }
         if (view === 'projects') this.renderProjects();
         // 音乐视图：iframe 的预加载/遮罩/降级由 js/music-view.js 管，切进来时让它重新对齐高度
