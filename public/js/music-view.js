@@ -492,7 +492,9 @@
   var cardLyric = document.getElementById('hv3MusicLyric');
 
   var lyricsBox = document.getElementById('hv3MusicLyrics');
-  var lyricsTrack = document.getElementById('hv3MusicLyricsTrack');
+  var lyricPrevEl = document.getElementById('hv3LyricPrev');
+  var lyricCurrentEl = document.getElementById('hv3LyricCurrent');
+  var lyricNextEl = document.getElementById('hv3LyricNext');
   var loopBtn = document.getElementById('hv3MusicLoopBtn');
   var lyricHoldTimer = 0;
 
@@ -511,11 +513,8 @@
     loopBtn.setAttribute('aria-label', '切换循环方式，当前 ' + LOOP_TEXT[key].label);
   }
 
-  // 歌词层里的行：只在「窗口内容真的变了」时重画，避免每句都重建 DOM
-  var lyricsSignature = '';
-
   // 兜底：老版本 Folia 只推「当前这一句」，不推前后窗口。那就把从这一刻起收到的每句攒起来
-  // （换歌就清空），也能翻出滚动歌词，只是开头缺进入页面之前的那几句。
+  // （换歌就清空），用倒数第二句充当「上一句」，只是开头缺进入页面之前的那几句。
   var lyricHistory = [];
   var lyricHistorySong = null;
 
@@ -541,55 +540,58 @@
     if (lyricHistory.length > 16) lyricHistory.shift();
   }
 
-  // 画歌词：优先用 Folia 推的窗口（完整的前后文），没有就用攒下来的历史
+  // 画歌词：一行一句地换——上一句淡出上移，当前句从下方顶上来，下一句淡入下方
+  // 数据优先取 Folia 推来的窗口（前后文齐全），老版播放器只有当前句时用攒下来的历史补上一句
+
+  function setLyricLine(el, text, translation) {
+    if (!el) return false;
+    var value = text ? String(text) : '';
+    var sub = translation ? String(translation) : '';
+    if (el.dataset.text === value && el.dataset.sub === sub) return false;
+    el.dataset.text = value;
+    el.dataset.sub = sub;
+    el.innerHTML = value
+      ? escapeHtml(value) + (sub ? '<span class="hv3-music-lyric-trans">' + escapeHtml(sub) + '</span>' : '')
+      : '';
+    return true;
+  }
+
   function renderCardLyrics(data) {
-    if (!lyricsTrack) return false;
+    if (!lyricCurrentEl) return false;
     var win = data && data.lyricsWindow;
-    var rows = null;
-    var activeIndex = 0;
+    var prevText = '';
+    var currentText = '';
+    var translation = '';
+    var nextText = '';
 
     if (win && Array.isArray(win.lines) && win.lines.length) {
-      rows = win.lines.map(function (l) {
-        return {
-          text: l.text == null ? '' : String(l.text),
-          translation: l.translation == null ? '' : String(l.translation)
-        };
-      });
-      activeIndex = Math.max(0, Math.min(Number(win.active) || 0, rows.length - 1));
-    } else if (lyricHistory.length >= 1) {
-      rows = lyricHistory.slice();
-      activeIndex = rows.length - 1;
-    }
-
-    if (!rows || !rows.length) {
-      // 有歌但还没等到第一句歌词：放一行占位，别让歌词层空着
-      if (lyricsSignature !== 'placeholder') {
-        lyricsSignature = 'placeholder';
-        lyricsTrack.innerHTML = '<div class="hv3-music-lyric-line is-placeholder">歌词加载中…</div>';
+      var active = Math.max(0, Math.min(Number(win.active) || 0, win.lines.length - 1));
+      var currentLine = win.lines[active] || {};
+      prevText = (win.lines[active - 1] || {}).text || '';
+      currentText = currentLine.text || '';
+      translation = currentLine.translation || '';
+      nextText = (win.lines[active + 1] || {}).text || '';
+    } else {
+      if (lyricHistory.length) {
+        var last = lyricHistory[lyricHistory.length - 1];
+        currentText = last.text || '';
+        translation = last.translation || '';
+        prevText = lyricHistory.length > 1 ? (lyricHistory[lyricHistory.length - 2].text || '') : '';
       }
-      return false;
+      nextText = data && data.nextLyric && data.nextLyric.text ? String(data.nextLyric.text) : '';
     }
 
-    var signature = rows.map(function (r, i) {
-      return i + '|' + r.text + '|' + r.translation;
-    }).join('\u0001') + '#' + activeIndex;
-    if (signature === lyricsSignature) return true;
-    lyricsSignature = signature;
+    if (!currentText) currentText = '歌词加载中…';
 
-    var html = '';
-    for (var i = 0; i < rows.length; i++) {
-      var row = rows[i];
-      var cls = 'hv3-music-lyric-line' + (i === activeIndex ? ' is-active' : '');
-      html += '<div class="' + cls + '" data-i="' + i + '">' + escapeHtml(row.text || '·') +
-        (row.translation ? '<span class="hv3-music-lyric-trans">' + escapeHtml(row.translation) + '</span>' : '') + '</div>';
-    }
-    lyricsTrack.innerHTML = html;
+    var changed = setLyricLine(lyricCurrentEl, currentText, translation);
+    setLyricLine(lyricPrevEl, prevText, '');
+    setLyricLine(lyricNextEl, nextText, '');
 
-    // 让当前行停在歌词层中间
-    var activeEl = lyricsTrack.querySelector('.is-active');
-    if (activeEl && lyricsBox) {
-      var boxHeight = lyricsBox.clientHeight || 0;
-      lyricsBox.scrollTop = Math.max(0, activeEl.offsetTop - boxHeight / 2 + activeEl.offsetHeight / 2);
+    if (changed) {
+      // 重启动画：当前句从下方顶上来，一口气滑到位
+      lyricCurrentEl.classList.remove('is-entering');
+      void lyricCurrentEl.offsetWidth;
+      lyricCurrentEl.classList.add('is-entering');
     }
     return true;
   }

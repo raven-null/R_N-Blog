@@ -14652,24 +14652,20 @@ body.view-music-active .now-island {
     pointer-events: none;
 }
 
-/* 歌词层：从底边翻上来的一块，里面是可滚动的歌词列 */
+/* 歌词层：从底边翻上来的一块，三行铺满整块（上下各留一点呼吸） */
 .hv3-music-lyrics {
     position: absolute;
     inset: 0;
-    padding: 14px 16px;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    scrollbar-width: none;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 14px;
+    overflow: hidden;
     opacity: 0;
     transform: rotateX(96deg);
     transform-origin: 50% 100%;
     pointer-events: none;
     transition: transform 0.55s cubic-bezier(0.2, 0.7, 0.3, 1), opacity 0.35s ease;
-}
-
-.hv3-music-lyrics::-webkit-scrollbar {
-    width: 0;
-    height: 0;
 }
 
 .hv3-music.is-lyric .hv3-music-lyrics {
@@ -14678,31 +14674,58 @@ body.view-music-active .now-island {
     pointer-events: auto;
 }
 
-.hv3-music-lyrics-track {
+/* 三行歌词：每行各占三分之一高度，文字纵向居中——整块铺满卡片 */
+.hv3-music-lyric-line {
+    flex: 1 1 0;
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    /* 上下留白：第一行和最后一行也能滚到中间 */
-    padding: 46% 0;
-}
-
-.hv3-music-lyric-line {
+    justify-content: center;
+    min-height: 0;
     font-size: 12.5px;
-    line-height: 1.45;
+    line-height: 1.4;
     color: var(--text-muted);
-    opacity: 0.55;
-    transition: color 0.25s ease, opacity 0.25s ease, transform 0.25s ease;
+    transition: transform 0.5s cubic-bezier(0.2, 0.7, 0.3, 1), opacity 0.5s ease,
+        color 0.3s ease, font-size 0.4s ease;
+    will-change: transform, opacity;
 }
 
-.hv3-music-lyric-line.is-active {
+.hv3-music-lyric-line.is-prev {
+    transform: translate(-10px, -6px) scale(0.92);
+    opacity: 0.38;
+}
+
+.hv3-music-lyric-line.is-current {
+    font-size: 17px;
+    font-weight: 650;
     color: var(--accent, var(--text));
     opacity: 1;
-    font-weight: 600;
-    transform: translateX(2px);
+}
+
+.hv3-music-lyric-line.is-next {
+    transform: translate(12px, 6px) scale(0.96);
+    opacity: 0.42;
+}
+
+/* 换句时当前句从下方顶上来 */
+.hv3-music-lyric-line.is-entering {
+    animation: hv3LyricIn 0.5s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+@keyframes hv3LyricIn {
+    from {
+        transform: translateY(24px) scale(0.94);
+        opacity: 0;
+    }
+
+    to {
+        transform: none;
+        opacity: 1;
+    }
 }
 
 .hv3-music-lyric-trans {
     display: block;
+    margin-top: 2px;
     font-size: 11px;
     font-weight: 400;
     color: var(--text-muted);
