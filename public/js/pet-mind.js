@@ -321,6 +321,17 @@
     try { return ls ? ls.getItem('pet-tts-voice') : null; } catch (e) { return null; }
   }
 
+  // 常见音色名 → 性别，用来做"同性别兜底"：
+  // 后台选了晓晓（女）但本机没装，就挑本机另一个女声，而不是退回可能是男声的系统默认。
+  const VOICE_FEMALE = ['xiaoxiao', 'xiaoyi', 'yaoyao', 'huihui', 'hanhan', 'tiantian', 'xiaomo', 'xiaoxuan', 'xiaochen', '女'];
+  const VOICE_MALE = ['yunxi', 'yunjian', 'yunyang', 'yunye', 'kangkang', '男'];
+  const voiceGender = (name) => {
+    const n = String(name || '').toLowerCase();
+    if (VOICE_FEMALE.some((k) => n.includes(k))) return 'female';
+    if (VOICE_MALE.some((k) => n.includes(k))) return 'male';
+    return '';
+  };
+
   function pickVoice() {
     const list = voiceList();
     if (!list.length) {
@@ -344,7 +355,15 @@
         voicePick = { wanted, picked: loose.name, matched: true, reason: 'loose' };
         return loose;
       }
-      // 名字里根本没有这个音色：退回默认，并记下来（后台试听/排障能看到）
+      // 本机没有这个音色：先按"同性别"找一个（选女声就别退回男声），再退回默认
+      const gender = voiceGender(want) || voiceGender(norm(want));
+      if (gender) {
+        const sameGender = list.find((v) => voiceGender(v.name) === gender);
+        if (sameGender) {
+          voicePick = { wanted, picked: sameGender.name, matched: false, reason: '本机没装「' + wanted + '」，用了同为' + (gender === 'female' ? '女声' : '男声') + '的替代', available: list.map((v) => v.name) };
+          return sameGender;
+        }
+      }
       const fallback = list.find((v) => v.default) || list[0] || null;
       voicePick = {
         wanted,

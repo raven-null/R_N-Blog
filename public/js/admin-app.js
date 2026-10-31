@@ -2366,6 +2366,10 @@
         }
         // 桌宠朗读音色的预设值（后台下拉用；访客本机没有对应声音就退回自动）
         const PET_VOICE_PRESETS=['','Xiaoxiao','Xiaoyi','Yaoyao','Huihui','Yunxi','Yunjian','Kangkang','Google'];
+        // 音色 → 性别，用来"选女声就别退回男声"
+        const VOICE_FEMALE=['xiaoxiao','xiaoyi','yaoyao','huihui','hanhan','tiantian','xiaomo','xiaoxuan','女'];
+        const VOICE_MALE=['yunxi','yunjian','yunyang','yunye','kangkang','男'];
+        const voiceGender=(name)=>{const n=String(name||'').toLowerCase();if(VOICE_FEMALE.some(k=>n.includes(k)))return 'female';if(VOICE_MALE.some(k=>n.includes(k)))return 'male';return ''};
         // 后台试听：用本机语音合成念一句，方便挑音色
         function previewPetVoice(){
             const synth=window.speechSynthesis;
@@ -2382,16 +2386,31 @@
             const zh=all.filter(v=>/^zh/i.test(v.lang||''));
             const pool=zh.length?zh:all;
             const want=String(key||'').toLowerCase();
-            const voice=want?pool.find(v=>String(v.name||'').toLowerCase().includes(want)):(pool.find(v=>v.default)||pool[0]);
+            const norm=(s)=>String(s||'').toLowerCase().replace(/^(microsoft|google|apple|baidu)\s*/i,'').trim();
+            let voice=null,note='';
+            if(want){
+                voice=pool.find(v=>String(v.name||'').toLowerCase().includes(want))
+                    ||pool.find(v=>norm(v.name).includes(norm(want)));
+                if(!voice){
+                    const gender=voiceGender(want)||voiceGender(norm(want));
+                    if(gender)voice=pool.find(v=>voiceGender(v.name)===gender);
+                    if(voice)note='本机没装「'+key+'」，先按同为'+(gender==='female'?'女声':'男声')+'的「'+voice.name+'」试听';
+                }
+            }
+            if(!voice)voice=pool.find(v=>v.default)||pool[0];
+            if(!voice){
+                showToast('本机没有任何语音包，Chrome / Edge 装个中文语音再试','error');
+                return;
+            }
             try{
                 const u=new SpeechSynthesisUtterance('你好，我是本站的桌宠，现在听到的是这个音色。');
                 u.lang='zh-CN';
                 u.rate=Math.min(1.6,Math.max(0.6,rate));
                 u.pitch=Math.min(1.6,Math.max(0.6,pitch));
-                if(voice)u.voice=voice;
+                u.voice=voice;
                 synth.cancel();
                 synth.speak(u);
-                if(!voice&&want)showToast('本机没有名字里带「'+key+'」的语音，先用默认声音试听','error');
+                if(note)showToast(note,'error');
             }catch(e){showToast('试听失败：'+((e&&e.message)||e),'error')}
         }
         async function loadSettings(){
