@@ -2428,6 +2428,13 @@
         let projectList=[];
         let projectEditIndex=-1;
 
+        // 把项目列表恢复成代码内置的默认 5 项（封面都是仓库里现成的 webp）
+        async function resetProjectsToDefault(){
+            if(!confirm('把项目列表恢复成内置默认的 5 项？\n后台里改过的项目名、描述、封面都会被覆盖。'))return;
+            projectList=PROJECT_DEFAULTS.map(p=>({...p}));
+            await persistProjects();
+        }
+
         async function loadProjects(){
             const box=document.getElementById('projectList');
             if(box)box.innerHTML='<div class="empty">加载中…</div>';

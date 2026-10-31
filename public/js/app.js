@@ -5602,6 +5602,11 @@ const BlogApp = {
             if (Array.isArray(list) && list.length) {
                 this.deployedProjects = list;
                 this._projectsFromApi = true;
+                // 主页那块渲染过一次就带 dataset.rendered 标记、再调会被直接 return，
+                // 于是「主页还是内置默认、项目页已经换成后台数据」—— 两处对不上。
+                // 这里清掉标记，让两边用同一份数据重画。
+                const box = document.getElementById('hv3Projects');
+                if (box) box.dataset.rendered = '';
                 this.renderHomeProjects();
                 this.renderDeployedProjects();
             }
