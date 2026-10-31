@@ -14674,13 +14674,16 @@ body.view-music-active .now-island {
     pointer-events: auto;
 }
 
-/* 三行歌词：每行各占三分之一高度，文字纵向居中——整块铺满卡片 */
+/* 三行歌词：每行各占三分之一高度，文字水平居中——左右留白对称，不会一边空 */
 .hv3-music-lyric-line {
     flex: 1 1 0;
     display: flex;
     flex-direction: column;
+    align-items: center;
     justify-content: center;
     min-height: 0;
+    padding: 0 4px;
+    text-align: center;
     font-size: 12.5px;
     line-height: 1.4;
     color: var(--text-muted);
@@ -14690,7 +14693,7 @@ body.view-music-active .now-island {
 }
 
 .hv3-music-lyric-line.is-prev {
-    transform: translate(-10px, -6px) scale(0.92);
+    transform: translateY(-5px) scale(0.92);
     opacity: 0.38;
 }
 
@@ -14699,10 +14702,11 @@ body.view-music-active .now-island {
     font-weight: 650;
     color: var(--accent, var(--text));
     opacity: 1;
+    text-shadow: 0 2px 14px rgba(0, 0, 0, 0.35);
 }
 
 .hv3-music-lyric-line.is-next {
-    transform: translate(12px, 6px) scale(0.96);
+    transform: translateY(5px) scale(0.96);
     opacity: 0.42;
 }
 
