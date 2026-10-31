@@ -453,10 +453,6 @@
       if (mind && typeof mind.toggleVoiceMode === 'function') mind.toggleVoiceMode();
       else speakRandom();
     };
-    const closeChat = () => {
-      const mind = global.PetMind;
-      if (mind && typeof mind.closePanel === 'function') mind.closePanel();
-    };
     let vx = 0;
     let vy = 0;
     let lastX = 0;
@@ -541,28 +537,26 @@
       while (tapTimes.length && now - tapTimes[0] > TRIPLE_WINDOW) tapTimes.shift();
       react();                             // 立刻给动作反馈
 
-      if (tapTimes.length >= 3) {          // 三连击：实时对话（不弹对话框）
+      if (tapTimes.length >= 3) {          // 三连击：实时对话（不碰对话框）
         clearTimeout(S.tapTimer);
         S.tapTimer = 0;
         tapTimes.length = 0;
-        closeChat();
         hideOrbit();
         toggleVoiceMode();
         return;
       }
-      if (tapTimes.length === 2) {         // 双击：召唤三个圆（等一等看有没有第三下）
+      if (tapTimes.length === 2) {         // 双击：召唤 / 收起三个圆（等一等看有没有第三下）
         clearTimeout(S.tapTimer);
         S.tapTimer = setTimeout(() => {
           S.tapTimer = 0;
           if (tapTimes.length !== 2) return;
           tapTimes.length = 0;
-          closeChat();
           toggleOrbit();
         }, DOUBLE_DELAY);
         return;
       }
-      // 单击：立刻召唤对话框（不等窗口，点了就有反应）
-      openChat();
+      // 单击：只是摸一下（跳一下 + 冒一句），对话框只从 💬 那个圆进
+      speakRandom();
     };
 
     S.dragging = false;
