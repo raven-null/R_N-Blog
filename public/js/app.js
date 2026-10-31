@@ -1873,7 +1873,14 @@ const BlogApp = {
                 // 这张卡以后显示的是图库竖图，点开看大图而不是进文章 —— 去掉链接就没有跳转
                 item.removeAttribute('href');
                 item.setAttribute('role', 'button');
+                // 自带的封面如果根本没加载出来（坏图/404），把 src 清掉，
+                // 否则下面补图时会被「这一层已经有 src」挡住，卡片一直空着
+                const cur = item.querySelector('.hv3-cover-img.is-front');
+                if (cur && cur.getAttribute('src') && !cur.naturalWidth) cur.removeAttribute('src');
                 playCards.push(item);
+                // 立刻补图：判定是异步的（要等封面加载完才知道方向），
+                // 如果只靠下面 400ms 那次批量填充，判定晚一步的卡就再没人管 = 空白。
+                this.scheduleFillCover([item]);
             };
             if (!img || !img.getAttribute('src')) { markPlay(); return; }
             const decide = () => {
@@ -1966,6 +1973,19 @@ const BlogApp = {
         const items = [...document.querySelectorAll('#hv3Track .hv3-item')];
         items.forEach((el, k) => el.classList.toggle('is-front', k === n));
         this.syncCarouselHeight();
+    },
+
+    /* 把「待补图」的卡攒一下再补：一屏可能同时有好几张卡判定为需要换图，
+       逐张补会重复跑池子逻辑。80ms 内的合并成一批。 */
+    scheduleFillCover(cards) {
+        this._pendingCoverCards = (this._pendingCoverCards || []).concat(cards || []);
+        clearTimeout(this._coverFillTimer);
+        this._coverFillTimer = setTimeout(() => {
+            this._coverFillTimer = 0;
+            const list = this._pendingCoverCards || [];
+            this._pendingCoverCards = [];
+            if (list.length) this.fillCoverPlay(list);
+        }, 80);
     },
 
     /* 横图封面和没有封面的卡：用竖图补一张封面。
@@ -2093,8 +2113,8 @@ const BlogApp = {
         const imgs = [...item.querySelectorAll('.hv3-cover-img')];
         if (imgs.length < 2) return;
         const front = imgs.find((i) => i.classList.contains('is-front')) || imgs[0];
-        // 已经有图的卡不再动（重试时只补空着的那些）
-        if (front && front.getAttribute('src')) return;
+        // 已经有「真的加载出来」的图就不再动（重试只补空着/挂掉的）
+        if (front && front.getAttribute('src') && front.naturalWidth) return;
         const back = imgs.find((i) => i !== front) || imgs[1];
         const p = pool[Math.floor(Math.random() * pool.length)];
         const src = String(p && (p.thumb || p.url) || '');
@@ -2113,6 +2133,19 @@ const BlogApp = {
             item.classList.remove('is-waiting-cover');
         };
         back.addEventListener('load', swap, { once: true });
+        // 这张图加载失败：从池子里另挑一张重试（最多 3 次），别让卡片停在空白
+        let tries = 0;
+        back.addEventListener('error', function retry() {
+            if (tries >= 3 || !pool.length) return;
+            tries++;
+            const next = pool[Math.floor(Math.random() * pool.length)];
+            const nextSrc = String(next && (next.thumb || next.url) || '');
+            if (!nextSrc) return;
+            back.dataset.src = nextSrc;
+            back.addEventListener('load', swap, { once: true });
+            back.addEventListener('error', retry, { once: true });
+            back.src = nextSrc;
+        }, { once: true });
         back.src = src;
         if (back.complete && back.naturalWidth) swap();
     },
