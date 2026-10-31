@@ -559,13 +559,87 @@ const BlogApp = {
         });
     },
 
-    // 打开文章详情页
+    // 打开文章：在首页里盖一层 iframe 加载 article.html。
+    // 这样主文档（和里面的音乐播放器 iframe）不会因为跳页被销毁，翻文章时歌不会停。
     openPost(filename, id) {
-        if (id) {
-            window.location.href = `article.html?post=${filename}&blob=${id}`;
-        } else {
-            window.location.href = `article.html?post=${filename}`;
+        const url = id
+            ? `article.html?post=${encodeURIComponent(filename)}&blob=${encodeURIComponent(id)}`
+            : `article.html?post=${encodeURIComponent(filename)}`;
+        const overlay = document.getElementById('articleOverlay');
+        const frame = document.getElementById('articleFrame');
+        // 没有覆盖层（老页面 / 被别的页面复用）就退回原来的整页跳转
+        if (!overlay || !frame) {
+            window.location.href = url;
+            return;
         }
+
+        // 记下主页滚到哪儿了，关掉时滚回原处
+        const scroller = document.getElementById('scrollArea');
+        this._articleScrollTop = scroller ? scroller.scrollTop : window.scrollY;
+
+        frame.src = url;
+        overlay.hidden = false;
+        requestAnimationFrame(() => overlay.classList.add('is-open'));
+        document.body.classList.add('article-open');
+        this.articleOverlayOpen = true;
+
+        // 入栈一条历史：浏览器返回键也能关掉这一层
+        try { history.pushState({ articleOverlay: true }, '', location.href); } catch (e) { /* 忽略 */ }
+        this._articlePushedHistory = true;
+
+        this.bindArticleOverlay();
+    },
+
+    // 关掉文章覆盖层（按钮 / Esc / 浏览器返回 / article.html 里点的返回）
+    closeArticle(fromHistory) {
+        const overlay = document.getElementById('articleOverlay');
+        const frame = document.getElementById('articleFrame');
+        if (!overlay || !this.articleOverlayOpen) return;
+        this.articleOverlayOpen = false;
+
+        overlay.classList.remove('is-open');
+        document.body.classList.remove('article-open');
+        const restore = () => {
+            overlay.hidden = true;
+            if (frame) frame.src = 'about:blank';
+            const scroller = document.getElementById('scrollArea');
+            if (scroller && typeof this._articleScrollTop === 'number') scroller.scrollTop = this._articleScrollTop;
+        };
+        setTimeout(restore, 260);
+
+        if (!fromHistory && this._articlePushedHistory) {
+            this._articlePushedHistory = false;
+            try { history.back(); } catch (e) { /* 忽略 */ }
+        }
+    },
+
+    // 只绑一次：返回按钮 / Esc / 浏览器返回 / 文章页发来的关闭消息
+    bindArticleOverlay() {
+        if (this._articleOverlayBound) return;
+        this._articleOverlayBound = true;
+
+        const backBtn = document.getElementById('articleOverlayBack');
+        if (backBtn) backBtn.addEventListener('click', () => this.closeArticle());
+
+        document.addEventListener('keydown', (e) => {
+            if (!this.articleOverlayOpen) return;
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                this.closeArticle();
+            }
+        });
+
+        window.addEventListener('popstate', () => {
+            if (!this.articleOverlayOpen) return;
+            this._articlePushedHistory = false;
+            this.closeArticle(true);
+        });
+
+        // article.html 被嵌在这一层里时，它自己的返回按钮会发这条消息过来
+        window.addEventListener('message', (e) => {
+            if (e.origin !== location.origin) return;
+            if (e.data && e.data.type === 'blog:close-article') this.closeArticle();
+        });
     },
 
     // 切换搜索框显示（打开时自动关闭标签面板，避免重叠）
@@ -2167,13 +2241,23 @@ const BlogApp = {
         const ratio = Math.max(0.5, Math.min(2.4,
             Number((card.style.getPropertyValue('--cover-ratio') || '').trim()) || 1.6));
 
-        // 先按高度上限摆，放不下就回退成占满可用宽
-        const maxH = window.innerWidth <= 900
-            ? Math.min(window.innerHeight * 0.52, 380)
-            : Math.min(window.innerHeight * 0.56, 430);
-        let h = maxH;
-        let w = Math.round(h * ratio);
-        if (w > availW) { w = availW; h = Math.round(w / ratio); }
+        let w;
+        let h;
+        if (window.innerWidth <= 900) {
+            // 手机上文章位只播竖图，纵向空间金贵、横向更宽裕：
+            // 先按「占满可用宽度」摆（盒子比原来大得多），太高再收窄；
+            // 配合 CSS 里同一断点的 object-fit: contain，整张竖图完整可见、不裁边。
+            const maxH = Math.min(window.innerHeight * 0.72, 620);
+            w = Math.round(availW);
+            h = Math.round(w / ratio);
+            if (h > maxH) { h = Math.round(maxH); w = Math.round(h * ratio); }
+        } else {
+            // 桌面：先按高度上限摆，放不下就回退成占满可用宽
+            const maxH = Math.min(window.innerHeight * 0.56, 430);
+            h = maxH;
+            w = Math.round(h * ratio);
+            if (w > availW) { w = availW; h = Math.round(w / ratio); }
+        }
         if (h < 120 || w < 120) return;
 
         if (Math.abs(w - Number(carousel.dataset.w || 0)) > 1 || Math.abs(h - Number(carousel.dataset.h || 0)) > 1) {

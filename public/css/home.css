@@ -1443,3 +1443,74 @@ body.view-blog-active .nav-bar {
 
     .blog-bar-search input { width: 110px; }
 }
+
+/* ============================================================
+   文章覆盖层：文章在首页里用 iframe 打开，主文档不销毁，
+   里面的音乐播放器就能一直放着（见 app.js 的 openPost / closeArticle）
+   ============================================================ */
+.article-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 260;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg, #fffefb);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.25s ease, visibility 0.25s ease;
+}
+
+.article-overlay[hidden] {
+    display: none;
+}
+
+.article-overlay.is-open {
+    opacity: 1;
+    visibility: visible;
+}
+
+.article-overlay-frame {
+    flex: 1 1 auto;
+    width: 100%;
+    border: 0;
+    background: var(--bg, #fffefb);
+}
+
+/* 返回键浮在文章左上角，用纸片底让它压在正文上也看得清 */
+.article-overlay-back {
+    position: fixed;
+    top: 14px;
+    left: 14px;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    font-family: inherit;
+    font-size: 13px;
+    letter-spacing: 0.04em;
+    color: var(--text-secondary);
+    background: var(--bg-card, #fffefb);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    box-shadow: 0 8px 24px var(--shadow, rgba(20, 26, 44, 0.14));
+    cursor: pointer;
+    transition: color 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+}
+
+.article-overlay-back:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+    transform: translateX(-1px);
+}
+
+/* 覆盖层打开时，主页自己的浮层别再压在文章上 */
+body.article-open .top-bar,
+body.article-open .deskpet,
+body.article-open .back-to-top,
+body.article-open .wheel-trigger,
+body.article-open .gallery-tag-float-panel {
+    display: none !important;
+}
+
+/* 覆盖层里滚动的是 iframe 自己，主页这一层不用动 */
