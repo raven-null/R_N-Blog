@@ -622,11 +622,10 @@
     }
     voiceMode = true;
     STATE.lastUserAt = Date.now();
-    openPanel();
+    // 实时对话：不打开对话框，直接在桌宠气泡里说
     if (!STATE.ttsOn) toggleTTS(true);
-    global.PetCore?.state && (global.PetCore.state.voiceMode = true);
     doc.getElementById('deskPet')?.classList.add('is-voice-mode');
-    say('对话模式：直接说话就行，再连点三下退出', 6500, { log: false });
+    say('直接说话就行，不用开对话框；再点一下麦克风或连点三下退出', 6500, { log: false });
     petState('listening', 0);
     restartRecognition(0);
     return true;

@@ -714,7 +714,12 @@
     const NS = 'http://www.w3.org/2000/svg';
     const ICONS = {
       chat: ['M4.5 5.5h15v9.5h-9.6l-5.4 4.2z'],
-      tts: ['M4.5 9.5h3.4l4.6-4v13l-4.6-4H4.5z', 'M15.4 9.2a4 4 0 0 1 0 5.6', 'M17.9 6.6a7.4 7.4 0 0 1 0 10.8'],
+      // 麦克风：实时对话（不用开对话框，直接说）
+      voice: [
+        'M12 4.2a2.4 2.4 0 0 1 2.4 2.4v4.8a2.4 2.4 0 0 1-4.8 0V6.6A2.4 2.4 0 0 1 12 4.2z',
+        'M6.8 11.4a5.2 5.2 0 0 0 10.4 0',
+        'M12 16.7v3',
+      ],
       sleep: ['M20 14.4A8.4 8.4 0 0 1 9.6 4a7 7 0 1 0 10.4 10.4z'],
     };
     const makeIcon = (key) => {
@@ -730,8 +735,8 @@
     };
 
     const actions = [
-      { key: 'chat', label: '聊天', run: () => openChat() },
-      { key: 'tts', label: '朗读 / 静音', run: () => global.PetMind?.toggleTTS?.() },
+      { key: 'chat', label: '打开对话框', run: () => openChat() },
+      { key: 'voice', label: '实时对话（直接说话，不弹对话框）', run: () => global.PetMind?.toggleVoiceMode?.() },
       { key: 'sleep', label: '睡觉 / 唤醒', run: () => toggleSleep() },
     ];
     actions.forEach((a) => {
