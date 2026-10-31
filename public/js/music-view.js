@@ -375,6 +375,7 @@
     marqueeTimer = setTimeout(function () {
       updateMarquee(islandTitle);
       updateMarquee(islandLyric);
+      updateMarquee(cardLyric);
     }, 380);
   }
 
@@ -384,6 +385,7 @@
     if (!song) {
       island.classList.remove('show');
       setIslandMode(false);
+      updateMusicCard(data);
       return;
     }
 
@@ -406,6 +408,7 @@
     if (lyric) setIslandLyric(lyric);
 
     // 岛刚展开时宽度还是 0，量不出溢出；等过渡走完再判定一次跑马灯
+    updateMusicCard(data);
     scheduleMarqueeUpdate();
   }
 
@@ -445,6 +448,66 @@
         FOLIA_ORIGIN
       );
     } catch (e) { /* iframe 还没挂上，忽略 */ }
+  }
+
+  // ---------- 主页「正在听」卡片 ----------
+  // 和岛吃同一份推送：换歌/换行跟着变，三个按钮、卡片本身都能直接操作播放器。
+  var musicCard = document.getElementById('hv3Music');
+  var cardCover = document.getElementById('hv3MusicCover');
+  var cardName = document.getElementById('hv3MusicName');
+  var cardArtist = document.getElementById('hv3MusicArtist');
+  var cardLyric = document.getElementById('hv3MusicLyric');
+
+  function updateMusicCard(data) {
+    if (!musicCard) return;
+    var song = data && data.song;
+
+    if (!song) {
+      musicCard.classList.remove('is-playing', 'paused');
+      if (cardName) cardName.textContent = '还没有在播放';
+      if (cardArtist) cardArtist.textContent = '去播放器里挑一首';
+      if (cardLyric) setRunText(cardLyric, '');
+      return;
+    }
+
+    musicCard.classList.add('is-playing');
+    musicCard.classList.toggle('paused', !data.playing && !data.loading);
+
+    if (cardName && cardName.textContent !== (song.name || '')) cardName.textContent = song.name || '';
+    if (cardArtist && cardArtist.textContent !== (song.artist || '')) cardArtist.textContent = song.artist || '';
+    if (cardCover && song.cover && cardCover.getAttribute('src') !== song.cover) cardCover.src = song.cover;
+
+    var cardLyricText = data.lyric && data.lyric.text ? String(data.lyric.text).trim() : '';
+    setRunText(cardLyric, cardLyricText);
+    updateMarquee(cardLyric);
+  }
+
+  if (musicCard) {
+    musicCard.addEventListener('click', function (e) {
+      // 控制按钮有自己的 handler，别被卡片点击顺走
+      if (e.target && e.target.closest && e.target.closest('.hv3-music-ctls')) return;
+      if (window.BlogApp && typeof window.BlogApp.switchView === 'function') {
+        window.BlogApp.switchView('music');
+      }
+    });
+
+    var cardCtls = musicCard.querySelectorAll('.hv3-music-ctls button');
+    for (var cci = 0; cci < cardCtls.length; cci++) {
+      cardCtls[cci].addEventListener('click', function (e) {
+        e.stopPropagation();
+        sendPlayerControl(this.getAttribute('data-ctl'));
+      });
+    }
+
+    var cardOpenBtn = document.getElementById('hv3MusicOpen');
+    if (cardOpenBtn) {
+      cardOpenBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        if (window.BlogApp && typeof window.BlogApp.switchView === 'function') {
+          window.BlogApp.switchView('music');
+        }
+      });
+    }
   }
 
   if (island) {

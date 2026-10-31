@@ -15,7 +15,7 @@
     <meta property="og:image" content="https://ravennull.work/images/Default/web-logo.webp">
     <meta property="og:locale" content="zh_CN">
     <meta name="twitter:card" content="summary">
-    <link rel="stylesheet" href="css/bundle.css?v=9d28464fc6">
+    <link rel="stylesheet" href="css/bundle.css?v=5da8d49404">
     <title>渡鸦 NULL · 日光与暮色之间</title>
     <link rel="icon" id="siteFavicon" href="/images/Default/web-logo.webp" type="image/webp">
     <link rel="apple-touch-icon" href="/images/Default/web-logo.webp">
@@ -75,7 +75,7 @@
     <script src="/js/tone.js?v=20261030" defer></script>
 <script src="/js/experience.js?v=20261103a" defer></script>
     <!-- 音乐视图：iframe 的加载 / 遮罩 / 探活 / 降级都归它管，defer 保证在 DOM 解析后拿到节点 -->
-    <script src="/js/music-view.js?v=1.6.0" defer></script>
+    <script src="/js/music-view.js?v=1.7.0" defer></script>
 </head>
 
 <body class="home-layout">
@@ -446,6 +446,35 @@
                                     <div class="hv3-stack" id="hv3Journals"></div>
                                 </section>
                             </div>
+
+                            <!-- 正在听：主页的音乐模块。数据来自 Folia 的 postMessage 推送，
+                                 换歌/换句跟着变；点卡片进播放器，三个按钮直接控制播放。 -->
+                            <section class="hv3-box hv3-music" id="hv3Music" aria-label="正在听的音乐">
+                                <div class="hv3-music-head">
+                                    <span class="hv3-music-title">正在听</span>
+                                    <button class="hv3-music-open" type="button" id="hv3MusicOpen">打开播放器 ›</button>
+                                </div>
+                                <div class="hv3-music-body">
+                                    <div class="hv3-music-cover"><img id="hv3MusicCover" alt="" loading="lazy" decoding="async"></div>
+                                    <div class="hv3-music-meta">
+                                        <span class="hv3-music-name" id="hv3MusicName">还没有在播放</span>
+                                        <span class="hv3-music-artist" id="hv3MusicArtist">去播放器里挑一首</span>
+                                        <span class="hv3-music-lyric" id="hv3MusicLyric"><span class="now-island-run"></span></span>
+                                    </div>
+                                </div>
+                                <div class="hv3-music-ctls" id="hv3MusicCtls">
+                                    <button type="button" data-ctl="prev" title="上一首" aria-label="上一首">
+                                        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 5h2v14H6zM20 5v14L9.5 12z"></path></svg>
+                                    </button>
+                                    <button type="button" data-ctl="toggle" title="播放 / 暂停" aria-label="播放或暂停">
+                                        <svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"></path></svg>
+                                        <svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"></path></svg>
+                                    </button>
+                                    <button type="button" data-ctl="next" title="下一首" aria-label="下一首">
+                                        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16 5h2v14h-2zM4 5v14l10.5-7z"></path></svg>
+                                    </button>
+                                </div>
+                            </section>
 
                             <section class="hv3-box hv3-projects" aria-label="创造与探索">
                                 <div class="hv3-project-grid" id="hv3Projects" aria-label="已上线项目"></div>

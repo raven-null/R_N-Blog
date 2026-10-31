@@ -14874,6 +14874,173 @@ body.view-music-active .now-island {
     transition: opacity 0.16s ease, transform 0.16s ease;
 }
 
+/* ============================================================
+   主页「正在听」卡片
+   ------------------------------------------------------------
+   数据同样来自 Folia 的 postMessage（见 js/music-view.js）：
+   换歌/换行跟着变，三个按钮直接控制播放器。
+   ============================================================ */
+.hv3-music {
+    padding: 14px 16px 13px;
+    cursor: pointer;
+    transition: box-shadow 0.22s ease, transform 0.22s ease;
+}
+
+.hv3-music:hover {
+    transform: translateY(-1px);
+}
+
+.hv3-music-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 11px;
+}
+
+.hv3-music-title {
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    color: var(--text-secondary);
+}
+
+.hv3-music-open {
+    font-family: inherit;
+    font-size: 11px;
+    color: var(--text-secondary);
+    background: none;
+    border: 0;
+    padding: 3px 6px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: color 0.18s ease, background 0.18s ease;
+}
+
+.hv3-music-open:hover {
+    color: var(--text);
+    background: rgba(0, 0, 0, 0.06);
+}
+
+.hv3-music-body {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.hv3-music-cover {
+    width: 56px;
+    height: 56px;
+    flex: none;
+    border-radius: 14px;
+    overflow: hidden;
+    background: rgba(0, 0, 0, 0.06);
+    transition: opacity 0.25s ease;
+}
+
+.hv3-music-cover img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.hv3-music:not(.is-playing) .hv3-music-cover {
+    opacity: 0.55;
+}
+
+.hv3-music-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.hv3-music-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.hv3-music-artist {
+    font-size: 12px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.hv3-music-lyric {
+    position: relative;
+    height: 16px;
+    overflow: hidden;
+    font-size: 12px;
+    color: var(--text-secondary);
+    opacity: 0;
+    transition: opacity 0.22s ease;
+}
+
+.hv3-music.is-playing .hv3-music-lyric {
+    opacity: 1;
+}
+
+.hv3-music-ctls {
+    display: flex;
+    gap: 6px;
+    margin-top: 11px;
+    opacity: 0.32;
+    transition: opacity 0.22s ease;
+}
+
+.hv3-music.is-playing .hv3-music-ctls {
+    opacity: 1;
+}
+
+.hv3-music-ctls button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: 1px solid var(--border, rgba(0, 0, 0, 0.1));
+    border-radius: 50%;
+    background: transparent;
+    color: var(--text);
+    cursor: pointer;
+    transition: transform 0.18s ease, background 0.18s ease;
+}
+
+.hv3-music-ctls button:hover {
+    background: rgba(0, 0, 0, 0.07);
+}
+
+.hv3-music-ctls button:active {
+    transform: scale(0.92);
+}
+
+.hv3-music-ctls svg {
+    display: block;
+    width: 14px;
+    height: 14px;
+}
+
+.hv3-music-ctls .icon-play {
+    display: none;
+}
+
+.hv3-music.paused .hv3-music-ctls .icon-pause {
+    display: none;
+}
+
+.hv3-music.paused .hv3-music-ctls .icon-play {
+    display: block;
+}
+
 /* 手机上没有 hover、dock 也塞不下：岛恢复成顶部独立浮层，导航靠圆按钮唤出 */
 @media (max-width: 760px) {
     .top-dock { gap: 6px; }
