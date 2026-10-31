@@ -844,13 +844,11 @@
     const mute = doc.getElementById('petQuietToggle');
     if (mute) {
       setPressed(mute, !STATE.enabled);
-      mute.textContent = STATE.enabled ? '🔔' : '🔕';
       mute.title = STATE.enabled ? '安静一会儿' : '继续陪我';
     }
     const tts = doc.getElementById('petTtsToggle');
     if (tts) {
       setPressed(tts, STATE.ttsOn);
-      tts.textContent = STATE.ttsOn ? '🔊' : '🔈';
       tts.title = STATE.ttsOn ? '关掉朗读' : '朗读回复';
     }
     // 朗读开着才显示音色选择
@@ -981,8 +979,21 @@
       btn.type = 'button';
       btn.className = 'pet-tool';
       btn.id = 'petWakeToggle';
-      btn.textContent = '👂';
       btn.setAttribute('aria-pressed', 'false');
+      // 简笔画风的耳朵
+      const NS = 'http://www.w3.org/2000/svg';
+      const svg = doc.createElementNS(NS, 'svg');
+      svg.setAttribute('viewBox', '0 0 24 24');
+      svg.setAttribute('aria-hidden', 'true');
+      [
+        'M9.5 21c0-3.4 2.6-4.6 4-6.4 1.1-1.4 1.5-2.9 1.5-4.6a5 5 0 1 0-10 0c0 .9.2 1.7.5 2.5',
+        'M11 9.8a2.1 2.1 0 0 1 0 4.2',
+      ].forEach((d) => {
+        const path = doc.createElementNS(NS, 'path');
+        path.setAttribute('d', d);
+        svg.appendChild(path);
+      });
+      btn.appendChild(svg);
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
         toggleWake();

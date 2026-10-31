@@ -7578,6 +7578,36 @@ body.canvas-on .reading-progress {
     transform: scale(0.92);
 }
 
+/* 工具按钮用细线条图标（简笔画风），开/关各一个 svg 叠在同一格里 */
+.pet-tool svg,
+.pet-chat-close svg {
+    grid-area: 1 / 1;
+    width: 15px;
+    height: 15px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.pet-chat-close svg {
+    width: 14px;
+    height: 14px;
+}
+
+.pet-tool .pet-ico-on {
+    display: none;
+}
+
+.pet-tool.is-on .pet-ico-on {
+    display: block;
+}
+
+.pet-tool.is-on .pet-ico-off {
+    display: none;
+}
+
 .pet-chat-close {
     font-size: 16px;
 }

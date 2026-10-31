@@ -15,7 +15,7 @@
     <meta property="og:image" content="https://ravennull.work/images/Default/web-logo.webp">
     <meta property="og:locale" content="zh_CN">
     <meta name="twitter:card" content="summary">
-    <link rel="stylesheet" href="css/bundle.css?v=253875b369">
+    <link rel="stylesheet" href="css/bundle.css?v=3339bb9673">
     <title>渡鸦 NULL · 日光与暮色之间</title>
     <link rel="icon" id="siteFavicon" href="/images/Default/web-logo.webp" type="image/webp">
     <link rel="apple-touch-icon" href="/images/Default/web-logo.webp">
@@ -501,9 +501,17 @@
             <div class="pet-chat-head">
                 <span class="pet-chat-title">渡鸦</span>
                 <div class="pet-chat-tools">
-                    <button type="button" class="pet-tool" id="petTtsToggle" title="朗读回复" aria-pressed="false">🔈</button>
-                    <button type="button" class="pet-tool" id="petQuietToggle" title="安静一会儿" aria-pressed="false">🔔</button>
-                    <button type="button" class="pet-chat-close" id="petChatClose" title="收起">×</button>
+                    <button type="button" class="pet-tool" id="petTtsToggle" title="朗读回复" aria-pressed="false">
+                        <svg class="pet-ico-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 9.5h3.4l4.6-4v13l-4.6-4H4.5z"/><path d="M15.4 9.2a4 4 0 0 1 0 5.6"/><path d="M17.9 6.6a7.4 7.4 0 0 1 0 10.8"/></svg>
+                        <svg class="pet-ico-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 9.5h3.4l4.6-4v13l-4.6-4H4.5z"/><path d="M4 20L20 4"/></svg>
+                    </button>
+                    <button type="button" class="pet-tool" id="petQuietToggle" title="安静一会儿" aria-pressed="false">
+                        <svg class="pet-ico-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.2a4.6 4.6 0 0 0-4.6 4.6v3.4L5.8 15h12.4l-1.6-2.8V8.8A4.6 4.6 0 0 0 12 4.2z"/><path d="M10.2 18a1.9 1.9 0 0 0 3.6 0"/><path d="M4 20L20 4"/></svg>
+                        <svg class="pet-ico-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.2a4.6 4.6 0 0 0-4.6 4.6v3.4L5.8 15h12.4l-1.6-2.8V8.8A4.6 4.6 0 0 0 12 4.2z"/><path d="M10.2 18a1.9 1.9 0 0 0 3.6 0"/></svg>
+                    </button>
+                    <button type="button" class="pet-chat-close" id="petChatClose" title="收起">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12"/><path d="M18 6L6 18"/></svg>
+                    </button>
                 </div>
             </div>
             <div class="pet-chat-log" id="petChatLog" aria-live="polite"></div>
@@ -1173,7 +1181,7 @@
         'vendor/grok/character.js?v=1.0.2',
         'js/gallery-wall.js?v=1.3.0',
         'js/pet-core.js?v=2.0.15',
-        'js/pet-mind.js?v=2.0.10'
+        'js/pet-mind.js?v=2.0.11'
     ];
     var started = false;
     function load() {
