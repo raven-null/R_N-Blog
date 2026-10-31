@@ -15,7 +15,7 @@
     <meta property="og:image" content="https://ravennull.work/images/Default/web-logo.webp">
     <meta property="og:locale" content="zh_CN">
     <meta name="twitter:card" content="summary">
-    <link rel="stylesheet" href="css/bundle.css?v=838022f5da">
+    <link rel="stylesheet" href="css/bundle.css?v=aac2832824">
     <title>渡鸦 NULL · 日光与暮色之间</title>
     <link rel="icon" id="siteFavicon" href="/images/Default/web-logo.webp" type="image/webp">
     <link rel="apple-touch-icon" href="/images/Default/web-logo.webp">
@@ -75,7 +75,7 @@
     <script src="/js/tone.js?v=20261030" defer></script>
 <script src="/js/experience.js?v=20261103a" defer></script>
     <!-- 音乐视图：iframe 的加载 / 遮罩 / 探活 / 降级都归它管，defer 保证在 DOM 解析后拿到节点 -->
-    <script src="/js/music-view.js?v=1.0.0" defer></script>
+    <script src="/js/music-view.js?v=1.0.3" defer></script>
 </head>
 
 <body class="home-layout">
@@ -227,6 +227,8 @@
                 <!-- 视图：音乐（内嵌 Folia 播放器；桌面首页就预加载，手机走降级卡片） -->
                 <section class="view view-music" id="view-music" style="display:none;">
                     <div id="musicBooting"><div class="music-spinner" aria-hidden="true"></div><span>正在唤醒播放器…</span></div>
+                    <!-- 顶部热区：浮层 iframe 会吞掉整页的 mousemove，靠这条透明带把导航唤出来 -->
+                    <div id="musicHotzone" aria-hidden="true"></div>
                     <!-- src 必须先占位：空 src 的 iframe 会把本页当成地址，导致无限递归加载。
                          注意：绝对不能加 sandbox，Folia 靠 localStorage 存登录态。 -->
                     <iframe id="musicFrame" src="about:blank" title="Folia 音乐播放器"
@@ -551,7 +553,7 @@
     <!-- 桌宠动效引擎（spring-driven character，见 public/vendor/grok/README.md） -->
 
     <!-- /js/* 是 immutable 长缓存：app.js 一改就必须换 ?v=，否则线上一直吃旧文件 -->
-    <script src="js/app.js?v=20261104b" defer></script>
+    <script src="js/app.js?v=20261104c" defer></script>
     <script src="js/animations.js?v=3.14.0" defer></script>
 
     <script>

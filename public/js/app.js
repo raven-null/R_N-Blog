@@ -695,9 +695,9 @@ const BlogApp = {
         // 音乐视图：铺满滚动区、不要 main-content 的限宽与内边距（见 css/music.css）
         document.body.classList.toggle('view-music-active', view === 'music');
         // 音乐视图里顶栏浮在播放器上（position: fixed + pointer-events: none），
-        // 收起态只露 6px 小边会让人找不到导航，这里强制展开胶囊（复用 bundle.css 的 .is-open）
+        // 展开/收起由 js/music-view.js 按鼠标位置驱动；切到别的视图时把残留的展开态收掉
         const topBarPill = document.getElementById('topBarPill');
-        if (topBarPill) topBarPill.classList.toggle('is-open', view === 'music');
+        if (topBarPill && view !== 'music') topBarPill.classList.remove('is-open');
         // 切换视图时隐藏分类面板
         const tagPanel = document.getElementById('galleryTagFloatPanel');
         if (tagPanel) tagPanel.classList.remove('show');

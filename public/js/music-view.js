@@ -130,12 +130,79 @@
     }, 150);
   }, { passive: true });
 
+  // ---------- 顶栏自动隐藏 ----------
+  // 音乐视图里顶栏是浮层（.top-bar 设了 pointer-events: none），不会自己响应 hover。
+  // 麻烦的是指针进 iframe 之后，父文档收不到 mousemove，元素的 :hover 也不会更新
+  // （实测 pill.matches(':hover') 会一直停在 true），所以这里一律用「最近有没有真的动过」来判断：
+  //   动过（热区/pill 上的 mouseenter、mousemove、click）→ 展开并刷新时间戳
+  //   HIDE_DELAY 内没再动过 → 收起
+  var HOT_ZONE = 90;
+  var HIDE_DELAY = 2000;
+  var pill = document.getElementById('topBarPill');
+  var barTimer = 0;
+  var lastTouch = 0;
+
+  function inMusicView() {
+    return document.body.classList.contains('view-music-active');
+  }
+
+  function showBar() {
+    if (!pill) return;
+    clearTimeout(barTimer);
+    pill.classList.add('is-open');
+    barTimer = setTimeout(hideBar, HIDE_DELAY);
+  }
+
+  // 任何真实交互都算「还在用导航」
+  function touchBar() {
+    lastTouch = Date.now();
+    showBar();
+  }
+
+  function hideBar() {
+    if (!pill || !inMusicView()) return;
+    if (Date.now() - lastTouch < HIDE_DELAY) {
+      barTimer = setTimeout(hideBar, HIDE_DELAY);
+      return;
+    }
+    pill.classList.remove('is-open');
+  }
+
+  document.addEventListener('mousemove', function (e) {
+    if (!inMusicView()) return;
+    // 只在顶部一带唤出（页面大部分被 iframe 盖着，这里基本只在降级卡片/空态时才走到）
+    if (e.clientY <= HOT_ZONE) touchBar();
+  }, { passive: true });
+
+  // 顶部透明热区：iframe 吞掉 mousemove 时，靠它把导航唤出来
+  var hotzone = document.getElementById('musicHotzone');
+  if (hotzone) {
+    hotzone.addEventListener('mouseenter', function () {
+      if (inMusicView()) touchBar();
+    });
+    hotzone.addEventListener('mousemove', function () {
+      if (inMusicView()) touchBar();
+    });
+  }
+  // 指针停在胶囊上操作时持续续命；离开后 lastTouch 不再更新，HIDE_DELAY 后自动收起
+  if (pill) {
+    ['mouseenter', 'mousemove', 'click'].forEach(function (type) {
+      pill.addEventListener(type, function () {
+        if (inMusicView()) touchBar();
+      }, { passive: true });
+    });
+  }
+
+  // 触屏没有 mousemove：保持 bundle.css 的「触屏常显」行为，这里不做拦截
+
   // ---------- 对外接口 ----------
   window.MusicView = {
     // app.js 每次切到音乐视图时调用
     onShow: function () {
       syncLayout();
       syncHeight();
+      // 进来先亮一会儿，让人知道导航在这儿，随后自动收起
+      touchBar();
     }
   };
 

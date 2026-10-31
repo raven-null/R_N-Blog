@@ -14506,6 +14506,17 @@ body.screensaver-on > *:not(.screensaver) {
    但内容是全屏 iframe，所以要摆脱 main-content 的限宽与内边距。
    ============================================================ */
 
+/* 顶部热区：iframe 盖住整页时父文档收不到 mousemove，
+   靠这条 24px 透明带把导航唤出来（和视频网站一个套路） */
+#musicHotzone {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 24px;
+    z-index: 3;
+}
+
 /* 音乐视图：导航栏浮在播放器之上（不占文档流），播放器顶到最上面 */
 body.view-music-active .top-bar {
     position: fixed;
