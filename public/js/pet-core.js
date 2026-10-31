@@ -684,17 +684,36 @@
     host.className = 'deskpet-orbit';
     host.id = 'deskpetOrbit';
 
+    // 细线条图标（stroke 取 currentColor，跟主题走）
+    const NS = 'http://www.w3.org/2000/svg';
+    const ICONS = {
+      chat: ['M4.5 5.5h15v9.5h-9.6l-5.4 4.2z'],
+      tts: ['M4.5 9.5h3.4l4.6-4v13l-4.6-4H4.5z', 'M15.4 9.2a4 4 0 0 1 0 5.6', 'M17.9 6.6a7.4 7.4 0 0 1 0 10.8'],
+      sleep: ['M20 14.4A8.4 8.4 0 0 1 9.6 4a7 7 0 1 0 10.4 10.4z'],
+    };
+    const makeIcon = (key) => {
+      const svg = doc.createElementNS(NS, 'svg');
+      svg.setAttribute('viewBox', '0 0 24 24');
+      svg.setAttribute('aria-hidden', 'true');
+      (ICONS[key] || []).forEach((d) => {
+        const path = doc.createElementNS(NS, 'path');
+        path.setAttribute('d', d);
+        svg.appendChild(path);
+      });
+      return svg;
+    };
+
     const actions = [
-      { key: 'chat', icon: '💬', label: '聊天', run: () => openChat() },
-      { key: 'tts', icon: '🔊', label: '朗读 / 静音', run: () => global.PetMind?.toggleTTS?.() },
-      { key: 'sleep', icon: '🌙', label: '睡觉 / 唤醒', run: () => toggleSleep() },
+      { key: 'chat', label: '聊天', run: () => openChat() },
+      { key: 'tts', label: '朗读 / 静音', run: () => global.PetMind?.toggleTTS?.() },
+      { key: 'sleep', label: '睡觉 / 唤醒', run: () => toggleSleep() },
     ];
     actions.forEach((a) => {
       const btn = doc.createElement('button');
       btn.type = 'button';
       btn.className = 'deskpet-orbit-item';
       btn.dataset.petAction = a.key;
-      btn.textContent = a.icon;
+      btn.appendChild(makeIcon(a.key));
       btn.title = a.label;
       btn.setAttribute('aria-label', a.label);
       btn.addEventListener('pointerdown', (e) => e.stopPropagation());
@@ -713,19 +732,21 @@
     const show = (delay) => {
       clearTimeout(hideTimer);
       clearTimeout(showTimer);
-      showTimer = setTimeout(() => {
+      const paint = () => {
         if (S.dragging) return;
         layoutOrbit();
         host.classList.add('is-show');
-      }, delay === undefined ? 160 : delay);
+      };
+      if (!delay) { paint(); return; }
+      showTimer = setTimeout(paint, delay);
     };
     const hideLater = (ms) => {
       clearTimeout(showTimer);
       clearTimeout(hideTimer);
-      hideTimer = setTimeout(() => host.classList.remove('is-show'), ms === undefined ? 450 : ms);
+      hideTimer = setTimeout(() => host.classList.remove('is-show'), ms === undefined ? 1200 : ms);
     };
 
-    body.addEventListener('pointerenter', () => { if (!S.sleeping) show(); });
+    body.addEventListener('pointerenter', () => { if (!S.sleeping) show(0); });
     body.addEventListener('pointerleave', () => hideLater());
     host.addEventListener('pointerenter', () => clearTimeout(hideTimer));
     host.addEventListener('pointerleave', () => hideLater());

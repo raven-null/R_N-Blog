@@ -6179,18 +6179,21 @@ body.screensaver-on .deskpet {
 
 .deskpet-orbit-item {
     position: absolute;
-    width: 30px;
-    height: 30px;
-    margin: -15px 0 0 -15px;
+    width: 32px;
+    height: 32px;
+    margin: -16px 0 0 -16px;
     display: grid;
     place-items: center;
     padding: 0;
-    font-size: 13px;
+    font-size: 14px;
     line-height: 1;
     color: var(--text-secondary);
-    background: color-mix(in srgb, var(--card-bg, #16161f) 82%, transparent);
-    border: 1px solid var(--line-soft, rgba(255, 255, 255, 0.55));
+    background: color-mix(in srgb, var(--surface, #ffffff) 68%, transparent);
+    border: 1px solid var(--border, rgba(20, 24, 44, 0.14));
     border-radius: 50%;
+    box-shadow: 0 6px 18px rgba(10, 14, 32, 0.16);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
     cursor: pointer;
     opacity: 0;
     transform: scale(0.62);
@@ -6199,8 +6202,19 @@ body.screensaver-on .deskpet {
         opacity 0.18s ease,
         transform 0.24s cubic-bezier(0.22, 1, 0.36, 1),
         border-color 0.18s,
-        color 0.18s;
+        color 0.18s,
+        box-shadow 0.18s;
     transition-delay: calc(var(--orbit-i, 0) * 45ms);
+}
+
+.deskpet-orbit-item svg {
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
 }
 
 .deskpet-orbit.is-show .deskpet-orbit-item {
@@ -6217,6 +6231,7 @@ body.screensaver-on .deskpet {
 .deskpet-orbit-item:focus-visible {
     color: var(--text);
     border-color: var(--accent, #f0a20c);
+    box-shadow: 0 8px 22px rgba(10, 14, 32, 0.22), 0 0 0 3px var(--accent-soft, rgba(240, 162, 12, 0.18));
     transform: scale(1.1);
     outline: none;
 }
