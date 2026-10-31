@@ -41,7 +41,9 @@ body:not(.view-music-active):not(.island-mode) .top-bar:hover .top-bar-pill {
 @media (min-width: 761px) {
     .top-dock {
         position: relative;
-        width: 470px;
+        /* 要装得下最宽的那个状态：导航展开 479 + 圆按钮 46 = 525，留点余量。
+           给窄了会把最后一个视图按钮裁掉（音乐就是被这么挤没的）。 */
+        width: 540px;
         max-width: calc(100vw - 32px);
         padding-left: 46px;   /* 给圆按钮留出固定位置 */
     }
@@ -285,8 +287,34 @@ body.view-music-active .now-island {
     letter-spacing: 0.02em;
     white-space: nowrap;
     overflow: hidden;
-    text-overflow: ellipsis;
     transition: opacity 0.18s ease;
+}
+
+/* 真正滚动的内层：文字比容器宽时由 JS 加 is-scrolling 做跑马灯 */
+.now-island-run {
+    display: inline-block;
+    white-space: nowrap;
+    will-change: transform;
+}
+
+.now-island-run.is-scrolling {
+    animation: island-marquee var(--marquee-duration, 10s) linear infinite;
+    animation-delay: 1.4s;
+}
+
+@keyframes island-marquee {
+    0%, 12% {
+        transform: translateX(0);
+    }
+    88%, 100% {
+        transform: translateX(var(--marquee-x, -40px));
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .now-island-run.is-scrolling {
+        animation: none;
+    }
 }
 
 .now-island-title {

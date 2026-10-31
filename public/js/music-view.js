@@ -127,6 +127,10 @@
       syncHeight();
       // 断点可能变了；已强制内嵌的用户不回退到降级卡片
       if (!forcedInline()) syncLayout();
+      // 宽度变了要重新判断文字还溢不溢出
+      if (window.MusicView && typeof window.MusicView.refreshMarquee === 'function') {
+        window.MusicView.refreshMarquee();
+      }
     }, 150);
   }, { passive: true });
 
@@ -312,6 +316,45 @@
     }
   });
 
+  // ---------- 超长文字跑马灯 ----------
+  // 标题/歌词只在真的超出岛宽时才滚动；否则保持静止。
+  function getRun(el) {
+    if (!el) return null;
+    var run = el.querySelector('.now-island-run');
+    if (!run) {
+      run = document.createElement('span');
+      run.className = 'now-island-run';
+      el.appendChild(run);
+    }
+    return run;
+  }
+
+  function setRunText(el, text) {
+    var run = getRun(el);
+    if (!run || run.textContent === text) return false;
+    run.textContent = text;
+    return true;
+  }
+
+  function updateMarquee(el) {
+    var run = getRun(el);
+    if (!run) return;
+    run.classList.remove('is-scrolling');
+    run.style.removeProperty('--marquee-x');
+    run.style.removeProperty('--marquee-duration');
+    // 先强制一次布局，避免量到上一轮动画里的旧值
+    void run.offsetWidth;
+    // 岛收起时容器宽为 0，这时候不判断（等它展开后 applyNowPlaying 会再量一次）
+    if (el.clientWidth < 20) return;
+    var overflow = run.scrollWidth - el.clientWidth;
+    if (overflow > 6) {
+      var shift = overflow + 12;
+      run.style.setProperty('--marquee-x', '-' + shift + 'px');
+      run.style.setProperty('--marquee-duration', Math.max(6, Math.round(shift / 28)) + 's');
+      run.classList.add('is-scrolling');
+    }
+  }
+
   // 换句先淡出再换字，避免文字硬闪
   function setIslandLyric(text) {
     if (!islandLyric || text === lastLyricText) return;
@@ -319,9 +362,20 @@
     clearTimeout(lyricSwapTimer);
     islandLyric.classList.add('is-flipping');
     lyricSwapTimer = setTimeout(function () {
-      islandLyric.textContent = text;
+      setRunText(islandLyric, text);
+      updateMarquee(islandLyric);
       islandLyric.classList.remove('is-flipping');
     }, 140);
+  }
+
+  // 岛展开有 0.34s 的宽度过渡，等它到位再量一次（首次显示时宽度还是 0，量不出真实溢出）
+  var marqueeTimer = 0;
+  function scheduleMarqueeUpdate() {
+    clearTimeout(marqueeTimer);
+    marqueeTimer = setTimeout(function () {
+      updateMarquee(islandTitle);
+      updateMarquee(islandLyric);
+    }, 380);
   }
 
   function applyNowPlaying(data) {
@@ -339,7 +393,7 @@
 
     var title = song.name || '';
     if (song.artist) title += ' · ' + song.artist;
-    if (islandTitle && islandTitle.textContent !== title) islandTitle.textContent = title;
+    if (setRunText(islandTitle, title)) updateMarquee(islandTitle);
 
     if (islandCover && song.cover && song.cover !== lastCover) {
       lastCover = song.cover;
@@ -350,6 +404,9 @@
     // 有歌词就只显示歌词，没有才显示「歌名 · 歌手」——两行叠在一起，靠 has-lyric 切换
     island.classList.toggle('has-lyric', !!lyric);
     if (lyric) setIslandLyric(lyric);
+
+    // 岛刚展开时宽度还是 0，量不出溢出；等过渡走完再判定一次跑马灯
+    scheduleMarqueeUpdate();
   }
 
   window.addEventListener('message', function (event) {
@@ -409,7 +466,11 @@
       syncHeight();
       // 进来先亮一会儿，让人知道导航在这儿，随后自动收起
       touchBar();
-    }
+      // 视图重新显示后宽度恢复了，重新判断文字要不要滚
+      scheduleMarqueeUpdate();
+    },
+    // 窗口尺寸变化后重新判断跑马灯
+    refreshMarquee: scheduleMarqueeUpdate
   };
 
   // ---------- 预加载 ----------
