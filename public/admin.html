@@ -375,8 +375,8 @@
         .settings-field:last-child{margin-bottom:0}
         .settings-field label{display:block;font-size:12px;color:var(--text-muted);margin-bottom:6px}
         .required-mark{color:var(--danger);font-weight:700;margin-left:2px}
-        .settings-field input,.settings-field textarea{width:100%;padding:10px 14px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:13px;font-family:inherit;resize:vertical}
-        .settings-field input:focus,.settings-field textarea:focus{outline:none;border-color:var(--accent)}
+        .settings-field input,.settings-field textarea,.settings-field select{width:100%;padding:10px 14px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:13px;font-family:inherit;resize:vertical}
+        .settings-field input:focus,.settings-field textarea:focus,.settings-field select:focus{outline:none;border-color:var(--accent)}
         /* 模型选择 / 测试连接 / 高级设置 */
         .settings-model-row{display:flex;gap:8px}
         .settings-model-row select{flex:1;min-width:0;padding:10px 12px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:13px;cursor:pointer;font-family:inherit}
@@ -1197,9 +1197,9 @@
                             <div class="settings-tip">写作页右侧「AI」页签用这套配置：只回答写作中的疑问，不读取正文、也不会改正文；密钥独立，不影响访客端聊天。<br>小米 MiMo 的 <code>tp-</code> 开头密钥（Token Plan）请选「小米 MiMo（Token Plan）」，选错会 401。</div>
                         </div>
 
-                        <!-- 桌宠 · 日常对话（右下角枯梦） -->
+                        <!-- 桌宠（右下角枯梦）：对话表现 + 朗读合成放在一起 -->
                         <div class="settings-group">
-                            <h3><span class="settings-title">桌宠 · 日常对话（右下角的枯梦）</span><span class="settings-grip" title="拖动排序">⠿</span><span class="settings-chevron" title="展开/收起">▾</span></h3>
+                            <h3><span class="settings-title">桌宠（右下角的枯梦）</span><span class="settings-grip" title="拖动排序">⠿</span><span class="settings-chevron" title="展开/收起">▾</span></h3>
                             <div class="settings-toggle-list">
                                 <div class="settings-toggle-item"><span>显示桌宠</span><label class="switch"><input type="checkbox" id="setPetEnabled" checked><span class="slider"></span></label></div>
                                 <div class="settings-toggle-item"><span>主动搭话</span><label class="switch"><input type="checkbox" id="setPetAutoTalk" checked><span class="slider"></span></label></div>
@@ -1221,13 +1221,7 @@
                                 <label>性格 / 口吻（追加到 AI 提示词）</label>
                                 <textarea id="setPetPersona" rows="3" placeholder="例如：说话简短，偶尔用「喵」，别把每句都写成卖萌"></textarea>
                             </div>
-                            <div class="settings-tip">对话走上面「AI 助手」的厂商 / 模型 / 密钥（`/api/ai`），这里只调它的日常表现；上面的 AI 关闭时桌宠也不会回话。</div>
-                        </div>
-
-                        <!-- 桌宠 · 朗读（TTS） -->
-                        <div class="settings-group">
-                            <h3><span class="settings-title">桌宠 · 朗读（浏览器 TTS）</span><span class="settings-grip" title="拖动排序">⠿</span><span class="settings-chevron" title="展开/收起">▾</span></h3>
-                            <div class="settings-toggle-list">
+                            <div class="settings-toggle-list" style="margin-top:14px">
                                 <div class="settings-toggle-item"><span>默认朗读回复</span><label class="switch"><input type="checkbox" id="setPetTts"><span class="slider"></span></label></div>
                             </div>
                             <div class="settings-field">
@@ -1242,7 +1236,7 @@
                                 <label>音色关键词（留空 = 自动挑中文语音）</label>
                                 <input type="text" id="setPetTtsVoice" placeholder="如 Xiaoxiao / Yaoyao / Yunjian / Google" maxlength="40">
                             </div>
-                            <div class="settings-tip">用系统自带的语音合成（Chrome / Edge 中文声音最好）。音色取决于访客本机的语音列表，这里填的关键词会做模糊匹配，匹配不到就退回自动；访客也能在对话面板里自己换。他点过面板上的 🔊 / 🔈 就以他的选择为准。</div>
+                            <div class="settings-tip">对话走上面「AI 助手」的厂商 / 模型 / 密钥（`/api/ai`），这里的 AI 关闭时桌宠也不会回话。<br>朗读用系统自带的语音合成（Chrome / Edge 中文声音最好）；音色取决于访客本机的语音列表，关键词做模糊匹配、匹配不到就退回自动，访客也能在对话面板里自己换。</div>
                         </div>
                         </div>
 

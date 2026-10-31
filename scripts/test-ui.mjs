@@ -90,20 +90,20 @@ assert.ok(!core.storage.get('pet-asleep'),'default state is awake');
 
 const press=(x=500,y=500)=>{bodyNode.dispatch('pointerdown',{button:0,pointerType:'mouse',clientX:x,clientY:y,cancelable:true,preventDefault(){}});};
 const release=()=>fireWin('pointerup',{pointerId:1});
+// 测试环境的 setTimeout 是手动队列：双击的确认定时器要手动跑掉
+const flushTapWindow=()=>{
+  let hit=0;
+  for(const [id,t] of [...core.timers]) if(t.ms===380){core.timers.delete(id);t.fn();hit++;}
+  return hit;
+};
 
-// 单击：立刻给动作反馈，不睡觉
+// 单击：立刻召唤对话框（这里没有 PetMind，退化成冒一句），不睡觉
 press();release();flushRaf();
 assert.equal(PetCore.sleeping,false,'single tap does not sleep');
 assert.ok(engineStates.includes('excited'),'single tap plays a reaction');
-// 测试环境的 setTimeout 是手动队列：把单击窗口结算掉，否则会和三连击判定累计
-const flushTapWindow=()=>{
-  let hit=0;
-  for(const [id,t] of [...core.timers]) if(t.ms===420){core.timers.delete(id);t.fn();hit++;}
-  return hit;
-};
-flushTapWindow();
 
 // 拖拽：位置被夹在视口内并记住（按比例存）
+await new Promise(resolve=>setTimeout(resolve,1300));   // 让连击窗口过期
 press(500,500);fireWin('pointermove',{clientX:300,clientY:300});flushRaf();
 assert.equal(petNode.style.left,'910px','drag moves the pet with the pointer');
 assert.equal(petNode.style.top,'510px','drag moves the pet vertically');
@@ -111,17 +111,17 @@ release();flushRaf();
 const saved=JSON.parse(core.storage.get('deskpet_pos_v2')||'null');
 assert.ok(saved&&typeof saved.rx==='number','drag position is stored as a viewport ratio');
 
-// 双击：两次点击落在同一个 420ms 窗口 → 睡觉
-press();release();            // 第 1 下
-press();release();            // 第 2 下
-assert.ok(flushTapWindow()>0,'tap window timer is scheduled');
+// 双击：第二下后 380ms 内没有第三下 → 睡觉
+press();release();            // 第 1 下（立刻开对话框）
+press();release();            // 第 2 下（挂上确认定时器）
+assert.ok(flushTapWindow()>0,'double tap schedules a sleep confirmation');
 flushRaf();
 assert.equal(PetCore.sleeping,true,'double tap puts the pet to sleep');
 assert.equal(petNode.dataset.state,'sleep');
 assert.equal(core.storage.get('pet-asleep'),'1','sleep state survives reloads');
 assert.ok(engineStates.includes('sleeping'));
 
-// 三连击：进对话模式（这里没有 PetMind，退化成冒一句，但不能睡）
+// 三连击：进实时对话，不睡觉
 PetCore.toggleSleep(false);
 press();release();press();release();press();release();
 flushTapWindow();

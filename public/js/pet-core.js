@@ -443,13 +443,19 @@
     let pending = null;
     let frame = 0;
     let lastTap = 0;
-    // 连击判定窗口：单击开面板、双击睡觉、三连击进对话模式
-    const TAP_WINDOW = 420;
+    // 单击立刻开对话框；第二下先等 DOUBLE_DELAY 看有没有第三下，
+    // 免得「连点三下进实时对话」被误判成双击睡觉
+    const TRIPLE_WINDOW = 1200;
+    const DOUBLE_DELAY = 380;
     const tapTimes = [];
     const toggleVoiceMode = () => {
       const mind = global.PetMind;
       if (mind && typeof mind.toggleVoiceMode === 'function') mind.toggleVoiceMode();
       else speakRandom();
+    };
+    const closeChat = () => {
+      const mind = global.PetMind;
+      if (mind && typeof mind.closePanel === 'function') mind.closePanel();
     };
     let vx = 0;
     let vy = 0;
@@ -529,24 +535,32 @@
         toggleSleep(false);
         return;
       }
-      lastTap = Date.now();
+      const now = Date.now();
+      lastTap = now;
+      tapTimes.push(now);
+      while (tapTimes.length && now - tapTimes[0] > TRIPLE_WINDOW) tapTimes.shift();
       react();                             // 立刻给动作反馈
-      // 1 / 2 / 3 连击的判定都推迟到窗口结束，避免「双击睡觉」和「三连击进对话模式」打架
-      tapTimes.push(lastTap);
-      clearTimeout(S.tapTimer);
-      if (tapTimes.length >= 3) {
-        tapTimes.length = 0;
+
+      if (tapTimes.length >= 3) {          // 三连击：实时对话
+        clearTimeout(S.tapTimer);
         S.tapTimer = 0;
+        tapTimes.length = 0;
         toggleVoiceMode();
         return;
       }
-      S.tapTimer = setTimeout(() => {
-        S.tapTimer = 0;
-        const n = tapTimes.length;
-        tapTimes.length = 0;
-        if (n >= 2) toggleSleep();
-        else openChat();
-      }, TAP_WINDOW);
+      if (tapTimes.length === 2) {         // 第二下：先别睡，等一等看有没有第三下
+        clearTimeout(S.tapTimer);
+        S.tapTimer = setTimeout(() => {
+          S.tapTimer = 0;
+          if (tapTimes.length !== 2) return;
+          tapTimes.length = 0;
+          closeChat();
+          toggleSleep();
+        }, DOUBLE_DELAY);
+        return;
+      }
+      // 单击：立刻召唤对话框（不等窗口，点了就有反应）
+      openChat();
     };
 
     S.dragging = false;
