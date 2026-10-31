@@ -264,11 +264,34 @@
   if (dockOrb) {
     dockOrb.addEventListener('mouseenter', openNavByHover);
     dockOrb.addEventListener('mouseleave', scheduleNavClose);
-    // 点击也切换一次，方便触屏和键盘用户
     dockOrb.addEventListener('click', function (e) {
       e.stopPropagation();
+      // 桌面端鼠标悬停已经能把导航唤出来，所以点击改成和导航栏品牌名一样：进后台。
+      // 触屏没有 hover，点击仍然负责唤出/收起导航。
+      var canHover = window.matchMedia ? window.matchMedia('(hover: hover)').matches : false;
+      if (canHover) {
+        window.location.href = '/admin';
+        return;
+      }
       setNavDockOpen(!document.body.classList.contains('nav-dock-open'));
     });
+  }
+
+  // 品牌名 + 五个视图按钮放不下时浏览器会让按钮换行：这时收起品牌名（`.is-cramped`），
+  // 进后台的入口就只剩左边那颗圆球。宽度一变就重新判断。
+  function syncPillCramped() {
+    if (!topBarPillEl) return;
+    var views = topBarPillEl.querySelector('.top-bar-views');
+    if (!views) return;
+    // 按钮一行装得下时高度就是个按钮高（34 左右）；换行了会明显变高
+    var wrapped = views.getBoundingClientRect().height > 44;
+    topBarPillEl.classList.toggle('is-cramped', wrapped);
+  }
+
+  syncPillCramped();
+  window.addEventListener('resize', syncPillCramped);
+  if (typeof ResizeObserver === 'function') {
+    new ResizeObserver(syncPillCramped).observe(topBarPillEl);
   }
 
   if (topBarPillEl) {

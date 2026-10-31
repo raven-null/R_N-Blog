@@ -71,8 +71,8 @@ body:not(.view-music-active):not(.island-mode) .top-bar:hover .top-bar-pill {
     display: none;
     align-items: center;
     justify-content: center;
-    width: 38px;
-    height: 38px;
+    width: 42px;
+    height: 42px;
     flex: none;
     padding: 0;
     border: 1px solid rgba(255, 255, 255, 0.12);
@@ -167,7 +167,8 @@ body.island-mode.nav-dock-open:not(.view-music-active) .now-island {
     gap: 9px;
     flex: none;
     width: 0;                  /* 没有歌时完全不占位 */
-    height: 38px;
+    /* 与导航胶囊同高：顶栏里这两块切换时不跳 */
+    height: 42px;
     padding: 4px;
     overflow: hidden;
     border-radius: 999px;
