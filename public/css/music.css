@@ -503,6 +503,57 @@ body.view-music-active .now-island {
     border-color: var(--accent);
 }
 
+/* 进度条：按钮行右侧一条细线 + 时间 */
+.hv3-music-progress {
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    margin-left: 4px;
+}
+
+.hv3-music-progress[hidden] {
+    display: none;
+}
+
+.hv3-music-progress-bar {
+    position: relative;
+    flex: 1 1 auto;
+    height: 4px;
+    min-width: 40px;
+    border-radius: 999px;
+    background: var(--surface-2, rgba(0, 0, 0, 0.08));
+    overflow: hidden;
+}
+
+.hv3-music-progress-bar i {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 0;
+    border-radius: inherit;
+    background: var(--accent, #f0a20c);
+    transition: width 0.25s linear;
+}
+
+.hv3-music-progress-time {
+    flex: none;
+    font-size: 10.5px;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.02em;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+/* 歌词层还没收到第一句时的占位 */
+.hv3-music-lyric-line.is-placeholder {
+    color: var(--text-muted);
+    opacity: 0.45;
+    font-style: italic;
+}
+
 /* 减少动效：翻页直接切 */
 @media (prefers-reduced-motion: reduce) {
     .hv3-music-front,

@@ -556,15 +556,16 @@
         };
       });
       activeIndex = Math.max(0, Math.min(Number(win.active) || 0, rows.length - 1));
-    } else if (lyricHistory.length > 1) {
+    } else if (lyricHistory.length >= 1) {
       rows = lyricHistory.slice();
       activeIndex = rows.length - 1;
     }
 
     if (!rows || !rows.length) {
-      if (lyricsSignature !== '') {
-        lyricsSignature = '';
-        lyricsTrack.innerHTML = '';
+      // 有歌但还没等到第一句歌词：放一行占位，别让歌词层空着
+      if (lyricsSignature !== 'placeholder') {
+        lyricsSignature = 'placeholder';
+        lyricsTrack.innerHTML = '<div class="hv3-music-lyric-line is-placeholder">歌词加载中…</div>';
       }
       return false;
     }
@@ -599,16 +600,59 @@
     });
   }
 
-  // 翻不翻：正在放 + 有歌词窗口 + 鼠标没悬停在卡上
+  // 翻不翻：有歌就翻（不等歌词到齐——歌词层没内容时显示「歌词加载中…」），鼠标停在卡上就翻回
   var cardHovered = false;
 
   function syncCardFlip() {
     if (!musicCard) return;
-    var canFlip = musicCard.classList.contains('is-playing') && !!lyricsTrack && lyricsTrack.childElementCount > 0;
-    musicCard.classList.toggle('has-lyrics', canFlip);
+    var canFlip = musicCard.classList.contains('is-playing');
     musicCard.classList.toggle('is-lyric', canFlip && !cardHovered);
     if (lyricsBox) lyricsBox.setAttribute('aria-hidden', canFlip && !cardHovered ? 'false' : 'true');
   }
+
+  // ---------- 进度条 ----------
+  // 位置来自播放器的推送（整秒），推送之间本地按 250ms 补帧，免得进度条一格一格跳。
+  var progressWrap = document.getElementById('hv3MusicProgress');
+  var progressFill = document.getElementById('hv3MusicProgressFill');
+  var progressTime = document.getElementById('hv3MusicProgressTime');
+  var progressState = { positionMs: 0, durationMs: 0, at: 0, playing: false, shown: false };
+
+  function formatClock(ms) {
+    var total = Math.max(0, Math.round(ms / 1000));
+    var m = Math.floor(total / 60);
+    var s = total % 60;
+    return m + ':' + (s < 10 ? '0' + s : s);
+  }
+
+  function paintProgress(positionMs, durationMs) {
+    if (progressFill) progressFill.style.width = (Math.min(1, positionMs / durationMs) * 100).toFixed(2) + '%';
+    if (progressTime) progressTime.textContent = formatClock(positionMs) + ' / ' + formatClock(durationMs);
+  }
+
+  function syncProgress(data) {
+    if (!progressWrap) return;
+    var song = data && data.song;
+    var durationMs = song && song.durationMs ? Number(song.durationMs) : 0;
+    var positionMs = data && Number.isFinite(data.positionMs) ? Math.max(0, Number(data.positionMs)) : 0;
+    // 老版播放器不推 positionMs，也没有时长时就不显示进度条（不编一个假的出来）
+    var show = !!song && durationMs > 0 && positionMs > 0;
+    if (show !== progressState.shown) {
+      progressState.shown = show;
+      progressWrap.hidden = !show;
+    }
+    if (!show) return;
+    progressState.positionMs = positionMs;
+    progressState.durationMs = durationMs;
+    progressState.at = Date.now();
+    progressState.playing = !!data.playing;
+    paintProgress(positionMs, durationMs);
+  }
+
+  setInterval(function () {
+    if (!progressState.shown || !progressState.playing || !progressState.durationMs) return;
+    var advanced = progressState.positionMs + (Date.now() - progressState.at);
+    paintProgress(Math.min(advanced, progressState.durationMs), progressState.durationMs);
+  }, 250);
 
   function updateMusicCard(data) {
     if (!musicCard) return;
@@ -616,7 +660,8 @@
 
     syncLoopButton(data && data.loopMode);
     accumulateLyric(song, data);
-    var hasLyrics = renderCardLyrics(data);
+    renderCardLyrics(data);
+    syncProgress(data);
 
     if (!song) {
       musicCard.classList.remove('is-playing', 'paused');
@@ -638,8 +683,6 @@
     setRunText(cardLyric, cardLyricText);
     updateMarquee(cardLyric);
 
-    // 没歌词（纯音乐 / 还没匹配到）就不翻，卡片保持原样
-    if (!hasLyrics) musicCard.classList.remove('is-lyric');
     syncCardFlip();
   }
 

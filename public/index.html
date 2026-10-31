@@ -15,7 +15,7 @@
     <meta property="og:image" content="https://ravennull.work/images/Default/web-logo.webp">
     <meta property="og:locale" content="zh_CN">
     <meta name="twitter:card" content="summary">
-    <link rel="stylesheet" href="css/bundle.css?v=e346c7395e">
+    <link rel="stylesheet" href="css/bundle.css?v=c62b1876a8">
     <title>渡鸦 NULL · 日光与暮色之间</title>
     <link rel="icon" id="siteFavicon" href="/images/Default/web-logo.webp" type="image/webp">
     <link rel="apple-touch-icon" href="/images/Default/web-logo.webp">
@@ -381,6 +381,12 @@
                                                 <path class="loop-off" d="M3.2 3.2 20.8 20.8"></path>
                                             </svg>
                                         </button>
+
+                                        <!-- 进度条：位置与总时长都来自播放器的推送（老版播放器不推位置时不显示） -->
+                                        <div class="hv3-music-progress" id="hv3MusicProgress" hidden>
+                                            <span class="hv3-music-progress-bar"><i id="hv3MusicProgressFill"></i></span>
+                                            <span class="hv3-music-progress-time" id="hv3MusicProgressTime">0:00</span>
+                                        </div>
                                     </div>
                                 </div>
 
