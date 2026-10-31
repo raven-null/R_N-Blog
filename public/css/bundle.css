@@ -12696,17 +12696,18 @@ body.home-layout .hv-news-box #newsList .news-item-meta{font-family:var(--font-s
 .hv3-span-7 { grid-column: span 7; }
 .hv3-span-8 { grid-column: span 8; }
 
-/* 卡片底：手写纸卡（与「今天」卡同一套变量），不用毛玻璃 */
+/* 卡片底：手写纸卡（与「今天」卡同一套变量），比原来的 .5 更实一点，
+   不然背景插画透出来整页显空 */
 .hv3-card {
     padding: 16px 18px;
     border-radius: 20px;
-    background: var(--glass-card, rgba(255, 253, 248, .5));
+    background: rgba(255, 253, 248, .74);
     border: 1px solid var(--glass-line, rgba(255, 255, 255, .5));
     box-shadow: 0 10px 26px rgba(20, 26, 44, .08);
 }
 
 html[data-theme="dark"] .hv3-card {
-    background: rgba(22, 25, 34, .66);
+    background: rgba(22, 25, 34, .82);
     border-color: rgba(255, 255, 255, .16);
     backdrop-filter: blur(18px) saturate(1.2);
     -webkit-backdrop-filter: blur(18px) saturate(1.2);
@@ -12732,8 +12733,8 @@ html[data-theme="dark"] .hv3-card {
 }
 
 .hv3-avatar {
-    width: 46px;
-    height: 46px;
+    width: 56px;
+    height: 56px;
     border-radius: 50%;
     object-fit: cover;
     flex: 0 0 auto;
@@ -12759,7 +12760,7 @@ html[data-theme="dark"] .hv3-card {
 
 .hv3-name {
     margin: 0;
-    font-size: 19px;
+    font-size: 22px;
     line-height: 1.2;
     font-weight: 650;
     color: var(--text);
@@ -12767,7 +12768,7 @@ html[data-theme="dark"] .hv3-card {
 
 .hv3-bio {
     margin: 0;
-    font-size: 12px;
+    font-size: 12.5px;
     line-height: 1.4;
     color: var(--text-muted);
     white-space: nowrap;
@@ -12834,27 +12835,28 @@ html[data-theme="dark"] .hv3-card {
     letter-spacing: .06em;
 }
 
-.hv3-toggles { display: flex; gap: 6px; }
+.hv3-toggles { display: flex; gap: 8px; }
 
 .hv3-toggle {
-    width: 26px;
-    height: 26px;
+    width: 40px;
+    height: 40px;
     display: grid;
     place-items: center;
     padding: 0;
-    font-size: 13px;
+    font-size: 16px;
     line-height: 1;
-    color: var(--text-muted);
-    background: transparent;
+    color: var(--text-secondary, var(--text-muted));
+    background: var(--surface-2, rgba(0, 0, 0, .04));
     border: 1px solid var(--border);
     border-radius: 50%;
     cursor: pointer;
-    transition: color .18s, border-color .18s;
+    transition: color .18s, border-color .18s, background .18s, transform .18s;
 }
 
 .hv3-toggle:hover {
     color: var(--text);
     border-color: var(--accent);
+    transform: translateY(-1px);
 }
 
 /* ============================================================
@@ -12874,13 +12876,15 @@ html[data-theme="dark"] .hv3-card {
     align-items: stretch;
 }
 
-/* 显示工具卡：标题 + 三个圆钮（主题 / 手写体 / 屏保） */
+/* 显示工具卡：标题 + 三个圆钮（主题 / 手写体 / 屏保），整体居中 */
 .hv3-tools {
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
-    gap: 10px;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
     min-width: 0;
+    text-align: center;
 }
 
 .hv3-tools-title {
@@ -12891,6 +12895,7 @@ html[data-theme="dark"] .hv3-card {
 }
 
 .hv3-tools .hv3-toggles {
+    justify-content: center;
     flex-wrap: wrap;
 }
 
@@ -12926,16 +12931,16 @@ html[data-theme="dark"] .hv3-card {
 }
 
 /* ============================================================
-   01 · 最近的文字：文字叠在封面上，图片铺满整张卡
+   01 · 最近的文字：文字叠在封面上，封面铺满整块卡
+   （宽度吃满 4 栏，高度跟着所在行 —— 与右侧照片列等高，矩阵里不留白）
    ============================================================ */
 .hv3-car {
     position: relative;
-    /* 宽高都由当前封面的比例算（syncCarouselHeight 写 --car-w / --car-h）：
-       竖图变窄变高、横图变宽变扁，整块轮播跟着封面变大小 */
-    width: var(--car-w, 100%);
-    height: var(--car-h, 360px);
-    margin-inline: auto;
-    transition: width .45s cubic-bezier(.2, .7, .3, 1), height .45s cubic-bezier(.2, .7, .3, 1);
+    flex: 1 1 auto;
+    width: 100%;
+    height: 100%;
+    min-height: 240px;
+    margin-inline: 0;
     border-radius: 18px;
     overflow: hidden;
     background: var(--surface-2, #f3eee1);
@@ -13147,39 +13152,31 @@ html[data-theme="dark"] .hv3-card {
 }
 
 /* ============================================================
-   02 · 生活切片：图库随机播放，宽高都跟当前图比例走（完整显示不裁切）
+   02 · 生活切片：8 栏宽的海报块，固定高度、图片 cover 铺满
+   （JS 照样会写 --shot-w / --shot-h，但那套「盒子跟图片比例变大小」
+     的玩法在矩阵里会撑歪整行，所以这里改成铺满容器 + 裁切）
    ============================================================ */
 
 .hv3-shot {
     position: relative;
-    /* 盒子宽高完全跟当前这张图走（fitShotBox 把算好的 --shot-w / --shot-h
-       和原始宽高比 --shot-ar 写在元素上）：竖图变窄变高、横图变宽变扁，
-       整块跟着图片一起变大变小，居中显示。
-       这里没有任何写死的高度：JS 还没算出尺寸时，aspect-ratio + max-height
-       也保证盒子形状 = 图片比例（既不裁切也不留白） */
-    --shot-max-h: min(56vh, 430px);
-    width: min(var(--shot-w, 100%), calc(var(--shot-max-h) * var(--shot-ar, 1.6)));
-    height: var(--shot-h, auto);
-    aspect-ratio: var(--shot-ar, 1.6);
-    max-height: var(--shot-max-h);
-    margin-inline: auto;
+    width: 100%;
+    height: 260px;
+    margin-inline: 0;
     border-radius: 18px;
     overflow: hidden;
-    /* 不设底色：盒子尺寸 = 图片比例，cover 铺满后看不到任何背景 */
-    background: transparent;
+    background: var(--surface-2, #f3eee1);
     cursor: zoom-in;
     isolation: isolate;
     box-shadow: 0 10px 30px rgba(16, 20, 32, .12);
-    transition: width .45s cubic-bezier(.2, .7, .3, 1), height .45s cubic-bezier(.2, .7, .3, 1);
 }
 
-/* 盒子宽高 = 图片真实像素比例；contain 保证任何情况下都完整显示、绝不裁切 */
+/* 图片铺满海报块，超出部分裁掉（cover） */
 .hv3-shot-img {
     position: absolute;
     inset: 0;
     width: 100%;
     height: 100%;
-    object-fit: contain;
+    object-fit: cover;
     opacity: 0;
     transition: opacity .9s ease;
     will-change: opacity;
@@ -13203,7 +13200,8 @@ html[data-theme="dark"] .hv3-card {
     border-radius: 999px;
     backdrop-filter: blur(6px);
     -webkit-backdrop-filter: blur(6px);
-    opacity: 0;
+    /* 常显：海报块角落一直有个信息，不然大片图看着空 */
+    opacity: .9;
     transition: opacity .25s ease;
     pointer-events: none;
 }
@@ -13216,7 +13214,7 @@ html[data-theme="dark"] .hv3-card {
 .hv3-news {
     /* 右侧子网格里占 2/3，和工具卡同高；高度写死才能让内部列表滚动 */
     grid-column: span 2;
-    height: 196px;
+    height: 176px;
 }
 
 .hv3-ticker {
@@ -13832,7 +13830,14 @@ html[data-theme="dark"] .hv3-shot {
 
     .hv3-hero-right { justify-content: space-between; }
 
-    .hv3-shot { --shot-max-h: min(52vh, 380px); }
+    .hv3-shot { height: 240px; }
+
+    /* 单列时工具卡压成一行：标题在左、三个圆钮在右 */
+    .hv3-tools {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+    }
 
     .hv3-news { height: 216px; }
     .hv3-projects { min-height: 280px; }
