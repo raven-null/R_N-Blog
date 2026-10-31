@@ -648,30 +648,56 @@
     try { return !global.matchMedia || global.matchMedia('(hover: hover)').matches; } catch (e) { return true; }
   }
 
+  // 三个圆的位置：以桌宠中心为原点，朝屏幕内侧扇形铺开。
+  // 注意要「整组平移」进视口 —— 逐点 clamp 会在窄屏/贴边时把三个圆夹到同一条线，
+  // 挤成一根竖条（文章页窄窗口下就是这样变形的）。
   function layoutOrbit() {
     const host = doc.getElementById('deskpetOrbit');
     const pet = petEl();
-    if (!host || !pet) return;
-    const r = pet.getBoundingClientRect();
+    if (!host || !pet || !host.children.length) return;
     const vw = global.innerWidth || 1024;
     const vh = global.innerHeight || 800;
-    const cx = r.left + r.width / 2;
-    const cy = r.top + r.height / 2;
-    // 朝屏幕内侧铺开，避免贴边时飞出视口
-    const vx = cx < vw / 2 ? 1 : -1;
-    const vy = cy < vh / 2 ? 1 : -1;
-    const base = Math.atan2(vy, vx);
+    const w = pet.offsetWidth || 58;
+    const h = pet.offsetHeight || 58;
+    // 位置优先用自己记的坐标，避免布局抖动 / 滚动条变化带来的误差
+    let left = S.pos ? S.pos.x : 0;
+    let top = S.pos ? S.pos.y : 0;
+    if (!S.pos) {
+      const r = pet.getBoundingClientRect();
+      left = r.left;
+      top = r.top;
+    }
+    const cx = left + w / 2;
+    const cy = top + h / 2;
+    const dirX = cx < vw / 2 ? 1 : -1;
+    const dirY = cy < vh / 2 ? 1 : -1;
+    const base = Math.atan2(dirY, dirX);
     const dist = 66;
     const spread = [-0.95, -0.05, 0.85];
-    const items = host.children;
-    for (let i = 0; i < items.length; i++) {
-      const ang = base + spread[i];
-      const x = clamp(cx + Math.cos(ang) * dist, 26, vw - 26) - r.left;
-      const y = clamp(cy + Math.sin(ang) * dist, 26, vh - 26) - r.top;
-      items[i].style.left = Math.round(x) + 'px';
-      items[i].style.top = Math.round(y) + 'px';
-      items[i].style.setProperty('--orbit-i', String(i));
-    }
+    const half = 16;          // 按钮半宽（32px）
+    const edge = 10;          // 与视口的最小距离
+    const items = [...host.children];
+    const pts = items.map((_, i) => {
+      const ang = base + spread[i % spread.length];
+      return { x: cx + Math.cos(ang) * dist, y: cy + Math.sin(ang) * dist };
+    });
+
+    const minX = Math.min(...pts.map((p) => p.x)) - half;
+    const maxX = Math.max(...pts.map((p) => p.x)) + half;
+    const minY = Math.min(...pts.map((p) => p.y)) - half;
+    const maxY = Math.max(...pts.map((p) => p.y)) + half;
+    let shiftX = 0;
+    let shiftY = 0;
+    if (minX < edge) shiftX = edge - minX;
+    else if (maxX > vw - edge) shiftX = (vw - edge) - maxX;
+    if (minY < edge) shiftY = edge - minY;
+    else if (maxY > vh - edge) shiftY = (vh - edge) - maxY;
+
+    items.forEach((btn, i) => {
+      btn.style.left = Math.round(pts[i].x + shiftX - left - half) + 'px';
+      btn.style.top = Math.round(pts[i].y + shiftY - top - half) + 'px';
+      btn.style.setProperty('--orbit-i', String(i));
+    });
   }
 
   function bindOrbit() {
@@ -736,6 +762,8 @@
         if (S.dragging) return;
         layoutOrbit();
         host.classList.add('is-show');
+        // 布局刚变化（滚动条 / 字体 / 图片加载）时下一帧再校一次
+        useRaf(() => { if (host.classList.contains('is-show')) layoutOrbit(); });
       };
       if (!delay) { paint(); return; }
       showTimer = setTimeout(paint, delay);

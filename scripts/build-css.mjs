@@ -17,4 +17,28 @@ const html = fs.readFileSync(indexPath, 'utf8')
   .replace(/css\/bundle\.css\?v=[^"']+/, `css/bundle.css?v=${hash}`)
   .replace(/<link rel="stylesheet" href="\/css\/renewal\.css[^>]*>\s*/g, '');
 fs.writeFileSync(indexPath, html);
-console.log(`Bundled ${names.length} stylesheets (${Math.round(Buffer.byteLength(bundle) / 1024)} KB), ${hash}`);
+
+// 文章页等直接引源文件（不走 bundle）的页面，版本号也得跟着内容走，
+// 否则改了 style.css 只有首页会更新，别的页面会一直吃旧缓存
+// （之前桌宠的悬停圆就是这么在文章页变形成一根竖条的）。
+const direct = ['style', 'glass', 'scrollbar', 'responsive', 'mobile', 'tokens', 'sky', 'renewal', 'home', 'capsule', 'drawer', 'ui', 'forms', 'wheel'];
+const hashes = {};
+for (const name of direct) {
+  const file = `public/css/${name}.css`;
+  if (!fs.existsSync(file)) continue;
+  hashes[name] = createHash('sha256').update(fs.readFileSync(file, 'utf8')).digest('hex').slice(0, 10);
+}
+let touched = 0;
+for (const file of fs.readdirSync('public').filter(n => n.endsWith('.html'))) {
+  const path = `public/${file}`;
+  let source = fs.readFileSync(path, 'utf8');
+  const before = source;
+  for (const [name, sum] of Object.entries(hashes)) {
+    source = source.replace(new RegExp(`(/css/|css/)${name}\\.css\\?v=[^"']+`, 'g'), (m, prefix) => `${prefix}${name}.css?v=${sum}`);
+  }
+  if (source !== before) {
+    fs.writeFileSync(path, source);
+    touched++;
+  }
+}
+console.log(`Bundled ${names.length} stylesheets (${Math.round(Buffer.byteLength(bundle) / 1024)} KB), ${hash}; refreshed css version refs in ${touched} html file(s)`);
