@@ -13182,9 +13182,14 @@ html[data-theme="dark"] .hv3-card {
 }
 
 /* 封面被换成图库竖图（原封面是横图或没有封面）时，卡片上不挂这篇的标题：
-   那张图和这篇文章不对应，标题跟着横图封面一起挪到生活切片那边去了 */
+   那张图和这篇文章不对应，标题跟着横图封面一起挪到生活切片那边去了。
+   这种卡点开是看大图（不是进文章），所以光标给放大镜。 */
 .hv3-item.is-generic .hv3-body {
     display: none;
+}
+
+.hv3-item.is-generic {
+    cursor: zoom-in;
 }
 
 .hv3-item-title {

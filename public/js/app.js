@@ -1870,6 +1870,9 @@ const BlogApp = {
             const img = item.querySelector('.hv3-cover-img.is-front');
             const markPlay = () => {
                 item.classList.add('is-generic');
+                // 这张卡以后显示的是图库竖图，点开看大图而不是进文章 —— 去掉链接就没有跳转
+                item.removeAttribute('href');
+                item.setAttribute('role', 'button');
                 playCards.push(item);
             };
             if (!img || !img.getAttribute('src')) { markPlay(); return; }
@@ -1914,6 +1917,29 @@ const BlogApp = {
         // 鼠标停上去就暂停自动切换，走开再继续
         car.addEventListener('mouseenter', () => this.stopPostPlay());
         car.addEventListener('mouseleave', () => this.startPostPlay());
+        // 卡片上显示的是「图库竖图」（is-generic）时，点开就该看大图，不能跳到文章去 ——
+        // 那张图和文章本来就不对应。显示自己封面的卡照旧进文章。
+        car.addEventListener('click', (e) => {
+            const item = e.target.closest('.hv3-item');
+            if (!item || !item.classList.contains('is-generic')) return;
+            e.preventDefault();
+            const front = item.querySelector('.hv3-cover-img.is-front') || item.querySelector('.hv3-cover-img');
+            const src = front ? (front.currentSrc || front.src || '') : '';
+            if (!src) return;
+            this.portraitPool().then((pool) => {
+                if (!pool || !pool.length) {
+                    if (typeof window.openGalleryLightbox === 'function') window.openGalleryLightbox(src, 0);
+                    return;
+                }
+                window.__galleryImages = pool;
+                const idx = pool.findIndex((p) => String(p.thumb || p.url) === src);
+                if (typeof window.openGalleryLightbox === 'function') {
+                    window.openGalleryLightbox(src, idx >= 0 ? idx : 0);
+                }
+            }).catch(() => {
+                if (typeof window.openGalleryLightbox === 'function') window.openGalleryLightbox(src, 0);
+            });
+        });
     },
 
     startPostPlay() {
