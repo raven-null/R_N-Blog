@@ -331,6 +331,27 @@
     return list.find((v) => v.default) || list[0] || null;
   }
 
+  // 正在朗读？点桌宠 / 按住说话都可以打断
+  let ttsWaiters = [];
+
+  function isSpeaking() {
+    return !!(global.speechSynthesis && global.speechSynthesis.speaking);
+  }
+
+  function stopSpeaking() {
+    const synth = global.speechSynthesis;
+    if (!synth) return false;
+    const was = !!synth.speaking;
+    try { synth.cancel(); } catch (e) { /* 忽略 */ }
+    // 让"等朗读收尾"的地方立刻放行
+    const waiters = ttsWaiters;
+    ttsWaiters = [];
+    waiters.forEach((fn) => { try { fn(); } catch (e) { /* 忽略 */ } });
+    // 上一轮按住说话正在等朗读：被打断就直接收工
+    if (was && pttBusy) endVoiceMode();
+    return was;
+  }
+
   function speak(text) {
     if (!global.speechSynthesis || !text) return;
     try {
@@ -610,6 +631,7 @@
       say('这个浏览器听不见我…换 Chrome / Edge 再说', 5000, { log: false });
       return false;
     }
+    stopSpeaking();              // 抢话：先停掉正在念的那句
     pttMode = !!(opts && opts.ptt);
     lastHeard = '';
     voiceMode = true;
@@ -656,9 +678,20 @@
   // 回复出完、朗读也念完，才算这次任务结束
   function finishPttTask() {
     const synth = global.speechSynthesis;
+    const done = () => {
+      const idx = ttsWaiters.indexOf(done);
+      if (idx >= 0) ttsWaiters.splice(idx, 1);
+      endVoiceMode();
+    };
     const waitTts = () => {
       if (STATE.ttsOn && synth && synth.speaking) {
-        setTimeout(waitTts, 250);
+        if (!ttsWaiters.includes(done)) ttsWaiters.push(done);
+        const tick = () => {
+          if (!ttsWaiters.includes(done)) return;      // 已被 stopSpeaking 放行
+          if (synth && synth.speaking) { setTimeout(tick, 250); return; }
+          done();
+        };
+        setTimeout(tick, 250);
         return;
       }
       endVoiceMode();
@@ -1016,6 +1049,8 @@
     setName,
     startVoiceMode,
     stopVoiceMode,
+    stopSpeaking,
+    isSpeaking,
     toggleVoiceMode,
     isSleeping,
     get voiceMode() { return voiceMode; },

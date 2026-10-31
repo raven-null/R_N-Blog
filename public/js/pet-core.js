@@ -578,6 +578,12 @@
         toggleOrbit();
         return;
       }
+      // 正在念回复时，点一下就是"打断"，不再多冒一句
+      const mind = global.PetMind;
+      if (mind && typeof mind.isSpeaking === 'function' && mind.isSpeaking()) {
+        if (typeof mind.stopSpeaking === 'function') mind.stopSpeaking();
+        return;
+      }
       // 单击：只是摸一下（跳一下 + 冒一句），对话框只从 💬 那个圆进
       speakRandom();
     };
