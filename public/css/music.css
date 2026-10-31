@@ -499,6 +499,9 @@ body.view-music-active .now-island {
     line-height: 1.4;
     letter-spacing: 0.06em;
     color: var(--text-muted);
+    /* 长句子两端柔化，顶到边也不会硬切 */
+    -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 5%, #000 95%, transparent 100%);
+    mask-image: linear-gradient(90deg, transparent 0, #000 5%, #000 95%, transparent 100%);
     transition: transform 0.5s cubic-bezier(0.2, 0.7, 0.3, 1), opacity 0.5s ease,
         color 0.3s ease, font-size 0.4s ease, letter-spacing 0.4s ease;
     will-change: transform, opacity;
@@ -510,13 +513,32 @@ body.view-music-active .now-island {
 }
 
 .hv3-music-lyric-line.is-current {
+    position: relative;
     font-size: 21px;
     font-weight: 650;
     letter-spacing: 0.08em;
-    color: var(--accent, var(--text));
+    color: var(--text-muted);
     opacity: 1;
     text-shadow: 0 2px 14px rgba(0, 0, 0, 0.35);
     animation: hv3LyricBreath 3.2s ease-in-out infinite;
+}
+
+/* 当前句两层：底层暗字 + 上层强调色字，按唱到的比例从上层的左边裁出来 */
+.hv3-music-lyric-base {
+    color: var(--text-muted);
+    opacity: 0.6;
+}
+
+.hv3-music-lyric-fill {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--accent, var(--text));
+    clip-path: inset(0 calc(100% - var(--lyric-progress, 100%)) 0 0);
+    transition: clip-path 0.25s linear;
+    pointer-events: none;
 }
 
 /* 入场时先滑上来，落定后再接呼吸；两个动画叠在一起，不用等 JS 来摘类 */

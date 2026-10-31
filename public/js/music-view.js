@@ -559,6 +559,35 @@
     return true;
   }
 
+  // 当前句分两层叠着画：底层是暗的字，上层是强调色的字，用 clip-path 按这句唱到的比例裁出来
+  // ——就是卡拉OK 那种「一句唱到哪儿亮到哪儿」。两层文本必须一模一样，所以一起重画。
+  function setCurrentLyric(text, translation) {
+    if (!lyricCurrentEl) return false;
+    var value = text ? String(text) : '';
+    var sub = translation ? String(translation) : '';
+    if (lyricCurrentEl.dataset.text === value && lyricCurrentEl.dataset.sub === sub) return false;
+    lyricCurrentEl.dataset.text = value;
+    lyricCurrentEl.dataset.sub = sub;
+    var safe = escapeHtml(value);
+    lyricCurrentEl.innerHTML =
+      '<span class="hv3-music-lyric-base">' + safe + '</span>' +
+      '<span class="hv3-music-lyric-fill" aria-hidden="true">' + safe + '</span>' +
+      (sub ? '<span class="hv3-music-lyric-trans">' + escapeHtml(sub) + '</span>' : '');
+    return true;
+  }
+
+  // 当前句的时间范围（毫秒），用来算唱到哪儿了
+  var lyricTiming = { startMs: 0, endMs: 0 };
+
+  function syncLyricProgress(positionMs) {
+    if (!lyricCurrentEl) return;
+    var now = Number.isFinite(positionMs) ? positionMs : 0;
+    var span = lyricTiming.endMs - lyricTiming.startMs;
+    var ratio = span > 0 ? (now - lyricTiming.startMs) / span : 1;
+    ratio = Math.max(0, Math.min(1, ratio));
+    lyricCurrentEl.style.setProperty('--lyric-progress', (ratio * 100).toFixed(1) + '%');
+  }
+
   function renderCardLyrics(data) {
     if (!lyricCurrentEl) return false;
     var win = data && data.lyricsWindow;
@@ -566,6 +595,8 @@
     var currentText = '';
     var translation = '';
     var nextText = '';
+    var startMs = 0;
+    var endMs = 0;
 
     if (win && Array.isArray(win.lines) && win.lines.length) {
       var active = Math.max(0, Math.min(Number(win.active) || 0, win.lines.length - 1));
@@ -574,6 +605,8 @@
       currentText = currentLine.text || '';
       translation = currentLine.translation || '';
       nextText = (win.lines[active + 1] || {}).text || '';
+      startMs = Number(currentLine.startMs) || 0;
+      endMs = Number(currentLine.endMs) || 0;
     } else {
       if (lyricHistory.length) {
         var last = lyricHistory[lyricHistory.length - 1];
@@ -582,15 +615,25 @@
         prevText = lyricHistory.length > 1 ? (lyricHistory[lyricHistory.length - 2].text || '') : '';
       }
       nextText = data && data.nextLyric && data.nextLyric.text ? String(data.nextLyric.text) : '';
+      var leaf = data && data.lyric;
+      if (leaf) {
+        startMs = Number(leaf.startMs) || 0;
+        endMs = Number(leaf.endMs) || 0;
+      }
     }
 
+    var hasLyricText = !!currentText;
     if (!currentText) currentText = '歌词加载中…';
+    lyricTiming = { startMs: startMs, endMs: endMs };
 
-    var changed = setLyricLine(lyricCurrentEl, currentText, translation);
+    var changed = setCurrentLyric(currentText, translation);
     setLyricLine(lyricPrevEl, prevText, '');
     setLyricLine(lyricNextEl, nextText, '');
 
-    if (changed) {
+    // 没拿到这句的时间范围时，直接当作「整句已唱完」，不做填充动画
+    syncLyricProgress(progressState.positionMs);
+
+    if (changed && hasLyricText) {
       // 重启动画：当前句从下方顶上来，一口气滑到位
       lyricCurrentEl.classList.remove('is-entering');
       void lyricCurrentEl.offsetWidth;
@@ -651,13 +694,16 @@
     progressState.at = Date.now();
     progressState.playing = !!data.playing;
     paintProgress(positionMs, durationMs);
+    syncLyricProgress(positionMs);
   }
 
   setInterval(function () {
     if (progressDragging) return;
     if (!progressState.shown || !progressState.playing || !progressState.durationMs) return;
     var advanced = progressState.positionMs + (Date.now() - progressState.at);
-    paintProgress(Math.min(advanced, progressState.durationMs), progressState.durationMs);
+    var clamped = Math.min(advanced, progressState.durationMs);
+    paintProgress(clamped, progressState.durationMs);
+    syncLyricProgress(clamped);
   }, 250);
 
   // ---------- 进度条拖动 ----------
