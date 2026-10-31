@@ -17,6 +17,8 @@
     ttsOn: false,
     name: '枯梦',
     persona: '',
+    ttsRate: 1.05,
+    ttsPitch: 1.1,
     autoMs: [70000, 155000],   // 白天主动说话间隔
     nightAutoMs: [150000, 300000], // 夜间：更安静
     minGap: 50000,             // 两次自动说话的最小间隔
@@ -324,8 +326,10 @@
     try {
       const u = new global.SpeechSynthesisUtterance(text.replace(/[*_`#>|]/g, '').slice(0, 160));
       u.lang = 'zh-CN';
-      u.rate = 1.05;
-      u.pitch = 1.1;
+      const rate = Number(STATE.ttsRate);
+      const pitch = Number(STATE.ttsPitch);
+      u.rate = Number.isFinite(rate) ? Math.min(1.6, Math.max(0.6, rate)) : 1.05;
+      u.pitch = Number.isFinite(pitch) ? Math.min(1.6, Math.max(0.6, pitch)) : 1.1;
       global.speechSynthesis.cancel();
       global.speechSynthesis.speak(u);
     } catch (e) { /* 忽略 */ }

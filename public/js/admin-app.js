@@ -2407,6 +2407,8 @@
             setPet('setPetAutoTalk',el=>{el.checked=pet.autoTalk!==false});
             setPet('setPetGaze',el=>{el.checked=pet.gaze!==false});
             setPet('setPetTts',el=>{el.checked=pet.tts===true});
+            setPet('setPetTtsRate',el=>{el.value=pet.ttsRate===undefined||pet.ttsRate===null?'':pet.ttsRate});
+            setPet('setPetTtsPitch',el=>{el.value=pet.ttsPitch===undefined||pet.ttsPitch===null?'':pet.ttsPitch});
             setPet('setPetTalkRate',el=>{el.value=['quiet','normal','chatty'].includes(pet.talkRate)?pet.talkRate:'normal'});
             setPet('setPetName',el=>{el.value=pet.name||''});
             setPet('setPetPersona',el=>{el.value=pet.persona||''});
@@ -2631,6 +2633,8 @@
                         gaze:(g('setPetGaze')||{}).checked!==false,
                         tts:(g('setPetTts')||{}).checked===true,
                         talkRate:rate&&rate.value?rate.value:'normal',
+                        ttsRate:(()=>{const el=g('setPetTtsRate');const n=el?parseFloat(el.value):NaN;return Number.isFinite(n)?n:null})(),
+                        ttsPitch:(()=>{const el=g('setPetTtsPitch');const n=el?parseFloat(el.value):NaN;return Number.isFinite(n)?n:null})(),
                         name:nameEl?(nameEl.value||'').trim():'',
                         persona:personaEl?(personaEl.value||'').trim():'',
                     };

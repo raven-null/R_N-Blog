@@ -1463,6 +1463,8 @@ export default async (req: Request) => {
         talkRate: "normal",
         gaze: true,
         tts: false,
+        ttsRate: 1.05,
+        ttsPitch: 1.1,
         persona: "",
       },
     }
@@ -1618,6 +1620,10 @@ export default async (req: Request) => {
         // 老客户端（缓存了旧 admin-app.js）保存时不会带 pet，这里沿用库里已有的值，免得被重置
         pet: (() => {
           const p = ((pet && typeof pet === "object" ? pet : null) || prevPet || {}) as any
+          const clampNum = (v: any, dflt: number, lo: number, hi: number) => {
+            const n = Number(v)
+            return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : dflt
+          }
           return {
             enabled: p.enabled !== false,
             name: String(p.name || DEFAULT_SETTINGS.pet.name).trim().slice(0, 20),
@@ -1625,6 +1631,8 @@ export default async (req: Request) => {
             talkRate: ["quiet", "normal", "chatty"].includes(String(p.talkRate)) ? String(p.talkRate) : DEFAULT_SETTINGS.pet.talkRate,
             gaze: p.gaze !== false,
             tts: p.tts === true,
+            ttsRate: clampNum(p.ttsRate, DEFAULT_SETTINGS.pet.ttsRate, 0.6, 1.6),
+            ttsPitch: clampNum(p.ttsPitch, DEFAULT_SETTINGS.pet.ttsPitch, 0.6, 1.6),
             persona: String(p.persona || "").trim().slice(0, 300),
           }
         })(),

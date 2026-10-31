@@ -1098,33 +1098,6 @@
                                 <input type="text" id="setAboutUpdated" placeholder="输入更新日期">
                             </div>
                         </div>
-                        <!-- 8. 桌宠（右下角的枯梦） -->
-                        <div class="settings-group">
-                            <h3><span class="settings-title">桌宠（右下角的枯梦）</span><span class="settings-grip" title="拖动排序">⠿</span><span class="settings-chevron" title="展开/收起">▾</span></h3>
-                            <div class="settings-toggle-list">
-                                <div class="settings-toggle-item"><span>显示桌宠</span><label class="switch"><input type="checkbox" id="setPetEnabled" checked><span class="slider"></span></label></div>
-                                <div class="settings-toggle-item"><span>主动搭话</span><label class="switch"><input type="checkbox" id="setPetAutoTalk" checked><span class="slider"></span></label></div>
-                                <div class="settings-toggle-item"><span>眼睛跟着鼠标</span><label class="switch"><input type="checkbox" id="setPetGaze" checked><span class="slider"></span></label></div>
-                                <div class="settings-toggle-item"><span>默认朗读回复</span><label class="switch"><input type="checkbox" id="setPetTts"><span class="slider"></span></label></div>
-                            </div>
-                            <div class="settings-field">
-                                <label>说话频率</label>
-                                <select id="setPetTalkRate">
-                                    <option value="quiet">安静（很少开口）</option>
-                                    <option value="normal">正常</option>
-                                    <option value="chatty">话多</option>
-                                </select>
-                            </div>
-                            <div class="settings-field">
-                                <label>名字</label>
-                                <input type="text" id="setPetName" placeholder="枯梦" maxlength="20">
-                            </div>
-                            <div class="settings-field">
-                                <label>性格 / 口吻（追加到 AI 提示词）</label>
-                                <textarea id="setPetPersona" rows="3" placeholder="例如：说话简短，偶尔用「喵」，别把每句都写成卖萌"></textarea>
-                            </div>
-                            <div class="settings-tip">这里的开关对所有访客生效；访客自己点过的「朗读 / 安静」状态存在他本机，优先于此处的默认值。</div>
-                        </div>
                         </div>
 
                         <div class="settings-section" data-section="ai">
@@ -1222,6 +1195,50 @@
                                 </div>
                             </div>
                             <div class="settings-tip">写作页右侧「AI」页签用这套配置：只回答写作中的疑问，不读取正文、也不会改正文；密钥独立，不影响访客端聊天。<br>小米 MiMo 的 <code>tp-</code> 开头密钥（Token Plan）请选「小米 MiMo（Token Plan）」，选错会 401。</div>
+                        </div>
+
+                        <!-- 桌宠 · 日常对话（右下角枯梦） -->
+                        <div class="settings-group">
+                            <h3><span class="settings-title">桌宠 · 日常对话（右下角的枯梦）</span><span class="settings-grip" title="拖动排序">⠿</span><span class="settings-chevron" title="展开/收起">▾</span></h3>
+                            <div class="settings-toggle-list">
+                                <div class="settings-toggle-item"><span>显示桌宠</span><label class="switch"><input type="checkbox" id="setPetEnabled" checked><span class="slider"></span></label></div>
+                                <div class="settings-toggle-item"><span>主动搭话</span><label class="switch"><input type="checkbox" id="setPetAutoTalk" checked><span class="slider"></span></label></div>
+                                <div class="settings-toggle-item"><span>眼睛跟着鼠标</span><label class="switch"><input type="checkbox" id="setPetGaze" checked><span class="slider"></span></label></div>
+                            </div>
+                            <div class="settings-field">
+                                <label>说话频率（主动搭话的间隔）</label>
+                                <select id="setPetTalkRate">
+                                    <option value="quiet">安静（约 3~7 分钟一句）</option>
+                                    <option value="normal">正常（约 1~2.5 分钟一句）</option>
+                                    <option value="chatty">话多（约 35~85 秒一句）</option>
+                                </select>
+                            </div>
+                            <div class="settings-field">
+                                <label>名字</label>
+                                <input type="text" id="setPetName" placeholder="枯梦" maxlength="20">
+                            </div>
+                            <div class="settings-field">
+                                <label>性格 / 口吻（追加到 AI 提示词）</label>
+                                <textarea id="setPetPersona" rows="3" placeholder="例如：说话简短，偶尔用「喵」，别把每句都写成卖萌"></textarea>
+                            </div>
+                            <div class="settings-tip">对话走上面「AI 助手」的厂商 / 模型 / 密钥（`/api/ai`），这里只调它的日常表现；上面的 AI 关闭时桌宠也不会回话。</div>
+                        </div>
+
+                        <!-- 桌宠 · 朗读（TTS） -->
+                        <div class="settings-group">
+                            <h3><span class="settings-title">桌宠 · 朗读（浏览器 TTS）</span><span class="settings-grip" title="拖动排序">⠿</span><span class="settings-chevron" title="展开/收起">▾</span></h3>
+                            <div class="settings-toggle-list">
+                                <div class="settings-toggle-item"><span>默认朗读回复</span><label class="switch"><input type="checkbox" id="setPetTts"><span class="slider"></span></label></div>
+                            </div>
+                            <div class="settings-field">
+                                <label>语速（0.6 - 1.6）</label>
+                                <input type="number" id="setPetTtsRate" min="0.6" max="1.6" step="0.05" placeholder="1.05">
+                            </div>
+                            <div class="settings-field">
+                                <label>音调（0.6 - 1.6）</label>
+                                <input type="number" id="setPetTtsPitch" min="0.6" max="1.6" step="0.05" placeholder="1.1">
+                            </div>
+                            <div class="settings-tip">用系统自带的语音合成（Chrome / Edge 中文声音最好）。访客自己点过面板上的 🔊 / 🔈 就以他的选择为准；这里只是默认值。</div>
                         </div>
                         </div>
 
@@ -1448,7 +1465,7 @@
     </div>
 
         <script src="js/tag-picker.js?v=1.1.2"></script>
-        <script src="js/admin-app.js?v=1.21.0"></script>
+        <script src="js/admin-app.js?v=1.22.0"></script>
 
     <!-- 前台预览抽屉（iframe 内嵌，零跳出） -->
     <style>

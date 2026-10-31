@@ -698,6 +698,8 @@
     talkRate: 'normal',
     gaze: true,
     tts: false,
+    ttsRate: 1.05,
+    ttsPitch: 1.1,
     persona: '',
     loaded: false,
   };
@@ -735,6 +737,9 @@
       }
       if (CONFIG.name && typeof mind.setName === 'function') mind.setName(CONFIG.name);
       mind.state.persona = CONFIG.persona || '';
+      // 朗读参数（语速 / 音调）
+      if (typeof CONFIG.ttsRate === 'number') mind.state.ttsRate = CONFIG.ttsRate;
+      if (typeof CONFIG.ttsPitch === 'number') mind.state.ttsPitch = CONFIG.ttsPitch;
       // 朗读默认值：只在本机还没选过时应用
       if (CONFIG.tts) {
         let local = null;
@@ -760,6 +765,8 @@
         CONFIG.talkRate = ['quiet', 'normal', 'chatty'].includes(pet.talkRate) ? pet.talkRate : 'normal';
         CONFIG.gaze = pet.gaze !== false;
         CONFIG.tts = pet.tts === true;
+        CONFIG.ttsRate = Number.isFinite(Number(pet.ttsRate)) ? Math.min(1.6, Math.max(0.6, Number(pet.ttsRate))) : 1.05;
+        CONFIG.ttsPitch = Number.isFinite(Number(pet.ttsPitch)) ? Math.min(1.6, Math.max(0.6, Number(pet.ttsPitch))) : 1.1;
         CONFIG.persona = String(pet.persona || '').slice(0, 300);
         applyConfig();
       })
