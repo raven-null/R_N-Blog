@@ -536,6 +536,8 @@
       tapTimes.push(now);
       while (tapTimes.length && now - tapTimes[0] > TRIPLE_WINDOW) tapTimes.shift();
       react();                             // 立刻给动作反馈
+      // 第一次摸桌宠时，如果后台允许，就顺手开始听召唤词
+      if (global.PetMind && typeof global.PetMind.maybeWake === 'function') global.PetMind.maybeWake();
 
       if (tapTimes.length >= 3) {          // 三连击：实时对话（不碰对话框）
         clearTimeout(S.tapTimer);

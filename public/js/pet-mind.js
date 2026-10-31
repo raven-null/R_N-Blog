@@ -613,7 +613,7 @@
   // ---------- 召唤词（语音唤醒） ----------
   // 常驻识别里匹配关键词；命中后按后台设置唤出对话框 / 直接进实时对话 / 只应一声。
   // 注意：这是"一直听着"的，耗电也涉及隐私，所以默认关闭、15 分钟没被叫到自动关。
-  const WAKE = { enabled: false, allowed: true, hitAt: 0, listenTimer: 0, idleTimer: 0, button: null };
+  const WAKE = { enabled: false, allowed: true, autoStarted: false, hitAt: 0, listenTimer: 0, idleTimer: 0, button: null };
   const WAKE_ALIASES = ['渡鸦', '渡鸭', '渡亚', '度鸦', '杜鸦', '毒鸦'];
   const WAKE_ACTIONS = ['panel', 'voice', 'line'];
 
@@ -729,6 +729,14 @@
       stopWake(false);
       return false;
     }
+    return startWake();
+  }
+
+  // 前台没有召唤词按钮了：靠后台开关 + 用户第一次和桌宠互动后再开麦
+  // （浏览器要求有用户手势才允许启动语音识别，所以不能页面一加载就听）
+  function maybeWake() {
+    if (!WAKE.allowed || WAKE.enabled || WAKE.autoStarted) return false;
+    WAKE.autoStarted = true;
     return startWake();
   }
 
@@ -932,6 +940,7 @@
     place();
     setTimeout(place, 30);
     setTimeout(() => input && input.focus(), 120);
+    maybeWake();
   }
 
   function closePanel() {
@@ -972,35 +981,8 @@
       toggleTTS();
     });
 
-    // 召唤词开关（工具条最前面那个 👂）
-    const tools = doc.querySelector('.pet-chat-tools');
-    if (tools && typeof doc.createElement === 'function' && !doc.getElementById('petWakeToggle')) {
-      const btn = doc.createElement('button');
-      btn.type = 'button';
-      btn.className = 'pet-tool';
-      btn.id = 'petWakeToggle';
-      btn.setAttribute('aria-pressed', 'false');
-      // 简笔画风的耳朵
-      const NS = 'http://www.w3.org/2000/svg';
-      const svg = doc.createElementNS(NS, 'svg');
-      svg.setAttribute('viewBox', '0 0 24 24');
-      svg.setAttribute('aria-hidden', 'true');
-      [
-        'M9.5 21c0-3.4 2.6-4.6 4-6.4 1.1-1.4 1.5-2.9 1.5-4.6a5 5 0 1 0-10 0c0 .9.2 1.7.5 2.5',
-        'M11 9.8a2.1 2.1 0 0 1 0 4.2',
-      ].forEach((d) => {
-        const path = doc.createElementNS(NS, 'path');
-        path.setAttribute('d', d);
-        svg.appendChild(path);
-      });
-      btn.appendChild(svg);
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        toggleWake();
-      });
-      tools.insertBefore(btn, tools.firstChild);
-      WAKE.button = btn;
-    }
+    // 召唤词不再有前台按钮：完全由后台「允许语音召唤」控制，
+    // 用户第一次和桌宠互动后再开始听（浏览器要求有手势才能开麦）。
 
     // Esc 关闭；点面板外面也关闭
     doc.addEventListener('keydown', (e) => {
@@ -1160,6 +1142,7 @@
     stopWake,
     toggleWake,
     setWakeAllowed,
+    maybeWake,
     matchWake,
     wakeWords,
     isSleeping,
