@@ -860,7 +860,8 @@
       const mind = global.PetMind;
       if (mind && mind.state && Date.now() - (mind.state.lastUserAt || 0) < 30000) return;
       if (bubbleEl()?.classList.contains('is-show')) return;
-      say('我是枯梦，点我聊天，拖我去别处也行', 7000);
+      const petName = (mind && mind.state && mind.state.name) || CONFIG.name || '渡鸦';
+      say('我是' + petName + '，点我聊天，拖我去别处也行', 7000);
       setState('happy', 1800);
     }, 1800);
   }
@@ -869,7 +870,7 @@
   // /api/admin?action=settings 的 GET 是公开的（首页本来就在读），pet 段不含密钥。
   const CONFIG = {
     enabled: true,
-    name: '枯梦',
+    name: '渡鸦',
     autoTalk: true,
     talkRate: 'normal',
     gaze: true,
@@ -877,7 +878,7 @@
     ttsRate: 1.05,
     ttsPitch: 1.1,
     ttsVoice: '',
-    wakeWord: '枯梦',
+    wakeWord: '渡鸦',
     wakeAction: 'panel',
     persona: '',
     loaded: false,
@@ -920,7 +921,7 @@
       if (typeof CONFIG.ttsRate === 'number') mind.state.ttsRate = CONFIG.ttsRate;
       if (typeof CONFIG.ttsPitch === 'number') mind.state.ttsPitch = CONFIG.ttsPitch;
       mind.state.ttsVoice = CONFIG.ttsVoice || '';
-      mind.state.wakeWord = CONFIG.wakeWord || '枯梦';
+      mind.state.wakeWord = CONFIG.wakeWord || '渡鸦';
       mind.state.wakeAction = CONFIG.wakeAction || 'panel';
       // 朗读默认值：只在本机还没选过时应用
       if (CONFIG.tts) {
@@ -942,7 +943,7 @@
         const pet = json && json.data && json.data.pet;
         if (!pet || typeof pet !== 'object') return;
         CONFIG.enabled = pet.enabled !== false;
-        CONFIG.name = String(pet.name || '枯梦').slice(0, 20);
+        CONFIG.name = String(pet.name || '渡鸦').slice(0, 20);
         CONFIG.autoTalk = pet.autoTalk !== false;
         CONFIG.talkRate = ['quiet', 'normal', 'chatty'].includes(pet.talkRate) ? pet.talkRate : 'normal';
         CONFIG.gaze = pet.gaze !== false;
@@ -950,7 +951,7 @@
         CONFIG.ttsRate = Number.isFinite(Number(pet.ttsRate)) ? Math.min(1.6, Math.max(0.6, Number(pet.ttsRate))) : 1.05;
         CONFIG.ttsPitch = Number.isFinite(Number(pet.ttsPitch)) ? Math.min(1.6, Math.max(0.6, Number(pet.ttsPitch))) : 1.1;
         CONFIG.ttsVoice = String(pet.ttsVoice || '').slice(0, 40);
-        CONFIG.wakeWord = String(pet.wakeWord || '枯梦').slice(0, 20);
+        CONFIG.wakeWord = String(pet.wakeWord || '渡鸦').slice(0, 20);
         CONFIG.wakeAction = ['panel', 'voice', 'line'].includes(pet.wakeAction) ? pet.wakeAction : 'panel';
         CONFIG.persona = String(pet.persona || '').slice(0, 300);
         applyConfig();

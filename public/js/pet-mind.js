@@ -15,12 +15,12 @@
   const STATE = {
     enabled: true,
     ttsOn: false,
-    name: '枯梦',
+    name: '渡鸦',
     persona: '',
     ttsRate: 1.05,
     ttsPitch: 1.1,
     ttsVoice: '',
-    wakeWord: '枯梦',
+    wakeWord: '渡鸦',
     wakeAction: 'panel',
     autoMs: [70000, 155000],   // 白天主动说话间隔
     nightAutoMs: [150000, 300000], // 夜间：更安静
@@ -367,7 +367,7 @@
 
   // ---------- 问 AI ----------
   function buildPrompt(ctx) {
-    const name = STATE.name || '枯梦';
+    const name = STATE.name || '渡鸦';
     const bits = [
       '你是这个个人博客站里的桌宠「' + name + '」，一只住在网页右下角的小生物。',
       '说话短、口语、有点小情绪，可以偶尔用「喵」，但不要每句都卖萌，不要长篇大论。',
@@ -614,11 +614,11 @@
   // 常驻识别里匹配关键词；命中后按后台设置唤出对话框 / 直接进实时对话 / 只应一声。
   // 注意：这是"一直听着"的，耗电也涉及隐私，所以默认关闭、15 分钟没被叫到自动关。
   const WAKE = { enabled: false, hitAt: 0, listenTimer: 0, idleTimer: 0, button: null };
-  const WAKE_ALIASES = ['枯梦', '哭梦', '苦梦', '枯木', '小枯', '阿梦'];
+  const WAKE_ALIASES = ['渡鸦', '渡鸭', '渡亚', '度鸦', '杜鸦', '毒鸦'];
   const WAKE_ACTIONS = ['panel', 'voice', 'line'];
 
   function wakeWords() {
-    const base = String(STATE.wakeWord || '').trim() || '枯梦';
+    const base = String(STATE.wakeWord || '').trim() || '渡鸦';
     const list = WAKE_ALIASES.slice();
     if (!list.includes(base)) list.unshift(base);
     return list;
@@ -650,7 +650,7 @@
   function updateWakeUI() {
     const btn = WAKE.button || doc.getElementById('petWakeToggle');
     if (!btn) return;
-    const word = STATE.wakeWord || '枯梦';
+    const word = STATE.wakeWord || '渡鸦';
     btn.classList.toggle('is-on', WAKE.enabled);
     btn.setAttribute('aria-pressed', String(WAKE.enabled));
     btn.title = WAKE.enabled ? '停止召唤词监听（喊「' + word + '」就能叫我）' : '开启召唤词（喊「' + word + '」叫我）';
@@ -684,7 +684,7 @@
     }
     WAKE.enabled = true;
     updateWakeUI();
-    const word = STATE.wakeWord || '枯梦';
+    const word = STATE.wakeWord || '渡鸦';
     say('叫我「' + word + '」就行，我先听着', 5200, { log: false });
     petState('listening', 2200);
     scheduleWakeListen(0);
@@ -913,7 +913,7 @@
         STATE.history.slice(-6).forEach((m) => appendMsg(m.role, m.content));
       } else {
         const ctx = collect();
-        appendMsg('assistant', '我是' + (STATE.name || '枯梦') + '，住在右下角。' + (ctx.view === 'article' && ctx.article ? '你正在读《' + ctx.article + '》。' : '') + '想聊什么？');
+        appendMsg('assistant', '我是' + (STATE.name || '渡鸦') + '，住在右下角。' + (ctx.view === 'article' && ctx.article ? '你正在读《' + ctx.article + '》。' : '') + '想聊什么？');
       }
     }
     // 面板跟着桌宠走（放不下会自己翻到另一侧）

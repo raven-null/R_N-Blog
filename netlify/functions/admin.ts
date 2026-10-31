@@ -1455,10 +1455,10 @@ export default async (req: Request) => {
         // 写作页的 AI：独立的一套（见文件顶部 DEFAULT_AI_WRITE）
         write: { ...DEFAULT_AI_WRITE },
       },
-      // 桌宠「枯梦」：前台右下角那只小生物的行为开关
+      // 桌宠「渡鸦」：前台右下角那只小生物的行为开关
       pet: {
         enabled: true,
-        name: "枯梦",
+        name: "渡鸦",
         autoTalk: true,
         talkRate: "normal",
         gaze: true,
@@ -1466,7 +1466,7 @@ export default async (req: Request) => {
         ttsRate: 1.05,
         ttsPitch: 1.1,
         ttsVoice: "",
-        wakeWord: "枯梦",
+        wakeWord: "渡鸦",
         wakeAction: "panel",
         persona: "",
       },
@@ -1619,7 +1619,7 @@ export default async (req: Request) => {
             }
           })(),
         },
-        // 桌宠「枯梦」：行为开关 + 名字 + 追加口吻（都不含敏感信息）
+        // 桌宠「渡鸦」：行为开关 + 名字 + 追加口吻（都不含敏感信息）
         // 老客户端（缓存了旧 admin-app.js）保存时不会带 pet，这里沿用库里已有的值，免得被重置
         pet: (() => {
           const p = ((pet && typeof pet === "object" ? pet : null) || prevPet || {}) as any
