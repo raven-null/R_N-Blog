@@ -20,6 +20,8 @@
     ttsRate: 1.05,
     ttsPitch: 1.1,
     ttsVoice: '',
+    wakeWord: '枯梦',
+    wakeAction: 'panel',
     autoMs: [70000, 155000],   // 白天主动说话间隔
     nightAutoMs: [150000, 300000], // 夜间：更安静
     minGap: 50000,             // 两次自动说话的最小间隔
@@ -555,6 +557,11 @@
       }
       const live = (finalText || interim).trim();
       if (!live) return;
+      // 召唤词：常驻监听时先看是不是在叫它（命中了就不当聊天内容处理）
+      if (wakeListening() && !voiceMode && matchWake(live)) {
+        onWakeWord();
+        return;
+      }
       const el = bubbleEl();
       if (el) {
         el.textContent = live;
@@ -575,8 +582,9 @@
       if (e.error === 'not-allowed') {
         say('麦克风没开权限，我收不到声音', 5000);
         stopVoiceMode();
+        stopWake();
       } else if (e.error === 'no-speech') {
-        if (!voiceMode) say('没听到声音…再试一次？', 4000);
+        if (!voiceMode && !wakeListening()) say('没听到声音…再试一次？', 4000);
       } else if (e.error !== 'aborted') {
         say('没听清…再说一次？', 4000);
       }
@@ -589,6 +597,8 @@
       if (!STATE.busy) petState(voiceMode ? 'listening' : 'idle', 0);
       // 对话模式：浏览器自己停了就接上（等回复期间先别抢麦克风）
       if (voiceMode && !doc.hidden) restartRecognition(400);
+      // 召唤词监听：同理，浏览器自己停就接着听
+      else if (wakeListening() && !doc.hidden) scheduleWakeListen(600);
     };
 
     mic.addEventListener('click', (e) => {
@@ -598,6 +608,115 @@
       try { rec.start(); } catch (err) { /* 已在启动中 */ }
     });
     recognition = rec;
+  }
+
+  // ---------- 召唤词（语音唤醒） ----------
+  // 常驻识别里匹配关键词；命中后按后台设置唤出对话框 / 直接进实时对话 / 只应一声。
+  // 注意：这是"一直听着"的，耗电也涉及隐私，所以默认关闭、15 分钟没被叫到自动关。
+  const WAKE = { enabled: false, hitAt: 0, listenTimer: 0, idleTimer: 0, button: null };
+  const WAKE_ALIASES = ['枯梦', '哭梦', '苦梦', '枯木', '小枯', '阿梦'];
+  const WAKE_ACTIONS = ['panel', 'voice', 'line'];
+
+  function wakeWords() {
+    const base = String(STATE.wakeWord || '').trim() || '枯梦';
+    const list = WAKE_ALIASES.slice();
+    if (!list.includes(base)) list.unshift(base);
+    return list;
+  }
+
+  function matchWake(text) {
+    const said = String(text || '').replace(/[\s,，。.、!！?？、~～]/g, '');
+    if (!said) return false;
+    return wakeWords().some((word) => said.indexOf(word.replace(/\s+/g, '')) !== -1);
+  }
+
+  function wakeListening() {
+    return WAKE.enabled && !voiceMode && !!recognition;
+  }
+
+  function scheduleWakeListen(delay) {
+    clearTimeout(WAKE.listenTimer);
+    if (!wakeListening() || doc.hidden) return;
+    WAKE.listenTimer = setTimeout(() => {
+      if (!wakeListening() || doc.hidden) return;
+      try {
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.start();
+      } catch (e) { /* 可能已经在跑 */ }
+    }, delay || 0);
+  }
+
+  function updateWakeUI() {
+    const btn = WAKE.button || doc.getElementById('petWakeToggle');
+    if (!btn) return;
+    const word = STATE.wakeWord || '枯梦';
+    btn.classList.toggle('is-on', WAKE.enabled);
+    btn.setAttribute('aria-pressed', String(WAKE.enabled));
+    btn.title = WAKE.enabled ? '停止召唤词监听（喊「' + word + '」就能叫我）' : '开启召唤词（喊「' + word + '」叫我）';
+    btn.setAttribute('aria-label', btn.title);
+  }
+
+  function onWakeWord() {
+    if (Date.now() - WAKE.hitAt < 2500) return;
+    WAKE.hitAt = Date.now();
+    const action = WAKE_ACTIONS.includes(STATE.wakeAction) ? STATE.wakeAction : 'panel';
+    stopWake(true);              // 命中后先停，避免同一句里连续触发
+    STATE.lastUserAt = Date.now();
+    if (action === 'voice') {
+      startVoiceMode();
+      return;
+    }
+    if (action === 'line') {
+      say(pickLine(), 4200, { log: false });
+      petState('happy', 1400);
+      return;
+    }
+    say('在呢', 2200, { log: false });
+    openPanel();
+  }
+
+  function startWake() {
+    if (WAKE.enabled) return true;
+    if (!recognition) {
+      say('这个浏览器听不见我…换 Chrome / Edge 再说', 5000, { log: false });
+      return false;
+    }
+    WAKE.enabled = true;
+    updateWakeUI();
+    const word = STATE.wakeWord || '枯梦';
+    say('叫我「' + word + '」就行，我先听着', 5200, { log: false });
+    petState('listening', 2200);
+    scheduleWakeListen(0);
+    clearTimeout(WAKE.idleTimer);
+    WAKE.idleTimer = setTimeout(() => {
+      if (WAKE.enabled) {
+        stopWake(true);
+        say('我先不听了，想叫我的话再点 👂', 4200, { log: false });
+      }
+    }, 15 * 60 * 1000);
+    return true;
+  }
+
+  function stopWake(silent) {
+    const was = WAKE.enabled;
+    WAKE.enabled = false;
+    clearTimeout(WAKE.listenTimer);
+    clearTimeout(WAKE.idleTimer);
+    updateWakeUI();
+    if (!voiceMode) {
+      try { if (recognition) recognition.stop(); } catch (e) { /* 忽略 */ }
+    }
+    if (was && !silent) say('好，我不听了', 3200, { log: false });
+    return was;
+  }
+
+  function toggleWake() {
+    if (WAKE.enabled) {
+      stopWake(false);
+      return false;
+    }
+    return startWake();
   }
 
   // ---------- 对话模式（连点三下桌宠 / 悬停选「聊天」后开）：边说边答 ----------
@@ -842,6 +961,23 @@
       toggleTTS();
     });
 
+    // 召唤词开关（工具条最前面那个 👂）
+    const tools = doc.querySelector('.pet-chat-tools');
+    if (tools && typeof doc.createElement === 'function' && !doc.getElementById('petWakeToggle')) {
+      const btn = doc.createElement('button');
+      btn.type = 'button';
+      btn.className = 'pet-tool';
+      btn.id = 'petWakeToggle';
+      btn.textContent = '👂';
+      btn.setAttribute('aria-pressed', 'false');
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleWake();
+      });
+      tools.insertBefore(btn, tools.firstChild);
+      WAKE.button = btn;
+    }
+
     // Esc 关闭；点面板外面也关闭
     doc.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && wrap.classList.contains('is-open')) closePanel();
@@ -855,6 +991,7 @@
     });
 
     syncTools();
+    updateWakeUI();
   }
 
   // ---------- 启动 ----------
@@ -872,8 +1009,15 @@
     scheduleAuto();
 
     doc.addEventListener('visibilitychange', () => {
-      if (doc.hidden) clearTimeout(STATE.timer);
-      else scheduleAuto();
+      if (doc.hidden) {
+        clearTimeout(STATE.timer);
+        if (WAKE.enabled) {
+          try { if (recognition) recognition.stop(); } catch (e) { /* 忽略 */ }
+        }
+      } else {
+        scheduleAuto();
+        if (WAKE.enabled) scheduleWakeListen(500);
+      }
     });
 
     // 视图切换：过几秒打一句招呼（有冷却，来回切不刷屏）
@@ -988,7 +1132,13 @@
     startVoiceMode,
     stopVoiceMode,
     toggleVoiceMode,
+    startWake,
+    stopWake,
+    toggleWake,
+    matchWake,
+    wakeWords,
     isSleeping,
+    get wakeEnabled() { return WAKE.enabled; },
     get voiceMode() { return voiceMode; },
     get listening() { return !!listening; },
     get recognition() { return recognition; },

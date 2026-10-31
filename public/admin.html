@@ -1221,6 +1221,18 @@
                                 <label>性格 / 口吻（追加到 AI 提示词）</label>
                                 <textarea id="setPetPersona" rows="3" placeholder="例如：说话简短，偶尔用「喵」，别把每句都写成卖萌"></textarea>
                             </div>
+                            <div class="settings-field">
+                                <label>召唤词（喊这个词叫它出来）</label>
+                                <input type="text" id="setPetWakeWord" placeholder="枯梦" maxlength="20">
+                            </div>
+                            <div class="settings-field">
+                                <label>听到召唤词后</label>
+                                <select id="setPetWakeAction">
+                                    <option value="panel">打开对话框</option>
+                                    <option value="voice">直接进实时对话</option>
+                                    <option value="line">只应一声</option>
+                                </select>
+                            </div>
                             <div class="settings-toggle-list" style="margin-top:14px">
                                 <div class="settings-toggle-item"><span>默认朗读回复</span><label class="switch"><input type="checkbox" id="setPetTts"><span class="slider"></span></label></div>
                             </div>
@@ -1463,7 +1475,7 @@
     </div>
 
         <script src="js/tag-picker.js?v=1.1.2"></script>
-        <script src="js/admin-app.js?v=1.23.0"></script>
+        <script src="js/admin-app.js?v=1.24.0"></script>
 
     <!-- 前台预览抽屉（iframe 内嵌，零跳出） -->
     <style>

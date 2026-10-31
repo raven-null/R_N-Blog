@@ -2410,6 +2410,8 @@
             setPet('setPetTtsRate',el=>{el.value=pet.ttsRate===undefined||pet.ttsRate===null?'':pet.ttsRate});
             setPet('setPetTtsPitch',el=>{el.value=pet.ttsPitch===undefined||pet.ttsPitch===null?'':pet.ttsPitch});
             setPet('setPetTtsVoice',el=>{el.value=pet.ttsVoice||''});
+            setPet('setPetWakeWord',el=>{el.value=pet.wakeWord||''});
+            setPet('setPetWakeAction',el=>{el.value=['panel','voice','line'].includes(pet.wakeAction)?pet.wakeAction:'panel'});
             setPet('setPetTalkRate',el=>{el.value=['quiet','normal','chatty'].includes(pet.talkRate)?pet.talkRate:'normal'});
             setPet('setPetName',el=>{el.value=pet.name||''});
             setPet('setPetPersona',el=>{el.value=pet.persona||''});
@@ -2637,6 +2639,8 @@
                         ttsRate:(()=>{const el=g('setPetTtsRate');const n=el?parseFloat(el.value):NaN;return Number.isFinite(n)?n:null})(),
                         ttsPitch:(()=>{const el=g('setPetTtsPitch');const n=el?parseFloat(el.value):NaN;return Number.isFinite(n)?n:null})(),
                         ttsVoice:(()=>{const el=g('setPetTtsVoice');return el?(el.value||'').trim():''})(),
+                        wakeWord:(()=>{const el=g('setPetWakeWord');return el?(el.value||'').trim():''})(),
+                        wakeAction:(()=>{const el=g('setPetWakeAction');return el&&el.value?el.value:'panel'})(),
                         name:nameEl?(nameEl.value||'').trim():'',
                         persona:personaEl?(personaEl.value||'').trim():'',
                     };
