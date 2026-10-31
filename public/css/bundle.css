@@ -12672,6 +12672,7 @@ html[data-tone="dark"] #loginPage {
 
 /* ============================================================
    文章页：目录 / 顶栏 / 正文卡 也纳入暗色覆盖
+   （背景按需求交还给各元素自己的样式，这里只管边框与文字颜色）
    ============================================================ */
 html[data-tone="dark"] .toc-sidebar-inner,
 html[data-tone="dark"] .toc-search,
@@ -12686,7 +12687,6 @@ html[data-tone="dark"] .rp-card,
 html[data-tone="dark"] .rc-card,
 html[data-tone="dark"] .comment-item-main,
 html[data-tone="dark"] .comment-form-main {
-    background: var(--glass-card, rgba(20, 24, 37, 0.72)) !important;
     border-color: var(--glass-line, rgba(255, 255, 255, 0.12)) !important;
     color: var(--text) !important;
 }
@@ -13997,11 +13997,18 @@ html[data-theme="dark"] .hv3-today-panel {
     grid-template-columns: minmax(0, 1fr);
 }
 
-/* 当天任务在上：吃掉右栏剩下的高度，条数多了自己滚 */
-.hv3-today-tasks {
-    /* style.css 里有一条 .view-home .home-life { order: 9 }（旧仪表盘的遗留），
-       会把任务排到日记后面去，这里按新布局拉回第一位 */
+/* 当天任务在上、日记在下：style.css 里有旧仪表盘留下的
+   `.view-home .home-life { order: 9 }`，会把任务排到最后，这里按新布局钉死顺序 */
+.hv3-today-side > .hv3-today-tasks {
     order: 0;
+}
+
+.hv3-today-side > .hv3-journals {
+    order: 1;
+}
+
+/* 当天任务：吃掉右栏剩下的高度，条数多了自己滚 */
+.hv3-today-tasks {
     flex: 1 1 auto;
     min-height: 0;
     overflow-y: auto;

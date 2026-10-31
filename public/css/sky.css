@@ -393,6 +393,7 @@ html[data-tone="dark"] #loginPage {
 
 /* ============================================================
    文章页：目录 / 顶栏 / 正文卡 也纳入暗色覆盖
+   （背景按需求交还给各元素自己的样式，这里只管边框与文字颜色）
    ============================================================ */
 html[data-tone="dark"] .toc-sidebar-inner,
 html[data-tone="dark"] .toc-search,
@@ -407,7 +408,6 @@ html[data-tone="dark"] .rp-card,
 html[data-tone="dark"] .rc-card,
 html[data-tone="dark"] .comment-item-main,
 html[data-tone="dark"] .comment-form-main {
-    background: var(--glass-card, rgba(20, 24, 37, 0.72)) !important;
     border-color: var(--glass-line, rgba(255, 255, 255, 0.12)) !important;
     color: var(--text) !important;
 }
