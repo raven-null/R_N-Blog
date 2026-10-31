@@ -152,15 +152,15 @@ html[data-theme="dark"] .hv3-card {
     white-space: nowrap;
 }
 
-.hv3-stats { display: flex; gap: 2px; }
+.hv3-stats { display: flex; gap: 4px; }
 
 .hv3-stat {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 0;
-    min-width: 44px;
-    padding: 3px 7px;
+    min-width: 58px;
+    padding: 4px 10px;
     border: 0;
     border-radius: 12px;
     background: transparent;
@@ -171,7 +171,7 @@ html[data-theme="dark"] .hv3-card {
 .hv3-stat:hover { background: var(--accent-soft, rgba(240, 162, 12, .13)); }
 
 .hv3-stat b {
-    font-size: 16px;
+    font-size: 22px;
     font-weight: 650;
     line-height: 1.2;
     font-variant-numeric: tabular-nums;
@@ -179,7 +179,7 @@ html[data-theme="dark"] .hv3-card {
 }
 
 .hv3-stat span {
-    font-size: 10px;
+    font-size: 11.5px;
     color: var(--text-muted);
     letter-spacing: .06em;
 }
