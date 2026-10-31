@@ -2878,6 +2878,71 @@ html.reader-serif .article-content {
     font-family: 'Courier New', monospace;
 }
 
+/* 阅读工具栏里的「正在播放」：首页的播放器把状态同步到这里（见 article.html 底部脚本） */
+.reader-island {
+    gap: 8px;
+    flex: 1 1 240px;
+    max-width: 440px;
+    min-width: 0;
+    padding-left: 2px;
+}
+
+.reader-island[hidden] {
+    display: none;
+}
+
+.reader-island-cover {
+    width: 24px;
+    height: 24px;
+    flex: none;
+    border-radius: 6px;
+    object-fit: cover;
+    background: var(--surface-2, rgba(0, 0, 0, 0.06));
+}
+
+.reader-island-cover:not([src]),
+.reader-island-cover[src=""] {
+    visibility: hidden;
+}
+
+.reader-island-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.reader-island-title {
+    font-size: 12px;
+    line-height: 1.25;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.reader-island-lyric {
+    font-size: 11px;
+    line-height: 1.25;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.reader-island-ctls {
+    display: flex;
+    gap: 2px;
+    flex: none;
+}
+
+.reader-island-btn {
+    padding: 2px 7px;
+    font-size: 13px;
+    line-height: 1.1;
+}
+
 /* 专注阅读模式：文章铺满整页 */
 html.reader-focus .toc-sidebar,
 html.reader-focus .mobile-top-bar,

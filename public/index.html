@@ -15,7 +15,7 @@
     <meta property="og:image" content="https://ravennull.work/images/Default/web-logo.webp">
     <meta property="og:locale" content="zh_CN">
     <meta name="twitter:card" content="summary">
-    <link rel="stylesheet" href="css/bundle.css?v=a1f343623f">
+    <link rel="stylesheet" href="css/bundle.css?v=82972ee2a4">
     <title>渡鸦 NULL · 日光与暮色之间</title>
     <link rel="icon" id="siteFavicon" href="/images/Default/web-logo.webp" type="image/webp">
     <link rel="apple-touch-icon" href="/images/Default/web-logo.webp">
@@ -74,7 +74,7 @@
     <!-- 音乐视图：iframe 的加载 / 遮罩 / 探活 / 降级都归它管，defer 保证在 DOM 解析后拿到节点。
          ⚠️ /js 下的文件在 Netlify 上是 max-age=31536000 + immutable，改了内容必须同时改这里的版本号，
          否则浏览器永远拿旧文件（v1.8.0：循环键 / 上翻歌词 / 进度条）。 -->
-    <script src="/js/music-view.js?v=2.0.0" defer></script>
+    <script src="/js/music-view.js?v=2.1.0" defer></script>
 </head>
 
 <body class="home-layout">
@@ -643,7 +643,7 @@
     <!-- 桌宠动效引擎（spring-driven character，见 public/vendor/grok/README.md） -->
 
     <!-- /js/* 是 immutable 长缓存：app.js 一改就必须换 ?v=，否则线上一直吃旧文件 -->
-    <script src="js/app.js?v=20261105k" defer></script>
+    <script src="js/app.js?v=20261105l" defer></script>
     <script src="js/animations.js?v=3.14.0" defer></script>
 
     <script>

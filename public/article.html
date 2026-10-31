@@ -34,7 +34,7 @@
     <script src="/js/site-icon.js?v=1.0.1" defer></script>
     
     <!-- 主样式 -->
-    <link rel="stylesheet" href="css/style.css?v=268e3720a3">
+    <link rel="stylesheet" href="css/style.css?v=9a7b029d3b">
     <link rel="stylesheet" href="css/glass.css?v=f39363ceac">
 
     <!-- 共享胶囊样式：文章正文里的白板嵌入块由白板编辑器渲染
@@ -2301,6 +2301,21 @@
                 <div class="reader-toolbar-group">
                     <button class="reader-btn" id="readerFocus" title="专注阅读">专注</button>
                 </div>
+
+                <!-- 正在播放：本页被首页的文章覆盖层嵌进来时，从首页那边的播放器同步过来 -->
+                <div class="reader-toolbar-sep" id="readerIslandSep" hidden></div>
+                <div class="reader-toolbar-group reader-island" id="readerIsland" hidden>
+                    <img class="reader-island-cover" id="readerIslandCover" alt="" decoding="async">
+                    <span class="reader-island-meta">
+                        <span class="reader-island-title" id="readerIslandTitle">正在播放</span>
+                        <span class="reader-island-lyric" id="readerIslandLyric"></span>
+                    </span>
+                    <span class="reader-island-ctls">
+                        <button class="reader-btn reader-island-btn" type="button" data-ctl="prev" title="上一首" aria-label="上一首">‹</button>
+                        <button class="reader-btn reader-island-btn" type="button" data-ctl="toggle" title="播放 / 暂停" aria-label="播放或暂停">▶</button>
+                        <button class="reader-btn reader-island-btn" type="button" data-ctl="next" title="下一首" aria-label="下一首">›</button>
+                    </span>
+                </div>
             </div>
 
             <!-- 文章头部 -->
@@ -2475,6 +2490,61 @@
         if (e.target.closest('#mobileGoBack, #sidebarGoBack, .sidebar-go-back')) return tellParent(e);
         if (e.target.closest('a[href="index.html"], a[href="./index.html"]')) return tellParent(e);
     }, true);
+})();
+</script>
+<script>
+/* 阅读工具栏里的「正在播放」：本页被首页嵌进来时，从首页那台播放器同步歌名 / 歌词 / 播放状态。
+   单独打开文章页（不是 iframe）时没有播放器可连，这一块保持隐藏。 */
+(function () {
+    var island = document.getElementById('readerIsland');
+    var sep = document.getElementById('readerIslandSep');
+    if (!island || window.parent === window) return;
+
+    var cover = document.getElementById('readerIslandCover');
+    var titleEl = document.getElementById('readerIslandTitle');
+    var lyricEl = document.getElementById('readerIslandLyric');
+    var toggleBtn = island.querySelector('[data-ctl="toggle"]');
+
+    var show = function (on) {
+        island.hidden = !on;
+        if (sep) sep.hidden = !on;
+    };
+
+    var render = function (payload) {
+        var song = payload && payload.song;
+        if (!song) {
+            show(false);
+            return;
+        }
+        show(true);
+        titleEl.textContent = song.name || '正在播放';
+        var line = payload.lyric && payload.lyric.text ? String(payload.lyric.text).trim() : '';
+        lyricEl.textContent = line || song.artist || '';
+        if (cover) {
+            if (song.cover) cover.src = song.cover;
+            else cover.removeAttribute('src');
+        }
+        if (toggleBtn) toggleBtn.textContent = payload.playing ? '❚❚' : '▶';
+    };
+
+    window.addEventListener('message', function (e) {
+        if (e.origin !== location.origin) return;
+        var data = e.data || {};
+        if (data.type === 'blog:now-playing') render(data.payload);
+    });
+
+    island.addEventListener('click', function (e) {
+        var btn = e.target && e.target.closest ? e.target.closest('[data-ctl]') : null;
+        if (!btn) return;
+        e.stopPropagation();
+        window.parent.postMessage(
+            { type: 'blog:player-control', action: btn.getAttribute('data-ctl') },
+            location.origin
+        );
+    });
+
+    // 进来先要一次当前状态（父页面会把它手上最新的一份发过来）
+    window.parent.postMessage({ type: 'blog:now-playing-request' }, location.origin);
 })();
 </script>
 </body>

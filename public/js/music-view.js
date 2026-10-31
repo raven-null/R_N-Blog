@@ -392,6 +392,9 @@
   }
 
   function applyNowPlaying(data) {
+    // 存一份最新的，并转给文章覆盖层里的「正在播放」（那边自己会藏/显示）
+    lastNowPlaying = data;
+    forwardNowPlaying(data);
     if (!island) return;
     var song = data.song;
     if (!song) {
@@ -485,6 +488,52 @@
       musicFrame.contentWindow.postMessage(message, FOLIA_ORIGIN);
     } catch (e) { /* iframe 还没挂上，忽略 */ }
   }
+
+  // ---------- 转给文章覆盖层里的「正在播放」 ----------
+  // 文章页跑在另一个 iframe 里，读不到这里的状态；它自己会发请求，播放状态一变也主动推过去。
+  var lastNowPlaying = null;
+
+  function articleFrameWindow() {
+    var frame = document.getElementById('articleFrame');
+    if (!frame) return null;
+    var src = frame.getAttribute('src') || '';
+    if (!src || src === 'about:blank') return null;
+    return frame.contentWindow || null;
+  }
+
+  // 只发文章页要用的几个字段：整份歌词窗口每秒传一次太重
+  function slimNowPlaying(data) {
+    var song = data && data.song;
+    return {
+      playing: !!(data && data.playing),
+      loading: !!(data && data.loading),
+      song: song ? { name: song.name || '', artist: song.artist || '', cover: song.cover || '' } : null,
+      lyric: data && data.lyric ? { text: data.lyric.text || '' } : null
+    };
+  }
+
+  function forwardNowPlaying(data) {
+    var win = articleFrameWindow();
+    if (!win) return;
+    try {
+      win.postMessage({ type: 'blog:now-playing', payload: slimNowPlaying(data) }, location.origin);
+    } catch (e) { /* iframe 正在换页，忽略 */ }
+  }
+
+  window.addEventListener('message', function (event) {
+    if (event.origin !== location.origin) return;
+    var data = event.data || {};
+    if (data.type === 'blog:now-playing-request') {
+      // 文章页刚打开：把手上最新的一份给它
+      var win = articleFrameWindow();
+      if (!win || !lastNowPlaying) return;
+      try {
+        win.postMessage({ type: 'blog:now-playing', payload: slimNowPlaying(lastNowPlaying) }, location.origin);
+      } catch (e) { /* 忽略 */ }
+    } else if (data.type === 'blog:player-control' && data.action) {
+      sendPlayerControl(data.action);
+    }
+  });
 
   // ---------- 主页「正在听」卡片 ----------
   // 和岛吃同一份推送：换歌/换行跟着变，三个按钮、卡片本身都能直接操作播放器。
