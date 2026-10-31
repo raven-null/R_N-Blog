@@ -512,6 +512,15 @@ body.view-music-active .now-island {
     opacity: 0.38;
 }
 
+/* 上下两句只是一句提示：一行放不下就用省略号，不换行、不挤 */
+.hv3-music-lyric-text {
+    display: block;
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 /* 唱完的那一句：从当前句的位置往上飘、散开一点，落到「上一句」该在的地方 */
 .hv3-music-lyric-line.is-prev.is-ghost {
     animation: hv3LyricGhost 0.62s cubic-bezier(0.2, 0.7, 0.3, 1);
@@ -540,7 +549,7 @@ body.view-music-active .now-island {
     align-content: center;
     justify-items: center;
     row-gap: 2px;
-    font-size: 21px;
+    font-size: var(--lyric-font, 21px);
     font-weight: 650;
     letter-spacing: 0.08em;
     color: var(--text-muted);
@@ -554,6 +563,14 @@ body.view-music-active .now-island {
 .hv3-music-lyric-fill {
     grid-row: 1;
     grid-column: 1;
+    max-width: 100%;
+    /* 长句最多两行，再多就省略——总比被裁掉半句强 */
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-align: center;
 }
 
 .hv3-music-lyric-base {

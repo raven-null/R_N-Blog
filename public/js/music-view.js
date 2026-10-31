@@ -553,10 +553,27 @@
     if (el.dataset.text === value && el.dataset.sub === sub) return false;
     el.dataset.text = value;
     el.dataset.sub = sub;
+    // 包一层 span：长句子才能在它身上做省略号
     el.innerHTML = value
-      ? escapeHtml(value) + (sub ? '<span class="hv3-music-lyric-trans">' + escapeHtml(sub) + '</span>' : '')
+      ? '<span class="hv3-music-lyric-text">' + escapeHtml(value) + '</span>'
+        + (sub ? '<span class="hv3-music-lyric-trans">' + escapeHtml(sub) + '</span>' : '')
       : '';
     return true;
+  }
+
+  // 长句自动缩字号：全角按 1、半角按 0.55 折算成"视觉宽度单位"，越长的句子字号越小
+  function lyricFontSize(text) {
+    var value = text ? String(text) : '';
+    var units = 0;
+    for (var i = 0; i < value.length; i++) {
+      units += /[\u0000-\u00ff]/.test(value[i]) ? 0.55 : 1;
+    }
+    if (units <= 14) return 21;
+    if (units <= 20) return 19;
+    if (units <= 26) return 17;
+    if (units <= 34) return 15;
+    if (units <= 44) return 13.5;
+    return 12.5;
   }
 
   // 当前句分两层叠着画：底层是暗的字，上层是强调色的字，用 clip-path 按这句唱到的比例裁出来
@@ -573,6 +590,8 @@
       '<span class="hv3-music-lyric-base">' + safe + '</span>' +
       '<span class="hv3-music-lyric-fill" aria-hidden="true">' + safe + '</span>' +
       (sub ? '<span class="hv3-music-lyric-trans">' + escapeHtml(sub) + '</span>' : '');
+    // 长句子自动缩字号，别让它在两行里被裁掉
+    lyricCurrentEl.style.setProperty('--lyric-font', lyricFontSize(value) + 'px');
     return true;
   }
 
