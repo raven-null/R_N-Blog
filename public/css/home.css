@@ -2982,3 +2982,14 @@ body:not(.has-music) .hv3-row-top .hv3-hero {
         margin: 0 !important;
     }
 }
+
+/* 移动端图片盒子去掉投影（v3.54.24）
+   手机上这块只有一个图片盒子，暗色主题下那条 `0 12px 34px rgba(0,0,0,.45)`
+   会在图外面围一圈灰黑色的"底板"，看着像图片自带一块背景，很脏。
+   浅色主题那条 `0 10px 30px rgba(16,20,32,.12)` 一并收掉，保持手机端干净。
+   用 !important 压过暗色主题规则（它写在前面、特异性更高），桌面端不受影响。 */
+@media (max-width: 900px) {
+    .hv3-row-main .hv3-shot {
+        box-shadow: none !important;
+    }
+}

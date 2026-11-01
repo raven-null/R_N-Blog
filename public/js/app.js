@@ -2730,12 +2730,20 @@ const BlogApp = {
         };
 
         nextShot();
-        // 面板切到「文章」时这块是 display:none（宽度 0），不白白换图
-        const timer = setInterval(() => {
-            if (document.hidden) return;
-            if (!stage.clientWidth) return;
-            nextShot();
-        }, 60000);
+        // 面板切到「文章」时这块是 display:none（宽度 0），不白白换图。
+        // 换图间隔按屏宽走：手机上（≤900px）这块是唯一的图片位，20 秒一换；
+        // 桌面上文章卡和方图也在轮播，保持 60 秒。用自调度 setTimeout 而非
+        // setInterval，这样窗口跨断点改变后下一次 tick 就换到新节奏。
+        const shotGap = () => (window.innerWidth <= 900 ? 20000 : 60000);
+        let shotTimer = 0;
+        const scheduleShot = () => {
+            shotTimer = setTimeout(() => {
+                if (!stage.isConnected) return; // 视图重建过，旧定时器自己收尾
+                if (!document.hidden && stage.clientWidth) nextShot();
+                scheduleShot();
+            }, shotGap());
+        };
+        scheduleShot();
 
         // 视口变化后可用宽度变了，尺寸要重算（与轮播 resize 一致）
         let resizePending = false;
@@ -2758,7 +2766,7 @@ const BlogApp = {
             }
         });
         stage.title = '点击看大图';
-        stage.dataset.timer = String(timer);
+        stage.dataset.timer = String(shotTimer);
     },
 
     // 生活切片：把盒子宽高设成图片真实比例（可用宽 × 高度上限内等比内切）
