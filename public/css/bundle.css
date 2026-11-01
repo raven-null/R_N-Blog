@@ -10793,7 +10793,7 @@ html[data-tone="dark"] .stack-pin {
 /* 桌宠跑出去玩时，当前页留下的召唤铃铛 */
 .deskpet-bell {
     position: fixed;
-    right: 22px;
+    left: 22px;
     bottom: 22px;
     z-index: 9000;
     width: 46px;
@@ -10822,7 +10822,7 @@ html[data-tone="dark"] .stack-pin {
 /* 铃铛悬停时的小气泡：告诉用户桌宠跑哪去了 */
 .deskpet-bell-tip {
     position: absolute;
-    right: 0;
+    left: 0;
     bottom: calc(100% + 8px);
     padding: 6px 10px;
     border-radius: 10px;

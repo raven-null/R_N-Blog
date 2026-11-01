@@ -1346,6 +1346,18 @@ const BlogApp = {
         list.addEventListener('focusout', () => { paused = false; play(); });
         document.addEventListener('visibilitychange', () => (document.hidden ? stop() : play()));
 
+        // 看门狗：切标签页 / 切视图后 pointerleave 可能根本收不到，暂停就永久卡住 —— 定期自检
+        setInterval(() => {
+            if (document.hidden) return;
+            if (!paused) {
+                if (!raf) play();
+                return;
+            }
+            if (list.matches(':hover') || list.matches(':focus-within')) return;   // 真在交互，别打断
+            paused = false;
+            play();
+        }, 2000);
+
         play();
     },
 
@@ -5461,6 +5473,13 @@ const BlogApp = {
             grid.addEventListener('pointerenter', () => { paused = true; }, { passive: true });
             grid.addEventListener('pointerleave', () => { paused = false; }, { passive: true });
             grid.addEventListener('pointerdown', () => { paused = true; }, { passive: true });
+            // 同上：离开事件丢了也要能自己恢复
+            setInterval(() => {
+                if (document.hidden) return;
+                if (!paused) return;
+                if (grid.matches(':hover') || grid.matches(':focus-within')) return;
+                paused = false;
+            }, 2000);
             if (grid._loopTimer) clearInterval(grid._loopTimer);
             grid._loopTimer = setInterval(() => {
                 if (document.hidden || paused) return;
