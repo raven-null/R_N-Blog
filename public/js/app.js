@@ -6343,7 +6343,12 @@ const BlogApp = {
         alt.removeAttribute('srcset');
         if (srcset) alt.setAttribute('srcset', srcset);
         alt.onload = swap;
-        alt.onerror = () => { settled = true; commit(art); };   // 新图挂了就直接换，别卡住
+        // 新图加载失败就放弃这一次：不能把底层也换成一张挂掉的图（那会变成空白背景）
+        alt.onerror = () => {
+            settled = true;
+            alt.removeAttribute('srcset');
+            alt.removeAttribute('src');
+        };
         alt.setAttribute('src', url);
         if (alt.complete && alt.naturalWidth > 0) swap();
     },
