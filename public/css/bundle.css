@@ -15526,6 +15526,64 @@ body:not(.has-music) .hv3-row-top .hv3-hero {
     }
 }
 
+/* ------------------------------------------------------------
+   移动端照片横排 + 简报顺序（v3.54.5）
+   1) 生活切片 / 方图在桌面上并排挤在一行里，手机上太小看不清楚。
+      ≤900px 把它们的父容器改成横向滑动：一块占 78% 宽，滑到哪块就近吸附，
+      滚动条隐藏，手指左右划就能看完。
+   2) 简报（#hv3News）本来就在 DOM 里排在「今天/日历」前面，这里再用 order 钉死一次，
+      免得以后调整布局时两边打架。
+   ------------------------------------------------------------ */
+@media (max-width: 900px) {
+    .hv3-sub-grid {
+        display: flex !important;
+        flex-wrap: nowrap;
+        gap: 12px;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+        padding-bottom: 2px;
+    }
+
+    .hv3-sub-grid::-webkit-scrollbar {
+        display: none;
+        width: 0;
+        height: 0;
+    }
+
+    .hv3-sub-grid > * {
+        flex: 0 0 78%;
+        min-width: 0;
+        scroll-snap-align: center;
+        align-self: auto;
+        max-height: none;
+    }
+
+    /* 方图原本靠 JS 写成「宽度 = 高度」的正方形，滑动布局里让它跟着容器走 */
+    .hv3-sub-grid > .hv3-square {
+        width: 100% !important;
+        height: auto !important;
+        aspect-ratio: 1;
+    }
+
+    .hv3-sub-grid > .hv3-shot {
+        width: 100%;
+        aspect-ratio: var(--shot-ar, 1.6);
+        min-height: 180px;
+    }
+
+    /* 简报一定在日历上面 */
+    .hv3-row-main {
+        order: 1;
+    }
+
+    .hv3-row-bottom {
+        order: 2;
+    }
+}
+
 
 /* music.css */
 /* ============================================================
