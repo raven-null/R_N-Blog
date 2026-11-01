@@ -16,7 +16,8 @@
 .hv3 {
     display: flex;
     flex-direction: column;
-    gap: 18px;
+    /* 间距跟着视口走：小屏紧凑、宽屏稍微松一点，整页是「缩放」而不是单纯拉宽 */
+    gap: clamp(14px, 0.9vw, 26px);
     width: 100%;
 }
 
@@ -30,7 +31,7 @@
 .hv3-grid {
     display: grid;
     grid-template-columns: repeat(12, minmax(0, 1fr));
-    gap: 18px;
+    gap: clamp(14px, 0.9vw, 26px);
     align-items: stretch;
 }
 
@@ -42,7 +43,7 @@
 /* 卡片底：手写纸卡（与「今天」卡同一套变量），比原来的 .5 更实一点，
    不然背景插画透出来整页显空 */
 .hv3-card {
-    padding: 16px 18px;
+    padding: clamp(13px, 0.75vw, 26px) clamp(15px, 0.95vw, 30px);
     border-radius: 20px;
     background: rgba(255, 253, 248, .74);
     border: 1px solid var(--glass-line, rgba(255, 255, 255, .5));
