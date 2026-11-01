@@ -17137,3 +17137,37 @@ body.island-off:not(.view-music-active) #topBarPill .top-bar-views {
 body.island-off:not(.view-music-active) .dock-orb {
     display: none !important;
 }
+
+/* ------------------------------------------------------------
+   歌词填充改用渐变文字（v3.54.13）
+   原来 .hv3-music-lyric-fill 用 clip-path: inset(0 60% 0 0) 做卡拉 OK：
+   那是按「整块」左右裁——单行没问题，一旦长句换成两行，
+   两行会一起被从右侧切掉，看起来就是「上一行被裁、下一行孤零零」。
+   现在改成给填充层加渐变背景再 text-clip 到文字上：
+   文字颜色从左到右分界，进度只改渐变断点，永远不会裁掉字。
+   ------------------------------------------------------------ */
+.hv3-music-lyric-fill {
+    clip-path: none !important;
+    color: transparent !important;
+    background-image: linear-gradient(90deg,
+        var(--accent, var(--text)) 0%,
+        var(--accent, var(--text)) var(--lyric-progress, 100%),
+        rgba(140, 140, 150, 0.42) var(--lyric-progress, 100%),
+        rgba(140, 140, 150, 0.42) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    transition: background-image 0.25s linear;
+}
+
+/* 窄屏：主行多给点高度，两行也放得下，别让容器把它裁掉 */
+@media (max-width: 900px) {
+    .hv3-music-lyric-line.is-current {
+        flex: 1.6 1 0;
+        min-height: 0;
+    }
+
+    .hv3-music-lyric-base,
+    .hv3-music-lyric-fill {
+        line-height: 1.35;
+    }
+}
