@@ -815,8 +815,6 @@
 
   // 翻不翻：真在放（或正要开始放）才翻起来；暂停、没歌都停在正面，方便按播放键
   var cardHovered = false;
-  // 触屏设备没有 hover：手动点卡片空白处切「信息 ↔ 歌词」，默认先显示信息面。
-  var touchLyricOn = false;
 
   function canHoverNow() {
     try {
@@ -826,10 +824,12 @@
     }
   }
 
+  // 只有真能 hover 的设备（鼠标）才自动翻到歌词面。
+  // 触屏手机没有 hover，就固定停在信息面 —— 不翻。
   function syncCardFlip() {
     if (!musicCard) return;
     var canFlip = musicCard.classList.contains('is-playing') && !musicCard.classList.contains('paused');
-    var showLyrics = canFlip && !cardHovered && (canHoverNow() || touchLyricOn);
+    var showLyrics = canFlip && !cardHovered && canHoverNow();
     musicCard.classList.toggle('is-lyric', showLyrics);
     if (lyricsBox) lyricsBox.setAttribute('aria-hidden', showLyrics ? 'false' : 'true');
   }
@@ -1012,17 +1012,6 @@
       cardHovered = false;
       clearTimeout(lyricHoldTimer);
       lyricHoldTimer = setTimeout(syncCardFlip, 900);
-    });
-
-    // 触屏：点「卡片空白处」在信息面 / 歌词面之间来回切。
-    // 按钮、循环键、进度条不算空白 —— 那些是控制，别把卡片翻走。
-    musicCard.addEventListener('click', function (e) {
-      if (canHoverNow()) return;                                  // 桌面还是靠 hover，不抢点击
-      var t = e.target;
-      if (t && t.closest && t.closest('button, a, .hv3-music-progress, .hv3-music-ctls')) return;
-      if (!musicCard.classList.contains('is-playing')) return;     // 没在放就没有歌词可翻
-      touchLyricOn = !touchLyricOn;
-      syncCardFlip();
     });
 
     var cardOpenBtn = document.getElementById('hv3MusicOpen');
