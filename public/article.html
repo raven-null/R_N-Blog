@@ -34,7 +34,7 @@
     <script src="/js/site-icon.js?v=1.0.1" defer></script>
     
     <!-- 主样式 -->
-    <link rel="stylesheet" href="css/style.css?v=7b366a0b89">
+    <link rel="stylesheet" href="css/style.css?v=f089b35966">
     <link rel="stylesheet" href="css/glass.css?v=f39363ceac">
 
     <!-- 共享胶囊样式：文章正文里的白板嵌入块由白板编辑器渲染
@@ -2222,9 +2222,20 @@
             color: var(--accent-strong); background: var(--accent-soft); border: 1px solid var(--accent-ring);
         }
         .related-posts-head .rp-tip { margin-left: auto; font-size: 11.5px; font-weight: 400; color: var(--text-muted); }
-        .rp-list { display: flex; flex-direction: column; gap: 10px; }
+        /* 一排横向：矮卡片，可拖 / 自动滚 / 无限循环 */
+        .rp-list {
+            display: flex; flex-direction: row; gap: 12px;
+            overflow-x: auto; overflow-y: hidden;
+            padding: 2px 2px 8px;
+            scrollbar-width: none;
+            user-select: none; -webkit-user-select: none;
+        }
+        .rp-list::-webkit-scrollbar { display: none; width: 0; height: 0; }
         .rp-card {
-            display: block; padding: 13px 15px; border-radius: 12px; text-decoration: none;
+            display: flex; flex-direction: column;
+            flex: 0 0 268px; align-self: stretch;
+            padding: 12px 14px; border-radius: 12px; text-decoration: none;
+            overflow: hidden;
             background: var(--surface-2);
             border: 1px solid var(--border);
             transition: border-color .18s ease, background .18s ease, transform .18s ease;
@@ -2239,7 +2250,7 @@
             display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden;
             font-size: 12.5px; line-height: 1.7; color: var(--text-secondary);
         }
-        .rp-card .rp-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 7px; font-size: 11.5px; color: var(--text-muted); }
+        .rp-card .rp-meta { display: flex; flex-wrap: nowrap; overflow: hidden; gap: 8px; margin-top: auto; padding-top: 7px; font-size: 11.5px; color: var(--text-muted); }
         .rp-card .rp-tag {
             padding: 1px 7px; border-radius: 99px;
             background: var(--accent-soft); border: 1px solid var(--accent-ring); color: var(--accent-strong);
@@ -2687,7 +2698,7 @@
     <script src="js/reader.js?v=3.15.2" defer></script>
     <script src="js/animations.js?v=3.14.0" defer></script>
 
-    <script src="js/article-app.js?v=2.4.1" defer></script>
+    <script src="js/article-app.js?v=2.4.2" defer></script>
 
     <!-- 桌宠：看页面 / 主动说话 / 语音对话 -->
     <div class="deskpet" id="deskPet" data-state="awake">

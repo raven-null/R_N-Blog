@@ -604,6 +604,10 @@ const ArticleApp = {
                     ? ''      // 一个可跳的都没有：不显示提示
                     : '<span class="rt-tip">点词条跳到正文中的定义引用' +
                       (jumpable < rows.length ? '（没有引用的不跳转）' : '') + '</span>';
+                // 上一轮那条横向轨道如果还在跑，先把定时器停掉（元素马上要被重建）
+                const oldRail = host.querySelector('.rp-list');
+                if (oldRail && oldRail._railTimer) { clearInterval(oldRail._railTimer); oldRail._railTimer = 0; }
+
                 host.style.display = '';
                 host.innerHTML =
                     '<div class="related-terms-head">本篇术语' +
@@ -893,6 +897,10 @@ const ArticleApp = {
                 backward.forEach(push);
                 if (!merged.length) { host.style.display = 'none'; host.innerHTML = ''; return; }
 
+                // 上一轮那条横向轨道如果还在跑，先把定时器停掉（元素马上要被重建）
+                const oldRail = host.querySelector('.rp-list');
+                if (oldRail && oldRail._railTimer) { clearInterval(oldRail._railTimer); oldRail._railTimer = 0; }
+
                 host.style.display = '';
                 host.innerHTML =
                     '<div class="related-posts-head">相关文章' +
@@ -910,6 +918,84 @@ const ArticleApp = {
                             (p.date ? '<span>' + this.esc(p.date) + '</span>' : '') + tags +
                             '</span></a>';
                     }).join('') + '</div>';
+                this.initRelatedRail(host.querySelector('.rp-list'));
+            },
+
+            /* 相关文章：一排横向，能按住拖、自己慢慢滚、滚到尽头无缝接回 */
+            initRelatedRail(list) {
+                if (!list) return;
+                if (!list.dataset.dragBound) {
+                    list.dataset.dragBound = '1';
+                    let dragging = false;
+                    let moved = false;
+                    let startX = 0;
+                    let startLeft = 0;
+                    list.addEventListener('pointerdown', (e) => {
+                        if (e.pointerType !== 'mouse' || e.button !== 0) return;
+                        dragging = true; moved = false; startX = e.clientX; startLeft = list.scrollLeft;
+                    });
+                    list.addEventListener('pointermove', (e) => {
+                        if (!dragging) return;
+                        const dx = e.clientX - startX;
+                        if (!moved && Math.abs(dx) > 4) moved = true;
+                        if (moved) { e.preventDefault(); list.scrollLeft = startLeft - dx; }
+                    });
+                    const stop = () => { dragging = false; };
+                    list.addEventListener('pointerup', stop);
+                    list.addEventListener('pointerleave', stop);
+                    // 刚拖过就别触发卡片跳转
+                    list.addEventListener('click', (e) => {
+                        if (!moved) return;
+                        e.preventDefault(); e.stopPropagation(); moved = false;
+                    }, true);
+                }
+                if (list.dataset.railInit === '1') return;
+                list.dataset.railInit = '1';
+
+                const cards = [...list.children];
+                if (!cards.length) return;
+                const copy = () => {
+                    const frag = document.createDocumentFragment();
+                    cards.forEach((c) => {
+                        const n = c.cloneNode(true);
+                        n.setAttribute('aria-hidden', 'true');
+                        frag.appendChild(n);
+                    });
+                    list.appendChild(frag);
+                };
+                copy(); copy();
+
+                const oneW = () => {
+                    const all = list.children;
+                    const a = all[0];
+                    const b = all[cards.length];
+                    return (a && b) ? (b.offsetLeft - a.offsetLeft) : 0;
+                };
+                const w0 = oneW();
+                if (w0 > 0) list.scrollLeft = w0;
+                const wrap = () => {
+                    const w = oneW();
+                    if (w <= 0) return;
+                    if (list.scrollLeft >= w * 2) list.scrollLeft -= w;
+                    else if (list.scrollLeft <= 0) list.scrollLeft += w;
+                };
+                list.addEventListener('scroll', wrap, { passive: true });
+                list.addEventListener('pointerup', () => setTimeout(wrap, 0), { passive: true });
+
+                let paused = false;
+                let acc = 0;
+                list.addEventListener('pointerenter', () => { paused = true; }, { passive: true });
+                list.addEventListener('pointerleave', () => { paused = false; }, { passive: true });
+                if (list._railTimer) clearInterval(list._railTimer);
+                list._railTimer = setInterval(() => {
+                    if (document.hidden || paused) return;
+                    if (oneW() <= 0) return;
+                    acc += 0.3;
+                    if (acc < 1) return;
+                    const stepPx = Math.floor(acc);
+                    acc -= stepPx;
+                    list.scrollLeft += stepPx;
+                }, 16);
             },
 
             renderRelatedCanvases() {
@@ -922,6 +1008,10 @@ const ArticleApp = {
                     host.innerHTML = '';
                     return;
                 }
+                // 上一轮那条横向轨道如果还在跑，先把定时器停掉（元素马上要被重建）
+                const oldRail = host.querySelector('.rp-list');
+                if (oldRail && oldRail._railTimer) { clearInterval(oldRail._railTimer); oldRail._railTimer = 0; }
+
                 host.style.display = '';
                 const label = k => (k === 'map' ? '思维导图' : '白板');
                 host.innerHTML =

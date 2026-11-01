@@ -400,19 +400,14 @@ const BlogApp = {
         }
     },
 
-    // 根据作者名字返回对应头像（站长使用设置中的头像，其他用默认）
+    // 作者头像：卡片上的名字一律显示站长名（见 getAuthorName），头像也就跟着用站长的，
+    // 否则会出现「名字是站长、头像却是默认」的错位（新发的书作者写的是原作者名，就中招了）
     getAuthorAvatar(author) {
         const name = (author || '').trim();
-        // 站长（博主/设置中配置的用户名）使用设置页面的头像
         const settings = this.getBlogSettings();
-        const authorName = settings ? settings.authorName : '';
         const avatar = settings ? settings.avatar : '';
-        // 作者是站长（博主或配置的用户名）→ 用设置的头像
-        if (name === '博主' || (authorName && name === authorName)) {
-            return avatar || 'images/Default/profile -picture.webp';
-        }
-        // AI 或其他作者 → 默认头像
-        return 'images/Default/profile -picture.webp';
+        if (name === 'AI') return avatar || 'images/Default/profile -picture.webp';
+        return avatar || 'images/Default/profile -picture.webp';
     },
 
     // 根据作者名字返回显示名（卡片用户名始终跟随设置中的用户名）
@@ -5075,6 +5070,11 @@ const BlogApp = {
         }).join('');
         body.innerHTML = list;
         if (sub) sub.textContent = `${posts.length} 篇`;
+        // 一排横向：按住可拖、自己慢慢滚、循环不停（和日历旁项目条同一套）
+        if (body._loopTimer) { clearInterval(body._loopTimer); body._loopTimer = 0; }
+        body.dataset.loopBound = '';
+        this.bindProjectsDragScroll(body);
+        this.initProjectsLoopScroll(body, '.post-wall-item', { auto: true, speed: 0.3 });
         this.layoutCanvasNodes();
     },
 

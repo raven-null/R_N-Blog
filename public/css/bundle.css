@@ -6905,28 +6905,43 @@ body.canvas-on .reading-progress {
     -webkit-user-select: none;
 }
 
-/* ===== 文章墙：瀑布流（多列，卡片高度自然错落） ===== */
+/* ===== 文章墙：横向一条（矮卡片，可拖 / 自动滚 / 无限循环） ===== */
 .canvas-wall-posts .canvas-wall-body {
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    padding-right: 4px;
+    overflow: hidden;
+    padding-right: 0;
 }
 
 .canvas-wall-posts .post-wall-list {
-    display: block;
-    columns: 2;
-    column-gap: 16px;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    gap: 12px;
     height: auto;
     min-height: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 2px 2px 8px;
+    scrollbar-width: none;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.canvas-wall-posts .post-wall-list::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
 }
 
 .canvas-wall-posts .post-wall-item {
-    display: block;
-    break-inside: avoid;
-    -webkit-column-break-inside: avoid;
-    page-break-inside: avoid;
-    margin: 0 0 16px;
-    padding: 14px 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 0 0 272px;
+    align-self: stretch;
+    margin: 0;
+    padding: 12px 13px;
+    overflow: hidden;
     border: 1px solid var(--border);
     border-radius: 14px;
     background: rgba(255, 255, 255, 0.03);
@@ -6943,7 +6958,8 @@ body.canvas-on .reading-progress {
 
 .canvas-wall-posts .post-wall-cover {
     display: block;
-    aspect-ratio: 16 / 10;
+    aspect-ratio: 16 / 9;
+    max-height: 92px;
     overflow: hidden;
     border-radius: 10px;
     margin-bottom: 11px;
@@ -6967,8 +6983,8 @@ body.canvas-on .reading-progress {
 
 .canvas-wall-posts .post-wall-excerpt {
     display: -webkit-box;
-    -webkit-line-clamp: 3;
-    line-clamp: 3;
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
     -webkit-box-orient: vertical;
     overflow: hidden;
     margin-top: 7px;
@@ -6981,8 +6997,10 @@ body.canvas-on .reading-progress {
     display: flex;
     align-items: center;
     gap: 8px;
-    flex-wrap: wrap;
-    margin-top: 10px;
+    flex-wrap: nowrap;
+    overflow: hidden;
+    margin-top: auto;
+    padding-top: 2px;
 }
 
 /* 三列：墙足够宽时更密 */
