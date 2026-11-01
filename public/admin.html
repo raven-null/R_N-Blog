@@ -438,6 +438,14 @@
         /* 拖到滑块上时别让整组卡跟着“浮起来” */
         .settings-group:has(.settings-range:active){opacity:1!important}
         .settings-range-val{font-family:'Courier New',monospace;font-size:12px;color:var(--accent);margin-left:6px}
+        /* 设置组里可以折叠的次级块（桌宠的名字/性格、朗读） */
+        .settings-more{margin-top:12px;border:1px solid var(--border,#e2ddd0);border-radius:10px;padding:2px 12px;background:rgba(128,128,128,.04)}
+        .settings-more>summary{cursor:pointer;list-style:none;padding:10px 0;font-size:12px;color:var(--text-secondary);display:flex;align-items:center;gap:8px;user-select:none}
+        .settings-more>summary::-webkit-details-marker{display:none}
+        .settings-more>summary::before{content:'▸';font-size:11px;transition:transform .15s ease;color:var(--text-muted)}
+        .settings-more[open]>summary::before{transform:rotate(90deg)}
+        .settings-more[open]>summary{border-bottom:1px solid var(--border,#e2ddd0);margin-bottom:12px}
+        .settings-more .settings-field:last-child{margin-bottom:12px}
         /* 滑块下面的实时示意：外框＝屏幕，中间那格＝主页内容，拖动时它跟着缩/涨 */
         .settings-screen{position:relative;height:104px;margin-top:12px;border-radius:10px;overflow:hidden;
             border:1px solid var(--border,#cfc9ba);
@@ -1184,27 +1192,8 @@
                             </div>
                         </div>
 
-                        <!-- 3. 导航页面开关 -->
-                        <div class="settings-group">
-                            <h3><span class="settings-title">导航页面（首页顶部视图）</span><span class="settings-grip" title="拖动排序">⠿</span><span class="settings-chevron" title="展开/收起">▾</span></h3>
-                            <div class="settings-toggle-list">
-                                <div class="settings-toggle-item"><span>主页</span><label class="switch"><input type="checkbox" id="setViewHome" checked><span class="slider"></span></label></div>
-                                <div class="settings-toggle-item"><span>文章</span><label class="switch"><input type="checkbox" id="setViewBlog" checked><span class="slider"></span></label></div>
-                                <div class="settings-toggle-item"><span>图库</span><label class="switch"><input type="checkbox" id="setViewGallery" checked><span class="slider"></span></label></div>
-                                <div class="settings-toggle-item"><span>项目</span><label class="switch"><input type="checkbox" id="setViewProjects" checked><span class="slider"></span></label></div>
-                            </div>
-                            <div class="settings-tip">关闭后对应页面将在首页导航栏中隐藏（主页关闭时默认落在文章页；今日简报已并入主页）</div>
-                        </div>
-
-                        <!-- 5. 导航标签 -->
-                        <div class="settings-group">
-                            <h3><span class="settings-title">导航标签（首页文章筛选）</span><span class="settings-grip" title="拖动排序">⠿</span><span class="settings-chevron" title="展开/收起">▾</span></h3>
-                            <div class="settings-field">
-                                <label>主要标签（逗号分隔，如：技术,生活,AI）</label>
-                                <input type="text" id="setNavTags" placeholder="用逗号分隔，如：技术,生活,AI">
-                            </div>
-                            <div class="settings-tip">首页导航栏将显示这些标签用于文章筛选，默认显示「全部」</div>
-                        </div>
+                        <!-- 3. 导航页面开关 / 5. 导航标签：已移除（v3.52.5）。
+                             视图和筛选标签改成固定全开，不再提供开关；settings 里旧字段仍原样保留。 -->
 
                         <!-- 6. 主页布局 -->
                         <div class="settings-group">
@@ -1242,6 +1231,70 @@
                                 <label>最后更新</label>
                                 <input type="text" id="setAboutUpdated" placeholder="输入更新日期">
                             </div>
+                        </div>
+
+                        <!-- 桌宠（右下角的渡鸦）：常用开关放外面，名字/性格与朗读设置折起来 -->
+                        <div class="settings-group">
+                            <h3><span class="settings-title">桌宠（右下角的渡鸦）</span><span class="settings-grip" title="拖动排序">⠿</span><span class="settings-chevron" title="展开/收起">▾</span></h3>
+                            <div class="settings-toggle-list">
+                                <div class="settings-toggle-item"><span>显示桌宠</span><label class="switch"><input type="checkbox" id="setPetEnabled" checked><span class="slider"></span></label></div>
+                                <div class="settings-toggle-item"><span>主动搭话</span><label class="switch"><input type="checkbox" id="setPetAutoTalk" checked><span class="slider"></span></label></div>
+                                <div class="settings-toggle-item"><span>眼睛跟着鼠标</span><label class="switch"><input type="checkbox" id="setPetGaze" checked><span class="slider"></span></label></div>
+                            </div>
+                            <div class="settings-field">
+                                <label>说话频率（主动搭话的间隔）</label>
+                                <select id="setPetTalkRate">
+                                    <option value="quiet">安静（约 2~4 分钟一句）</option>
+                                    <option value="normal">正常（约 40~90 秒一句）</option>
+                                    <option value="chatty">话多（约 20~45 秒一句）</option>
+                                </select>
+                            </div>
+
+                            <details class="settings-more">
+                                <summary>名字与性格</summary>
+                                <div class="settings-field">
+                                    <label>名字</label>
+                                    <input type="text" id="setPetName" placeholder="渡鸦" maxlength="20">
+                                </div>
+                                <div class="settings-field">
+                                    <label>性格 / 口吻（追加到 AI 提示词）</label>
+                                    <textarea id="setPetPersona" rows="3" placeholder="例如：说话简短，偶尔用「喵」，别把每句都写成卖萌"></textarea>
+                                </div>
+                            </details>
+
+                            <details class="settings-more">
+                                <summary>朗读（TTS）</summary>
+                                <div class="settings-toggle-list">
+                                    <div class="settings-toggle-item"><span>默认朗读回复</span><label class="switch"><input type="checkbox" id="setPetTts"><span class="slider"></span></label></div>
+                                </div>
+                                <div class="settings-field">
+                                    <label>语速（0.6 - 1.6）</label>
+                                    <input type="number" id="setPetTtsRate" min="0.6" max="1.6" step="0.05" placeholder="1.05">
+                                </div>
+                                <div class="settings-field">
+                                    <label>音调（0.6 - 1.6）</label>
+                                    <input type="number" id="setPetTtsPitch" min="0.6" max="1.6" step="0.05" placeholder="1.1">
+                                </div>
+                                <div class="settings-field">
+                                    <label>音色（本机没有的会自动退回自动）</label>
+                                    <select id="setPetTtsVoice">
+                                        <option value="">自动（挑本机一个中文语音）</option>
+                                        <option value="Xiaoxiao">晓晓 · 女声（Xiaoxiao）</option>
+                                        <option value="Xiaoyi">晓伊 · 女声（Xiaoyi）</option>
+                                        <option value="Yaoyao">瑶瑶 · 女声（Yaoyao）</option>
+                                        <option value="Huihui">慧慧 · 女声（Huihui）</option>
+                                        <option value="Yunxi">云希 · 男声（Yunxi）</option>
+                                        <option value="Yunjian">云健 · 男声（Yunjian）</option>
+                                        <option value="Kangkang">康康 · 男声（Kangkang）</option>
+                                        <option value="Google">Google 普通话</option>
+                                        <option value="__custom">自定义关键词…</option>
+                                    </select>
+                                    <input type="text" id="setPetTtsVoiceCustom" placeholder="比如 Xiaoxiao / Yaoyao / Yunjian" maxlength="40" style="margin-top:8px;display:none">
+                                    <button type="button" class="btn btn-ghost btn-sm" id="setPetTtsPreview" style="margin-top:10px">▶ 试听这个音色</button>
+                                </div>
+                            </details>
+
+                            <div class="settings-tip">对话走「AI 助手」的厂商 / 模型 / 密钥（`/api/ai`），那里的 AI 关闭时桌宠也不会回话。<br>朗读用系统自带语音合成；音色取决于访客本机，关键词匹配不到就退回自动。</div>
                         </div>
                         </div>
 
@@ -1340,62 +1393,6 @@
                                 </div>
                             </div>
                             <div class="settings-tip">写作页右侧「AI」页签用这套配置：只回答写作中的疑问，不读取正文、也不会改正文；密钥独立，不影响访客端聊天。<br>小米 MiMo 的 <code>tp-</code> 开头密钥（Token Plan）请选「小米 MiMo（Token Plan）」，选错会 401。</div>
-                        </div>
-
-                        <!-- 桌宠（右下角渡鸦）：对话表现 + 朗读合成放在一起 -->
-                        <div class="settings-group">
-                            <h3><span class="settings-title">桌宠（右下角的渡鸦）</span><span class="settings-grip" title="拖动排序">⠿</span><span class="settings-chevron" title="展开/收起">▾</span></h3>
-                            <div class="settings-toggle-list">
-                                <div class="settings-toggle-item"><span>显示桌宠</span><label class="switch"><input type="checkbox" id="setPetEnabled" checked><span class="slider"></span></label></div>
-                                <div class="settings-toggle-item"><span>主动搭话</span><label class="switch"><input type="checkbox" id="setPetAutoTalk" checked><span class="slider"></span></label></div>
-                                <div class="settings-toggle-item"><span>眼睛跟着鼠标</span><label class="switch"><input type="checkbox" id="setPetGaze" checked><span class="slider"></span></label></div>
-                            </div>
-                            <div class="settings-field">
-                                <label>说话频率（主动搭话的间隔）</label>
-                                <select id="setPetTalkRate">
-                                    <option value="quiet">安静（约 2~4 分钟一句）</option>
-                                    <option value="normal">正常（约 40~90 秒一句）</option>
-                                    <option value="chatty">话多（约 20~45 秒一句）</option>
-                                </select>
-                            </div>
-                            <div class="settings-field">
-                                <label>名字</label>
-                                <input type="text" id="setPetName" placeholder="渡鸦" maxlength="20">
-                            </div>
-                            <div class="settings-field">
-                                <label>性格 / 口吻（追加到 AI 提示词）</label>
-                                <textarea id="setPetPersona" rows="3" placeholder="例如：说话简短，偶尔用「喵」，别把每句都写成卖萌"></textarea>
-                            </div>
-                            <div class="settings-toggle-list" style="margin-top:14px">
-                                <div class="settings-toggle-item"><span>默认朗读回复</span><label class="switch"><input type="checkbox" id="setPetTts"><span class="slider"></span></label></div>
-                            </div>
-                            <div class="settings-field">
-                                <label>语速（0.6 - 1.6）</label>
-                                <input type="number" id="setPetTtsRate" min="0.6" max="1.6" step="0.05" placeholder="1.05">
-                            </div>
-                            <div class="settings-field">
-                                <label>音调（0.6 - 1.6）</label>
-                                <input type="number" id="setPetTtsPitch" min="0.6" max="1.6" step="0.05" placeholder="1.1">
-                            </div>
-                            <div class="settings-field">
-                                <label>音色（本机没有的会自动退回自动）</label>
-                                <select id="setPetTtsVoice">
-                                    <option value="">自动（挑本机一个中文语音）</option>
-                                    <option value="Xiaoxiao">晓晓 · 女声（Xiaoxiao）</option>
-                                    <option value="Xiaoyi">晓伊 · 女声（Xiaoyi）</option>
-                                    <option value="Yaoyao">瑶瑶 · 女声（Yaoyao）</option>
-                                    <option value="Huihui">慧慧 · 女声（Huihui）</option>
-                                    <option value="Yunxi">云希 · 男声（Yunxi）</option>
-                                    <option value="Yunjian">云健 · 男声（Yunjian）</option>
-                                    <option value="Kangkang">康康 · 男声（Kangkang）</option>
-                                    <option value="Google">Google 普通话</option>
-                                    <option value="__custom">自定义关键词…</option>
-                                </select>
-                                <input type="text" id="setPetTtsVoiceCustom" placeholder="比如 Xiaoxiao / Yaoyao / Yunjian" maxlength="40" style="margin-top:8px;display:none">
-                                <button type="button" class="btn btn-ghost btn-sm" id="setPetTtsPreview" style="margin-top:10px">▶ 试听这个音色</button>
-                            </div>
-                            <div class="settings-tip">对话走上面「AI 助手」的厂商 / 模型 / 密钥（`/api/ai`），这里的 AI 关闭时桌宠也不会回话。<br>朗读用系统自带的语音合成（Chrome / Edge 中文声音最好）；音色取决于访客本机的语音列表，关键词做模糊匹配、匹配不到就退回自动，访客也能在对话面板里自己换。</div>
-                        </div>
                         </div>
 
                         <div class="settings-section" data-section="backend">
@@ -1621,7 +1618,7 @@
     </div>
 
         <script src="js/tag-picker.js?v=1.1.2"></script>
-        <script src="js/admin-app.js?v=1.32.1"></script>
+        <script src="js/admin-app.js?v=1.32.2"></script>
 
     <!-- 前台预览抽屉（iframe 内嵌，零跳出） -->
     <style>

@@ -1571,7 +1571,8 @@ export default async (req: Request) => {
       const merged = {
         ...DEFAULT_SETTINGS,
         ...data,
-        views: { ...DEFAULT_SETTINGS.views, ...(data.views || {}) },
+        // 「导航页面」开关已从后台移除（v3.52.5）：视图固定全开，不再跟着库里的旧值隐藏
+        views: { home: true, blog: true, gallery: true, projects: true },
         stats: { ...DEFAULT_SETTINGS.stats, ...(data.stats || {}) },
         about: { ...DEFAULT_SETTINGS.about, ...(data.about || {}) },
         // AI 字段留空时回退到内置默认值，保证开箱即用

@@ -2619,11 +2619,7 @@
             renderSettingsAvatar(s.avatar);
             document.getElementById('setAuthorName').value=s.authorName||'';
             document.getElementById('setBio').value=s.bio||'';
-            document.getElementById('setViewHome').checked=s.views?s.views.home!==false:true;
-            document.getElementById('setViewBlog').checked=s.views?s.views.blog!==false:true;
-            document.getElementById('setViewGallery').checked=s.views?s.views.gallery!==false:true;
-            document.getElementById('setViewProjects').checked=s.views?s.views.projects!==false:true;
-            document.getElementById('setNavTags').value=(s.navTags||[]).join(',');
+            // 「导航页面」「导航标签」两块设置已移除（v3.52.5）：视图与筛选标签固定全开
             // 主页布局滑块
             const homePctEl=document.getElementById('setHomeWidthPct');
             if(homePctEl){
@@ -2874,13 +2870,8 @@
                 avatar:document.getElementById('setAvatar').value.trim(),
                 authorName,
                 bio:document.getElementById('setBio').value.trim(),
-                views:{
-                    home:document.getElementById('setViewHome').checked,
-                    blog:document.getElementById('setViewBlog').checked,
-                    gallery:document.getElementById('setViewGallery').checked,
-                    projects:document.getElementById('setViewProjects').checked,
-                },
-                navTags:document.getElementById('setNavTags').value.split(',').map(s=>s.trim()).filter(Boolean),
+                // views / navTags 的设置项已移除（v3.52.5）：不再提交这两个字段，
+                // 后端按「没带就沿用/全开」处理，视图与筛选标签保持全开。
             // 主页布局：滑块值 = 内容占视口宽度的百分比（前台 home-layout.js 读它）
             layout:{
                 homeWidthPct:(()=>{
