@@ -9,8 +9,8 @@ button,input,textarea,select{font:inherit}button,a,input,textarea,select{-webkit
 :where(input,textarea,select){color:var(--text);background-color:var(--surface-2);border-color:var(--border)}
 :where(.card,.project-card,.home-project){transition:transform .18s ease,box-shadow .18s ease}
 :where(.card,.project-card,.home-project):hover{transform:translateY(-3px);box-shadow:0 12px 30px #11182710}
-.sky{filter:none!important}.sky-art{transition:filter 1.4s ease;opacity:.65!important}.sky::before{filter:none}
-html[data-theme=dark] .sky{filter:brightness(.7)!important}
+.sky{filter:none!important}.sky-art{transition:filter 1.4s ease;opacity:.72!important}.sky::before{filter:none}
+html[data-theme=dark] .sky{filter:brightness(.92)!important}
 .top-bar{background:transparent!important;border-bottom:1px solid transparent!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
 .top-bar-inner{max-width:1200px!important;margin:auto;padding-inline:28px!important;justify-content:center!important}.top-bar-brand{letter-spacing:.03em;font-weight:650!important}
 .top-bar-views{background:transparent!important;border:none;padding:0;border-radius:30px}.view-btn{min-height:34px;color:var(--text-secondary)!important}.view-btn.active{color:var(--text)!important}.view-indicator{background:var(--surface)!important;box-shadow:0 2px 7px #0000000a!important}

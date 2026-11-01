@@ -131,7 +131,9 @@
     if (previous !== L.period.key) document.dispatchEvent(new CustomEvent('daylightchange', { detail: L.period }));
     if (window.Tone) window.Tone.refresh();
     const dark = root.getAttribute('data-theme') === 'dark';
-    root.style.setProperty('--art-brightness', (dark ? L.tone.brightness * 0.55 : L.tone.brightness).toFixed(3));
+    // 深色主题下别把插画压得太狠：原来乘 0.55，夜间算下来只剩 0.286，再叠 0.65 的不透明度，
+    // 背景几乎是一块纯黑 —— 顶栏那段没内容的区域看着就像「有一块黑背景」。放松到 0.85，让插画透出来。
+    root.style.setProperty('--art-brightness', (dark ? L.tone.brightness * 0.85 : L.tone.brightness).toFixed(3));
     root.style.setProperty('--art-tint', L.tone.tint.toFixed(3));
     if (typeof L.warmth === 'number') {
       root.style.setProperty('--sky-warmth', L.warmth.toFixed(3));
