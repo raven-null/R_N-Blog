@@ -15,7 +15,7 @@
     <meta property="og:image" content="https://ravennull.work/images/Default/web-logo.webp">
     <meta property="og:locale" content="zh_CN">
     <meta name="twitter:card" content="summary">
-    <link rel="stylesheet" href="css/bundle.css?v=f625db22e8">
+    <link rel="stylesheet" href="css/bundle.css?v=a8e217ea83">
     <title>渡鸦 NULL · 日光与暮色之间</title>
     <link rel="icon" id="siteFavicon" href="/images/Default/web-logo.webp" type="image/webp">
     <link rel="apple-touch-icon" href="/images/Default/web-logo.webp">
@@ -243,6 +243,7 @@
                         <!-- 已上线 -->
                         <div class="dash-panel">
                             <div class="dash-panel-title">已上线
+                                <span class="projects-count" id="deployedCount"></span>
                                 <span class="projects-hint">可直接访问的站点</span>
                             </div>
                             <div class="projects-grid" id="deployedProjects">
@@ -253,6 +254,7 @@
                         <!-- GitHub 仓库 -->
                         <div class="dash-panel">
                             <div class="dash-panel-title">GitHub 仓库
+                                <span class="projects-count" id="repoCount"></span>
                                 <a class="home-projects-all" href="https://github.com/raven-null" target="_blank" rel="noopener">在 GitHub 查看 ›</a>
                             </div>
                             <div class="projects-grid" id="projectsGithubGrid">
@@ -669,7 +671,7 @@
     <!-- 桌宠动效引擎（spring-driven character，见 public/vendor/grok/README.md） -->
 
     <!-- /js/* 是 immutable 长缓存：app.js 一改就必须换 ?v=，否则线上一直吃旧文件 -->
-    <script src="js/app.js?v=20261106p" defer></script>
+    <script src="js/app.js?v=20261106q" defer></script>
     <script src="js/animations.js?v=3.14.0" defer></script>
 
     <script>

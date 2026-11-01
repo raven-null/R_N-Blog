@@ -5229,6 +5229,10 @@ const BlogApp = {
         if (!box || box.dataset.rendered) return;
         box.dataset.rendered = '1';
 
+        // 标题旁的数字
+        const countEl = document.getElementById('deployedCount');
+        if (countEl) countEl.textContent = String((this.deployedProjects || []).length);
+
         if (!this.deployedProjects.length) {
             box.innerHTML = '<div class="home-empty">暂无已上线项目</div>';
             return;
@@ -5324,6 +5328,9 @@ const BlogApp = {
         box.dataset.rendered = '1';
 
         const items = await this.loadGithubRepos();
+        // 标题旁的数字
+        const countEl = document.getElementById('repoCount');
+        if (countEl) countEl.textContent = String(items.length || 0);
         if (!items.length) {
             box.innerHTML = '<div class="home-empty">仓库列表暂时不可用</div>';
             return;

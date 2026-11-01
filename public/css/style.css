@@ -3840,6 +3840,33 @@ html.reader-focus .article-content {
     gap: 20px;
 }
 
+/* 标题旁的数量徽标（已上线 / GitHub 仓库） */
+.projects-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    height: 21px;
+    margin-left: 8px;
+    padding: 0 8px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--accent) 16%, transparent);
+    color: var(--accent);
+    font-size: 12.5px;
+    font-weight: 700;
+    letter-spacing: .02em;
+    line-height: 1;
+    vertical-align: middle;
+}
+
+.projects-count:empty {
+    display: none;
+}
+/* 标题是 flex：数字紧跟文字，把右半边的提示/链接推到最右 */
+.view-projects .projects-page .dash-panel-title .projects-count {
+    margin-left: 2px;
+    margin-right: auto;
+}
 /* 项目页「已上线」标题：比通用面板标题大一号，跟卡片区一起对齐 */
 .view-projects .projects-page .dash-panel-title {
     display: flex;
