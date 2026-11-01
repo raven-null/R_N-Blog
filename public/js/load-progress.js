@@ -163,4 +163,58 @@
         newsReady = true;
         tick();
     }, { once: true });
+
+    /* ===== 遮罩背景图（v2.2.0）=====
+       图池由 scripts/build-loader-bg.mjs 生成（public/images/loader/manifest.json，每张图三档）。
+       这里只做三件事：按「视口宽 × DPR」选档 → 随机挑一张（避开上次那张）→ decode 完再淡入。
+       任何一步失败都只是没有背景图，遮罩本身照常工作。 */
+    function paintVeilBackdrop() {
+        var bg = document.getElementById('loadVeilBg');
+        if (!bg) return;
+
+        var need = (window.innerWidth || 1280) * (window.devicePixelRatio || 1);
+        var slot = need >= 2200 ? '2560' : need >= 1500 ? '1920' : '1280';
+
+        // 图池清单 + 后台那个「允许 R18」开关一起等：开关默认关，只用普通图
+        var manifestPromise = fetch('/images/loader/manifest.json', { cache: 'force-cache' })
+            .then(function (r) { return r.ok ? r.json() : null; });
+        var settingsPromise = fetch('/api/admin?action=settings', { cache: 'force-cache', headers: { Accept: 'application/json' } })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .catch(function () { return null; });
+
+        Promise.all([manifestPromise, settingsPromise])
+            .then(function (res) {
+                var data = res[0];
+                var settings = res[1];
+                var allowR18 = !!(settings && settings.data && settings.data.layout && settings.data.layout.loaderBgAllowR18);
+
+                var items = data && Array.isArray(data.items) ? data.items : [];
+                items = items.filter(function (it) {
+                    if (!it || !it.slots || !it.slots[slot]) return false;
+                    // 非普通图（r16/r18）只有后台明确允许时才用
+                    var rating = String(it.rating || 'general');
+                    return rating === 'general' || allowR18;
+                });
+                if (!items.length) return;
+
+                var lastId = '';
+                try { lastId = localStorage.getItem('loader-bg-last') || ''; } catch (e) { }
+                var pool = items.filter(function (it) { return it.id !== lastId; });
+                if (!pool.length) pool = items;
+                var picked = pool[Math.floor(Math.random() * pool.length)];
+
+                bg.src = picked.slots[slot];
+                try { localStorage.setItem('loader-bg-last', picked.id); } catch (e) { }
+
+                var reveal = function () { bg.classList.add('is-ready'); };
+                if (typeof bg.decode === 'function') {
+                    bg.decode().then(reveal).catch(reveal);
+                } else {
+                    bg.onload = reveal;
+                }
+            })
+            .catch(function () { /* 没有图池就保持纯色 */ });
+    }
+
+    paintVeilBackdrop();
 })();

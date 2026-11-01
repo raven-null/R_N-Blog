@@ -2627,6 +2627,9 @@
                 homePctEl.value=String(Number.isFinite(pct)&&pct>=40&&pct<=100?Math.round(pct):86);
                 previewHomeWidth(homePctEl.value);
             }
+            // 加载背景是否允许 R16/R18（默认关）
+            const r18El=document.getElementById('setLoaderBgR18');
+            if(r18El)r18El.checked=(s.layout||{}).loaderBgAllowR18===true;
             document.getElementById('setAboutVersion').value=s.about?s.about.version||'':'';
             document.getElementById('setAboutTech').value=s.about?s.about.tech||'':'';
             document.getElementById('setAboutUpdated').value=s.about?s.about.updated||'':'';
@@ -2878,6 +2881,11 @@
                     const el=document.getElementById('setHomeWidthPct');
                     const n=Number(el?el.value:86);
                     return Number.isFinite(n)&&n>=40&&n<=100?Math.round(n):86;
+                })(),
+                // 加载遮罩的背景图是否允许用图库里的 R16/R18
+                loaderBgAllowR18:(()=>{
+                    const el=document.getElementById('setLoaderBgR18');
+                    return !!(el&&el.checked);
                 })(),
             },
                 about:{

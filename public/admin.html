@@ -1259,6 +1259,11 @@
                                 </div>
                                 <div class="settings-tip">外框是整块屏幕，中间那格是主页内容——拖上面那根条，它就会跟着缩/涨。宽度是占屏幕的百分比，窄屏宽屏自己跟着变；内容最宽 1900px，再宽就只加留白。<span id="setHomeWidthHint"></span></div>
                             </div>
+                            <div class="settings-toggle-list" style="margin-top:14px">
+                                <div class="settings-toggle-item"><span>加载背景允许使用 R16/R18 图</span><label class="switch"><input type="checkbox" id="setLoaderBgR18"><span class="slider"></span></label></div>
+                            </div>
+                            <div class="settings-tip">默认关闭：加载遮罩的背景图只从图库的「普通」图里挑（公开可见、横向、高清）。
+                                打开后才会用上 R16/R18 的图——但那种图需要带图库 token 重新生成图池（<code>node scripts/build-loader-bg.mjs --allow-r18</code>），否则仍然只有普通图可选。</div>
                         </div>
 
                         <!-- 7. 关于信息 -->
@@ -1662,7 +1667,7 @@
     </div>
 
         <script src="js/tag-picker.js?v=1.1.2"></script>
-        <script src="js/admin-app.js?v=1.32.4"></script>
+        <script src="js/admin-app.js?v=1.32.5"></script>
 
     <!-- 前台预览抽屉（iframe 内嵌，零跳出） -->
     <style>

@@ -1520,7 +1520,7 @@ export default async (req: Request) => {
       views: { home: true, blog: true, gallery: true, projects: true },
       stats: { posts: true, tags: true, words: true, images: true },
       // 主页布局（v3.52.4）：后台「主页布局」里那条滑块调的，前台 home-layout.js 读它设 CSS 变量
-      layout: { homeWidthPct: 86 },
+      layout: { homeWidthPct: 86, loaderBgAllowR18: false },
       navTags: [],
       about: { version: "", tech: "", updated: "" },
       ai: {
@@ -1604,6 +1604,8 @@ export default async (req: Request) => {
             const v = Number((data.layout || {}).homeWidthPct)
             return Number.isFinite(v) && v >= 40 && v <= 100 ? Math.round(v) : DEFAULT_SETTINGS.layout.homeWidthPct
           })(),
+          // 加载遮罩的背景图是否允许用图库里的 R16/R18（默认关：那些图不该出现在公开首屏）
+          loaderBgAllowR18: (data.layout || {}).loaderBgAllowR18 === true,
         },
         // 桌宠设置：公开字段，没有密钥，直接跟着设置返回给前台
         pet: {
@@ -1739,6 +1741,7 @@ export default async (req: Request) => {
           const n = Number(src.homeWidthPct)
           return {
             homeWidthPct: Number.isFinite(n) && n >= 40 && n <= 100 ? Math.round(n) : DEFAULT_SETTINGS.layout.homeWidthPct,
+            loaderBgAllowR18: src.loaderBgAllowR18 === true,
           }
         })(),
       }
