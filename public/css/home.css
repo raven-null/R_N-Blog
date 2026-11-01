@@ -2773,3 +2773,29 @@ body:not(.has-music) .hv3-row-top .hv3-hero {
         height: auto !important;
     }
 }
+
+/* ------------------------------------------------------------
+   横滑带间距统一（v3.54.16）
+   三块图片盒子的间距只由容器的 gap 决定：把各自的 margin 清掉，
+   吸附位置改成 start，避免第一块左边留出半截空白、看着像间距不一样。
+   简报仍在 .hv3-row-main 里（排在图片后面），几何上就在日历那一行之上。
+   ------------------------------------------------------------ */
+@media (max-width: 900px) {
+    .hv3-row-main {
+        gap: 12px !important;
+        scroll-snap-type: x proximity;
+        scroll-padding-inline: 0;
+    }
+
+    .hv3-row-main > .hv3-stage,
+    .hv3-row-main > .hv3-shot,
+    .hv3-row-main > .hv3-square {
+        margin: 0 !important;
+        scroll-snap-align: start;
+    }
+
+    .hv3-row-main > .hv3-sub-grid {
+        margin: 0 !important;
+        scroll-snap-align: start;
+    }
+}
