@@ -190,8 +190,9 @@ body.island-mode.nav-dock-open:not(.view-music-active) .now-island {
 
 .now-island.show {
     width: 400px;
-    padding: 4px 10px 4px 4px;
-    gap: 9px;
+    /* 左右内边距与块间距取同一个值：标题离头像、离岛边缘一样远 */
+    padding: 5px 10px;
+    gap: 10px;
     opacity: 1;
     pointer-events: auto;
 }
@@ -797,9 +798,27 @@ body.view-music-active .now-island {
     font-size: 16px;
     font-weight: 600;
     color: var(--text);
+    /* 长标题横向跑马灯（比岛慢一档），所以这里不写省略号 */
+    display: block;
     white-space: nowrap;
     overflow: hidden;
-    text-overflow: ellipsis;
+}
+
+.hv3-music-run {
+    display: inline-block;
+    white-space: nowrap;
+    will-change: transform;
+}
+
+.hv3-music-run.is-scrolling {
+    animation: island-marquee var(--marquee-duration, 14s) linear infinite;
+    animation-delay: 1.6s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .hv3-music-run.is-scrolling {
+        animation: none;
+    }
 }
 
 .hv3-music-artist {

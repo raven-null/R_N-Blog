@@ -3843,26 +3843,67 @@ html.reader-focus .article-content {
     gap: 20px;
 }
 
-.projects-hint {
-    float: right;
-    font-size: 11px;
-    font-weight: 400;
+/* 项目页「已上线」标题：比通用面板标题大一号，跟卡片区一起对齐 */
+.view-projects .projects-page .dash-panel-title {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 21px;
+    font-weight: 700;
     letter-spacing: 1px;
-    color: var(--text-muted);
+    color: var(--text);
+    margin-bottom: 18px;
+    padding-bottom: 14px;
 }
 
+.projects-hint {
+    float: none;
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 400;
+    letter-spacing: 1px;
+}
+
+/* 项目页放宽容器：一行四张卡片，卡片不至于缩得太小 */
+body.view-projects-active.home-layout .main-content {
+    max-width: 1440px !important;
+}
 .projects-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-    gap: 16px;
+    display: flex;
+    gap: 18px;
+    /* 一排摆开，按住左右拖（滚动条藏起来，跟主页项目条一致） */
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 6px 2px 12px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.projects-grid::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+}
+
+.projects-grid > .project-card {
+    flex: 0 0 clamp(280px, 27%, 340px);
+    align-self: stretch;
+}
+
+.projects-grid img {
+    -webkit-user-drag: none;
+    user-drag: none;
 }
 
 .project-card {
     display: flex;
     flex-direction: column;
-    padding: 0;
+    padding: 16px;
     border: 1px solid var(--border);
-    border-radius: 14px;
+    border-radius: 20px;
     background: var(--bg-secondary);
     text-decoration: none;
     color: inherit;
@@ -3878,6 +3919,7 @@ html.reader-focus .article-content {
 
 .project-card-cover {
     position: relative;
+    border-radius: 14px;
     aspect-ratio: 16 / 10;
     flex-shrink: 0;
     overflow: hidden;
@@ -3914,8 +3956,8 @@ html.reader-focus .article-content {
     display: flex;
     flex: 1;
     flex-direction: column;
-    gap: 10px;
-    padding: 16px 18px 18px;
+    gap: 12px;
+    padding: 18px 4px 4px;
 }
 
 .project-card-head {
@@ -3940,7 +3982,7 @@ html.reader-focus .article-content {
 }
 
 .project-card-name {
-    font-size: 15px;
+    font-size: 19px;
     font-weight: 700;
     letter-spacing: 0.5px;
     color: var(--text-primary);
@@ -3957,7 +3999,7 @@ html.reader-focus .article-content {
 }
 
 .project-card-desc {
-    font-size: 12px;
+    font-size: 13.5px;
     line-height: 1.7;
     color: var(--text-muted);
     display: -webkit-box;
@@ -3995,8 +4037,8 @@ html.reader-focus .article-content {
 }
 
 @media (max-width: 640px) {
-    .projects-grid {
-        grid-template-columns: minmax(0, 1fr);
+    .projects-grid > .project-card {
+        flex: 0 0 82%;
     }
 }
 
@@ -13098,9 +13140,33 @@ html[data-theme="dark"] .hv3-card {
     justify-self: center;
 }
 
-/* 灵动岛关了：不管是谁把它顶出来都不显示 */
+/* 灵动岛关了：走它自己的收起动画（宽度收 0 + 淡出），不是啪一下消失；岛上的头像也一起隐掉 */
 body.island-off .now-island {
-    display: none !important;
+    width: 0;
+    padding: 0;
+    gap: 0;
+    opacity: 0;
+    border-width: 0;
+    pointer-events: none;
+    visibility: hidden;
+    transition:
+        width .34s cubic-bezier(.34, 1.4, .64, 1),
+        padding .34s cubic-bezier(.34, 1.4, .64, 1),
+        gap .28s ease,
+        opacity .24s ease,
+        border-width .34s ease,
+        visibility 0s linear .34s;
+}
+
+body.island-off .now-island .now-island-cover {
+    opacity: 0;
+    transform: scale(.78);
+    transition: opacity .22s ease, transform .3s cubic-bezier(.22, 1, .36, 1);
+}
+
+body.island-off .now-island img {
+    opacity: 0;
+    transition: opacity .22s ease;
 }
 
 .hv3-time {
@@ -13172,6 +13238,69 @@ body.island-off .now-island {
     color: var(--text);
     border-color: var(--accent);
     transform: translateY(-1px);
+}
+
+/* 开关状态：开着 = 强调色 + 右下角小绿点；关着 = 变淡 + 一道斜杠 */
+.hv3-toggle {
+    position: relative;
+}
+
+.hv3-toggle::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 22px;
+    height: 2px;
+    margin: -1px 0 0 -11px;
+    border-radius: 2px;
+    background: currentColor;
+    transform: rotate(-45deg) scaleX(0);
+    transform-origin: center;
+    opacity: 0;
+    transition: transform .2s ease, opacity .2s ease;
+    pointer-events: none;
+}
+
+.hv3-toggle::after {
+    content: '';
+    position: absolute;
+    right: 5px;
+    bottom: 5px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 2px var(--bg-primary, #fff);
+    opacity: 0;
+    transform: scale(.4);
+    transition: opacity .2s ease, transform .24s cubic-bezier(.34, 1.4, .64, 1);
+    pointer-events: none;
+}
+
+.hv3-toggle[aria-pressed="true"] {
+    color: var(--accent);
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+.hv3-toggle[aria-pressed="true"]::after {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.hv3-toggle[aria-pressed="false"] {
+    color: var(--text-muted);
+    opacity: .55;
+}
+
+.hv3-toggle[aria-pressed="false"]::before {
+    opacity: .7;
+    transform: rotate(-45deg) scaleX(1);
+}
+
+.hv3-toggle:active {
+    transform: scale(.92);
 }
 
 /* ============================================================
@@ -15107,8 +15236,9 @@ body.island-mode.nav-dock-open:not(.view-music-active) .now-island {
 
 .now-island.show {
     width: 400px;
-    padding: 4px 10px 4px 4px;
-    gap: 9px;
+    /* 左右内边距与块间距取同一个值：标题离头像、离岛边缘一样远 */
+    padding: 5px 10px;
+    gap: 10px;
     opacity: 1;
     pointer-events: auto;
 }
@@ -15714,9 +15844,27 @@ body.view-music-active .now-island {
     font-size: 16px;
     font-weight: 600;
     color: var(--text);
+    /* 长标题横向跑马灯（比岛慢一档），所以这里不写省略号 */
+    display: block;
     white-space: nowrap;
     overflow: hidden;
-    text-overflow: ellipsis;
+}
+
+.hv3-music-run {
+    display: inline-block;
+    white-space: nowrap;
+    will-change: transform;
+}
+
+.hv3-music-run.is-scrolling {
+    animation: island-marquee var(--marquee-duration, 14s) linear infinite;
+    animation-delay: 1.6s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .hv3-music-run.is-scrolling {
+        animation: none;
+    }
 }
 
 .hv3-music-artist {

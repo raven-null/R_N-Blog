@@ -478,6 +478,17 @@
     applyNowPlaying(data);
   });
 
+  // 触屏没有 hover：岛上的头像点一下就把导航栏唤出来（桌面端点头像仍然回播放器）
+  if (islandCover && island) {
+    islandCover.addEventListener('click', function (e) {
+      var canHover = window.matchMedia ? window.matchMedia('(hover: hover)').matches : false;
+      if (canHover) return;
+      e.preventDefault();
+      e.stopPropagation();
+      setNavDockOpen(!document.body.classList.contains('nav-dock-open'));
+    });
+  }
+
   // 点岛（或键盘回车）→ 回到音乐视图
   if (island) {
     var goToPlayer = function () {
@@ -577,6 +588,45 @@
   var cardName = document.getElementById('hv3MusicName');
   var cardArtist = document.getElementById('hv3MusicArtist');
   var cardLyric = document.getElementById('hv3MusicLyric');
+
+  // 卡片里的歌名：太长就左右跑马灯（比岛慢一档，读起来不赶）
+  var cardNameRun = cardName ? cardName.querySelector('.hv3-music-run') : null;
+
+  function setCardName(text) {
+    var value = text ? String(text) : '';
+    if (!cardNameRun || cardNameRun.textContent === value) return false;
+    cardNameRun.textContent = value;
+    return true;
+  }
+
+  function updateCardNameMarquee() {
+    if (!cardNameRun || !cardName) return;
+    cardNameRun.classList.remove('is-scrolling');
+    cardNameRun.style.removeProperty('--marquee-x');
+    cardNameRun.style.removeProperty('--marquee-duration');
+    void cardNameRun.offsetWidth;
+    // 卡片收起时宽度是 0，量不出来；下次推送再量（所以调用方在没滚的时候会再调一次）
+    if (cardName.clientWidth < 20) return;
+    // 卡片标题这里只要溢出就滚（岛那边留了 6px 余量，是因为岛宽会变；
+    // 卡片宽度是固定的 5 栏，差 1px 也是被切掉了一点，得让它滚出来）
+    var overflow = cardNameRun.scrollWidth - cardName.clientWidth;
+    if (overflow > 0) {
+      var shift = overflow + 16;
+      cardNameRun.style.setProperty('--marquee-x', '-' + shift + 'px');
+      // 约 16px/秒，比灵动岛（28px/秒）慢一些；越长滚得越久
+      cardNameRun.style.setProperty('--marquee-duration', Math.max(8, Math.round(shift / 16)) + 's');
+      cardNameRun.classList.add('is-scrolling');
+    }
+  }
+
+  // 名字变了，或者名字没变但还没滚起来（首次显示时卡片宽度可能还是 0），就重新量一次；
+  // 已经在滚的就不动它，免得每秒推送把动画重启一遍。
+  function syncCardName(text) {
+    var changed = setCardName(text);
+    if (changed || !cardNameRun || !cardNameRun.classList.contains('is-scrolling')) {
+      updateCardNameMarquee();
+    }
+  }
 
   var lyricsBox = document.getElementById('hv3MusicLyrics');
   var lyricPrevEl = document.getElementById('hv3LyricPrev');
@@ -899,7 +949,7 @@
 
     if (!song) {
       musicCard.classList.remove('is-playing', 'paused');
-      if (cardName) cardName.textContent = '还没有在播放';
+      syncCardName('还没有在播放');
       if (cardArtist) cardArtist.textContent = '去播放器里挑一首';
       if (cardLyric) setRunText(cardLyric, '');
       syncCardFlip();
@@ -909,7 +959,7 @@
     musicCard.classList.add('is-playing');
     musicCard.classList.toggle('paused', !data.playing && !data.loading);
 
-    if (cardName && cardName.textContent !== (song.name || '')) cardName.textContent = song.name || '';
+    syncCardName(song.name || '');
     if (cardArtist && cardArtist.textContent !== (song.artist || '')) cardArtist.textContent = song.artist || '';
     if (cardCover && song.cover && cardCover.getAttribute('src') !== song.cover) cardCover.src = song.cover;
 
