@@ -15414,6 +15414,52 @@ body:not(.has-music) .hv3-row-top .hv3-hero {
     }
 }
 
+/* ------------------------------------------------------------
+   移动端信息卡重排 + 隐藏桌宠（v3.54.3）
+   桌面是 2×2 网格（谁/时钟、统计/圆钮）；手机上两列太窄，时钟和圆钮挤在一起、
+   统计贴着边，看着很乱。≤900px 改成自上而下一列：谁 → 时钟 → 统计 → 圆钮。
+   同时在手机上不显示桌宠——它是实时绘制的 SVG，弱网下多半是块白方块。
+   ------------------------------------------------------------ */
+@media (max-width: 900px) {
+    .hv3-hero {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-areas:
+            'who'
+            'clock'
+            'stats'
+            'toggles';
+        gap: 14px;
+    }
+
+    .hv3-clock {
+        justify-self: start;
+        align-items: flex-start;
+        text-align: left;
+    }
+
+    .hv3-stats,
+    .hv3-toggles {
+        justify-self: start;
+    }
+
+    .hv3-stats {
+        gap: 18px;
+    }
+
+    .hv3-toggles {
+        gap: 10px;
+    }
+
+    /* 桌宠：手机上不显示，别留一块白方块 */
+    .deskpet,
+    #deskPet,
+    #deskPetBubble,
+    #deskpetOrbit,
+    #deskpetBell {
+        display: none !important;
+    }
+}
+
 
 /* music.css */
 /* ============================================================
