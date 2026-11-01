@@ -112,7 +112,12 @@
 
         let saved = false;
         try { saved = localStorage.getItem(TOC_STORE) === '1'; } catch (e) { }
-        if (saved) setTocCollapsed(true, false);
+        if (saved) {
+            // 上次就是收起状态：恢复时别播一遍「目录滑出去」的动画，直接到终点
+            document.body.classList.add('toc-no-anim');
+            setTocCollapsed(true, false);
+            requestAnimationFrame(() => requestAnimationFrame(() => document.body.classList.remove('toc-no-anim')));
+        }
 
         if (collapseBtn) collapseBtn.addEventListener('click', () => setTocCollapsed(true, true));
         if (revealTab) revealTab.addEventListener('click', () => setTocCollapsed(false, true));

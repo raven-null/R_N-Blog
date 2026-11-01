@@ -1928,11 +1928,12 @@
         }
 
         .toc-reveal-tab {
-            display: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             position: fixed;
             left: 0;
             top: 50%;
-            transform: translateY(-50%);
             z-index: 120;
             padding: 16px 7px;
             border: 1px solid var(--border);
@@ -1945,7 +1946,12 @@
             letter-spacing: 3px;
             writing-mode: vertical-rl;
             cursor: pointer;
-            transition: color 0.2s ease, border-color 0.2s ease;
+            /* 默认藏在屏幕左边外面，收起目录时滑进来 */
+            transform: translate(-100%, -50%);
+            opacity: 0;
+            pointer-events: none;
+            transition: transform 0.34s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.22s ease,
+                color 0.2s ease, border-color 0.2s ease;
         }
 
         .toc-reveal-tab:hover {
@@ -1954,20 +1960,34 @@
         }
 
         @media (min-width: 774px) {
+            /* 目录栏靠位移+淡出退场（原来的 display:none 是瞬移，没法做动画） */
+            .toc-sidebar {
+                transition: transform 0.38s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.24s ease;
+            }
+
             body.toc-collapsed .toc-sidebar {
-                display: none !important;
+                transform: translateX(calc(-100% - 32px));
+                opacity: 0;
+                visibility: hidden;
+                pointer-events: none;
+                transition: transform 0.38s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.24s ease,
+                    visibility 0s linear 0.38s;
             }
 
-            body.toc-collapsed .toc-reveal-tab {
-                display: flex;
-                align-items: center;
-                justify-content: center;
-            }
-
-            /* 侧栏那 296/320px 的占位收回来，正文主体整体往左拉宽 */
+            /* 正文跟着一起让位：padding 走过渡，宽度随之平滑长出来 */
             body.toc-collapsed .article-layout {
                 padding-left: clamp(20px, 3vw, 48px);
             }
+
+            body.toc-collapsed .toc-reveal-tab {
+                transform: translate(0, -50%);
+                opacity: 1;
+                pointer-events: auto;
+            }
+        }
+
+        .article-layout {
+            transition: padding-left 0.38s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
         /* 专注阅读 / 白板 / 导图整页模式里，这条竖标签不该冒出来 */
@@ -1981,14 +2001,18 @@
             #tocSidebarCollapse {
                 display: none;
             }
+
+            .toc-reveal-tab {
+                display: none;
+            }
         }
 
         /* 阅读工具栏：一条通栏玻璃条 */
         .reader-toolbar {
-            gap: 10px;
+            gap: 8px;
             flex-wrap: nowrap;
-            padding: 11px 14px;
-            border-radius: 18px;
+            padding: 9px 12px;
+            border-radius: 16px;
             background: var(--bg-card);
             border: 1px solid var(--border);
             -webkit-backdrop-filter: blur(18px) saturate(150%);
@@ -2007,7 +2031,7 @@
         .reader-toolbar .reader-btn,
         .reader-func-btn,
         .reader-toolbar .sidebar-action-btn {
-            height: 40px;
+            height: 36px;
             border-radius: 10px;
             border-color: var(--border);
         }
@@ -2015,15 +2039,15 @@
         .reader-toolbar .reader-btn {
             display: inline-flex;
             align-items: center;
-            padding: 0 15px;
-            font-size: 13px;
+            padding: 0 13px;
+            font-size: 12.5px;
             flex: none;
         }
 
         .reader-func {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
             min-width: 0;
         }
 
@@ -2032,7 +2056,7 @@
             display: none;
             align-items: center;
             justify-content: center;
-            width: 40px;
+            width: 36px;
             padding: 0;
             flex: none;
             background: transparent;
@@ -2059,14 +2083,51 @@
         /* 目录收起来之后才换成「一个功能按钮」：点开才展开，鼠标离开这条工具栏就收回 */
         body.toc-collapsed .reader-func-btn {
             display: inline-flex;
+            animation: reader-bar-in 0.26s cubic-bezier(0.16, 1, 0.3, 1) both;
         }
 
         body.toc-collapsed .reader-func-panel {
             display: none;
         }
 
+        /* 点开时淡入 + 往右滑一点出来 */
         body.toc-collapsed .reader-func.is-open .reader-func-panel {
             display: flex;
+            animation: reader-func-in 0.24s cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+
+        @keyframes reader-func-in {
+            from {
+                opacity: 0;
+                transform: translateX(-8px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        /* 恢复上次的「已收起」状态时用：别把退场动画再播一遍 */
+        body.toc-no-anim .toc-sidebar,
+        body.toc-no-anim .article-layout,
+        body.toc-no-anim .toc-reveal-tab,
+        body.toc-no-anim .reader-bar-actions > *,
+        body.toc-no-anim .reader-func-btn {
+            transition: none !important;
+            animation: none !important;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .toc-sidebar,
+            .article-layout,
+            .toc-reveal-tab,
+            .reader-bar-actions > *,
+            body.toc-collapsed .reader-func-btn,
+            body.toc-collapsed .reader-func.is-open .reader-func-panel {
+                transition: none !important;
+                animation: none !important;
+            }
         }
 
         /* 目录收起后搬过来的那排（返回 / 首页 / 主题 / 助手）：占工具栏最左边；
@@ -2082,16 +2143,33 @@
             display: none;
         }
 
+        /* 搬进来的时候淡入 + 轻轻往右挪一点，别凭空冒出来 */
+        .reader-bar-actions > * {
+            animation: reader-bar-in 0.26s cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+
+        @keyframes reader-bar-in {
+            from {
+                opacity: 0;
+                transform: translateX(-6px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
         .reader-toolbar .sidebar-go-back {
             flex: none;
-            height: 40px;
-            padding: 0 14px;
-            font-size: 13px;
+            height: 36px;
+            padding: 0 12px;
+            font-size: 12.5px;
         }
 
         .reader-toolbar .sidebar-action-btn {
-            width: 40px;
-            font-size: 15px;
+            width: 36px;
+            font-size: 14px;
         }
 
         /* 音乐岛贴右：左边留给搬过来的那排和功能按钮，中间的空档由这条分隔线吃掉 */
@@ -2616,7 +2694,7 @@
     <!-- /js/* 在线上是 immutable 长缓存：reader.js 改了内容就必须换这个版本号，否则线上吃旧文件
          （v3.52.1 踩过：折叠后那排按钮没搬上来——功能按钮是 CSS 控的、搬按钮是 JS 控的，
          新 HTML 配旧 reader.js 就只剩一个功能按钮、旁边空着） -->
-    <script src="js/reader.js?v=3.15.1" defer></script>
+    <script src="js/reader.js?v=3.15.2" defer></script>
     <script src="js/animations.js?v=3.14.0" defer></script>
 
     <script src="js/article-app.js?v=2.4.1" defer></script>
