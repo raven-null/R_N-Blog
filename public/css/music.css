@@ -990,6 +990,21 @@ body.view-music-active .top-bar-pill {
     -webkit-backdrop-filter: blur(20px) saturate(160%) !important;
 }
 
+/* 音乐视图里导航也默认藏起来：鼠标移到顶部那条热区才滑下来，
+   2 秒不动自动收起（is-open 由 music-view.js 维护）。 */
+body.view-music-active #topBarPill {
+    transform: translateY(-120%) !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    transition: transform 0.32s cubic-bezier(0.2, 0.7, 0.3, 1), opacity 0.22s ease !important;
+}
+
+body.view-music-active #topBarPill.is-open {
+    transform: translateY(0) !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+}
+
 /* 常显态下胶囊比 .top-bar-inner 的 40px 高一点，撑开容器，别让顶部被切掉 */
 body.view-music-active .top-bar-inner {
     height: auto;

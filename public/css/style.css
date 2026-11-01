@@ -92,9 +92,12 @@ body.home-layout {
     gap: 10px;
     padding: 4px 10px 4px 14px;
     border-radius: 100px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    box-shadow: 0 2px 12px rgba(16, 20, 32, .08);
+    /* 统一成音乐视图那套深色玻璃胶囊：浅色主题下也是深底白字，压在任何背景图上都稳 */
+    background: rgba(18, 20, 28, 0.72);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
     max-width: 100%;
     min-width: 0;
     transition: gap .35s var(--ease, cubic-bezier(.2, .7, .3, 1));
@@ -104,7 +107,7 @@ body.home-layout {
     font-size: 14px;
     font-weight: 700;
     letter-spacing: .04em;
-    color: var(--text-primary);
+    color: #f5f6f8;
     text-decoration: none;
     white-space: nowrap;
     flex: none;
@@ -10735,4 +10738,29 @@ html[data-tone="dark"] .stack-pin {
     .top-bar-views::-webkit-scrollbar {
         display: none;
     }
+}
+/* ============================================================
+   顶栏统一样式：深色玻璃胶囊 + 白字，当前视图用 accent 描边圈标出来
+   （和音乐视图里那套一致；renewal.css 里的 !important 用更高特异性压住）
+   ============================================================ */
+.top-bar-pill .top-bar-brand {
+    color: #f5f6f8 !important;
+}
+
+.top-bar-pill .view-btn {
+    color: rgba(236, 239, 246, 0.72) !important;
+}
+
+.top-bar-pill .view-btn:hover {
+    color: #ffffff !important;
+}
+
+.top-bar-pill .view-btn.active {
+    color: #ffffff !important;
+    background: rgba(255, 255, 255, 0.07) !important;
+    box-shadow: inset 0 0 0 2px var(--accent) !important;
+}
+
+.top-bar-pill .view-indicator {
+    display: none !important;
 }
