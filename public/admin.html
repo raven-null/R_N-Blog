@@ -38,8 +38,25 @@
         /* 已登录时跳过登录页，改为显示一个门帘，等密钥验完再进后台（见 head 里的内联脚本） */
         html.has-admin-key #loginPage{display:none!important}
         html:not(.has-admin-key) #bootGate{display:none!important}
-        #bootGate{position:fixed;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;
+        #bootGate{position:fixed;inset:0;z-index:5;display:flex;flex-direction:column;gap:16px;align-items:center;justify-content:center;
             background:var(--bg);color:var(--text-muted);font-size:13.5px;letter-spacing:1px}
+        /* 进后台的加载动画：与首页那个一致（From Uiverse.io by satyamchaudharydev，八根条子多米诺）。
+           类名带 boot- 前缀，避开上传进度条那个 .spinner（圆环）。 */
+        .boot-spinner{position:relative;width:115px;height:60px}
+        .boot-spinner span{position:absolute;top:50%;left:var(--left);width:35px;height:7px;margin-top:-3.5px;border-radius:2px;
+            background:#fff;box-shadow:2px 2px 3px 0 rgba(0,0,0,.8);animation:boot-dominos 1s ease infinite}
+        .boot-spinner span:nth-child(1){--left:80px;animation-delay:.125s}
+        .boot-spinner span:nth-child(2){--left:70px;animation-delay:.3s}
+        .boot-spinner span:nth-child(3){--left:60px;animation-delay:.425s}
+        .boot-spinner span:nth-child(4){--left:50px;animation-delay:.54s}
+        .boot-spinner span:nth-child(5){--left:40px;animation-delay:.665s}
+        .boot-spinner span:nth-child(6){--left:30px;animation-delay:.79s}
+        .boot-spinner span:nth-child(7){--left:20px;animation-delay:.915s}
+        .boot-spinner span:nth-child(8){--left:10px}
+        html[data-tone="light"] .boot-spinner span,
+        html[data-theme="light"] .boot-spinner span{background:#1b1d23;box-shadow:2px 2px 3px 0 rgba(0,0,0,.16)}
+        @keyframes boot-dominos{50%{opacity:.7}75%{-webkit-transform:rotate(90deg);transform:rotate(90deg)}80%{opacity:1}}
+        @media (prefers-reduced-motion: reduce){.boot-spinner span{animation:none}}
         /* 旧登录框样式已移除，改由 /css/login.css 接管（选择器限定在 #loginPage 内） */
 
         .admin{display:none;height:100vh}
@@ -744,7 +761,14 @@
              ├─ .lg-left-panel   品牌 + 角色舞台 + 页脚链接
              └─ .lg-right-panel  登录表单容器
     -->
-    <div id="bootGate">正在进入后台…</div>
+    <div id="bootGate">
+        <!-- 加载动画：From Uiverse.io by satyamchaudharydev -->
+        <div class="boot-spinner">
+            <span></span><span></span><span></span><span></span>
+            <span></span><span></span><span></span><span></span>
+        </div>
+        <div>正在进入后台…</div>
+    </div>
     <div id="loginPage">
         <!-- 左栏：品牌 + 角色舞台 + 页脚 -->
         <div class="lg-left-panel">
