@@ -15725,6 +15725,78 @@ body:not(.has-music) .hv3-row-top .hv3-hero {
     }
 }
 
+/* ------------------------------------------------------------
+   移动端信息卡：时间挪到名字右边（v3.54.9）
+   布局：
+       [头像 + 名字 + 上下两行小字]        15:49
+       33   768   8                       （统计独占一行）
+   时钟（含圆钮翻牌层）贴在右上，点它仍能翻出三个圆钮。
+   ------------------------------------------------------------ */
+@media (max-width: 900px) {
+    .hv3-hero {
+        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-areas:
+            'who clock'
+            'stats stats';
+        gap: 10px 12px;
+        align-items: start;
+    }
+
+    .hv3-who {
+        grid-area: who;
+        min-width: 0;
+    }
+
+    .hv3-flip {
+        grid-area: clock;
+        justify-self: end;
+        align-self: center;
+        height: var(--flip-h, 60px);
+    }
+
+    .hv3-clock {
+        grid-area: auto;
+        justify-self: center;
+        align-items: center;
+        text-align: center;
+    }
+
+    .hv3-toggles {
+        grid-area: auto;
+        justify-self: center;
+        gap: 10px;
+    }
+
+    /* 统计：独占一行，别再被压缩或藏掉 */
+    .hv3-stats {
+        grid-area: stats;
+        justify-self: stretch;
+        display: flex;
+        flex-wrap: nowrap;
+        gap: 18px;
+        overflow-x: auto;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+        padding-top: 4px;
+    }
+
+    .hv3-stats::-webkit-scrollbar {
+        display: none;
+        width: 0;
+        height: 0;
+    }
+
+    .hv3-stat {
+        flex: 0 0 auto;
+    }
+
+    .hv3-toggle {
+        flex: 0 0 auto;
+        width: 40px;
+        height: 40px;
+    }
+}
+
 
 /* music.css */
 /* ============================================================
