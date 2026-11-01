@@ -2050,28 +2050,25 @@
             min-width: 0;
         }
 
-        /* 默认（目录展开着）：设置整排摊开，没有「功能」按钮 */
+        /* 默认（目录展开着）：设置整排摊开，没有「功能」按钮。
+           外观直接复用 .sidebar-action-btn——连 glass.css 那层玻璃底和描边也一起继承，
+           这样它跟左边搬过来的那排按钮永远同色，不用两处各写一遍颜色。 */
         .reader-func-btn {
             display: none;
-            align-items: center;
-            justify-content: center;
             width: 40px;
             height: 40px;
             padding: 0;
             flex: none;
-            border-radius: 10px;
-            background: transparent;
-            border: 1px solid var(--border);
-            color: var(--text-secondary);
-            cursor: pointer;
-            transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
         }
 
-        .reader-func-btn:hover,
+        .reader-func-btn:hover {
+            color: var(--accent);
+        }
+
+        /* 展开时靠图标变色 + 一圈内描边表示「面板开着」（底色和边框被 glass.css 的 !important 占了） */
         .reader-func.is-open .reader-func-btn {
             color: var(--accent);
-            border-color: var(--accent);
-            background: var(--glow);
+            box-shadow: inset 0 0 0 1px var(--accent);
         }
 
         .reader-func-panel {
@@ -2569,8 +2566,8 @@
                 <div class="reader-bar-actions" id="readerBarActions"></div>
 
                 <div class="reader-func" id="readerFunc">
-                    <button class="reader-func-btn" id="readerFuncBtn" type="button" aria-expanded="false" title="阅读设置">
-                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <button class="sidebar-action-btn reader-func-btn" id="readerFuncBtn" type="button" aria-expanded="false" title="阅读设置">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <line x1="4" y1="6" x2="20" y2="6"></line>
                             <line x1="4" y1="12" x2="20" y2="12"></line>
                             <line x1="4" y1="18" x2="20" y2="18"></line>
