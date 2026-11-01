@@ -15,7 +15,60 @@
     <meta property="og:image" content="https://ravennull.work/images/Default/web-logo.webp">
     <meta property="og:locale" content="zh_CN">
     <meta name="twitter:card" content="summary">
-    <link rel="stylesheet" href="css/bundle.css?v=21c87a98ed">
+    <!-- 首屏遮罩（v3.52.10）：样式内联、节点写在 <body> 最前面，保证它是页面上第一个画出来的东西，
+         不依赖 bundle.css（那 400KB 还在下载时，这段已经生效了）。背景完全不透明，不透出后面的半成品。
+         进度推进与移除逻辑见 js/load-progress.js。 -->
+    <style>
+        html { background: #0c0e13; }
+        html[data-theme="light"], html[data-tone="light"] { background: #f7f4ee; }
+        .load-veil {
+            position: fixed;
+            inset: 0;
+            z-index: 2147483000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #0c0e13;
+            opacity: 1;
+            transition: opacity 0.42s ease;
+        }
+        html[data-theme="light"] .load-veil,
+        html[data-tone="light"] .load-veil { background: #f7f4ee; }
+        .load-veil.is-done { opacity: 0; pointer-events: none; }
+        .load-veil-inner {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            width: min(280px, 62vw);
+        }
+        .load-veil-bar {
+            width: 100%;
+            height: 4px;
+            border-radius: 999px;
+            background: rgba(128, 128, 128, 0.28);
+            overflow: hidden;
+        }
+        .load-veil-bar > span {
+            display: block;
+            width: 0;
+            height: 100%;
+            border-radius: 999px;
+            background: linear-gradient(90deg, #f0a212, #ffcf7a);
+            box-shadow: 0 0 12px rgba(240, 162, 18, 0.65);
+            transition: width 0.26s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .load-veil-pct {
+            font: 600 12px/1 'Courier New', monospace;
+            letter-spacing: 0.08em;
+            color: #9aa0ae;
+            font-variant-numeric: tabular-nums;
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .load-veil { display: none; }
+        }
+    </style>
+    <link rel="stylesheet" href="css/bundle.css?v=ee44ae59d4">
     <title>渡鸦 NULL · 日光与暮色之间</title>
     <link rel="icon" id="siteFavicon" href="/images/Default/web-logo.webp" type="image/webp">
     <link rel="apple-touch-icon" href="/images/Default/web-logo.webp">
@@ -29,7 +82,7 @@
     <link rel="dns-prefetch" href="https://music.ravennull.work">
     <script src="/js/site-icon.js?v=1.0.1" defer></script>
     <!-- 首屏加载遮罩：进度跟着首屏图片的真实加载数走（见 js/load-progress.js） -->
-    <script src="/js/load-progress.js?v=2.0.0" defer></script>
+    <script src="/js/load-progress.js?v=2.1.0" defer></script>
     <!-- 主页宽度：后台「主页布局」滑块的值 → CSS 变量 --home-content-w（见 js/home-layout.js） -->
     <script src="/js/home-layout.js?v=1.0.0" defer></script>
 
@@ -82,6 +135,14 @@
 </head>
 
 <body class="home-layout">
+    <!-- 首屏遮罩：必须是 body 里第一个元素，页面其它东西都在它后面（样式见 head 里的内联 style） -->
+    <div class="load-veil" id="loadVeil" role="status" aria-live="polite" aria-label="页面加载中">
+        <div class="load-veil-inner">
+            <div class="load-veil-bar"><span></span></div>
+            <div class="load-veil-pct">0%</div>
+        </div>
+    </div>
+
     <!-- 昼夜天色背景层（按真实时间变化） -->
     <div class="sky" id="sky" aria-hidden="true">
         <img class="sky-art" id="skyArt" alt=""
@@ -1246,7 +1307,7 @@
         'vendor/grok/fx.js?v=1.0.0',
         'vendor/grok/eyes.js?v=1.0.0',
         'vendor/grok/character.js?v=1.0.2',
-        'js/pet-core.js?v=2.0.28',
+        'js/pet-core.js?v=2.0.29',
         'js/pet-mind.js?v=2.0.27'
     ];
     var started = false;

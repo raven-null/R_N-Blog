@@ -807,12 +807,54 @@
     if (!pet || typeof doc.createElement !== 'function') return;
     if (doc.getElementById('deskpetOrbit')) return;
 
-    /* 自由走动：开着的时候桌宠每隔几秒自己挪到视口里的随机位置，
-       拖动它或者再点一下这个按钮就停。 */
+    /* 自由走动：开着的时候桌宠自己挑个地方挪过去 —— 间隔是随机的，不是定时打点。
+       每到一个新地方会看一眼脚下是什么（图 / 字 / 歌），顺口说一句。 */
     let roamTimer = 0;
     let roaming = false;
 
+    const ROAM_LINES = {
+      image: ['这张图真好看', '这图的光我喜欢', '构图不错嘛', '我在这张图上多看两眼'],
+      text: ['这段字有点多，我慢慢读', '写得挺好的', '这行字我看看…有点意思', '文字排版挺舒服'],
+      music: ['这歌不错', '跟着哼两句？', '这旋律有点上头', '这首歌我记住了'],
+      other: ['我在这儿待会儿', '换个地方发呆', '随便逛逛~', '这里也不错'],
+    };
+
+    function pickLine(kind) {
+      const pool = ROAM_LINES[kind] || ROAM_LINES.other;
+      return pool[Math.floor(Math.random() * pool.length)];
+    }
+
+    // 看看这个位置底下是什么：图片 / 文字 / 音乐 / 其它
+    function kindAt(x, y) {
+      const list = (doc.elementsFromPoint ? doc.elementsFromPoint(x, y) : [doc.elementFromPoint(x, y)]).filter(Boolean);
+      for (const el of list) {
+        if (!el.closest) continue;
+        if (el.closest('#deskPet')) continue;
+        if (el.closest('#hv3Music, .hv3-music, #nowIsland, #musicFrame, .music-card')) return 'music';
+        if (el.tagName === 'IMG' || el.closest('.hv3-cover, .hv3-shot, .hv3-square, .hv3-project-cover, .home-project-cover, .gw-tile, .project-card-cover')) return 'image';
+        if (el.closest('p, h1, h2, h3, li, blockquote, .article-content, .hv3-item-title, .hv3-body, .hv3-name, .hv3-bio, .hv3-news-title, .hv3-project-name, .hv3-project-host, .hv3-journals-title, .life-task-title, .hv3-journal, .hv3-stat, .home-articles')) return 'text';
+      }
+      return 'other';
+    }
+
+    function speakWhere(x, y) {
+      const kind = kindAt(x, y);
+      let line = pickLine(kind);
+      if (kind === 'music') {
+        const m = global.PetMind && global.PetMind.music;
+        if (m && m.name) line = '《' + m.name + '》' + ['挺好听', '我记住了', '循环播放？', '这歌可以'][Math.floor(Math.random() * 4)];
+      }
+      say(line, 3200);
+    }
+
+    function scheduleRoam(delay) {
+      clearTimeout(roamTimer);
+      const ms = Number.isFinite(delay) ? delay : (2600 + Math.random() * 7200);   // 2.6~9.8 秒，随机
+      roamTimer = setTimeout(roamStep, ms);
+    }
+
     function roamStep() {
+      roamTimer = 0;
       if (!roaming || S.dragging || S.sleeping || doc.hidden) return;
       const p = petEl();
       if (!p) return;
@@ -822,6 +864,9 @@
       p.classList.add('is-roaming');
       place(x, y, false);
       savePos();
+      // 落地站稳了再说话，别和移动动画抢
+      setTimeout(() => { if (roaming && !S.sleeping) speakWhere(x + 28, y + 28); }, 320);
+      scheduleRoam();
     }
 
     function setRoam(on) {
@@ -834,11 +879,10 @@
         btn.setAttribute('aria-pressed', roaming ? 'true' : 'false');
         btn.title = roaming ? '停止自由活动' : '让它自己在页面里走动';
       }
-      clearInterval(roamTimer);
+      clearTimeout(roamTimer);
       roamTimer = 0;
       if (!roaming) return;
       roamStep();
-      roamTimer = setInterval(roamStep, 3400);
     }
 
     const host = doc.createElement('div');
