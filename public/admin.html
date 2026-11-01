@@ -433,6 +433,22 @@
         .settings-range::-webkit-slider-thumb{appearance:none;-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--accent);border:2px solid var(--bg-primary);box-shadow:0 2px 6px rgba(0,0,0,.22)}
         .settings-range::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--accent);border:2px solid var(--bg-primary)}
         .settings-range-val{font-family:'Courier New',monospace;font-size:12px;color:var(--accent);margin-left:6px}
+        /* 滑块下面的实时示意：外框＝屏幕，中间那格＝主页内容，拖动时它跟着缩/涨 */
+        .settings-screen{position:relative;height:104px;margin-top:12px;border-radius:10px;overflow:hidden;
+            border:1px solid var(--border,#cfc9ba);
+            background:repeating-linear-gradient(90deg,rgba(128,128,128,.10) 0 1px,transparent 1px 22px),
+                       rgba(128,128,128,.06)}
+        .settings-screen-tag{position:absolute;left:10px;top:7px;font-size:10px;letter-spacing:.1em;
+            color:var(--text-muted,#8a8275)}
+        .settings-screen-inner{position:absolute;top:26px;bottom:12px;left:50%;transform:translateX(-50%);
+            width:86%;max-width:100%;display:flex;align-items:center;gap:6px;padding:8px;border-radius:9px;
+            border:2px solid var(--accent,#f0a212);
+            background:rgba(240,162,12,.20);
+            transition:width .18s cubic-bezier(.16,1,.3,1)}
+        .settings-screen-inner i{flex:1;height:100%;border-radius:5px;background:rgba(255,255,255,.55)}
+        .settings-screen-inner b{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+            font:600 12px/1 'Courier New',monospace;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.55)}
+        @media (prefers-reduced-motion:reduce){.settings-screen-inner{transition:none}}
         /* 头像预览 */
         .settings-avatar-row{display:flex;gap:10px;align-items:center}
         .settings-avatar-preview{width:48px;height:48px;border-radius:50%;border:1px dashed var(--border);display:flex;align-items:center;justify-content:center;overflow:hidden;background:var(--bg-input);color:var(--text-muted);font-size:11px;flex-shrink:0}
@@ -1192,7 +1208,15 @@
                                 <label>主页内容宽度 <span class="settings-range-val" id="setHomeWidthVal">86%</span></label>
                                 <input type="range" min="40" max="100" step="1" value="86" id="setHomeWidthPct"
                                        class="settings-range" oninput="previewHomeWidth(this.value)">
-                                <div class="settings-tip">宽度是占屏幕的百分比，窄屏宽屏会自己跟着变；内容最宽 1900px，再宽就只加留白。<span id="setHomeWidthHint"></span></div>
+                                <!-- 实时示意：外框＝整块屏幕，中间那格＝主页内容；拖动滑块，中间那格跟着缩/涨 -->
+                                <div class="settings-screen" aria-hidden="true">
+                                    <span class="settings-screen-tag">屏幕</span>
+                                    <div class="settings-screen-inner" id="setHomeWidthPreview">
+                                        <i></i><i></i><i></i>
+                                        <b id="setHomeWidthInBox">86%</b>
+                                    </div>
+                                </div>
+                                <div class="settings-tip">外框是整块屏幕，中间那格是主页内容——拖上面那根条，它就会跟着缩/涨。宽度是占屏幕的百分比，窄屏宽屏自己跟着变；内容最宽 1900px，再宽就只加留白。<span id="setHomeWidthHint"></span></div>
                             </div>
                         </div>
 
@@ -1590,7 +1614,7 @@
     </div>
 
         <script src="js/tag-picker.js?v=1.1.2"></script>
-        <script src="js/admin-app.js?v=1.31.1"></script>
+        <script src="js/admin-app.js?v=1.32.0"></script>
 
     <!-- 前台预览抽屉（iframe 内嵌，零跳出） -->
     <style>

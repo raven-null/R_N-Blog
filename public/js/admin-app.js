@@ -2590,11 +2590,16 @@
             await persistProjects();
         }
 
-        // 主页宽度滑块：拖动时只更新旁边那行文字（真正生效要保存后由前台 home-layout.js 读）
+        // 主页宽度滑块：拖动时更新百分比数字、下面那块屏幕示意，以及「当前屏幕换算成多少 px」
         function previewHomeWidth(v){
             const pct=Math.round(Number(v)||86);
             const val=document.getElementById('setHomeWidthVal');
             if(val)val.textContent=pct+'%';
+            // 示意条：外框当屏幕，中间那格按比例变宽变窄（CSS 有 0.18s 过渡，拖起来是连续变化的）
+            const preview=document.getElementById('setHomeWidthPreview');
+            if(preview)preview.style.width=pct+'%';
+            const inBox=document.getElementById('setHomeWidthInBox');
+            if(inBox)inBox.textContent=pct+'%';
             const hint=document.getElementById('setHomeWidthHint');
             if(hint){
                 const w=window.innerWidth||1920;
