@@ -883,7 +883,8 @@
       clearTimeout(roamTimer);
       roamTimer = 0;
       if (!roaming) return;
-      roamStep();
+      // 先让欢迎语说完再开始逛（首次别一上来就走掉）
+      scheduleRoam(4800);
     }
 
     const host = doc.createElement('div');
@@ -1017,20 +1018,37 @@
     sync();
   }
 
-  // ---------- 首次见面 ----------
+  // ---------- 每次进来都打个招呼 ----------
+  // 不记住「已经打过招呼」：刷新/重新进入一定说一句，话随机。
+  const WELCOME_LINES = [
+    '欢迎回来～',
+    '又见面啦',
+    '来啦？今天想看点什么',
+    '欢迎欢迎，我在这儿呢',
+    '回来了呀，我等你半天了',
+    '嗨，进来坐坐',
+    '你来了，我就不困了',
+    '欢迎光临这个角落',
+  ];
+
   function greet() {
-    if (store(KEY_GREET)) return;
-    store(KEY_GREET, '1');
-    setTimeout(() => {
-      if (S.sleeping || doc.hidden) return;
-      // 用户已经先动手了（点过/聊过）就别再插一句，免得把他的气泡顶掉
-      const mind = global.PetMind;
-      if (mind && mind.state && Date.now() - (mind.state.lastUserAt || 0) < 30000) return;
-      if (bubbleEl()?.classList.contains('is-show')) return;
-      const petName = (mind && mind.state && mind.state.name) || CONFIG.name || '渡鸦';
-      say('我是' + petName + '，点我聊天，拖我去别处也行', 7000);
-      setState('happy', 1800);
-    }, 1800);
+    const speak = () => {
+      // 后台打开/切走了标签页：等真的在前台了再说，别白说一句
+      if (doc.hidden) {
+        const once = () => {
+          if (doc.hidden) return;
+          doc.removeEventListener('visibilitychange', once);
+          setTimeout(speak, 700);
+        };
+        doc.addEventListener('visibilitychange', once);
+        return;
+      }
+      if (S.sleeping) toggleSleep(false);
+      const line = WELCOME_LINES[Math.floor(Math.random() * WELCOME_LINES.length)];
+      say(line, 5200);
+      setState('happy', 1600);
+    };
+    setTimeout(speak, 1200);
   }
 
   // ---------- 后台设置（后台「前台设置 → 桌宠」下发） ----------

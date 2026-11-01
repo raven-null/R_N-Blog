@@ -14489,10 +14489,17 @@ html[data-theme="dark"] .hv3-today-panel {
 /* 「今天」卡：左边一列按钮 / 中间日历 / 右边任务+日记 */
 .hv3-today-main {
     display: grid;
-    grid-template-columns: auto minmax(0, 1.05fr) minmax(0, 1fr);
+    /* 日历给一个下限，别被右边万年历的长文本挤扁；两边都允许收缩（minmax(0,…)） */
+    grid-template-columns: minmax(280px, 1.05fr) minmax(0, 1fr);
     gap: 14px;
     align-items: start;
     min-height: 0;
+}
+
+/* 万年历展开时右栏按内容走，不再被日历高度锁死 */
+.hv3-today-side:has(#hv3DayPane:not([hidden])) {
+    max-height: none;
+    overflow: visible;
 }
 
 .hv3-today-side {
@@ -14500,6 +14507,8 @@ html[data-theme="dark"] .hv3-today-panel {
     flex-direction: column;
     gap: 8px;
     min-height: 0;
+    /* 关键：不设 min-width:0 时，grid 会按内容把这一列撑宽，左边的日历就被挤变形了 */
+    min-width: 0;
     /* 实际高度由 syncTodaySideHeight() 按日历高度写进来 —— 右栏不能比日历高 */
     max-height: 100%;
     overflow: hidden;
@@ -14591,10 +14600,6 @@ html[data-theme="dark"] .hv3-today-panel {
     animation: hv3-day-actions-in .3s cubic-bezier(.22, 1, .36, 1) both;
 }
 
-/* 没这栏时日历直接铺满（否则 grid 第一列虽然空，gap 还会留 14px） */
-.hv3-today-panel:not(.is-day-pane) .hv3-today-main {
-    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
-}
 
 @keyframes hv3-day-actions-in {
     from { opacity: 0; transform: translateX(-10px); }
@@ -14923,7 +14928,13 @@ html[data-theme="dark"] .hv3-shot {
         width: auto;
     }
 
-    .hv3-today-side {
+    /* 万年历展开时右栏按内容走，不再被日历高度锁死 */
+.hv3-today-side:has(#hv3DayPane:not([hidden])) {
+    max-height: none;
+    overflow: visible;
+}
+
+.hv3-today-side {
         max-height: none !important;
     }
 

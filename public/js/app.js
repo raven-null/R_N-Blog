@@ -3372,8 +3372,15 @@ const BlogApp = {
         const cal = document.getElementById('homeCalendar');
         const side = panel.querySelector('.hv3-today-side');
         if (!cal || !side) return;
-        // 手机上是竖排（任务/日记在日历下面），不需要限高
+        // 手机上是竖排，不需要限高
         if (window.innerWidth <= 900 || panel.classList.contains('is-guest')) {
+            side.style.height = '';
+            side.style.maxHeight = '';
+            return;
+        }
+        // 点日期后右栏换成万年历：内容比日历高，再按日历高度锁死就会把内容压变形
+        const dayPane = document.getElementById('hv3DayPane');
+        if (dayPane && !dayPane.hidden) {
             side.style.height = '';
             side.style.maxHeight = '';
             return;
