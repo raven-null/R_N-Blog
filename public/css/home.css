@@ -180,6 +180,13 @@ html[data-theme="dark"] .hv3-card {
     justify-self: center;
 }
 
+/* 信息卡被挤窄、名字开始换行（「渡鸦 NULL」逐字竖排）时：
+   头像 + 名字整块收起来，只留时钟和统计，别让名字竖成一列。
+   这个类由 app.js 的 syncHeroFit() 按实测行数加/摘，不靠固定断点。 */
+.hv3-hero.hero-squeezed .hv3-who {
+    display: none;
+}
+
 /* 灵动岛关了：走它自己的收起动画（宽度收 0 + 淡出），不是啪一下消失；岛上的头像也一起隐掉 */
 body.island-off .now-island {
     width: 0;

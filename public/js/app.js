@@ -102,6 +102,18 @@ const BlogApp = {
         // 时间 / 按钮 上下翻：滚轮切换，移开自动回到时间
         this.bindClockFlip();
 
+        // 名字挤到换行就把头像 + 名字收起来：窗口变化、字体载入后再各判一次
+        if (!this._heroFitBound) {
+            this._heroFitBound = true;
+            window.addEventListener('resize', () => {
+                clearTimeout(this._heroFitTimer);
+                this._heroFitTimer = setTimeout(() => this.syncHeroFit(), 120);
+            }, { passive: true });
+            if (document.fonts && document.fonts.ready) {
+                document.fonts.ready.then(() => this.syncHeroFit()).catch(() => { });
+            }
+        }
+
 
         // 正文手写开关（记忆在 localStorage）
         this.applyHandBody();
@@ -1706,7 +1718,24 @@ const BlogApp = {
                 const names = ['日', '一', '二', '三', '四', '五', '六'];
                 d.textContent = (now.getMonth() + 1) + ' 月 ' + now.getDate() + ' 日 · 周' + names[now.getDay()];
             }
+            // 时钟宽度变了（比如 9:05 → 19:20），名字那块可用宽度跟着变，重新判定要不要收起来
+            this.syncHeroFit();
         }
+    },
+
+    /* 信息卡被挤窄时，「渡鸦 NULL」会逐字换行竖成一列，比不显示还难看。
+       做法：按实际行数量一次，超过一行就把头像 + 名字整块收掉（.hero-squeezed），只留时钟与统计。
+       关键：测量前先把标记摘掉再量 —— 否则 display:none 之后量到 0 高，会立刻判成"没挤"，
+       一秒内来回抽搐。 */
+    syncHeroFit() {
+        const hero = document.querySelector('.hv3-hero');
+        const name = document.querySelector('.hv3-name');
+        if (!hero || !name) return;
+        hero.classList.remove('hero-squeezed');
+        const lh = parseFloat(getComputedStyle(name).lineHeight) || 0;
+        const h = name.getBoundingClientRect().height;
+        const wrapped = lh > 0 ? h > lh * 1.4 : name.scrollWidth > name.clientWidth + 2;
+        hero.classList.toggle('hero-squeezed', wrapped);
     },
     // 主页身份区：头像 / 名字 / 简介跟随博客设置
     renderHomeIdentity() {
@@ -1728,6 +1757,8 @@ const BlogApp = {
             if (avatarEl.getAttribute("src") !== src) avatarEl.src = src;
             avatarEl.alt = name;
         }
+        // 名字换了长度就重新判定一次：短名字放得下就照常显示
+        this.syncHeroFit();
     },
 
     // ---------- 图库图片墙：无限画布 · 拖拽平移 · 缩放 · 视野虚拟化 ----------
