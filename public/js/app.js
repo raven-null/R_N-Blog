@@ -6280,6 +6280,11 @@ const BlogApp = {
                     h: p.height,
                     url: p.url,
                 }));
+
+                // R16/R18 只有「后台登录过 + 后台开关打开」时才补进来，而且只补收藏里的横图。
+                // 这一步放后台异步做，不影响普通图立刻可用。
+                this.maybeAddRestrictedBgs();
+
                 return this.heroBgPool;
             })
             .catch(() => {
@@ -6353,7 +6358,70 @@ const BlogApp = {
         if (alt.complete && alt.naturalWidth > 0) swap();
     },
 
-    // 背景自动轮换：页面加载完后先换第一张，之后每 60 秒换下一张。
+    // R16/R18 背景：必须两件事同时成立才启用
+    //   1) 这台浏览器后台登录过（localStorage 里有 admin_key）
+    //   2) 后台「加载背景允许使用 R16/R18 图」开关是打开的
+    // 两个条件缺一，就只用普通评级的图。补进来的也只要收藏里的横向高清图。
+    maybeAddRestrictedBgs() {
+        const key = this.getAdminKey();
+        if (!key) return;                       // 没登录：连问都不问
+        if (this._restrictedBgTried) return;
+        this._restrictedBgTried = true;
+
+        fetch('/api/admin?action=settings', { cache: 'no-cache', headers: { 'X-Admin-Key': key } })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((res) => {
+                const allow = !!(res && res.data && res.data.layout && res.data.layout.loaderBgAllowR18);
+                if (!allow) return;
+
+                // 带 token 拉全量元数据（游客接口不发 r16/r18）
+                const out = [];
+                let cursor = '';
+                const next = (round) => {
+                    if (round > 3) return Promise.resolve(out);
+                    const url = new URL('https://r-gallery.netlify.app/api/photos');
+                    url.searchParams.set('limit', '500');
+                    url.searchParams.set('token', key);
+                    if (cursor) url.searchParams.set('cursor', cursor);
+                    return fetch(url.toString())
+                        .then((r) => (r.ok ? r.json() : null))
+                        .then((data) => {
+                            const photos = (data && Array.isArray(data.photos) ? data.photos : []);
+                            out.push(...photos);
+                            cursor = (data && data.cursor) || '';
+                            if (!cursor || !photos.length) return out;
+                            return next(round + 1);
+                        });
+                };
+
+                return next(0).then((all) => {
+                    const extra = all.filter((p) => {
+                        if (!p || !p.id || p.fav !== true) return false;
+                        const rating = String(p.rating || 'general');
+                        if (rating === 'general') return false;      // 普通图已经收过了
+                        const w = Number(p.width) || 0;
+                        const h = Number(p.height) || 0;
+                        if (!(w > h && w >= 1600)) return false;
+                        return !this.heroBgPool.some((it) => it.id === p.id);
+                    }).map((p) => ({
+                        id: p.id,
+                        fav: true,
+                        w: p.width,
+                        h: p.height,
+                        rating: p.rating,
+                        // raw 带 token：受保护的图不带 token 取不到
+                        url: 'https://r-gallery.netlify.app/api/photos/' + encodeURIComponent(p.id) + '/raw?token=' + encodeURIComponent(key),
+                    }));
+                    if (extra.length) {
+                        this.heroBgPool = this.heroBgPool.concat(extra);
+                        if (!this.heroBgTimer) this.startHeroBgRotation();
+                    }
+                });
+            })
+            .catch(() => { /* 拿不到就用普通图 */ });
+    },
+
+
     // 「还有图在加载就不切」——页面上只要有没加载完的图，这一轮直接跳过，等下一分钟。
     heroBgIndex: 0,
     heroBgTimer: 0,
