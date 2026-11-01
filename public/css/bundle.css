@@ -15015,7 +15015,9 @@ html[data-theme="dark"] .hv3-shot {
        表现就是「点时钟切换了 is-tools，但按钮翻不出来」。 */
     .hv3-flip-inner { transform: none; }
 
-    .hv3-flip-view { height: auto; }
+    /* 两页都按翻牌容器的高度铺满：只写 height:auto 的话，按钮那页只有 40 高（内容高），
+       翻上来就贴着容器顶边，看着「太靠上」；铺满 + place-items:center 才是垂直居中。 */
+    .hv3-flip-view { height: var(--flip-h, 60px); }
 
     .hv3-flip .hv3-toggles { justify-self: start; }
 
@@ -15674,9 +15676,14 @@ body:not(.has-music) .hv3-row-top .hv3-hero {
    ------------------------------------------------------------ */
 @media (max-width: 900px) {
     .hv3-flip,
-    .hv3-flip-inner,
-    .hv3-flip-view {
+    .hv3-flip-inner {
         display: revert;
+    }
+
+    /* 翻牌的两页各自铺满容器；用 grid 居中，按钮那页才不会贴着容器顶边 */
+    .hv3-flip-view {
+        display: grid;
+        place-items: center;
     }
 
     .hv3-hero {
