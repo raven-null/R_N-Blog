@@ -56,6 +56,14 @@
             z-index: 0;
         }
         .load-veil-bg.is-ready { opacity: 1; }
+        /* 默认图（第 1 层）不等 JS：CSS 自己 0.25s 后开始淡入。
+           load-progress.js 是 defer 的，线上要四秒左右才跑起来，等它的话前几秒全是纯色。 */
+        #loadVeilBg { animation: veil-bg-in 0.6s ease 0.25s forwards; }
+        /* 第 2 层还没有 src 时不占画面，显示与否交给 JS 的 is-ready */
+        #loadVeilBgAlt:not([src]) { display: none; }
+        @keyframes veil-bg-in {
+            to { opacity: 1; }
+        }
         /* 压暗层：不压的话白色条子和百分比数字会糊进画面里看不清 */
         .load-veil-shade {
             position: absolute;
@@ -151,7 +159,7 @@
             .load-veil { display: none; }
         }
     </style>
-    <link rel="stylesheet" href="css/bundle.css?v=b87fdb638c">
+    <link rel="stylesheet" href="css/bundle.css?v=6d2d344463">
     <title>渡鸦 NULL · 日光与暮色之间</title>
     <link rel="icon" id="siteFavicon" href="/images/Default/web-logo.webp" type="image/webp">
     <link rel="apple-touch-icon" href="/images/Default/web-logo.webp">
@@ -787,7 +795,7 @@
     <!-- 桌宠动效引擎（spring-driven character，见 public/vendor/grok/README.md） -->
 
     <!-- /js/* 是 immutable 长缓存：app.js 一改就必须换 ?v=，否则线上一直吃旧文件 -->
-    <script src="js/app.js?v=20261106zh" defer></script>
+    <script src="js/app.js?v=20261106zi" defer></script>
     <script src="js/animations.js?v=3.14.0" defer></script>
 
     <script>
