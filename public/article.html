@@ -1696,8 +1696,11 @@
                 width: 100vw;
                 height: 100vh;
                 height: 100dvh;
-                /* 拉高：正文里带 transform/backdrop 的元素会自己开层叠上下文，200 压不住 */
-                z-index: 900;
+                /* 移动端目录是整屏抽屉，层级要压过页面上所有浮层：
+                   正文层叠上下文 200 出头、聊天窗口 1002、划词气泡 2000、进度条 2100、
+                   桌宠铃铛 9000 —— 这里取 10000 坐最顶层，遮罩紧随其下一档（9990）。
+                   !important：其它样式表可能后到，别被同特异性规则盖回去。 */
+                z-index: 10000 !important;
                 gap: 0;
                 transition: left 0.3s cubic-bezier(0.16, 1, 0.3, 1);
             }
@@ -1711,7 +1714,8 @@
                 position: fixed;
                 inset: 0;
                 background: rgba(0, 0, 0, 0.55);
-                z-index: 880;
+                /* 跟着抽屉一起提到最顶层，只比抽屉本身低一档 */
+                z-index: 9990 !important;
                 opacity: 0;
                 transition: opacity 0.3s;
             }
@@ -2708,7 +2712,7 @@
     <script src="js/reader.js?v=3.15.2" defer></script>
     <script src="js/animations.js?v=3.14.0" defer></script>
 
-    <script src="js/article-app.js?v=2.4.2" defer></script>
+    <script src="js/article-app.js?v=2.4.3" defer></script>
 
     <!-- 桌宠：看页面 / 主动说话 / 语音对话 -->
     <div class="deskpet" id="deskPet" data-state="awake">

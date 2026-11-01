@@ -1,5 +1,5 @@
 /**
- * 文章页主脚本（由 article.html 内联脚本抽出，便于独立缓存与排查）· v2.2.1
+ * 文章页主脚本（由 article.html 内联脚本抽出，便于独立缓存与排查）· v2.4.3
  * 改动后请同步 bump article.html 里的 ?v= 版本号
  */
         // 文章详情页应用
@@ -1796,6 +1796,9 @@ const ArticleApp = {
             const sidebarChatBtn = document.getElementById('sidebarChatToggle');
             if (sidebarChatBtn) sidebarChatBtn.addEventListener('click', () => {
                 const chatWindow = document.getElementById('chatWindow');
+                // 窄屏（≤773px）目录是整屏抽屉且层级最高（z-index 10000）：
+                // 先把它收起来，否则聊天窗口开在抽屉底下，看着像点了没反应
+                if (window.innerWidth <= 773) closeSidebar();
                 if (chatWindow) chatWindow.classList.toggle('show');
             });
 
@@ -2027,6 +2030,19 @@ const ArticleApp = {
         function checkMobileView() {
             const width = window.innerWidth;
             const tocSidebar = document.getElementById('tocSidebar');
+
+            // 目录抽屉要真的是「最高层」：侧栏本来在 .article-layout 里，而它是
+            // position:relative + z-index:1 的层叠上下文 —— 抽屉的 z-index 写到 10000
+            // 也只在这个上下文内生效，照样被遮罩、聊天窗口、进度条压在下面。
+            // 窄屏时把侧栏提到 body 顶层（fixed 定位，不影响正文布局），宽屏放回去。
+            if (tocSidebar) {
+                const layout = document.querySelector('.article-layout');
+                if (width <= 773 && tocSidebar.parentElement !== document.body) {
+                    document.body.appendChild(tocSidebar);
+                } else if (width > 773 && layout && tocSidebar.parentElement === document.body) {
+                    layout.insertBefore(tocSidebar, layout.firstChild);
+                }
+            }
 
             // 悬浮球显隐交给 CSS（窄屏或触摸设备），这里只回收移动端菜单状态
             if (width >= 773) {
