@@ -3214,12 +3214,9 @@ const BlogApp = {
         }
 
         if (!tasks.length) {
-            /* 平时没任务就整块收起；点了日期（右栏就是「任务 + 日记」）时留一行空态，
-               否则右侧一片空白，看着像功能坏了 */
-            const dayPane = document.getElementById('hv3DayPane');
-            const inDayPane = !!dayPane && !dayPane.hidden;
-            box.style.display = inDayPane ? '' : 'none';
-            list.innerHTML = inDayPane ? '<div class="life-task-empty">这天还没有任务</div>' : '';
+            // 这天没有任务就整块收起，不放占位文案
+            box.style.display = 'none';
+            list.innerHTML = '';
             return;
         }
 

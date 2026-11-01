@@ -13688,7 +13688,20 @@ html[data-theme="dark"] .hv3-card {
     border-radius: 12px;
     text-decoration: none;
     color: inherit;
+    /* 简报直接铺在背景插画上：给每条垫一层淡玻璃底，
+       这样白天（浅色主题）用黑字、晚上（深色主题）用白字都读得清 */
+    background: var(--news-fill);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     transition: background .18s ease;
+}
+
+.hv3-news {
+    --news-fill: rgba(255, 255, 255, .58);
+}
+
+html[data-theme="dark"] .hv3-news {
+    --news-fill: rgba(14, 16, 24, .52);
 }
 
 .hv3-news-item:hover { background: var(--accent-soft, rgba(240, 162, 12, .12)); }
@@ -14162,8 +14175,7 @@ html[data-theme="dark"] .hv3-today-panel {
     flex: 1 1 auto;
     min-height: 0;
     display: block;
-    overflow-y: auto;
-    overscroll-behavior: contain;
+    overflow: hidden;
     scrollbar-width: none;
 }
 
@@ -14416,6 +14428,8 @@ html[data-theme="dark"] .hv3-today-panel {
 /* 日历：有任务的日期下方点一个小圆点（任务和日历就这样叠在一起） */
 .cal-day {
     position: relative;
+    height: 30px;
+    line-height: 30px;
 }
 
 .cal-day.has-task::after {
