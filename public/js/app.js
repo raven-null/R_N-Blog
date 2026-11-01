@@ -1291,8 +1291,8 @@ const BlogApp = {
         const track = list.firstElementChild;
         if (!track) return;
 
-        // 一帧 0.45px ≈ 60fps 下 27px/s：慢慢走，读标题不赶
-        const SPEED = 0.45;
+        // 一帧 0.28px ≈ 60fps 下 17px/s：再慢一点，读标题不赶
+        const SPEED = 0.28;
         let raf = 0;
         let paused = false;
         let resumeTimer = 0;
@@ -5087,8 +5087,9 @@ const BlogApp = {
         }
 
         box.innerHTML = items.map(p => this.hv3DeployedCard(p)).join('');
-        // 横向一条：鼠标按住可拖动，滚动条藏起来
+        // 横向一条：鼠标按住可拖动，滚动条藏起来；和简报一样自己慢慢滚（这里是左右）
         this.bindProjectsDragScroll(box);
+        this.initProjectsLoopScroll(box, '.hv3-project', { auto: true, speed: 0.18 });
     },
 
     // 首页已上线项目卡片：封面截图 + 名称/标签 + 域名
@@ -5294,11 +5295,11 @@ const BlogApp = {
     },
 
     // 项目条横向无限滚动（配合 bindProjectsDragScroll 用）
-    initProjectsLoopScroll(grid) {
+    initProjectsLoopScroll(grid, cardSel = '.project-card', opts = {}) {
         if (!grid || grid.dataset.loopBound) return;
         grid.dataset.loopBound = '1';
 
-        const origin = [...grid.querySelectorAll('.project-card')];
+        const origin = [...grid.querySelectorAll(cardSel)];
         if (!origin.length) return;
 
         const cloneCopy = () => {
@@ -5316,7 +5317,7 @@ const BlogApp = {
 
         // 一份内容的宽度（第一张和第二份的第一张之间的间距）
         const oneW = () => {
-            const cards = grid.querySelectorAll('.project-card');
+            const cards = grid.querySelectorAll(cardSel);
             const first = cards[0];
             const second = cards[origin.length];
             return (first && second) ? (second.offsetLeft - first.offsetLeft) : 0;
@@ -5336,6 +5337,28 @@ const BlogApp = {
         grid.addEventListener('scroll', wrap, { passive: true });
         // 拖完松手也可能停在越界位置，补一次纠正
         grid.addEventListener('pointerup', () => setTimeout(wrap, 0), { passive: true });
+
+        // 慢慢自动往右滚（和简报一样自己走；鼠标停上去暂停，离开继续）
+        if (opts.auto) {
+            const speed = Number(opts.speed) || 0.5;
+            let paused = false;
+            let acc = 0;
+            grid.addEventListener('pointerenter', () => { paused = true; }, { passive: true });
+            grid.addEventListener('pointerleave', () => { paused = false; }, { passive: true });
+            grid.addEventListener('pointerdown', () => { paused = true; }, { passive: true });
+            if (grid._loopTimer) clearInterval(grid._loopTimer);
+            grid._loopTimer = setInterval(() => {
+                if (document.hidden || paused) return;
+                if (!grid.clientWidth) return;
+                if (oneW() <= 0) return;
+                // scrollLeft 只认真数像素：先攒够 1px 再加，不然 0.5 这种小数每帧都被吞掉
+                acc += speed;
+                if (acc < 1) return;
+                const step = Math.floor(acc);
+                acc -= step;
+                grid.scrollLeft += step;
+            }, 16);
+        }
     },
 
     // 封面加载失败：退化成图标底（不影响卡片可用）
@@ -5363,6 +5386,9 @@ const BlogApp = {
         }
 
         box.innerHTML = items.map(repo => this.githubRepoCard(repo)).join('');
+        // 跟「已上线」一样：一排横向拖动 + 无限循环
+        this.bindProjectsDragScroll(box);
+        this.initProjectsLoopScroll(box, '.home-project');
     },
 
     // 相对时间：刚刚 / 12 分钟前 / 3 天前 / 2 个月前

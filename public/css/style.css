@@ -3920,6 +3920,13 @@ body.view-projects-active.home-layout .main-content {
     align-self: stretch;
 }
 
+/* GitHub 仓库卡片跟已上线卡片同宽同高，一排横向拖 */
+.projects-grid > .home-project {
+    flex: 0 0 clamp(280px, 27%, 340px);
+    align-self: stretch;
+    width: auto;
+}
+
 .projects-grid img {
     -webkit-user-drag: none;
     user-drag: none;
