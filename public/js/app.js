@@ -3312,9 +3312,20 @@ const BlogApp = {
         if (idx >= 0) box.hvStackGoTo(idx);
     },
 
-    // 选择日期（日历点击）：右边换成「任务 + 当天日记」，并弹出编写盒子
+    // 选择日期（日历点击）：右边换成「任务 + 当天日记」；再点同一天就收起来
     selectLifeDate(date) {
         if (!date) return;
+
+        const day = document.getElementById('hv3DayPane');
+        const paneOpen = !!day && !day.hidden;
+        // 再点一次已经选中的那天：收起右栏、左边两个按钮消失、右边回到项目栏
+        if (paneOpen && date === this.lifeState.date) {
+            this.closeEditor();
+            this.showDayPane(false);
+            this.updateSelectedCalCell();
+            return;
+        }
+
         const month = date.slice(0, 7);
         this.lifeState.date = date;
         this.showDayPane(true);
@@ -3433,7 +3444,8 @@ const BlogApp = {
         };
         const month = this.lifeState.date.slice(0, 7);
         if (month !== this.lifeState.month) {
-            this.loadLifeMonth(month).then(ok => { if (ok) open(); });
+            // 换月的数据没拿到也照样把编辑器打开：不然点了按钮毫无反馈
+            this.loadLifeMonth(month).catch(() => { }).then(() => open());
             return;
         }
         if (!wrap) return;
@@ -3456,6 +3468,14 @@ const BlogApp = {
 
         // 小弹窗：绝对定位浮在日历下方，不参与布局
         wrap.classList.add('is-open');
+        // 日历常常在视口下半部分，弹窗一开就落在屏幕外面 —— 看着像「点了没反应」，先把它滚进来
+        setTimeout(() => {
+            if (!wrap.classList.contains('is-open')) return;
+            const r = wrap.getBoundingClientRect();
+            if (r.bottom > window.innerHeight - 12 || r.top < 12) {
+                try { wrap.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (e) { wrap.scrollIntoView(); }
+            }
+        }, 80);
     },
 
     // 点「任务 / 日记」→ 选择层隐藏，换成对应编写表单
@@ -3620,6 +3640,9 @@ const BlogApp = {
             }
             if (quick) {
                 e.preventDefault();
+                // 按下先给个反馈，免得以为没点上
+                quick.classList.add('is-pressed');
+                setTimeout(() => quick.classList.remove('is-pressed'), 280);
                 this.openLifeEditor(quick.dataset.kind);
                 return;
             }

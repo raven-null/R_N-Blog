@@ -14446,8 +14446,12 @@ html[data-theme="dark"] .hv3-today-panel {
     border-color: var(--accent, #5b7cfa);
 }
 
-.hv3-day-act:active {
+.hv3-day-act:active,
+.hv3-day-act.is-pressed {
     transform: translateY(0) scale(.97);
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 22%, transparent);
+    color: var(--accent);
 }
 
 
