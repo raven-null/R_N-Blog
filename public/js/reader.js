@@ -65,6 +65,83 @@
         if (typeof window.closeMobileMenu === 'function') window.closeMobileMenu();
     };
 
+    /* ===== 目录折叠（v3.52.1） =====
+       收起后整个目录栏消失、正文向左铺开，左边缘留一条竖标签点回来。
+       窄屏（≤773px）目录本来就是抽屉，不参与这套，状态也就不写死。 */
+    const TOC_STORE = 'article-toc-collapsed';
+    const narrowScreen = () => window.matchMedia('(max-width: 773px)').matches;
+
+    function setTocCollapsed(collapsed, remember) {
+        document.body.classList.toggle('toc-collapsed', collapsed);
+        const btn = document.getElementById('tocSidebarCollapse');
+        if (btn) btn.setAttribute('aria-expanded', String(!collapsed));
+        const tab = document.getElementById('tocRevealTab');
+        if (tab) tab.setAttribute('aria-expanded', String(!collapsed));
+        if (remember) {
+            try { localStorage.setItem(TOC_STORE, collapsed ? '1' : '0'); } catch (e) { }
+        }
+    }
+
+    function initTocCollapse() {
+        const collapseBtn = document.getElementById('tocSidebarCollapse');
+        const revealTab = document.getElementById('tocRevealTab');
+
+        let saved = false;
+        try { saved = localStorage.getItem(TOC_STORE) === '1'; } catch (e) { }
+        if (saved) setTocCollapsed(true, false);
+
+        if (collapseBtn) collapseBtn.addEventListener('click', () => setTocCollapsed(true, true));
+        if (revealTab) revealTab.addEventListener('click', () => setTocCollapsed(false, true));
+
+        // 跨过 773px 断点：回到宽屏就恢复记住的状态，窄屏一律展开
+        const mq = window.matchMedia('(max-width: 773px)');
+        const sync = () => {
+            if (mq.matches) {
+                setTocCollapsed(false, false);
+            } else {
+                let want = false;
+                try { want = localStorage.getItem(TOC_STORE) === '1'; } catch (e) { }
+                setTocCollapsed(want, false);
+            }
+        };
+        if (mq.addEventListener) mq.addEventListener('change', sync);
+        else if (mq.addListener) mq.addListener(sync);
+    }
+
+    window.expandToc = function () {
+        if (document.body.classList.contains('toc-collapsed')) setTocCollapsed(false, true);
+    };
+
+    /* ===== 阅读工具栏：一个功能按钮收起所有设置（v3.52.1） =====
+       点按钮展开，鼠标离开整条工具栏 / 按 Esc / 点外面都收回去。 */
+    function initReaderFunc() {
+        const bar = document.getElementById('readerToolbar');
+        const func = document.getElementById('readerFunc');
+        const btn = document.getElementById('readerFuncBtn');
+        if (!bar || !func || !btn) return;
+
+        const isOpen = () => func.classList.contains('is-open');
+        const setOpen = (open) => {
+            func.classList.toggle('is-open', open);
+            btn.setAttribute('aria-expanded', String(open));
+        };
+
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            setOpen(!isOpen());
+        });
+
+        // 鼠标移开这条工具栏就收起
+        bar.addEventListener('mouseleave', () => { if (isOpen()) setOpen(false); });
+
+        // 触屏 / 键盘：点别处或按 Esc 一样收回去
+        document.addEventListener('click', (e) => {
+            if (isOpen() && !func.contains(e.target)) setOpen(false);
+        });
+
+        window.__closeReaderFunc = () => { if (isOpen()) setOpen(false); };
+    }
+
     function init() {
         // 阅读进度条
         const progress = document.getElementById('articleProgress');
@@ -93,6 +170,7 @@
         document.addEventListener('keydown', (e) => {
             const t = e.target;
             if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+            if (e.key === 'Escape' && window.__closeReaderFunc) window.__closeReaderFunc();
             if (e.key === 'Escape' && root.classList.contains('reader-focus')) { toggleFocus(); return; }
             if (e.key === 'j' || e.key === 'J') { const el = document.querySelector('#article-navigation .nav-card.next'); if (el) el.click(); return; }
             if (e.key === 'k' || e.key === 'K') { const el = document.querySelector('#article-navigation .nav-card.prev'); if (el) el.click(); return; }
@@ -100,7 +178,11 @@
             if (e.key === 'b' || e.key === 'B') { window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' }); return; }
             if (e.key === '/') {
                 const inp = document.getElementById('tocSearchInput');
-                if (inp) { e.preventDefault(); inp.focus(); }
+                if (inp) {
+                    e.preventDefault();
+                    if (window.expandToc) window.expandToc();
+                    inp.focus();
+                }
             }
         });
 
@@ -114,6 +196,8 @@
 
         apply();
         syncFocusUi();
+        initTocCollapse();
+        initReaderFunc();
     }
 
     if (document.readyState === 'loading') {
