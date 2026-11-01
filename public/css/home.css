@@ -2823,3 +2823,23 @@ body:not(.has-music) .hv3-row-top .hv3-hero {
         justify-self: start;
     }
 }
+
+/* 简报换到图片下面（v3.54.18）
+   横滑带允许换行：第一行是三块图片（84% 宽，可左右滑），
+   简报用 order 排到第二行、独占整宽，就落在图片下面、日历上面，不再跟图片挤在一行里。
+   flex-wrap 下横向滚动仍然只滚第一行那三块。
+   ------------------------------------------------------------ */
+@media (max-width: 900px) {
+    .hv3-row-main {
+        flex-wrap: wrap !important;
+        align-content: flex-start !important;
+    }
+
+    .hv3-row-main > .hv3-sub-grid {
+        flex: 0 0 100% !important;
+        order: 9;
+        margin-top: 12px !important;
+        align-self: flex-start !important;
+        height: auto !important;
+    }
+}
