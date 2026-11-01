@@ -759,6 +759,8 @@ const BlogApp = {
         document.body.classList.toggle('view-blog-active', view === 'blog');
         // 音乐视图：铺满滚动区、不要 main-content 的限宽与内边距（见 css/music.css）
         document.body.classList.toggle('view-music-active', view === 'music');
+        // 项目页铺宽一点：一行能放下 4 张卡（见 css/style.css）
+        document.body.classList.toggle('view-projects-active', view === 'projects');
         // 音乐视图里顶栏浮在播放器上（position: fixed + pointer-events: none），
         // 展开/收起由 js/music-view.js 按鼠标位置驱动；切到别的视图时把残留的展开态收掉
         const topBarPill = document.getElementById('topBarPill');
@@ -5234,6 +5236,56 @@ const BlogApp = {
             </a>
         `;
         }).join('');
+
+        // 一排摆开，按住左右拖（跟主页项目条同一套拖拽逻辑）
+        this.bindProjectsDragScroll(box);
+        // 横向无限循环：内容复制两份，滚出一份宽度就悄悄挪回去，看着永远滚不完
+        this.initProjectsLoopScroll(box);
+    },
+
+    // 项目条横向无限滚动（配合 bindProjectsDragScroll 用）
+    initProjectsLoopScroll(grid) {
+        if (!grid || grid.dataset.loopBound) return;
+        grid.dataset.loopBound = '1';
+
+        const origin = [...grid.querySelectorAll('.project-card')];
+        if (!origin.length) return;
+
+        const cloneCopy = () => {
+            const frag = document.createDocumentFragment();
+            origin.forEach((el) => {
+                const c = el.cloneNode(true);
+                c.setAttribute('aria-hidden', 'true');
+                c.dataset.loopCopy = '1';
+                frag.appendChild(c);
+            });
+            grid.appendChild(frag);
+        };
+        cloneCopy();
+        cloneCopy();
+
+        // 一份内容的宽度（第一张和第二份的第一张之间的间距）
+        const oneW = () => {
+            const cards = grid.querySelectorAll('.project-card');
+            const first = cards[0];
+            const second = cards[origin.length];
+            return (first && second) ? (second.offsetLeft - first.offsetLeft) : 0;
+        };
+
+        // 先挪过一份，左右都留出余量，两边都能一直拖
+        const w0 = oneW();
+        if (w0 > 0) grid.scrollLeft = w0;
+
+        const wrap = () => {
+            const w = oneW();
+            if (w <= 0) return;
+            if (grid.scrollLeft >= w * 2) grid.scrollLeft -= w;
+            else if (grid.scrollLeft <= 0) grid.scrollLeft += w;
+        };
+
+        grid.addEventListener('scroll', wrap, { passive: true });
+        // 拖完松手也可能停在越界位置，补一次纠正
+        grid.addEventListener('pointerup', () => setTimeout(wrap, 0), { passive: true });
     },
 
     // 封面加载失败：退化成图标底（不影响卡片可用）
@@ -5833,6 +5885,8 @@ const BlogApp = {
                 // 这里清掉标记，让两边用同一份数据重画。
                 const box = document.getElementById('hv3Projects');
                 if (box) box.dataset.rendered = '';
+                const pageBox = document.getElementById('deployedProjects');
+                if (pageBox) pageBox.dataset.rendered = '';
                 this.renderHomeProjects();
                 this.renderDeployedProjects();
             }

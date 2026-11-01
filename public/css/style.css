@@ -3840,26 +3840,67 @@ html.reader-focus .article-content {
     gap: 20px;
 }
 
-.projects-hint {
-    float: right;
-    font-size: 11px;
-    font-weight: 400;
+/* 项目页「已上线」标题：比通用面板标题大一号，跟卡片区一起对齐 */
+.view-projects .projects-page .dash-panel-title {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 21px;
+    font-weight: 700;
     letter-spacing: 1px;
-    color: var(--text-muted);
+    color: var(--text);
+    margin-bottom: 18px;
+    padding-bottom: 14px;
 }
 
+.projects-hint {
+    float: none;
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 400;
+    letter-spacing: 1px;
+}
+
+/* 项目页放宽容器：一行四张卡片，卡片不至于缩得太小 */
+body.view-projects-active.home-layout .main-content {
+    max-width: 1440px !important;
+}
 .projects-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-    gap: 16px;
+    display: flex;
+    gap: 18px;
+    /* 一排摆开，按住左右拖（滚动条藏起来，跟主页项目条一致） */
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 6px 2px 12px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.projects-grid::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+}
+
+.projects-grid > .project-card {
+    flex: 0 0 clamp(280px, 27%, 340px);
+    align-self: stretch;
+}
+
+.projects-grid img {
+    -webkit-user-drag: none;
+    user-drag: none;
 }
 
 .project-card {
     display: flex;
     flex-direction: column;
-    padding: 0;
+    padding: 16px;
     border: 1px solid var(--border);
-    border-radius: 14px;
+    border-radius: 20px;
     background: var(--bg-secondary);
     text-decoration: none;
     color: inherit;
@@ -3875,6 +3916,7 @@ html.reader-focus .article-content {
 
 .project-card-cover {
     position: relative;
+    border-radius: 14px;
     aspect-ratio: 16 / 10;
     flex-shrink: 0;
     overflow: hidden;
@@ -3911,8 +3953,8 @@ html.reader-focus .article-content {
     display: flex;
     flex: 1;
     flex-direction: column;
-    gap: 10px;
-    padding: 16px 18px 18px;
+    gap: 12px;
+    padding: 18px 4px 4px;
 }
 
 .project-card-head {
@@ -3937,7 +3979,7 @@ html.reader-focus .article-content {
 }
 
 .project-card-name {
-    font-size: 15px;
+    font-size: 19px;
     font-weight: 700;
     letter-spacing: 0.5px;
     color: var(--text-primary);
@@ -3954,7 +3996,7 @@ html.reader-focus .article-content {
 }
 
 .project-card-desc {
-    font-size: 12px;
+    font-size: 13.5px;
     line-height: 1.7;
     color: var(--text-muted);
     display: -webkit-box;
@@ -3992,8 +4034,8 @@ html.reader-focus .article-content {
 }
 
 @media (max-width: 640px) {
-    .projects-grid {
-        grid-template-columns: minmax(0, 1fr);
+    .projects-grid > .project-card {
+        flex: 0 0 82%;
     }
 }
 

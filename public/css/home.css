@@ -179,9 +179,33 @@ html[data-theme="dark"] .hv3-card {
     justify-self: center;
 }
 
-/* 灵动岛关了：不管是谁把它顶出来都不显示 */
+/* 灵动岛关了：走它自己的收起动画（宽度收 0 + 淡出），不是啪一下消失；岛上的头像也一起隐掉 */
 body.island-off .now-island {
-    display: none !important;
+    width: 0;
+    padding: 0;
+    gap: 0;
+    opacity: 0;
+    border-width: 0;
+    pointer-events: none;
+    visibility: hidden;
+    transition:
+        width .34s cubic-bezier(.34, 1.4, .64, 1),
+        padding .34s cubic-bezier(.34, 1.4, .64, 1),
+        gap .28s ease,
+        opacity .24s ease,
+        border-width .34s ease,
+        visibility 0s linear .34s;
+}
+
+body.island-off .now-island .now-island-cover {
+    opacity: 0;
+    transform: scale(.78);
+    transition: opacity .22s ease, transform .3s cubic-bezier(.22, 1, .36, 1);
+}
+
+body.island-off .now-island img {
+    opacity: 0;
+    transition: opacity .22s ease;
 }
 
 .hv3-time {
@@ -253,6 +277,69 @@ body.island-off .now-island {
     color: var(--text);
     border-color: var(--accent);
     transform: translateY(-1px);
+}
+
+/* 开关状态：开着 = 强调色 + 右下角小绿点；关着 = 变淡 + 一道斜杠 */
+.hv3-toggle {
+    position: relative;
+}
+
+.hv3-toggle::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 22px;
+    height: 2px;
+    margin: -1px 0 0 -11px;
+    border-radius: 2px;
+    background: currentColor;
+    transform: rotate(-45deg) scaleX(0);
+    transform-origin: center;
+    opacity: 0;
+    transition: transform .2s ease, opacity .2s ease;
+    pointer-events: none;
+}
+
+.hv3-toggle::after {
+    content: '';
+    position: absolute;
+    right: 5px;
+    bottom: 5px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 2px var(--bg-primary, #fff);
+    opacity: 0;
+    transform: scale(.4);
+    transition: opacity .2s ease, transform .24s cubic-bezier(.34, 1.4, .64, 1);
+    pointer-events: none;
+}
+
+.hv3-toggle[aria-pressed="true"] {
+    color: var(--accent);
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+.hv3-toggle[aria-pressed="true"]::after {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.hv3-toggle[aria-pressed="false"] {
+    color: var(--text-muted);
+    opacity: .55;
+}
+
+.hv3-toggle[aria-pressed="false"]::before {
+    opacity: .7;
+    transform: rotate(-45deg) scaleX(1);
+}
+
+.hv3-toggle:active {
+    transform: scale(.92);
 }
 
 /* ============================================================
