@@ -2651,8 +2651,7 @@
             const pet=s.pet||{};
             const setPet=(id,fn)=>{const el=document.getElementById(id);if(el)fn(el)};
             setPet('setPetEnabled',el=>{el.checked=pet.enabled!==false});
-            setPet('setPetAutoTalk',el=>{el.checked=pet.autoTalk!==false});
-            setPet('setPetGaze',el=>{el.checked=pet.gaze!==false});
+            // 「主动搭话」「眼睛跟着鼠标」开关已移除（v3.52.8）：固定开启，这里不再读
             setPet('setPetTts',el=>{el.checked=pet.tts===true});
             setPet('setPetTtsRate',el=>{el.value=pet.ttsRate===undefined||pet.ttsRate===null?'':pet.ttsRate});
             setPet('setPetTtsPitch',el=>{el.value=pet.ttsPitch===undefined||pet.ttsPitch===null?'':pet.ttsPitch});
@@ -2913,8 +2912,9 @@
                     const personaEl=g('setPetPersona');
                     return {
                         enabled:(g('setPetEnabled')||{}).checked!==false,
-                        autoTalk:(g('setPetAutoTalk')||{}).checked!==false,
-                        gaze:(g('setPetGaze')||{}).checked!==false,
+                        // 这两个开关已移除（v3.52.8）：固定开启，保存时也恒定提交 true
+                        autoTalk:true,
+                        gaze:true,
                         tts:(g('setPetTts')||{}).checked===true,
                         talkRate:rate&&rate.value?rate.value:'normal',
                         ttsRate:(()=>{const el=g('setPetTtsRate');const n=el?parseFloat(el.value):NaN;return Number.isFinite(n)?n:null})(),

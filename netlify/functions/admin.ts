@@ -1609,6 +1609,9 @@ export default async (req: Request) => {
         pet: {
           ...DEFAULT_SETTINGS.pet,
           ...(data.pet && typeof data.pet === "object" ? data.pet : {}),
+          // 「主动搭话」「眼睛跟着鼠标」开关已从后台移除（v3.52.8）：不管库里存的什么，一律按开启下发
+          autoTalk: true,
+          gaze: true,
           talkRate: ["quiet", "normal", "chatty"].includes(String((data.pet || {}).talkRate))
             ? String((data.pet || {}).talkRate)
             : DEFAULT_SETTINGS.pet.talkRate,
@@ -1716,9 +1719,10 @@ export default async (req: Request) => {
           return {
             enabled: p.enabled !== false,
             name: String(p.name || DEFAULT_SETTINGS.pet.name).trim().slice(0, 20),
-            autoTalk: p.autoTalk !== false,
+            // 「主动搭话」「眼睛跟着鼠标」开关已从后台移除（v3.52.8）：保存时固定成 true
+            autoTalk: true,
             talkRate: ["quiet", "normal", "chatty"].includes(String(p.talkRate)) ? String(p.talkRate) : DEFAULT_SETTINGS.pet.talkRate,
-            gaze: p.gaze !== false,
+            gaze: true,
             tts: p.tts === true,
             ttsRate: clampNum(p.ttsRate, DEFAULT_SETTINGS.pet.ttsRate, 0.6, 1.6),
             ttsPitch: clampNum(p.ttsPitch, DEFAULT_SETTINGS.pet.ttsPitch, 0.6, 1.6),

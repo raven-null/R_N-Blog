@@ -397,6 +397,30 @@
         .required-mark{color:var(--danger);font-weight:700;margin-left:2px}
         .settings-field input,.settings-field textarea,.settings-field select{width:100%;padding:10px 14px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:13px;font-family:inherit;resize:vertical}
         .settings-field input:focus,.settings-field textarea:focus,.settings-field select:focus{outline:none;border-color:var(--accent)}
+
+        /* 下拉框统一（v3.52.8）：原生箭头去掉、自己画一个，深色主题下展开的原生列表也跟着变深。
+           color-scheme:dark 是关键——不加的话 Windows 上原生弹出层是浅色，黑底白字的条目夹着白色高亮块。 */
+        .settings-field select,.settings-model-row select,.pet-voice-row select,select{
+            -webkit-appearance:none;appearance:none;
+            color-scheme:dark;
+            background-color:#141821 !important;
+            color:#ededf2 !important;
+            border:1px solid rgba(255,255,255,.18) !important;
+            border-radius:10px !important;
+            padding:10px 38px 10px 14px !important;
+            font-size:13px;
+            cursor:pointer;
+            background-image:url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23c9c9d4' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+            background-repeat:no-repeat;
+            background-position:right 13px center;
+            background-size:12px 12px;
+            transition:border-color .15s ease;
+        }
+        .settings-field select:hover,.settings-model-row select:hover,select:hover{border-color:rgba(255,255,255,.34)!important}
+        .settings-field select:focus,.settings-model-row select:focus,select:focus{border-color:var(--accent)!important}
+        /* 展开的原生列表：条目与选中项都用同一套深色，不再出现白色高亮块 */
+        select option,select optgroup{background-color:#141821;color:#ededf2}
+        select option:checked,select option:hover,select option:focus{background-color:#2b3244;color:#fff}
         /* 模型选择 / 测试连接 / 高级设置 */
         .settings-model-row{display:flex;gap:8px}
         .settings-model-row select{flex:1;min-width:0;padding:10px 12px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:13px;cursor:pointer;font-family:inherit}
@@ -1235,8 +1259,7 @@
                             <h3><span class="settings-title">桌宠（右下角的渡鸦）</span><span class="settings-chevron" title="展开/收起">▾</span></h3>
                             <div class="settings-toggle-list">
                                 <div class="settings-toggle-item"><span>显示桌宠</span><label class="switch"><input type="checkbox" id="setPetEnabled" checked><span class="slider"></span></label></div>
-                                <div class="settings-toggle-item"><span>主动搭话</span><label class="switch"><input type="checkbox" id="setPetAutoTalk" checked><span class="slider"></span></label></div>
-                                <div class="settings-toggle-item"><span>眼睛跟着鼠标</span><label class="switch"><input type="checkbox" id="setPetGaze" checked><span class="slider"></span></label></div>
+                                <!-- 「主动搭话」「眼睛跟着鼠标」两个开关已移除（v3.52.8）：固定开启 -->
                             </div>
                             <div class="settings-field">
                                 <label>说话频率（主动搭话的间隔）</label>
@@ -1614,7 +1637,7 @@
     </div>
 
         <script src="js/tag-picker.js?v=1.1.2"></script>
-        <script src="js/admin-app.js?v=1.32.3"></script>
+        <script src="js/admin-app.js?v=1.32.4"></script>
 
     <!-- 前台预览抽屉（iframe 内嵌，零跳出） -->
     <style>
