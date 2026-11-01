@@ -2027,8 +2027,9 @@
             min-width: 0;
         }
 
+        /* 默认（目录展开着）：设置整排摊开，没有「功能」按钮 */
         .reader-func-btn {
-            display: inline-flex;
+            display: none;
             align-items: center;
             justify-content: center;
             width: 40px;
@@ -2049,13 +2050,22 @@
         }
 
         .reader-func-panel {
-            display: none;
+            display: flex;
             align-items: center;
             gap: 8px;
             min-width: 0;
         }
 
-        .reader-func.is-open .reader-func-panel {
+        /* 目录收起来之后才换成「一个功能按钮」：点开才展开，鼠标离开这条工具栏就收回 */
+        body.toc-collapsed .reader-func-btn {
+            display: inline-flex;
+        }
+
+        body.toc-collapsed .reader-func-panel {
+            display: none;
+        }
+
+        body.toc-collapsed .reader-func.is-open .reader-func-panel {
             display: flex;
         }
 
@@ -2093,6 +2103,11 @@
         @media (max-width: 773px) {
             .reader-bar-actions {
                 display: none;
+            }
+
+            /* 窄屏放不下整排时换行，别让它横向滚 */
+            .reader-toolbar {
+                flex-wrap: wrap;
             }
         }
 
@@ -2476,9 +2491,9 @@
             </div>
 
             <!-- 阅读工具栏（v3.52.1）：整条玻璃条。
-                 平时只有最左边一个「功能」按钮（点开才是字号 / 行距 / 衬线 / 专注，鼠标离开这条就收回去）；
-                 目录收起来之后，目录栏顶部那排（返回 / 首页 / 主题 / 助手）由 reader.js 整个搬到
-                 #readerBarActions 这个空插槽里，占最左边。 -->
+                 目录展开着的时候（默认）：字号 / 行距 / 衬线 / 专注整排摊开，就是原来那一排，没有「功能」按钮；
+                 目录收起来之后：这排收进最左边（跟着搬过来的导航按钮）的一个「功能」按钮里，点开才展开、
+                 鼠标离开这条工具栏就收回，右边空出来的位置留给正在播放的音乐岛。 -->
             <div class="reader-toolbar" id="readerToolbar">
                 <div class="reader-bar-actions" id="readerBarActions"></div>
 

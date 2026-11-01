@@ -93,6 +93,8 @@
         const tab = document.getElementById('tocRevealTab');
         if (tab) tab.setAttribute('aria-expanded', String(!collapsed));
         moveTopBar(collapsed);
+        // 目录展开回去时，设置那一排本来就全都露着，把「展开」状态清掉，免得下次进来面板卡在打开态
+        if (!collapsed && window.__closeReaderFunc) window.__closeReaderFunc();
         if (remember) {
             try { localStorage.setItem(TOC_STORE, collapsed ? '1' : '0'); } catch (e) { }
         }
