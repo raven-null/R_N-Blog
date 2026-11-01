@@ -15,7 +15,7 @@
     <meta property="og:image" content="https://ravennull.work/images/Default/web-logo.webp">
     <meta property="og:locale" content="zh_CN">
     <meta name="twitter:card" content="summary">
-    <link rel="stylesheet" href="css/bundle.css?v=2f389ef57d">
+    <link rel="stylesheet" href="css/bundle.css?v=c68a20cc2d">
     <title>渡鸦 NULL · 日光与暮色之间</title>
     <link rel="icon" id="siteFavicon" href="/images/Default/web-logo.webp" type="image/webp">
     <link rel="apple-touch-icon" href="/images/Default/web-logo.webp">
@@ -28,6 +28,8 @@
     <link rel="preconnect" href="https://music.ravennull.work" crossorigin>
     <link rel="dns-prefetch" href="https://music.ravennull.work">
     <script src="/js/site-icon.js?v=1.0.1" defer></script>
+    <!-- 主页宽度：后台「主页布局」滑块的值 → CSS 变量 --home-content-w（见 js/home-layout.js） -->
+    <script src="/js/home-layout.js?v=1.0.0" defer></script>
 
     <!-- Styles -->
 
@@ -487,22 +489,14 @@
                                         <div class="home-editor-pop" id="homeEditorWrap">
                                             <div class="home-editor-inner">
                                                 <div class="dash-panel home-editor" id="homeEditor">
-                                                    <!-- 第一步：选择写任务还是日记 -->
-                                                    <div class="editor-choice" id="editorChoice">
-                                                        <span class="editor-date" id="editorDateLabel"></span>
-                                                        <button class="editor-choice-btn" type="button" data-kind="task">任务</button>
-                                                        <button class="editor-choice-btn" type="button" data-kind="journal">日记</button>
-                                                        <button class="editor-close" type="button" data-close="1" title="关闭">×</button>
-                                                    </div>
-
-                                                    <!-- 第二步：任务编写 -->
+                                                    <!-- 任务编写 -->
                                                     <form class="editor-form" id="editorTaskForm" style="display:none;">
                                                         <input type="text" id="editorTaskInput" placeholder="写下一个任务，回车或点提交保存" maxlength="120" autocomplete="off">
                                                         <button class="editor-submit" type="submit">提交</button>
                                                         <button class="editor-close" type="button" data-close="1" title="关闭">×</button>
                                                     </form>
 
-                                                    <!-- 第二步：日记编写 -->
+                                                    <!-- 日记编写 -->
                                                     <form class="editor-form editor-form-journal" id="editorJournalForm" style="display:none;">
                                                         <textarea id="editorJournalInput" placeholder="写下今天的日记…" maxlength="20000"></textarea>
                                                         <div class="editor-form-actions">
@@ -671,7 +665,7 @@
     <!-- 桌宠动效引擎（spring-driven character，见 public/vendor/grok/README.md） -->
 
     <!-- /js/* 是 immutable 长缓存：app.js 一改就必须换 ?v=，否则线上一直吃旧文件 -->
-    <script src="js/app.js?v=20261106u" defer></script>
+    <script src="js/app.js?v=20261106x" defer></script>
     <script src="js/animations.js?v=3.14.0" defer></script>
 
     <script>

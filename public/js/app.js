@@ -3280,11 +3280,14 @@ const BlogApp = {
         // 只显示「当前选中那天」的日记，不再把整月做成文件摞
         const date = this.lifeState.date || '';
         const item = (this.lifeState.journals || []).find(j => j && j.date === date && j.content);
-        box.innerHTML = item
-            ? this.journalCard(item)
-            : '<button class="hv3-journal is-empty" type="button" data-journal-new="1">'
-              + '<span class="hv3-journal-hint">这天还没写日记</span>'
-              + '<span class="hv3-journal-tip">点这里写一篇</span></button>';
+        // 这天没日记就整块不显示（原来那张「这天还没写日记」的空卡不要了）：
+        // 想写日记点日历左边的「日记」按钮
+        if (!item) {
+            box.innerHTML = '';
+            if (wrap) wrap.style.display = 'none';
+            return;
+        }
+        box.innerHTML = this.journalCard(item);
         if (wrap) wrap.style.display = '';
     },
 
@@ -3457,14 +3460,10 @@ const BlogApp = {
         if (!this.lifeAdminKey()) return;
         const wrap = document.getElementById('homeEditorWrap');
         if (!wrap) return;
-        const choice = document.getElementById('editorChoice');
         const taskForm = document.getElementById('editorTaskForm');
         const journalForm = document.getElementById('editorJournalForm');
-        const label = document.getElementById('editorDateLabel');
-        if (choice) choice.style.display = '';
         if (taskForm) taskForm.style.display = 'none';
         if (journalForm) journalForm.style.display = 'none';
-        if (label) label.textContent = this.formatDateLabel(this.lifeState.date);
 
         // 小弹窗：绝对定位浮在日历下方，不参与布局
         wrap.classList.add('is-open');
@@ -3478,24 +3477,10 @@ const BlogApp = {
         }, 80);
     },
 
-    // 点「任务 / 日记」→ 选择层隐藏，换成对应编写表单
+    // 点「任务 / 日记」→ 换成对应编写表单
     chooseEditorKind(kind) {
-        const choice = document.getElementById('editorChoice');
         const taskForm = document.getElementById('editorTaskForm');
         const journalForm = document.getElementById('editorJournalForm');
-        if (choice) choice.style.display = 'none';
-
-        // 写任务时，这天要是还没有日记，就别把「日记」那一块摆在那儿占地方
-        const jourBox = document.getElementById('homeJournalBox');
-        if (jourBox) {
-            if (kind === 'task') {
-                const hasJournal = !!(this.lifeState.journals || [])
-                    .find(j => j && j.date === this.lifeState.date && j.content);
-                jourBox.style.display = hasJournal ? '' : 'none';
-            } else {
-                jourBox.style.display = '';
-            }
-        }
 
         if (kind === 'task') {
             if (journalForm) journalForm.style.display = 'none';
@@ -3525,9 +3510,6 @@ const BlogApp = {
     closeEditor() {
         const wrap = document.getElementById('homeEditorWrap');
         if (wrap) wrap.classList.remove('is-open');
-        // 写任务时临时藏起来的日记块，关掉编辑器就恢复
-        const jourBox = document.getElementById('homeJournalBox');
-        if (jourBox) jourBox.style.display = '';
     },
 
     // 提交任务
@@ -3645,6 +3627,13 @@ const BlogApp = {
             const quick = e.target.closest('.hv3-day-act');
             if (!act && !quick && (!cell || !cell.dataset.date)) return;
             if (!this.lifeAdminKey()) {
+                // 点这两个按钮没登录的话会显得毫无反应 —— 直接带去后台登录
+                if (quick) {
+                    e.preventDefault();
+                    this.petSay('先去后台登录，登录完就能写了', 2600);
+                    setTimeout(() => { location.href = '/admin'; }, 320);
+                    return;
+                }
                 if (cell) {
                     document.querySelectorAll('#homeCalendar .cal-day').forEach(el => {
                         el.classList.toggle('is-selected', el === cell);
@@ -3678,16 +3667,11 @@ const BlogApp = {
         // 任务展示列表：勾选完成 / 删除
         document.getElementById('lifeTaskList')?.addEventListener('click', (e) => this.onLifeTaskClick(e));
 
-        // 编写盒子：选类型 / 关闭（×）
+        // 编写盒子：关闭（×）
         const editor = document.getElementById('homeEditor');
         if (editor && !editor.dataset.bound) {
             editor.dataset.bound = '1';
             editor.addEventListener('click', (e) => {
-                const kindBtn = e.target.closest('.editor-choice-btn');
-                if (kindBtn) {
-                    this.chooseEditorKind(kindBtn.dataset.kind);
-                    return;
-                }
                 if (e.target.closest('[data-close]')) this.closeEditor();
             });
         }
