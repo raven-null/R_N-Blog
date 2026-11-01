@@ -31,6 +31,8 @@
 
     var fill = veil.querySelector('.load-veil-bar > span');
     var pctLabel = veil.querySelector('.load-veil-pct');
+    // 告诉 CSS：JS 接管了，把「10 秒后自动消失」那套兜底动画关掉
+    veil.classList.add('is-js');
     var finished = false;
     var timer = null;
     var timeout = null;

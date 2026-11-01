@@ -48,6 +48,22 @@
         html[data-theme="light"] .load-veil-pct,
         html[data-tone="light"] .load-veil-pct { color: #7a7365; }
         .load-veil.is-done { opacity: 0; pointer-events: none; }
+        /* 纯 CSS 兜底：万一 load-progress.js 没加载/报错（CDN 缓存、被拦、语法出错），
+           遮罩也必须自己走完并消失，绝不能把人锁在黑屏里。JS 一启动就会加 .is-js 关掉这套动画。 */
+        .load-veil { animation: veil-fallback-hide 10s linear forwards; }
+        .load-veil.is-js { animation: none; }
+        .load-veil-bar > span { animation: veil-bar-fallback 9s cubic-bezier(0.25, 1, 0.35, 1) forwards; }
+        .load-veil.is-js .load-veil-bar > span { animation: none; }
+        /* 没有 JS 时数字永远是 0%，跟自己在走的条子对不上，索性藏掉 */
+        .load-veil:not(.is-js) .load-veil-pct { opacity: 0; }
+        @keyframes veil-bar-fallback {
+            from { width: 8%; }
+            to { width: 92%; }
+        }
+        @keyframes veil-fallback-hide {
+            0%, 90% { opacity: 1; visibility: visible; }
+            100% { opacity: 0; visibility: hidden; }
+        }
         .load-veil-inner {
             display: flex;
             flex-direction: column;
@@ -64,7 +80,7 @@
         }
         .load-veil-bar > span {
             display: block;
-            width: 0;
+            width: 8%;
             height: 100%;
             border-radius: 999px;
             background: linear-gradient(90deg, #f0a212, #ffcf7a);
@@ -95,7 +111,7 @@
     <link rel="dns-prefetch" href="https://music.ravennull.work">
     <script src="/js/site-icon.js?v=1.0.1" defer></script>
     <!-- 首屏加载遮罩：进度跟着首屏图片的真实加载数走（见 js/load-progress.js） -->
-    <script src="/js/load-progress.js?v=2.1.0" defer></script>
+    <script src="/js/load-progress.js?v=2.1.1" defer></script>
     <!-- 主页宽度：后台「主页布局」滑块的值 → CSS 变量 --home-content-w（见 js/home-layout.js） -->
     <script src="/js/home-layout.js?v=1.0.0" defer></script>
 
