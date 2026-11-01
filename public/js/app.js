@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 博客首页核心逻辑
  * 负责文章加载、标签筛选、搜索、分页和渲染
  */
@@ -101,6 +101,8 @@ const BlogApp = {
         this.bindIslandToggle();
         // 时间 / 按钮 上下翻：滚轮切换，移开自动回到时间
         this.bindClockFlip();
+        // 双击时间 = 只看背景插画，再双击任意处恢复
+        this.bindBgOnlyMode();
 
         // 名字挤到换行就把头像 + 名字收起来：窗口变化、字体载入后再各判一次
         if (!this._heroFitBound) {
@@ -6630,6 +6632,63 @@ const BlogApp = {
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
             apply(document.body.classList.contains('island-off'));
+        });
+    },
+
+    /* 双击首页时间：整页只剩背景插画（.sky），其它界面全收起；
+       再双击任意位置（背景）恢复，恢复后回到原来的滚动位置。 */
+    bindBgOnlyMode() {
+        const clock = document.querySelector('.hv3-clock');
+        if (!clock || clock.dataset.bgOnlyBound) return;
+        clock.dataset.bgOnlyBound = '1';
+        const root = document.documentElement;
+        const flip = document.getElementById('hv3ClockFlip');
+        const se = () => document.scrollingElement || document.documentElement;
+        // 首页真正的滚动条在 #scrollArea 里（html/body 都是 overflow:hidden），
+        // 别的页面可能挂在 window 上，所以按顺序探测，恢复时写回同一个容器
+        const scroller = () => {
+            const s = document.getElementById('scrollArea');
+            if (s && s.scrollHeight > s.clientHeight + 4) return s;
+            const c = document.getElementById('contentWrapper');
+            if (c && c.scrollHeight > c.clientHeight + 4) return c;
+            return se();
+        };
+        let savedY = 0;
+        let savedEl = null;
+
+        const setMode = (on) => {
+            root.classList.toggle('bg-only', on);
+            if (on) {
+                const t = scroller();
+                savedEl = t;
+                savedY = t === se() ? (window.scrollY || t.scrollTop || 0) : t.scrollTop;
+                root.dataset.bgOnlyScroll = String(savedY);
+                root.dataset.bgOnlyScroller = (t.id || (t === se() ? 'window' : t.className));
+                if (flip) flip.classList.remove('is-tools');   // 别停在工具面
+            } else {
+                // 隐藏用的是 visibility（布局没动），滚动位置本来就还在；
+                // 这里只兜一次底：万一浏览器在还原瞬间把 scrollTop 钳到 0，再写回原值。
+                const restore = () => {
+                    if (!savedEl) return;
+                    if (savedEl === se()) window.scrollTo(0, savedY);
+                    else savedEl.scrollTop = savedY;
+                };
+                requestAnimationFrame(() => requestAnimationFrame(restore));
+            }
+        };
+
+        clock.addEventListener('dblclick', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setMode(true);
+        });
+
+        // 进入这个模式后，界面上能点的只有背景了：任意双击恢复
+        document.addEventListener('dblclick', (e) => {
+            if (!root.classList.contains('bg-only')) return;
+            e.preventDefault();
+            e.stopPropagation();
+            setMode(false);
         });
     },
 

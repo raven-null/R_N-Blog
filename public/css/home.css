@@ -3022,3 +3022,20 @@ body:not(.has-music) .hv3-row-top .hv3-hero {
         box-shadow: none !important;
     }
 }
+
+/* ------------------------------------------------------------
+   双击首页时间：整页只留背景插画
+   app.js 的 bindBgOnlyMode() 会给 <html> 加 .bg-only：
+   body 下除了背景层（.sky）之外的东西全部藏起来，屏幕上只剩背景图；
+   再双击任意位置把这个类摘掉，界面原样回来。
+   用 visibility 而不是 display —— 布局保持原样，滚动位置不会跳。
+   ------------------------------------------------------------ */
+html.bg-only,
+html.bg-only body {
+    overflow: hidden;
+}
+
+html.bg-only body > *:not(.sky) {
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
