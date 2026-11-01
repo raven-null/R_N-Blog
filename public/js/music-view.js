@@ -947,6 +947,10 @@
     renderCardLyrics(data);
     syncProgress(data);
 
+    // 没有歌（播放器还没登录 / 没在放东西）：整张卡不占位，个人信息卡撑满那一行。
+    // 一旦收到带歌的推送（哪怕暂停着）就把它放回来。
+    if (document.body) document.body.classList.toggle('has-music', !!song);
+
     if (!song) {
       musicCard.classList.remove('is-playing', 'paused');
       syncCardName('还没有在播放');
