@@ -8265,13 +8265,14 @@ body.view-gallery-active .gallery-wall {
 /* ============================================================
    手写体点缀：只用在标题性、装饰性的地方，正文保持易读字体
    ============================================================ */
-.hv-name,
-.hv-block-title,
-.hv-clock-time,
-.hv-clock-date,
-.hv-stat-num,
-.home-theme-name {
-    font-family: var(--font-hand);
+/* 手写体只跟着开关走：关掉之后名字、时钟、数字都回到正文体 */
+html.hand-body .hv-name,
+html.hand-body .hv-block-title,
+html.hand-body .hv-clock-time,
+html.hand-body .hv-clock-date,
+html.hand-body .hv-stat-num,
+html.hand-body .home-theme-name {
+    font-family: var(--font-deco);
     font-weight: 400;
     letter-spacing: 0.01em;
 }
@@ -8294,13 +8295,13 @@ body.view-gallery-active .gallery-wall {
 }
 
 /* 文章页：标题与各级小标题 */
-.article-title,
-.article-content h1,
-.article-content h2,
-.article-content h3,
-.reader-toolbar .reader-font-size,
-.toc-title {
-    font-family: var(--font-hand);
+html.hand-body .article-title,
+html.hand-body .article-content h1,
+html.hand-body .article-content h2,
+html.hand-body .article-content h3,
+html.hand-body .reader-toolbar .reader-font-size,
+html.hand-body .toc-title {
+    font-family: var(--font-deco);
 }
 
 .article-title {
@@ -8326,7 +8327,7 @@ html.hand-body .article-content blockquote,
 html.hand-body .hv-post-title,
 html.hand-body .hv-bio,
 html.hand-body .news-item-title {
-    font-family: var(--font-hand);
+    font-family: var(--font-deco);
     letter-spacing: 0.02em;
 }
 
@@ -8338,7 +8339,7 @@ html.hand-body .news-item-cat,
 html.hand-body .news-item-meta,
 html.hand-body .article-meta,
 html.hand-body .toc-list a {
-    font-family: var(--font-hand);
+    font-family: var(--font-deco);
 }
 
 html.hand-body .article-content {
@@ -8417,14 +8418,14 @@ html.hand-body .article-content p {
 
 /* ---- 简报卡内容 ---- */
 .stack-box .news-item-cat {
-    font-family: var(--font-hand);
+    font-family: var(--font-deco);
     font-size: 15px;
     color: var(--accent-strong, var(--accent));
     letter-spacing: 0.04em;
 }
 
 .stack-box .news-item-title {
-    font-family: var(--font-hand);
+    font-family: var(--font-deco);
     font-size: 22px;
     line-height: 1.5;
     color: var(--text);
@@ -8440,7 +8441,7 @@ html.hand-body .article-content p {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    font-family: var(--font-hand);
+    font-family: var(--font-deco);
     font-size: 13px;
     color: var(--text-muted);
 }
@@ -8451,7 +8452,7 @@ html.hand-body .article-content p {
     top: 16px;
     right: 18px;
     padding: 2px 9px;
-    font-family: var(--font-hand);
+    font-family: var(--font-deco);
     font-size: 12px;
     color: var(--text-muted);
     background: var(--surface-2, rgba(0, 0, 0, 0.06));
@@ -8795,7 +8796,7 @@ html.glass-ready .stack-box > [data-reveal].in-view {
 }
 
 .hv-car-title {
-    font-family: var(--font-hand);
+    font-family: var(--font-deco);
     font-size: 17px;
     line-height: 1.45;
     color: var(--text);
@@ -8811,7 +8812,7 @@ html.glass-ready .stack-box > [data-reveal].in-view {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    font-family: var(--font-hand);
+    font-family: var(--font-deco);
     font-size: 12.5px;
     color: var(--text-muted);
 }
@@ -8954,13 +8955,13 @@ html.glass-ready .stack-box > [data-reveal].in-view {
 }
 
 .hv-news-box .news-item-cat {
-    font-family: var(--font-hand);
+    font-family: var(--font-deco);
     font-size: 13px;
     color: var(--accent-strong, var(--accent));
 }
 
 .hv-news-box .news-item-title {
-    font-family: var(--font-hand);
+    font-family: var(--font-deco);
     font-size: 16px;
     line-height: 1.55;
     color: var(--text);
@@ -8969,7 +8970,7 @@ html.glass-ready .stack-box > [data-reveal].in-view {
 
 .hv-news-box .news-item-meta {
     margin-top: auto;
-    font-family: var(--font-hand);
+    font-family: var(--font-deco);
     font-size: 12px;
     color: var(--text-muted);
 }
@@ -9501,12 +9502,12 @@ html.glass-ready .stack-box > [data-reveal].in-view {
 
 /* 堆叠里的项目卡文字大小 */
 .hv-projects.stack-box .home-project-name {
-    font-family: var(--font-hand);
+    font-family: var(--font-deco);
     font-size: 17px;
 }
 
 .hv-projects.stack-box .home-project-desc {
-    font-family: var(--font-hand);
+    font-family: var(--font-deco);
     font-size: 14px;
 }
 
@@ -9880,7 +9881,7 @@ html.glass-ready .stack-box > [data-reveal].in-view {
 }
 
 .loop-box.loop-news > .news-item .news-item-title {
-    font-family: var(--font-hand);
+    font-family: var(--font-deco);
     font-size: 15px !important;
     line-height: 1.6 !important;
     -webkit-line-clamp: 2 !important;
@@ -9908,7 +9909,7 @@ html.glass-ready .stack-box > [data-reveal].in-view {
 }
 
 .loop-box.loop-projects > .home-project .home-project-name {
-    font-family: var(--font-hand);
+    font-family: var(--font-deco);
     font-size: 16px !important;
 }
 
@@ -10360,7 +10361,7 @@ html[data-tone="dark"] .stack-box > *[style*="--stack-o: 1"] {
 }
 
 .stack-box.stack-news > .news-item .news-item-title {
-    font-family: var(--font-hand) !important;
+    font-family: var(--font-deco) !important;
     font-size: 17px !important;
     line-height: 1.6 !important;
     -webkit-line-clamp: 3 !important;
@@ -10369,13 +10370,13 @@ html[data-tone="dark"] .stack-box > *[style*="--stack-o: 1"] {
 }
 
 .stack-box.stack-news > .news-item .news-item-cat {
-    font-family: var(--font-hand) !important;
+    font-family: var(--font-deco) !important;
     font-size: 12px !important;
     color: var(--accent-strong, var(--accent, #8a6a2a)) !important;
 }
 
 .stack-box.stack-news > .news-item .news-item-meta {
-    font-family: var(--font-hand) !important;
+    font-family: var(--font-deco) !important;
     font-size: 12px !important;
     color: var(--text-muted, #7a8090) !important;
 }
@@ -10400,13 +10401,13 @@ html[data-tone="dark"] .stack-box > *[style*="--stack-o: 1"] {
 }
 
 .stack-box.stack-projects > .home-project .home-project-name {
-    font-family: var(--font-hand) !important;
+    font-family: var(--font-deco) !important;
     font-size: 18px !important;
     color: var(--text, #1a1f2c) !important;
 }
 
 .stack-box.stack-projects > .home-project .home-project-desc {
-    font-family: var(--font-hand) !important;
+    font-family: var(--font-deco) !important;
     font-size: 14px !important;
     color: var(--text-muted, #6f7686) !important;
     -webkit-line-clamp: 2 !important;

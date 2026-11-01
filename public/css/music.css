@@ -45,7 +45,8 @@ body:not(.view-music-active):not(.island-mode) .top-bar:hover .top-bar-pill {
            给窄了会把最后一个视图按钮裁掉（音乐就是被这么挤没的）。 */
         width: 540px;
         max-width: calc(100vw - 32px);
-        padding-left: 46px;   /* 给圆按钮留出固定位置 */
+        /* 42 的圆球 + 8 的间距：圆球到岛的距离和岛到导航的距离一样 */
+        padding-left: 50px;
     }
 
     /* 岛模式下内容靠左：圆按钮钉在最左边，岛/导航紧挨着它，中间不留大缝 */
@@ -147,10 +148,13 @@ body.island-mode.nav-dock-open:not(.view-music-active) #topBarPill .top-bar-view
 /* 导航接管时岛让位：也收成 0 宽（有过渡），而不是 display 直接消失 */
 body.island-mode.nav-dock-open:not(.view-music-active) .now-island {
     width: 0 !important;
-    padding: 4px !important;
+    padding: 0 !important;
     gap: 0 !important;
+    border-width: 0 !important;
     opacity: 0 !important;
     pointer-events: none !important;
+    /* 收干净别占位：再抵掉一个 gap，圆球到导航的间距才跟到岛的一致 */
+    margin-right: -8px !important;
 }
 
 /* ============================================================

@@ -367,3 +367,14 @@ html.hand-body .hljs,
 html.hand-body .code-block {
     font-family: var(--font-mono) !important;
 }
+
+/* 装饰性手写字体的「开关代理」：
+   默认用正文字体，打开手写体（html.hand-body）时才换成手写字体。
+   这样所有 var(--font-deco) 的地方都跟着那颗开关走，不会再出现「关了还是手写」。 */
+:root {
+    --font-deco: var(--font-sans);
+}
+
+html.hand-body {
+    --font-deco: var(--font-hand);
+}
