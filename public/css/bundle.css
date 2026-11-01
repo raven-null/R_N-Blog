@@ -15909,6 +15909,20 @@ body:not(.has-music) .hv3-row-top .hv3-hero {
     }
 }
 
+/* 两个小修补（v3.54.15）：方图宽度被脚本按高度写死，简报被 stretch 拉成图片那么高 */
+@media (max-width: 900px) {
+    .hv3-row-main > .hv3-square {
+        flex: 0 0 86% !important;
+        width: 86% !important;
+        max-width: 86% !important;
+    }
+
+    .hv3-row-main > .hv3-sub-grid {
+        align-self: flex-start !important;
+        height: auto !important;
+    }
+}
+
 
 /* music.css */
 /* ============================================================
