@@ -1860,7 +1860,11 @@ html[data-theme="dark"] .hv3-shot {
         justify-self: stretch;
     }
 
-    .hv3-flip-inner { transform: none !important; }
+    /* 注意：这里不能再用 transform: none !important ——
+       上面那段「各占一行」的写法后来已经被 2515 行那段「时钟 ↔ 工具翻牌」取代，
+       而 !important 会一直压着 .hv3-flip.is-tools 的位移，
+       表现就是「点时钟切换了 is-tools，但按钮翻不出来」。 */
+    .hv3-flip-inner { transform: none; }
 
     .hv3-flip-view { height: auto; }
 
