@@ -53,13 +53,17 @@ const BlogApp = {
             this.applyHandBody(!document.documentElement.classList.contains('hand-body'));
         });
 
-        // 首页主题切换（时钟旁的小圆钮）
+        // 首页主题切换（时钟旁的小圆钮）：只切「日间 / 夜间」两档。
+        // 原来走 nextTheme() 是 auto → light → dark，白天在 auto 下按一次等于没变，要按两次才黑
         document.getElementById('hvThemeBtn')?.addEventListener('click', (e) => {
             e.stopPropagation();
-            if (window.ThemeManager) {
-                ThemeManager.nextTheme();
-                this.syncHvThemeIcon();
-            }
+            if (!window.ThemeManager) return;
+            const mode = ThemeManager.mode;
+            const scheme = mode === 'dark' ? 'dark'
+                : mode === 'light' ? 'light'
+                    : (document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light');
+            ThemeManager.setMode(scheme === 'dark' ? 'light' : 'dark');
+            this.syncHvThemeIcon();
         });
         this.syncHvThemeIcon();
 
