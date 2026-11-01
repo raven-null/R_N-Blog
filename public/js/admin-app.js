@@ -2651,6 +2651,7 @@
             const pet=s.pet||{};
             const setPet=(id,fn)=>{const el=document.getElementById(id);if(el)fn(el)};
             setPet('setPetEnabled',el=>{el.checked=pet.enabled!==false});
+            setPet('setPetRoam',el=>{el.checked=pet.roam!==false});   // 自由走动默认开
             // 「主动搭话」「眼睛跟着鼠标」开关已移除（v3.52.8）：固定开启，这里不再读
             setPet('setPetTts',el=>{el.checked=pet.tts===true});
             setPet('setPetTtsRate',el=>{el.value=pet.ttsRate===undefined||pet.ttsRate===null?'':pet.ttsRate});
@@ -2915,6 +2916,7 @@
                         // 这两个开关已移除（v3.52.8）：固定开启，保存时也恒定提交 true
                         autoTalk:true,
                         gaze:true,
+                        roam:(g('setPetRoam')||{}).checked!==false,
                         tts:(g('setPetTts')||{}).checked===true,
                         talkRate:rate&&rate.value?rate.value:'normal',
                         ttsRate:(()=>{const el=g('setPetTtsRate');const n=el?parseFloat(el.value):NaN;return Number.isFinite(n)?n:null})(),

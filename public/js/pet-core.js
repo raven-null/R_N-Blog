@@ -750,7 +750,8 @@
     // 圆离桌宠近一点（原来 66，看着像飘在外面）
     const dist = 52;
     // 三个圆（打开对话框 / 自由走动 / 睡觉）沿着朝向视口中心的一侧铺开
-    const spread = [-0.7, 0.7];
+    // 圆的数量决定铺开的角度（只剩一个时放正上方）
+    const spread = items.length >= 3 ? [-0.9, 0, 0.9] : (items.length === 2 ? [-0.7, 0.7] : [0]);
     const half = 16;          // 按钮半宽（32px）
     const edge = 10;          // 与视口的最小距离
     const items = [...host.children];
@@ -864,21 +865,18 @@
       p.classList.add('is-roaming');
       place(x, y, false);
       savePos();
-      // 落地站稳了再说话，别和移动动画抢
-      setTimeout(() => { if (roaming && !S.sleeping) speakWhere(x + 28, y + 28); }, 320);
-      scheduleRoam();
+      // 先站稳（移动过渡 0.9s），再说话；说完等气泡自己收掉才走下一站
+      setTimeout(() => {
+        if (!roaming || S.sleeping || S.dragging) return;
+        speakWhere(x + 28, y + 28);
+        scheduleRoam(3600 + Math.random() * 4600);
+      }, 2300);   // 等它慢悠悠走到位（过渡 2.2s）再说
     }
 
     function setRoam(on) {
       roaming = !!on;
       const p = petEl();
       if (p) p.classList.toggle('is-roaming', roaming);
-      const btn = doc.querySelector('[data-pet-action="roam"]');
-      if (btn) {
-        btn.classList.toggle('is-on', roaming);
-        btn.setAttribute('aria-pressed', roaming ? 'true' : 'false');
-        btn.title = roaming ? '停止自由活动' : '让它自己在页面里走动';
-      }
       clearTimeout(roamTimer);
       roamTimer = 0;
       if (!roaming) return;
@@ -911,9 +909,9 @@
     };
 
     // 睡觉不再占一个圆：挂机久了会自动睡，有动静自己醒
+    // 自由走动也固定开启（后台可以关），前台不再留开关
     const actions = [
       { key: 'chat', label: '打开对话框', run: () => openChat() },
-      { key: 'roam', label: '让它自己在页面里走动', run: () => setRoam(!roaming) },
     ];
     actions.forEach((a) => {
       const btn = doc.createElement('button');
@@ -932,6 +930,16 @@
       host.appendChild(btn);
     });
     pet.appendChild(host);
+
+    // 自由走动：默认就开着（后台「桌宠 · 自由走动」可以关掉）
+    setTimeout(() => {
+      let allowed = true;
+      try {
+        const s = global.BlogApp && global.BlogApp.getBlogSettings && global.BlogApp.getBlogSettings();
+        if (s && s.pet && s.pet.roam === false) allowed = false;
+      } catch (e) { allowed = true; }
+      if (allowed) setRoam(true);
+    }, 1500);
 
     // 点页面其它地方就把三个圆收起来
     doc.addEventListener('pointerdown', (e) => {
@@ -1168,15 +1176,29 @@
     return (global.BlogApp && global.BlogApp.currentView) || 'home';
   }
 
+  function bellLabel() {
+    const where = VIEW_LABEL[petView] || '别处';
+    return '我在' + where + '玩呢～';
+  }
+
+  function updateBellTip() {
+    const tip = doc.getElementById('deskpetBellTip');
+    const btn = doc.getElementById('deskpetBell');
+    const text = bellLabel();
+    if (tip) tip.textContent = text;
+    if (btn) btn.title = text + '（点我召唤）';
+  }
+
   function ensureBell() {
-    if (doc.getElementById('deskpetBell')) return;
+    if (doc.getElementById('deskpetBell')) { updateBellTip(); return; }
     const btn = doc.createElement('button');
     btn.type = 'button';
     btn.id = 'deskpetBell';
     btn.className = 'deskpet-bell';
-    btn.title = '召唤桌宠';
+    btn.title = bellLabel() + '（点我召唤）';
     btn.setAttribute('aria-label', '召唤桌宠');
-    btn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true">'
+    btn.innerHTML = '<span class="deskpet-bell-tip" id="deskpetBellTip"></span>'
+      + '<svg viewBox="0 0 24 24" aria-hidden="true">'
       + '<path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.6 2.1H4.4L6 16.5z"/>'
       + '<path d="M10 20.2a2.2 2.2 0 0 0 4 0"/></svg>';
     btn.addEventListener('click', (e) => {
