@@ -175,43 +175,52 @@
         var need = (window.innerWidth || 1280) * (window.devicePixelRatio || 1);
         var slot = need >= 2200 ? '2560' : need >= 1500 ? '1920' : '1280';
 
-        // 图池清单 + 后台那个「允许 R18」开关一起等：开关默认关，只用普通图
-        var manifestPromise = fetch('/images/loader/manifest.json', { cache: 'force-cache' })
-            .then(function (r) { return r.ok ? r.json() : null; });
-        var settingsPromise = fetch('/api/admin?action=settings', { cache: 'force-cache', headers: { Accept: 'application/json' } })
+        function show(items) {
+            if (!items.length) return;
+            var lastId = '';
+            try { lastId = localStorage.getItem('loader-bg-last') || ''; } catch (e) { }
+            var pool = items.filter(function (it) { return it.id !== lastId; });
+            if (!pool.length) pool = items;
+            var picked = pool[Math.floor(Math.random() * pool.length)];
+
+            bg.src = picked.slots[slot];
+            try { localStorage.setItem('loader-bg-last', picked.id); } catch (e) { }
+
+            var reveal = function () { bg.classList.add('is-ready'); };
+            if (typeof bg.decode === 'function') {
+                bg.decode().then(reveal).catch(reveal);
+            } else {
+                bg.onload = reveal;
+            }
+        }
+
+        fetch('/images/loader/manifest.json', { cache: 'force-cache' })
             .then(function (r) { return r.ok ? r.json() : null; })
-            .catch(function () { return null; });
-
-        Promise.all([manifestPromise, settingsPromise])
-            .then(function (res) {
-                var data = res[0];
-                var settings = res[1];
-                var allowR18 = !!(settings && settings.data && settings.data.layout && settings.data.layout.loaderBgAllowR18);
-
-                var items = data && Array.isArray(data.items) ? data.items : [];
-                items = items.filter(function (it) {
-                    if (!it || !it.slots || !it.slots[slot]) return false;
-                    // 非普通图（r16/r18）只有后台明确允许时才用
-                    var rating = String(it.rating || 'general');
-                    return rating === 'general' || allowR18;
+            .then(function (data) {
+                var items = (data && Array.isArray(data.items) ? data.items : []).filter(function (it) {
+                    return it && it.slots && it.slots[slot];
                 });
                 if (!items.length) return;
 
-                var lastId = '';
-                try { lastId = localStorage.getItem('loader-bg-last') || ''; } catch (e) { }
-                var pool = items.filter(function (it) { return it.id !== lastId; });
-                if (!pool.length) pool = items;
-                var picked = pool[Math.floor(Math.random() * pool.length)];
+                var general = items.filter(function (it) { return String(it.rating || 'general') === 'general'; });
+                // 图池里既然全是普通图（默认情况），就立刻出图——绝不去等 settings 接口，
+                // 那个接口是 Netlify 函数，冷启动要 1~3 秒，遮罩根本撑不到那时候。
+                if (general.length === items.length) { show(items); return; }
 
-                bg.src = picked.slots[slot];
-                try { localStorage.setItem('loader-bg-last', picked.id); } catch (e) { }
-
-                var reveal = function () { bg.classList.add('is-ready'); };
-                if (typeof bg.decode === 'function') {
-                    bg.decode().then(reveal).catch(reveal);
-                } else {
-                    bg.onload = reveal;
-                }
+                // 池子里混了 r16/r18（用 --allow-r18 生成过），这时才需要问后台允不允许
+                var askSettings = Promise.race([
+                    fetch('/api/admin?action=settings', { cache: 'force-cache', headers: { Accept: 'application/json' } })
+                        .then(function (r) { return r.ok ? r.json() : null; })
+                        .catch(function () { return null; }),
+                    new Promise(function (resolve) { setTimeout(function () { resolve(null); }, 800); }),
+                ]);
+                show(general.length ? general : items);   // 先按普通图出，别等
+                askSettings.then(function (res) {
+                    var allow = !!(res && res.data && res.data.layout && res.data.layout.loaderBgAllowR18);
+                    if (!allow) return;
+                    var withR18 = items.filter(function (it) { return it.rating !== 'general'; });
+                    if (withR18.length && !bg.classList.contains('is-ready')) show(items);
+                });
             })
             .catch(function () { /* 没有图池就保持纯色 */ });
     }
