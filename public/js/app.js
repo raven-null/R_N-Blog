@@ -53,12 +53,35 @@ const BlogApp = {
             this.applyHandBody(!document.documentElement.classList.contains('hand-body'));
         });
 
-        // 首页背景切换（手写体左边那颗）：默认天空插画 → 图库图池里的横图，轮着换
+        // 首页背景切换（手写体左边那颗）：默认天空插画 → 图库里的横图，轮着换
         document.getElementById('hvBgBtn')?.addEventListener('click', (e) => {
             e.stopPropagation();
             this.cycleHeroBg();
         });
         this.restoreHeroBg();
+
+        // 背景图（图库那张）真的下载并显示出来之后：把桌宠叫到当前视图，提醒一句
+        window.addEventListener('blog:hero-bg-ready', () => {
+            let tries = 0;
+            const notify = () => {
+                const pet = window.PetCore;
+                if (pet && pet.ready) {
+                    try { pet.callBack(); } catch (e) { }     // 跑回用户当前所在的视图
+                    // 桌宠自己会顺着新背景评论一句（pet-core 的看页面逻辑）；
+                    // 两秒后气泡还是空的，才由这里补一句，别把它的台词盖掉。
+                    setTimeout(() => {
+                        const b = document.getElementById('deskPetBubble');
+                        const showing = b && b.classList.contains('is-show') && b.textContent.trim();
+                        if (!showing) {
+                            try { pet.say('背景换成图库那张啦，看看好不好看', 5200); } catch (e) { }
+                        }
+                    }, 2200);
+                    return;
+                }
+                if (++tries < 50) setTimeout(notify, 200);    // 桌宠可能还没初始化完
+            };
+            notify();
+        });
 
         // 首页主题切换（时钟旁的小圆钮）：只切「日间 / 夜间」两档。
         // 原来走 nextTheme() 是 auto → light → dark，白天在 auto 下按一次等于没变，要按两次才黑
@@ -6268,8 +6291,9 @@ const BlogApp = {
     },
 
     // 把 sky 层换成指定图；传 null 表示回到默认的天空插画（带 srcset）
-    // instant=true 用于「刷新后恢复上次选择」，直接落到底层、不播动画
-    applyHeroBg(item, instant) {
+    // instant=true：刷新后恢复上次选择，直接落到底层、不播动画
+    // auto=true：这次不是用户点的（刷新后自动换的），换完让桌宠过来提醒一声
+    applyHeroBg(item, instant, auto) {
         const art = document.getElementById('skyArt');
         if (!art) return;
 
@@ -6280,6 +6304,13 @@ const BlogApp = {
 
         // 已经是这张了就不折腾
         if (!instant && (art.getAttribute('src') === url)) return;
+
+        const announce = () => {
+            if (!auto) return;
+            try {
+                window.dispatchEvent(new CustomEvent('blog:hero-bg-ready', { detail: { id: item && item.id } }));
+            } catch (e) { }
+        };
 
         const commit = (el) => {
             // srcset 优先于 src，切图前得先摘掉，否则换了 src 也不生效
@@ -6292,7 +6323,7 @@ const BlogApp = {
 
         const alt = document.getElementById('skyArtAlt');
 
-        if (instant || !alt) { commit(art); return; }
+        if (instant || !alt) { commit(art); announce(); return; }
 
         // 交叉淡入：新图先在下层备好 → 上层淡入盖住 → 底层换成同一张 → 上层淡出并清空
         let settled = false;
@@ -6303,6 +6334,7 @@ const BlogApp = {
             setTimeout(() => {
                 commit(art);
                 alt.classList.remove('is-visible');
+                announce();          // 图已经真的显示出来了，这才叫「下载完成」
                 setTimeout(() => {
                     alt.removeAttribute('srcset');
                     alt.removeAttribute('src');
@@ -6361,7 +6393,7 @@ const BlogApp = {
                     const art = document.getElementById('skyArt');
                     if (!art || art.getAttribute('data-picked')) return;
                     const item = pool[Math.floor(Math.random() * pool.length)];
-                    this.applyHeroBg(item);
+                    this.applyHeroBg(item, false, true);   // 自动换：换完让桌宠来提醒
                     if (btn) {
                         btn.title = '切换背景（当前：图库背景 ' + (pool.indexOf(item) + 1) + ' / ' + pool.length + '）';
                         btn.setAttribute('aria-pressed', 'true');
