@@ -2434,3 +2434,54 @@ body:not(.has-music) .hv3-row-top .hv3-hero {
         order: 2;
     }
 }
+
+/* ------------------------------------------------------------
+   移动端照片横排（修正版 v3.54.6）
+   上一版误把横排规则加在 .hv3-sub-grid 上——那是「今日拾光」的容器。
+   真正的照片两块（生活切片 .hv3-shot + 方图 .hv3-square）在 .hv3-top-row 里。
+   这里把 .hv3-sub-grid 恢复成原来的网格，横向滑动改到 .hv3-top-row。
+   ------------------------------------------------------------ */
+@media (max-width: 900px) {
+    .hv3-sub-grid {
+        display: grid !important;
+        overflow-x: visible !important;
+    }
+
+    .hv3-top-row {
+        display: flex !important;
+        flex-wrap: nowrap;
+        gap: 12px;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+        padding-bottom: 2px;
+    }
+
+    .hv3-top-row::-webkit-scrollbar {
+        display: none;
+        width: 0;
+        height: 0;
+    }
+
+    .hv3-top-row > * {
+        flex: 0 0 78%;
+        min-width: 0;
+        scroll-snap-align: center;
+        align-self: stretch;
+        max-height: none;
+    }
+
+    .hv3-top-row > .hv3-square {
+        width: 100% !important;
+        height: auto !important;
+        aspect-ratio: 1;
+    }
+
+    .hv3-top-row > .hv3-shot {
+        width: 100%;
+        aspect-ratio: var(--shot-ar, 1.6);
+        min-height: 180px;
+    }
+}
