@@ -2680,3 +2680,21 @@ body:not(.has-music) .hv3-row-top .hv3-hero {
         display: none !important;
     }
 }
+
+/* ------------------------------------------------------------
+   修：移动端翻牌没生效（v3.54.12）
+   .hv3-flip 本来是 height + overflow:hidden 只露一格，但线上算出来
+   overflow 是 visible（被别处的规则改回去了），于是时间和三个圆钮同时露出来，
+   点时间也没有翻牌效果。这里显式钉死。
+   ------------------------------------------------------------ */
+@media (max-width: 900px) {
+    .hv3-flip {
+        overflow: hidden !important;
+        height: var(--flip-h, 60px) !important;
+    }
+
+    .hv3-flip.is-tools {
+        /* 翻上去以后露的是圆钮那一格 */
+        height: var(--flip-h, 60px) !important;
+    }
+}
