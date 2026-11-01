@@ -2143,30 +2143,41 @@ body:not(.has-music) .hv3-row-top .hv3-hero {
 /* ============================================================
    万年历：点日历那天，右栏显示这天的农历 / 干支 / 宜忌
    ============================================================ */
+/* 排版按「信息卡」来，不再整块居中：
+     10 月 8 日  周四 · 第 41 周
+     农历 八月廿八
+     丙午年 · 马年 · 天秤座
+     ────────────────
+     宜  纳财、收纳、收账
+     忌  出行、安葬
+     ────────────────
+     收日 · 宜忌仅供参考
+   左对齐 + 两条细分隔线，长句换行也不会跟左边徽标错位。 */
 .hv3-almanac {
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: stretch;
     justify-content: center;
-    text-align: center;
-    gap: 10px;
+    text-align: left;
+    gap: 8px;
     height: 100%;
     min-height: 0;
-    padding: 2px 2px 0;
+    padding: 10px 12px;
 }
 
 .al-head {
     display: flex;
     align-items: baseline;
-    justify-content: center;
+    justify-content: flex-start;
     flex-wrap: wrap;
-    gap: 4px 10px;
+    gap: 2px 10px;
 }
 
 .al-solar {
-    font-size: 26px;
+    font-size: 27px;
     font-weight: 700;
-    line-height: 1.1;
+    line-height: 1.05;
+    letter-spacing: -.01em;
     color: var(--text);
 }
 
@@ -2176,16 +2187,21 @@ body:not(.has-music) .hv3-row-top .hv3-hero {
     white-space: nowrap;
 }
 
+/* 农历跟日期贴成一组，干支/星座再小一号缀在下面 */
 .al-lunar {
-    font-size: 17px;
+    font-size: 16px;
     font-weight: 600;
+    line-height: 1.3;
     letter-spacing: .02em;
     color: var(--text);
+    margin-top: -2px;
 }
 
 .al-sub {
     font-size: 12px;
+    line-height: 1.5;
     color: var(--text-secondary);
+    margin-top: -4px;
 }
 
 .al-fest {
@@ -2198,21 +2214,27 @@ body:not(.has-music) .hv3-row-top .hv3-hero {
     font-weight: 600;
 }
 
+/* 宜忌单独一区：上面一条细线，徽标固定列宽、文字自己换行 */
 .al-yiji {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    gap: 6px;
-    margin-top: 2px;
+    gap: 7px;
+    padding-top: 9px;
+    border-top: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
 }
 
 .al-row {
     display: flex;
     align-items: flex-start;
-    gap: 8px;
-    font-size: 12.5px;
-    line-height: 1.5;
+    gap: 9px;
+    font-size: 13px;
+    line-height: 1.55;
     color: var(--text-secondary);
+}
+
+.al-row > span {
+    flex: 1 1 auto;
+    min-width: 0;
 }
 
 .al-row b {
@@ -2224,6 +2246,7 @@ body:not(.has-music) .hv3-row-top .hv3-hero {
     border-radius: 7px;
     font-size: 12px;
     font-weight: 700;
+    line-height: 1;
 }
 
 .al-yi b {
@@ -2236,10 +2259,14 @@ body:not(.has-music) .hv3-row-top .hv3-hero {
     color: #c04642;
 }
 
+/* 底部小注：再一条虚线，字号最小 */
 .al-foot {
     font-size: 11px;
+    line-height: 1.5;
     color: var(--text-muted);
     letter-spacing: .04em;
+    padding-top: 7px;
+    border-top: 1px dashed color-mix(in srgb, var(--border) 70%, transparent);
 }
 
 /* ------------------------------------------------------------
