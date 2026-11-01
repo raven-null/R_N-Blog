@@ -59,6 +59,17 @@
         /* 默认图（第 1 层）不等 JS：CSS 自己 0.25s 后开始淡入。
            load-progress.js 是 defer 的，线上要四秒左右才跑起来，等它的话前几秒全是纯色。 */
         #loadVeilBg { animation: veil-bg-in 0.6s ease 0.25s forwards; }
+        /* 换首页背景时的交叉淡入层：默认透明，换图时新图从这一层淡入，盖住旧图后再换底层。
+           必须带 !important：renewal.css 里有 `.sky-art{opacity:.72!important}`，
+           不加的话这层被钉死在 0.72——既没有淡入动画，还会留下重影。 */
+        #skyArtAlt {
+            opacity: 0 !important;
+            transition: opacity 0.5s ease !important;
+            pointer-events: none;
+        }
+        #skyArtAlt.is-visible {
+            opacity: 1 !important;
+        }
         /* 第 2 层还没有 src 时不占画面，显示与否交给 JS 的 is-ready */
         #loadVeilBgAlt:not([src]) { display: none; }
         @keyframes veil-bg-in {
@@ -259,6 +270,8 @@
             src="images/sky/kumeng-1920.webp"
             srcset="images/sky/kumeng-960.webp 960w, images/sky/kumeng-1920.webp 1920w"
             sizes="100vw" fetchpriority="high" decoding="async">
+        <!-- 换背景时用来交叉淡入的第二层（见 app.js 的 applyHeroBg）；平时是空的、不占画面 -->
+        <img class="sky-art sky-art-alt" id="skyArtAlt" alt="" aria-hidden="true" decoding="async">
         <div class="sky-tint"></div>
     </div>
 
@@ -803,7 +816,7 @@
     <!-- 桌宠动效引擎（spring-driven character，见 public/vendor/grok/README.md） -->
 
     <!-- /js/* 是 immutable 长缓存：app.js 一改就必须换 ?v=，否则线上一直吃旧文件 -->
-    <script src="js/app.js?v=20261106zk" defer></script>
+    <script src="js/app.js?v=20261106zn" defer></script>
     <script src="js/animations.js?v=3.14.0" defer></script>
 
     <script>

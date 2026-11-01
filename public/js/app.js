@@ -6249,20 +6249,56 @@ const BlogApp = {
     },
 
     // 把 sky 层换成指定图；传 null 表示回到默认的天空插画（带 srcset）
-    applyHeroBg(item) {
+    // instant=true 用于「刷新后恢复上次选择」，直接落到底层、不播动画
+    applyHeroBg(item, instant) {
         const art = document.getElementById('skyArt');
         if (!art) return;
-        if (!item) {
-            art.removeAttribute('data-picked');
-            art.setAttribute('srcset', 'images/sky/kumeng-960.webp 960w, images/sky/kumeng-1920.webp 1920w');
-            art.setAttribute('src', 'images/sky/kumeng-1920.webp');
-            return;
-        }
-        const url = item.slots['1920'] || item.slots['1280'] || item.slots['2560'];
+
+        const isDefault = !item;
+        const url = isDefault
+            ? 'images/sky/kumeng-1920.webp'
+            : (item.slots['1920'] || item.slots['1280'] || item.slots['2560']);
         if (!url) return;
-        art.removeAttribute('srcset');   // srcset 优先，留着的话换了 src 也没用
-        art.setAttribute('data-picked', item.id);
-        art.setAttribute('src', url);
+        const srcset = isDefault ? 'images/sky/kumeng-960.webp 960w, images/sky/kumeng-1920.webp 1920w' : null;
+
+        // 已经是这张了就不折腾
+        if (!instant && (art.getAttribute('src') === url)) return;
+
+        const commit = (el) => {
+            // srcset 优先于 src，切图前得先摘掉，否则换了 src 也不生效
+            el.removeAttribute('srcset');
+            if (srcset) el.setAttribute('srcset', srcset);
+            el.setAttribute('src', url);
+            if (item) el.setAttribute('data-picked', item.id);
+            else el.removeAttribute('data-picked');
+        };
+
+        const alt = document.getElementById('skyArtAlt');
+
+        if (instant || !alt) { commit(art); return; }
+
+        // 交叉淡入：新图先在下层备好 → 上层淡入盖住 → 底层换成同一张 → 上层淡出并清空
+        let settled = false;
+        const swap = () => {
+            if (settled) return;
+            settled = true;
+            alt.classList.add('is-visible');
+            setTimeout(() => {
+                commit(art);
+                alt.classList.remove('is-visible');
+                setTimeout(() => {
+                    alt.removeAttribute('srcset');
+                    alt.removeAttribute('src');
+                }, 520);
+            }, 520);
+        };
+
+        alt.removeAttribute('srcset');
+        if (srcset) alt.setAttribute('srcset', srcset);
+        alt.onload = swap;
+        alt.onerror = () => { settled = true; commit(art); };   // 新图挂了就直接换，别卡住
+        alt.setAttribute('src', url);
+        if (alt.complete && alt.naturalWidth > 0) swap();
     },
 
     cycleHeroBg() {
@@ -6302,7 +6338,7 @@ const BlogApp = {
         this.loadHeroBgPool().then((pool) => {
             const item = pool[idx - 1];
             if (!item) return;
-            this.applyHeroBg(item);
+            this.applyHeroBg(item, true);   // 恢复时直接落地，不播淡入
             const btn = document.getElementById('hvBgBtn');
             if (btn) {
                 btn.title = '切换背景（当前：图库背景 ' + idx + ' / ' + pool.length + '）';
