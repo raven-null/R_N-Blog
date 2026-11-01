@@ -386,6 +386,39 @@
     speakRandom();
   }
 
+  // ---------- 用户挂机久了自动睡觉 ----------
+  // 鼠标移动 / 点击 / 键盘 / 滚轮 / 触摸 / 滚动都算「人还在」；
+  // 超过 IDLE_SLEEP_MS 一点动静都没有，桌宠自己睡；一有操作立刻醒。
+  // 允许外部覆盖（方便调试时把等待缩短）
+  const IDLE_SLEEP_MS = Number(global.__idleSleepMs) > 0 ? Number(global.__idleSleepMs) : 3 * 60 * 1000;
+  function bindIdleSleep() {
+    if (S.idleSleepBound) return;
+    S.idleSleepBound = true;
+    let lastActive = Date.now();
+
+    const markActive = () => {
+      lastActive = Date.now();
+      if (S.sleeping) toggleSleep(false);
+    };
+    // 注意别监听 scroll：简报/项目那些自动滚动会一直触发，桌面永远算「有人」，就永远不会睡
+    ['pointermove', 'pointerdown', 'keydown', 'wheel', 'touchstart', 'touchmove'].forEach((type) => {
+      global.addEventListener(type, markActive, { passive: true, capture: true });
+    });
+
+    // 检查间隔最多 15 秒；等待时间被调短时（调试）也跟着变短
+    const tickMs = Math.max(1000, Math.min(15000, IDLE_SLEEP_MS));
+    setInterval(() => {
+      if (doc.hidden) return;                 // 标签页在后台不算挂机
+      if (S.sleeping || S.dragging) return;
+      if (Date.now() - lastActive >= IDLE_SLEEP_MS) toggleSleep(true);
+    }, tickMs);
+
+    // 从后台切回来时，先当作「刚有人来」，别一上来就睡
+    doc.addEventListener('visibilitychange', () => {
+      if (!doc.hidden) lastActive = Date.now();
+    });
+  }
+
   // ---------- 睡觉 / 唤醒 ----------
   function toggleSleep(force) {
     const pet = petEl();
@@ -714,9 +747,10 @@
     const dirX = cx < vw / 2 ? 1 : -1;
     const dirY = cy < vh / 2 ? 1 : -1;
     const base = Math.atan2(dirY, dirX);
-    const dist = 66;
-    // 两个圆（打开对话框 / 睡觉）对称铺在两侧；实时对话靠长按桌宠，不占圆位
-    const spread = [-0.62, 0.62];
+    // 圆离桌宠近一点（原来 66，看着像飘在外面）
+    const dist = 52;
+    // 三个圆（打开对话框 / 自由走动 / 睡觉）沿着朝向视口中心的一侧铺开
+    const spread = [-0.7, 0.7];
     const half = 16;          // 按钮半宽（32px）
     const edge = 10;          // 与视口的最小距离
     const items = [...host.children];
@@ -773,6 +807,40 @@
     if (!pet || typeof doc.createElement !== 'function') return;
     if (doc.getElementById('deskpetOrbit')) return;
 
+    /* 自由走动：开着的时候桌宠每隔几秒自己挪到视口里的随机位置，
+       拖动它或者再点一下这个按钮就停。 */
+    let roamTimer = 0;
+    let roaming = false;
+
+    function roamStep() {
+      if (!roaming || S.dragging || S.sleeping || doc.hidden) return;
+      const p = petEl();
+      if (!p) return;
+      const b = bounds();
+      const x = b.minX + Math.random() * Math.max(0, b.maxX - b.minX);
+      const y = b.minY + Math.random() * Math.max(0, b.maxY - b.minY);
+      p.classList.add('is-roaming');
+      place(x, y, false);
+      savePos();
+    }
+
+    function setRoam(on) {
+      roaming = !!on;
+      const p = petEl();
+      if (p) p.classList.toggle('is-roaming', roaming);
+      const btn = doc.querySelector('[data-pet-action="roam"]');
+      if (btn) {
+        btn.classList.toggle('is-on', roaming);
+        btn.setAttribute('aria-pressed', roaming ? 'true' : 'false');
+        btn.title = roaming ? '停止自由活动' : '让它自己在页面里走动';
+      }
+      clearInterval(roamTimer);
+      roamTimer = 0;
+      if (!roaming) return;
+      roamStep();
+      roamTimer = setInterval(roamStep, 3400);
+    }
+
     const host = doc.createElement('div');
     host.className = 'deskpet-orbit';
     host.id = 'deskpetOrbit';
@@ -781,6 +849,9 @@
     const NS = 'http://www.w3.org/2000/svg';
     const ICONS = {
       chat: ['M4.5 5.5h15v9.5h-9.6l-5.4 4.2z'],
+      roam: ['M12 4.5v15', 'M4.5 12h15', 'M12 4.5l-2.2 2.2', 'M12 4.5l2.2 2.2',
+        'M12 19.5l-2.2-2.2', 'M12 19.5l2.2-2.2', 'M4.5 12l2.2-2.2', 'M4.5 12l2.2 2.2',
+        'M19.5 12l-2.2-2.2', 'M19.5 12l-2.2 2.2'],
       sleep: ['M20 14.4A8.4 8.4 0 0 1 9.6 4a7 7 0 1 0 10.4 10.4z'],
     };
     const makeIcon = (key) => {
@@ -795,9 +866,10 @@
       return svg;
     };
 
+    // 睡觉不再占一个圆：挂机久了会自动睡，有动静自己醒
     const actions = [
       { key: 'chat', label: '打开对话框', run: () => openChat() },
-      { key: 'sleep', label: '睡觉 / 唤醒', run: () => toggleSleep() },
+      { key: 'roam', label: '让它自己在页面里走动', run: () => setRoam(!roaming) },
     ];
     actions.forEach((a) => {
       const btn = doc.createElement('button');
@@ -1006,6 +1078,8 @@
     bindDrag();
     bindHover();
     bindOrbit();
+    bindWander();
+    bindIdleSleep();
     bindGaze();
     bindFocus();
     bindReflow();
@@ -1027,6 +1101,146 @@
     return global.PetCore;
   }
 
+  // ---------- 在视图之间串门 ----------
+  // 桌宠偶尔会自己跑去别的视图玩：走之前冒个气泡，主页（以及它离开的那个视图）
+  // 留下一个铃铛，点一下就能把它召回来。用户切到它所在的视图，就能看见它在那儿。
+  const WANDER_VIEWS = ['home', 'blog', 'gallery', 'projects'];
+  const VIEW_LABEL = { home: '主页', blog: '文章页', gallery: '图库', projects: '项目页', music: '音乐页' };
+  const WANDER_LINES = [
+    (n) => '我去' + n + '玩啦，想我就摇铃铛～',
+    (n) => '溜了溜了，去' + n + '逛逛',
+    (n) => '我去' + n + '待会儿，记得叫我回来',
+    (n) => '换个地方发呆，去' + n,
+  ];
+  let petView = 'home';
+  let wanderTimer = 0;
+  let leaveTimer = 0;
+  let leavingAt = 0;   // 正在说「我去…玩啦」的时间戳，这期间先别把它藏起来
+  let returnTimer = 0;
+  // 逛一阵子自己就回来了；台词随机，别每次都一样
+  const RETURN_LINES = ['我回来啦～', '逛完了，回来啦', '转一圈就回来了', '回来啦，没想我呀？'];
+
+  function currentView() {
+    return (global.BlogApp && global.BlogApp.currentView) || 'home';
+  }
+
+  function ensureBell() {
+    if (doc.getElementById('deskpetBell')) return;
+    const btn = doc.createElement('button');
+    btn.type = 'button';
+    btn.id = 'deskpetBell';
+    btn.className = 'deskpet-bell';
+    btn.title = '召唤桌宠';
+    btn.setAttribute('aria-label', '召唤桌宠');
+    btn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true">'
+      + '<path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.6 2.1H4.4L6 16.5z"/>'
+      + '<path d="M10 20.2a2.2 2.2 0 0 0 4 0"/></svg>';
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      callBack();
+    });
+    doc.body.appendChild(btn);
+  }
+
+  function removeBell() {
+    doc.getElementById('deskpetBell')?.remove();
+  }
+
+  function showPetHere() {
+    const pet = petEl();
+    if (!pet) return;
+    if (pet.classList.contains('is-away')) {
+      // 淡入 + 弹回来（CSS 过渡，见 style.css 的 .deskpet.is-away）
+      pet.classList.remove('is-away');
+      scheduleIdle();
+    }
+    removeBell();
+  }
+
+  function hidePetAway() {
+    const pet = petEl();
+    if (!pet) return;
+    hideBubble();
+    hideOrbit();
+    // 先缩一下淡出，再彻底不可见（.is-away 里有 visibility 的延迟）
+    pet.classList.add('is-away');
+    ensureBell();
+  }
+
+  function sayWanderLine(target) {
+    const name = VIEW_LABEL[target] || '别处';
+    const line = WANDER_LINES[Math.floor(Math.random() * WANDER_LINES.length)];
+    say(line(name), 3800);
+  }
+
+  function wanderOff(target) {
+    if (!global.BlogApp) return false;         // 不在单页（比如文章页）不跑
+    if (S.sleeping || S.dragging) return false;
+    const here = currentView();
+    const options = WANDER_VIEWS.filter((v) => v !== here && v !== petView);
+    const next = target || options[Math.floor(Math.random() * options.length)];
+    if (!next) return false;
+    petView = next;
+    leavingAt = Date.now();
+    sayWanderLine(next);
+    clearTimeout(leaveTimer);
+    leaveTimer = setTimeout(() => {
+      leaveTimer = 0;
+      leavingAt = 0;
+      if (petView !== currentView()) hidePetAway();
+    }, 2400);   // 先把「我去…玩啦」说完再消失
+
+    // 在外面待一会儿就自己回来（调试时可用 __petReturnMs 缩短）
+    clearTimeout(returnTimer);
+    const backMs = Number(global.__petReturnMs) > 0 ? Number(global.__petReturnMs) : (60000 + Math.random() * 90000);
+    returnTimer = setTimeout(goBack, backMs);
+    return true;
+  }
+
+  // 逛完自己走回来：回到用户此刻在的那个视图，冒一句「我回来啦」
+  function goBack() {
+    clearTimeout(returnTimer);
+    returnTimer = 0;
+    leavingAt = 0;
+    petView = currentView();
+    showPetHere();
+    say(RETURN_LINES[Math.floor(Math.random() * RETURN_LINES.length)], 3200);
+  }
+
+  function callBack() {
+    clearTimeout(returnTimer);
+    returnTimer = 0;
+    leavingAt = 0;
+    petView = currentView();
+    showPetHere();
+    say('来啦～', 2400);
+    return petView;
+  }
+
+  function bindWander() {
+    if (S.wanderBound) return;
+    S.wanderBound = true;
+    petView = currentView();
+
+    // 跟着视图切换：它在这页就露面，不在就留个铃铛
+    setInterval(() => {
+      if (!global.BlogApp) return;
+      // 正在说再见：等它把话说完再执行（否则 900ms 就把桌宠藏了，气泡根本看不见）
+      if (leavingAt && Date.now() - leavingAt < 2600) return;
+      const v = currentView();
+      if (v === petView) showPetHere();
+      else hidePetAway();
+    }, 900);
+
+    // 隔一阵子考虑要不要溜出去玩（睡着了就不跑）
+    clearInterval(wanderTimer);
+    wanderTimer = setInterval(() => {
+      if (doc.hidden || S.sleeping || S.dragging) return;
+      if (currentView() !== petView) return;   // 已经不在当前页了
+      if (Math.random() < 0.22) wanderOff();
+    }, 45000);
+  }
+
   global.PetCore = {
     init,
     ensureEngine,
@@ -1046,6 +1260,9 @@
     toggleSleep,
     scheduleIdle,
     pickFallback: randomLine,
+    wanderOff,
+    callBack,
+    get petView() { return petView; },
     get engine() { return S.engine; },
     get sleeping() { return S.sleeping; },
     get dragging() { return S.dragging; },

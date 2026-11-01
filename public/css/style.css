@@ -6441,6 +6441,52 @@ body.view-projects-active.home-layout .main-content {
     display: none;
 }
 
+/* 串门离开 / 回来时的进出动画：用 scale 属性，和桌宠自己的 transform 不打架 */
+.deskpet {
+    transition: opacity 0.26s ease, scale 0.3s cubic-bezier(0.22, 1, 0.36, 1), visibility 0s linear 0s;
+}
+
+.deskpet.is-away {
+    opacity: 0;
+    scale: 0.55;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.24s ease, scale 0.28s cubic-bezier(0.4, 0, 0.7, 1), visibility 0s linear 0.3s;
+}
+
+/* 回家时弹一下，别只是淡入 */
+.deskpet:not(.is-away) {
+    animation: deskpet-pop-in 0.42s cubic-bezier(0.22, 1.4, 0.36, 1);
+}
+
+@keyframes deskpet-pop-in {
+    from { scale: 0.55; opacity: 0; }
+    60% { scale: 1.06; opacity: 1; }
+    to { scale: 1; opacity: 1; }
+}
+
+/* 铃铛也是淡入出现的 */
+.deskpet-bell {
+    animation: deskpet-bell-swing 2.6s ease-in-out infinite, deskpet-bell-in 0.3s ease both;
+}
+
+@keyframes deskpet-bell-in {
+    from { opacity: 0; transform: scale(0.6); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+/* 自由走动：位置变化走一段缓动，看起来是「飘」过去 */
+.deskpet.is-roaming {
+    transition: left 0.9s cubic-bezier(0.22, 1, 0.36, 1), top 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* 圆按钮的「已开启」态（自由走动开着时高亮） */
+.deskpet-orbit-item.is-on {
+    color: var(--accent, #f0a20c);
+    border-color: var(--accent, #f0a20c);
+    background: color-mix(in srgb, var(--accent, #f0a20c) 20%, transparent);
+}
+
 .deskpet-orbit-item:hover,
 .deskpet-orbit-item:focus-visible {
     color: var(--text);
@@ -10770,4 +10816,50 @@ html[data-tone="dark"] .stack-pin {
 
 .top-bar-pill .view-indicator {
     display: none !important;
+}
+/* 桌宠跑出去玩时，当前页留下的召唤铃铛 */
+.deskpet-bell {
+    position: fixed;
+    right: 22px;
+    bottom: 22px;
+    z-index: 9000;
+    width: 46px;
+    height: 46px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border-radius: 50%;
+    border: 1px solid var(--border, rgba(20, 24, 44, 0.14));
+    background: color-mix(in srgb, var(--surface, #fff) 86%, transparent);
+    color: var(--text-secondary);
+    box-shadow: 0 10px 26px rgba(10, 14, 32, 0.2);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    cursor: pointer;
+    animation: deskpet-bell-swing 2.6s ease-in-out infinite;
+    transition: color 0.18s, border-color 0.18s, transform 0.18s;
+}
+
+.deskpet-bell:hover {
+    color: var(--accent, #f0a20c);
+    border-color: var(--accent, #f0a20c);
+    transform: translateY(-2px);
+}
+
+.deskpet-bell svg {
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+@keyframes deskpet-bell-swing {
+    0%, 62%, 100% { transform: rotate(0deg); }
+    68% { transform: rotate(9deg); }
+    76% { transform: rotate(-7deg); }
+    84% { transform: rotate(4deg); }
+    92% { transform: rotate(-2deg); }
 }
