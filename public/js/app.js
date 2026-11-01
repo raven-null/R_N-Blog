@@ -53,12 +53,12 @@ const BlogApp = {
             this.applyHandBody(!document.documentElement.classList.contains('hand-body'));
         });
 
-        // 首页背景切换（手写体左边那颗）：默认天空插画 → 图库里的横图，轮着换
+        // 首页背景：不再给按钮，改成自动轮换（见 startHeroBgRotation）
         document.getElementById('hvBgBtn')?.addEventListener('click', (e) => {
             e.stopPropagation();
-            this.cycleHeroBg();
+            this.heroBgStep(false);
         });
-        this.restoreHeroBg();
+        this.initHeroBg();
 
         // 背景图（图库那张）真的下载并显示出来之后：把桌宠叫到当前视图，提醒一句
         window.addEventListener('blog:hero-bg-ready', () => {
@@ -6265,16 +6265,14 @@ const BlogApp = {
                 const photos = (data && Array.isArray(data.photos) ? data.photos : []);
                 const usable = photos.filter((p) => {
                     if (!p || !p.id || !p.url) return false;
+                    if (p.fav !== true) return false;                                // 只用户收藏夹里的图
                     if (String(p.rating || 'general') !== 'general') return false;   // 公开首屏不用 r16/r18
                     const w = Number(p.width) || 0;
                     const h = Number(p.height) || 0;
-                    return w > h && w >= 1600;
+                    return w > h && w >= 1600;                                       // 横向、够高清才铺得满
                 });
-                // 收藏优先，其余按分辨率降序
-                usable.sort((a, b) => {
-                    if (!!b.fav !== !!a.fav) return (b.fav ? 1 : 0) - (a.fav ? 1 : 0);
-                    return (Number(b.width) || 0) - (Number(a.width) || 0);
-                });
+                // 收藏里若有多张，按分辨率降序
+                usable.sort((a, b) => (Number(b.width) || 0) - (Number(a.width) || 0));
                 this.heroBgPool = usable.slice(0, 20).map((p) => ({
                     id: p.id,
                     fav: !!p.fav,
@@ -6350,70 +6348,63 @@ const BlogApp = {
         if (alt.complete && alt.naturalWidth > 0) swap();
     },
 
-    cycleHeroBg() {
-        const btn = document.getElementById('hvBgBtn');
-        const art = document.getElementById('skyArt');
-        if (!art) return;
+    // 背景自动轮换：页面加载完后先换第一张，之后每 60 秒换下一张。
+    // 「还有图在加载就不切」——页面上只要有没加载完的图，这一轮直接跳过，等下一分钟。
+    heroBgIndex: 0,
+    heroBgTimer: 0,
+    heroBgLastSwapAt: 0,
 
-        this.loadHeroBgPool().then((pool) => {
-            // index：0 = 默认天空图，1..n = 图池里的第几张
-            let idx = 0;
-            try { idx = Number(localStorage.getItem('blog-hero-bg') ?? '0'); } catch (e) { idx = 0; }
-            if (!Number.isFinite(idx) || idx < 0) idx = 0;
+    anyImageLoading() {
+        const imgs = document.images || [];
+        for (let i = 0; i < imgs.length; i++) {
+            const im = imgs[i];
+            // 还没轮到加载的懒图不算（currentSrc 为空）
+            if (!im.currentSrc) continue;
+            if (!im.complete) return true;
+        }
+        return false;
+    },
 
-            const total = pool.length + 1;   // 默认图也算一项
-            idx = (idx + 1) % total;
-
-            const item = idx === 0 ? null : pool[idx - 1];
-            this.applyHeroBg(item);
-            try { localStorage.setItem('blog-hero-bg', String(idx)); } catch (e) { }
-
-            if (btn) {
-                const name = item ? ('图库背景 ' + idx + ' / ' + pool.length) : '默认天空背景';
-                btn.title = '切换背景（当前：' + name + '）';
-                btn.setAttribute('aria-pressed', item ? 'true' : 'false');
-            }
+    heroBgStep(first) {
+        return this.loadHeroBgPool().then((pool) => {
+            if (!pool.length) return;
+            this.heroBgIndex = (this.heroBgIndex + 1) % pool.length;
+            this.heroBgLastSwapAt = Date.now();
+            this.applyHeroBg(pool[this.heroBgIndex], false, !!first);
         });
     },
 
-    restoreHeroBg() {
-        let idx = 0;
-        try { idx = Number(localStorage.getItem('blog-hero-bg') ?? '0'); } catch (e) { idx = 0; }
-        if (!Number.isFinite(idx) || idx < 0) idx = 0;
+    startHeroBgRotation() {
+        if (this.heroBgTimer) return;
+        // 收藏里只有一张横向高清图时，轮换没有意义，别每分钟白忙一次
+        const pool = this.heroBgPool || [];
+        if (pool.length <= 1) return;
+        this.heroBgTimer = setInterval(() => {
+            if (document.hidden) return;                                  // 切走了就不折腾
+            if (this.anyImageLoading()) return;                            // 还有图在加载，这轮跳过
+            if (Date.now() - this.heroBgLastSwapAt < 5000) return;         // 上一张还在淡入
+            this.heroBgStep(false);
+        }, 60000);
+    },
 
-        const btn = document.getElementById('hvBgBtn');
-
-        // 没有明确选过（0 = 默认）：等页面加载完再悄悄换一张图库的图，不跟首屏抢带宽
-        if (idx === 0) {
-            if (btn) { btn.title = '切换背景（当前：默认天空背景）'; btn.setAttribute('aria-pressed', 'false'); }
-            const pickLater = () => {
-                this.loadHeroBgPool().then((pool) => {
-                    if (!pool.length) return;
-                    // 当前还是默认图才自动换；用户已经点过就别抢
-                    const art = document.getElementById('skyArt');
-                    if (!art || art.getAttribute('data-picked')) return;
-                    const item = pool[Math.floor(Math.random() * pool.length)];
-                    this.applyHeroBg(item, false, true);   // 自动换：换完让桌宠来提醒
-                    if (btn) {
-                        btn.title = '切换背景（当前：图库背景 ' + (pool.indexOf(item) + 1) + ' / ' + pool.length + '）';
-                        btn.setAttribute('aria-pressed', 'true');
-                    }
-                });
+    initHeroBg() {
+        // 先等页面自己加载完，别跟首屏抢带宽；第一张换完才开始轮换。
+        // 首页懒加载的图太多，「一张都没在加载」几乎等不到，所以最多等 10 秒就硬上；
+        // 之后每分钟那一轮才真正按「有图在加载就跳过」来办。
+        const kickoff = () => {
+            let waited = 0;
+            const trySwap = () => {
+                if (this.anyImageLoading() && waited < 10000) {
+                    waited += 3000;
+                    setTimeout(trySwap, 3000);
+                    return;
+                }
+                this.heroBgStep(true).then(() => this.startHeroBgRotation());
             };
-            if (document.readyState === 'complete') setTimeout(pickLater, 1200);
-            else window.addEventListener('load', () => setTimeout(pickLater, 1200), { once: true });
-            return;
-        }
-
-        this.loadHeroBgPool().then((pool) => {
-            const item = pool[idx - 1];
-            if (!item) return;
-            this.applyHeroBg(item, true);   // 恢复时直接落地，不播淡入
-            if (btn) {
-                btn.title = '切换背景（当前：图库背景 ' + idx + ' / ' + pool.length + '）';
-                btn.setAttribute('aria-pressed', 'true');
-            }
-        });
+            setTimeout(trySwap, 1200);
+        };
+        if (document.readyState === 'complete') kickoff();
+        else window.addEventListener('load', kickoff, { once: true });
     },
 
     // 首页时钟旁的主题图标同步
