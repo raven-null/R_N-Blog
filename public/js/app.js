@@ -3061,6 +3061,8 @@ const BlogApp = {
         if (!box) return;
         this.bindCalendarWheel();
         this.bindCalendarClicks();
+        // 日记的折叠按钮不依赖登录态：先绑上，免得登录切换后点不动
+        this.bindJournalToggle();
         if (!this.lifeAdminKey()) {
             box.style.display = 'none';
             if (journalBox) journalBox.style.display = 'none';
@@ -3291,7 +3293,7 @@ const BlogApp = {
         const after = () => {
             this.renderLife();
             this.updateSelectedCalCell();
-            this.openEditor();
+            // 不再自动弹出「任务 / 日记」选择层：写东西走日历左边那两个按钮
         };
         if (month !== this.lifeState.month) {
             this.loadLifeMonth(month).then(ok => { if (ok) after(); });
@@ -3309,6 +3311,9 @@ const BlogApp = {
         if (!proj || !day) return;
         proj.hidden = !!on;
         day.hidden = !on;
+        // 卡片上的标记：日历左边那两个「任务 / 日记」按钮只在点过日期后出现
+        const panel = document.getElementById('hv3TodayPanel');
+        if (panel) panel.classList.toggle('is-day-pane', !!on);
         if (on) {
             /* 点日期后，任务区 / 日记区必须真的露出来：
                它们可能被「未登录」时写的 display:none 或折叠状态藏着 */
@@ -3316,10 +3321,11 @@ const BlogApp = {
             const jour = document.getElementById('homeJournalBox');
             if (life) life.style.display = '';
             if (jour) {
+                // 日记默认不展开：点日期先看任务，想写再点标题
                 jour.style.display = '';
-                jour.classList.remove('is-collapsed');
+                jour.classList.add('is-collapsed');
                 const btn = document.getElementById('journalToggle');
-                if (btn) btn.setAttribute('aria-expanded', 'true');
+                if (btn) btn.setAttribute('aria-expanded', 'false');
             }
         }
         this.syncTodaySideHeight();
@@ -3683,7 +3689,7 @@ const BlogApp = {
         this.bindJournalToggle();
     },
 
-    // 日记折叠开关（状态记在 localStorage，下次进来还是上次的样子）
+    // 日记折叠开关（默认收起：点日期先看任务，想写再点开）
     bindJournalToggle() {
         const wrap = document.getElementById('homeJournalBox');
         const btn = document.getElementById('journalToggle');
@@ -3693,12 +3699,9 @@ const BlogApp = {
         const apply = (open) => {
             wrap.classList.toggle('is-collapsed', !open);
             btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-            try { localStorage.setItem('blog-journal-open', open ? '1' : '0'); } catch (e) { /* 忽略 */ }
         };
 
-        let saved = '0';
-        try { saved = localStorage.getItem('blog-journal-open') || '0'; } catch (e) { saved = '0'; }
-        apply(saved === '1');
+        apply(false);
 
         btn.addEventListener('click', () => apply(wrap.classList.contains('is-collapsed')));
     },

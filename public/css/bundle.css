@@ -13947,7 +13947,11 @@ html[data-theme="dark"] .hv3-card {
 }
 
 .hv3-journals.is-collapsed .hv3-stack {
-    display: none;
+    height: 0;
+    margin-block: 0;
+    opacity: 0;
+    overflow: hidden;
+    pointer-events: none;
 }
 
 .hv3-journals-head {
@@ -14177,16 +14181,33 @@ html[data-theme="dark"] .hv3-today-panel {
     grid-template-columns: minmax(0, 1fr);
 }
 
-.hv3-today-panel.is-guest .hv3-day-actions {
+.hv3-today-panel.is-guest.is-day-pane .hv3-day-actions {
     display: none;
 }
 
-/* 日历左边竖排的两个按钮：直接进「写任务 / 写日记」，不用先弹选择层 */
+/* 日历左边竖排的两个按钮：直接进「写任务 / 写日记」，不用先弹选择层。
+   默认不出现 —— 没点日期时这里是项目栏，放两个「写」按钮没有意义；
+   点了日期才淡入，跟右栏换成任务 / 日记同步。 */
 .hv3-day-actions {
-    display: flex;
+    display: none;
     flex-direction: column;
     gap: 8px;
     padding-top: 2px;
+}
+
+.hv3-today-panel.is-day-pane .hv3-day-actions {
+    display: flex;
+    animation: hv3-day-actions-in .3s cubic-bezier(.22, 1, .36, 1) both;
+}
+
+/* 没这栏时日历直接铺满（否则 grid 第一列虽然空，gap 还会留 14px） */
+.hv3-today-panel:not(.is-day-pane) .hv3-today-main {
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+}
+
+@keyframes hv3-day-actions-in {
+    from { opacity: 0; transform: translateX(-10px); }
+    to { opacity: 1; transform: none; }
 }
 
 .hv3-day-act {
@@ -14225,11 +14246,20 @@ html[data-theme="dark"] .hv3-today-panel {
     order: 1;
 }
 
-/* 当天任务：吃掉右栏剩下的高度，条数多了自己滚 */
+/* 当天任务：跟着内容自然高（右栏整体滚），条数多了不压扁。
+   max-height 是为了日记展开时能把整块「挤走」—— 过渡高度才有动画可看。 */
 .hv3-today-tasks {
     flex: 0 0 auto;
     min-height: 0;
-    overflow: visible;
+    max-height: 1200px;
+    overflow: hidden;
+    opacity: 1;
+    transform: none;
+    transition:
+        max-height .38s cubic-bezier(.22, 1, .36, 1),
+        opacity .22s ease,
+        transform .38s cubic-bezier(.22, 1, .36, 1),
+        margin-bottom .38s cubic-bezier(.22, 1, .36, 1);
 }
 
 /* 任务项不许被压扁（否则条数多了只会变矮，不会滚动） */
@@ -14253,8 +14283,12 @@ html[data-theme="dark"] .hv3-today-panel {
 
 /* 日记展开时把任务整块让开：右栏就那么高，任务被压到只剩两行还要挤一条滚动条，
    根本看不了 —— 干脆收起任务，让日记占满整栏。日记收起时任务照常占满。 */
-.hv3-today-side .hv3-today-tasks {
-    display: block;
+.hv3-today-side-day:has(.hv3-journals:not(.is-collapsed)) .hv3-today-tasks {
+    max-height: 0;
+    opacity: 0;
+    transform: translateY(-10px);
+    margin-bottom: -8px;
+    pointer-events: none;
 }
 
 /* 日记在下：默认收起只留一行标题；展开时占满右栏（上面的任务已让开） */
@@ -14273,8 +14307,10 @@ html[data-theme="dark"] .hv3-today-panel {
     flex: 0 0 auto;
     min-height: 0;
     height: 150px;
+    margin: 2px 8px 10px 2px;
     overflow: hidden;
     overscroll-behavior: contain;
+    transition: height .38s cubic-bezier(.22, 1, .36, 1), opacity .24s ease, margin .38s cubic-bezier(.22, 1, .36, 1);
 }
 
 .hv3-journals .hv3-stack::-webkit-scrollbar {
