@@ -2698,3 +2698,64 @@ body:not(.has-music) .hv3-row-top .hv3-hero {
         height: var(--flip-h, 60px) !important;
     }
 }
+
+/* ------------------------------------------------------------
+   移动端三个图片盒子横滑（v3.54.14）
+   桌面结构是：.hv3-row-main > [.hv3-stage(文章卡), .hv3-col-right > [.hv3-top-row > [shot, square], .hv3-sub-grid(简报)]]。
+   ≤900px 把中间那两层容器用 display:contents 拆平，让文章卡、生活切片、方图
+   直接成为 .hv3-row-main 的 flex 项，排成一条横向滑动带（每块 86% 宽、就近吸附、滚动条隐藏）。
+   简报仍然跟在后面单独占一屏，不会挤进图片那排里。
+   ------------------------------------------------------------ */
+@media (max-width: 900px) {
+    .hv3-col-right,
+    .hv3-top-row {
+        display: contents !important;
+    }
+
+    .hv3-row-main {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: stretch;
+        gap: 12px;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+        padding-bottom: 4px;
+    }
+
+    .hv3-row-main::-webkit-scrollbar {
+        display: none;
+        width: 0;
+        height: 0;
+    }
+
+    .hv3-stage,
+    .hv3-shot,
+    .hv3-square {
+        flex: 0 0 86%;
+        min-width: 0;
+        scroll-snap-align: center;
+        align-self: stretch;
+        width: 86% !important;
+        max-height: none;
+    }
+
+    .hv3-shot {
+        aspect-ratio: var(--shot-ar, 1.6);
+    }
+
+    .hv3-square {
+        aspect-ratio: 1;
+        height: auto !important;
+    }
+
+    /* 简报：跟在图片后面自己占一屏，本身仍是网格 */
+    .hv3-sub-grid {
+        flex: 0 0 100%;
+        display: grid !important;
+        overflow-x: visible !important;
+        scroll-snap-align: start;
+    }
+}
