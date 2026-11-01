@@ -1413,6 +1413,38 @@ html[data-theme="dark"] .hv3-today-panel {
     display: none;
 }
 
+/* 编写区不再浮在日历下面，改成「日历右边」那一栏里的内联块：
+   点左边的「任务 / 日记」按钮就在右栏顶上展开，写完收起。 */
+.hv3-today-side-day .home-editor-pop {
+    position: static;
+    top: auto;
+    right: auto;
+    left: auto;
+    width: 100%;
+    max-width: none;
+    display: none;
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+    pointer-events: auto;
+    margin-bottom: 6px;
+}
+
+/* 编写区展开时右栏可能装不下（任务 + 编日记框），允许它自己滚一下，别把输入框裁掉 */
+.hv3-today-side-day:has(.home-editor-pop.is-open) {
+    overflow-y: auto;
+}
+
+.hv3-today-side-day .home-editor-pop.is-open {
+    display: block;
+    animation: hv3-editor-in .26s cubic-bezier(.22, 1, .36, 1) both;
+}
+
+@keyframes hv3-editor-in {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: none; }
+}
+
 /* 日历左边竖排的两个按钮：直接进「写任务 / 写日记」，不用先弹选择层。
    默认不出现 —— 没点日期时这里是项目栏，放两个「写」按钮没有意义；
    点了日期才淡入，跟右栏换成任务 / 日记同步。 */
@@ -1568,9 +1600,7 @@ html[data-theme="dark"] .hv3-today-panel {
 }
 
 /* 弹窗展开时给底部留出空间：否则「任务 / 日记」两个按钮会掉到卡片外面 */
-.hv3-today-panel:has(.home-editor-pop.is-open) {
-    padding-bottom: 68px;
-}
+
 
 /* 注意：这里不能写 align-self: start。「今天」卡现在是第三行里唯一的整宽块
    （项目条已经挪到它下面），一旦按内容宽度站住就会缩成日历那么窄 —— 之前就是这样塌的。 */

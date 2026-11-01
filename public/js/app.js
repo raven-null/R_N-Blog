@@ -3485,6 +3485,18 @@ const BlogApp = {
         const journalForm = document.getElementById('editorJournalForm');
         if (choice) choice.style.display = 'none';
 
+        // 写任务时，这天要是还没有日记，就别把「日记」那一块摆在那儿占地方
+        const jourBox = document.getElementById('homeJournalBox');
+        if (jourBox) {
+            if (kind === 'task') {
+                const hasJournal = !!(this.lifeState.journals || [])
+                    .find(j => j && j.date === this.lifeState.date && j.content);
+                jourBox.style.display = hasJournal ? '' : 'none';
+            } else {
+                jourBox.style.display = '';
+            }
+        }
+
         if (kind === 'task') {
             if (journalForm) journalForm.style.display = 'none';
             if (taskForm) taskForm.style.display = '';
@@ -3513,6 +3525,9 @@ const BlogApp = {
     closeEditor() {
         const wrap = document.getElementById('homeEditorWrap');
         if (wrap) wrap.classList.remove('is-open');
+        // 写任务时临时藏起来的日记块，关掉编辑器就恢复
+        const jourBox = document.getElementById('homeJournalBox');
+        if (jourBox) jourBox.style.display = '';
     },
 
     // 提交任务
