@@ -16093,6 +16093,26 @@ body:not(.has-music) .hv3-row-top .hv3-hero {
     }
 }
 
+/* 简报钉在图片后面（v3.54.22）
+   简报已经从 .hv3-col-right 搬出来，成为 .hv3 的直接子项；
+   用 order 再钉一次顺序：图片区在前、简报在后，后面才是日历那一行。
+   顺手把图片区锁成不横向溢出，别让旁边多露出半张图。
+   ------------------------------------------------------------ */
+@media (max-width: 900px) {
+    .hv3 > .hv3-row-main { order: 1; }
+    .hv3 > .hv3-sub-grid { order: 2; }
+    .hv3 > .hv3-row-bottom { order: 3; }
+
+    .hv3-row-main {
+        overflow: hidden !important;
+        display: block !important;
+    }
+
+    .hv3-row-main > .hv3-square {
+        display: none !important;
+    }
+}
+
 
 /* music.css */
 /* ============================================================
