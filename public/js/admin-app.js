@@ -3139,15 +3139,12 @@
         }
         // 页面加载后初始化事件委托
         document.addEventListener('DOMContentLoaded',initCardDelegation);
-        // 设置卡片拖拽排序（每个分类内自由拖动，顺序存 localStorage）
-        let settingsDragCard=null;
-        const settingsOrderKey='admin_settings_order_v1';
+        // 设置卡片：折叠（点标题展开/收起，状态存 localStorage）
+        // 拖动排序已下线（v3.52.6）：顺序固定为页面里的书写顺序，⠿ 把手和相关拖拽逻辑一起删掉
         function settingsCardKey(card){
             const h=card.querySelector('h3 .settings-title')||card.querySelector('h3');
             return h?h.textContent.replace(/⠿/g,'').trim():'';
         }
-        // 卡片折叠：点标题展开/收起，状态存 localStorage
-        let suppressSettingsClick=false;
         function saveSettingsCollapse(){
             const collapsed=[];
             document.querySelectorAll('.settings-section .settings-group.collapsed').forEach(c=>collapsed.push(settingsCardKey(c)));
@@ -3169,101 +3166,14 @@
                 const h=card.querySelector('h3');
                 if(!h)return;
                 h.addEventListener('click',e=>{
-                    if(suppressSettingsClick){suppressSettingsClick=false;return}
-                    if(e.target.closest('.settings-grip'))return;
                     card.classList.toggle('collapsed');
                     saveSettingsCollapse();
                 });
             });
             restoreSettingsCollapse();
         }
-        function saveSettingsOrder(){
-            const order={};
-            document.querySelectorAll('.settings-section').forEach(section=>{
-                order[section.dataset.section]=[...section.querySelectorAll(':scope > .settings-group')].map(settingsCardKey);
-            });
-            try{localStorage.setItem(settingsOrderKey,JSON.stringify(order))}catch(e){}
-            // 同步到服务端，保证任何刷新 / 设备都不变
-            try{
-                fetch('/api/admin?action=setting-order',{
-                    method:'POST',
-                    headers:{'Content-Type':'application/json','X-Admin-Key':adminKey},
-                    body:JSON.stringify({order})
-                }).catch(()=>{});
-            }catch(e){}
-        }
-        async function restoreSettingsOrder(){
-            let order=null;
-            try{order=JSON.parse(localStorage.getItem(settingsOrderKey)||'null')}catch(e){}
-            // 优先使用服务端排序（跨设备一致）
-            try{
-                const r=await fetch('/api/admin?action=setting-order',{headers:{'X-Admin-Key':adminKey}});
-                const d=await r.json();
-                if(d.status==='success'&&d.data&&Object.keys(d.data).length)order=d.data;
-            }catch(e){}
-            if(!order)return;
-            document.querySelectorAll('.settings-section').forEach(section=>{
-                const names=order[section.dataset.section];
-                if(!Array.isArray(names)||!names.length)return;
-                const cards=[...section.querySelectorAll(':scope > .settings-group')];
-                const byName=new Map(cards.map(c=>[settingsCardKey(c),c]));
-                names.forEach(n=>{
-                    const card=byName.get(n);
-                    if(card){section.appendChild(card);byName.delete(n)}
-                });
-            });
-            // 回写本地缓存
-            try{localStorage.setItem(settingsOrderKey,JSON.stringify(order))}catch(e){}
-        }
-        function initSettingsDrag(){
-            document.querySelectorAll('.settings-section').forEach(section=>{
-                section.querySelectorAll(':scope > .settings-group').forEach(card=>{
-                    card.setAttribute('draggable','true');
-                    card.addEventListener('dragstart',e=>{
-                        if(e.target.closest('input,textarea,select,button,label,a,img')){e.preventDefault();return}
-                        settingsDragCard=card;
-                        card.classList.add('dragging');
-                        e.dataTransfer.effectAllowed='move';
-                        try{e.dataTransfer.setData('text/plain','')}catch(err){}
-                    });
-                    card.addEventListener('dragover',e=>{
-                        if(!settingsDragCard||settingsDragCard===card)return;
-                        e.preventDefault();
-                        e.dataTransfer.dropEffect='move';
-                        const r=card.getBoundingClientRect();
-                        if(e.clientY>r.top+r.height/2)card.after(settingsDragCard);
-                        else card.before(settingsDragCard);
-                    });
-                    card.addEventListener('drop',e=>e.preventDefault());
-                    card.addEventListener('dragend',()=>{
-                        card.classList.remove('dragging');
-                        suppressSettingsClick=true;
-                        if(settingsDragCard===card){
-                            settingsDragCard=null;
-                            saveSettingsOrder();
-                        }
-                    });
-                });
-            });
-        }
-        // 设置组整体是 draggable（拖动排序），滑块按下去会被浏览器当成「拖动整张卡」，
-        // 表现就是点轨道能跳、按住拖却不动。按下滑块的一瞬间先关掉祖先的 draggable，松手再恢复。
-        document.addEventListener('pointerdown',e=>{
-            const range=e.target.closest('input[type="range"]');
-            if(!range)return;
-            const group=range.closest('.settings-group');
-            if(group)group.setAttribute('draggable','false');
-        },true);
-        const restoreGroupDrag=()=>{
-            document.querySelectorAll('.settings-group[draggable="false"]').forEach(g=>g.setAttribute('draggable','true'));
-        };
-        document.addEventListener('pointerup',restoreGroupDrag,true);
-        document.addEventListener('pointercancel',restoreGroupDrag,true);
-
         document.addEventListener('DOMContentLoaded',()=>{
-            initSettingsDrag();
             initSettingsCollapse();
-            restoreSettingsOrder();
         });
 
         (function(){

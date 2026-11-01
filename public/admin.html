@@ -384,13 +384,10 @@
         .settings-tab.active{background:var(--accent);border-color:var(--accent);color:#000;font-weight:600}
         .settings-section{display:none}
         .settings-section.active{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(380px,100%),1fr));gap:16px;align-items:start;margin-bottom:16px}
-        .settings-group{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;display:block;cursor:grab;transition:box-shadow .15s,border-color .15s,opacity .15s;min-width:0}
+        .settings-group{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;display:block;transition:box-shadow .15s,border-color .15s,opacity .15s;min-width:0}
         .settings-group:hover{border-color:var(--border-light)}
-        .settings-group.dragging{opacity:.45;cursor:grabbing;border-color:var(--accent);box-shadow:var(--shadow)}
         .settings-group h3{font-size:14px;color:var(--accent);margin-bottom:12px;font-weight:600;display:flex;align-items:center;gap:8px;user-select:none;cursor:pointer}
         .settings-group h3 .settings-title{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-        .settings-grip{color:var(--text-muted);font-size:14px;cursor:grab;letter-spacing:1px;transition:color .15s;padding:2px 4px;flex-shrink:0}
-        .settings-grip:hover{color:var(--accent)}
         .settings-chevron{color:var(--text-muted);font-size:12px;cursor:pointer;transition:transform .2s;flex-shrink:0;padding:2px}
         .settings-group.collapsed .settings-chevron{transform:rotate(-90deg)}
         .settings-group.collapsed > :not(h3){display:none}
@@ -1150,7 +1147,7 @@
                         <div class="settings-section active" data-section="front">
                         <!-- 1. 站点名称与标题 -->
                         <div class="settings-group">
-                            <h3><span class="settings-title">站点名称与标题</span><span class="settings-grip" title="拖动排序">⠿</span><span class="settings-chevron" title="展开/收起">▾</span></h3>
+                            <h3><span class="settings-title">站点名称与标题</span><span class="settings-chevron" title="展开/收起">▾</span></h3>
                             <div class="settings-field">
                                 <label>网站标题（浏览器标签页显示）</label>
                                 <input type="text" id="setSiteTitle" placeholder="我的博客">
@@ -1172,7 +1169,7 @@
 
                         <!-- 2. 个人资料 -->
                         <div class="settings-group">
-                            <h3><span class="settings-title">个人资料（主页欢迎区）</span><span class="settings-grip" title="拖动排序">⠿</span><span class="settings-chevron" title="展开/收起">▾</span></h3>
+                            <h3><span class="settings-title">个人资料（主页欢迎区）</span><span class="settings-chevron" title="展开/收起">▾</span></h3>
                             <div class="settings-field">
                                 <label>头像</label>
                                 <div class="settings-avatar-row">
@@ -1197,7 +1194,7 @@
 
                         <!-- 6. 主页布局 -->
                         <div class="settings-group">
-                            <h3><span class="settings-title">主页布局</span><span class="settings-grip" title="拖动排序">⠿</span><span class="settings-chevron" title="展开/收起">▾</span></h3>
+                            <h3><span class="settings-title">主页布局</span><span class="settings-chevron" title="展开/收起">▾</span></h3>
                             <div class="settings-field">
                                 <label>主页内容宽度 <span class="settings-range-val" id="setHomeWidthVal">86%</span></label>
                                 <!-- draggable="false"：设置组整体可拖动排序（.settings-group 带 draggable），
@@ -1218,7 +1215,7 @@
 
                         <!-- 7. 关于信息 -->
                         <div class="settings-group">
-                            <h3><span class="settings-title">关于信息（主页底部）</span><span class="settings-grip" title="拖动排序">⠿</span><span class="settings-chevron" title="展开/收起">▾</span></h3>
+                            <h3><span class="settings-title">关于信息（主页底部）</span><span class="settings-chevron" title="展开/收起">▾</span></h3>
                             <div class="settings-field">
                                 <label>版本</label>
                                 <input type="text" id="setAboutVersion" placeholder="输入版本号，如 v1.0">
@@ -1235,7 +1232,7 @@
 
                         <!-- 桌宠（右下角的渡鸦）：常用开关放外面，名字/性格与朗读设置折起来 -->
                         <div class="settings-group">
-                            <h3><span class="settings-title">桌宠（右下角的渡鸦）</span><span class="settings-grip" title="拖动排序">⠿</span><span class="settings-chevron" title="展开/收起">▾</span></h3>
+                            <h3><span class="settings-title">桌宠（右下角的渡鸦）</span><span class="settings-chevron" title="展开/收起">▾</span></h3>
                             <div class="settings-toggle-list">
                                 <div class="settings-toggle-item"><span>显示桌宠</span><label class="switch"><input type="checkbox" id="setPetEnabled" checked><span class="slider"></span></label></div>
                                 <div class="settings-toggle-item"><span>主动搭话</span><label class="switch"><input type="checkbox" id="setPetAutoTalk" checked><span class="slider"></span></label></div>
@@ -1301,7 +1298,7 @@
                         <div class="settings-section" data-section="ai">
                         <!-- 6. AI 助手 -->
                         <div class="settings-group">
-                            <h3><span class="settings-title">AI 助手（聊天机器人）</span><span class="settings-grip" title="拖动排序">⠿</span><span class="settings-chevron" title="展开/收起">▾</span></h3>
+                            <h3><span class="settings-title">AI 助手（聊天机器人）</span><span class="settings-chevron" title="展开/收起">▾</span></h3>
                             <div class="settings-toggle-list" style="margin-bottom:12px">
                                 <div class="settings-toggle-item"><span>启用 AI 助手</span><label class="switch"><input type="checkbox" id="setAiEnabled" checked><span class="slider"></span></label></div>
                             </div>
@@ -1350,7 +1347,7 @@
                              只回答写作中的疑问，不读正文、不改正文（后端 action=ai-write 代调）。
                              写作页永远拿不到这个 key —— 设置接口的公开 GET 会把它抹掉。 -->
                         <div class="settings-group">
-                            <h3><span class="settings-title">写作助手（写作页的 AI）</span><span class="settings-grip" title="拖动排序">⠿</span><span class="settings-chevron" title="展开/收起">▾</span></h3>
+                            <h3><span class="settings-title">写作助手（写作页的 AI）</span><span class="settings-chevron" title="展开/收起">▾</span></h3>
                             <div class="settings-toggle-list" style="margin-bottom:12px">
                                 <div class="settings-toggle-item"><span>启用写作助手</span><label class="switch"><input type="checkbox" id="setAiWriteEnabled" checked><span class="slider"></span></label></div>
                             </div>
@@ -1394,11 +1391,12 @@
                             </div>
                             <div class="settings-tip">写作页右侧「AI」页签用这套配置：只回答写作中的疑问，不读取正文、也不会改正文；密钥独立，不影响访客端聊天。<br>小米 MiMo 的 <code>tp-</code> 开头密钥（Token Plan）请选「小米 MiMo（Token Plan）」，选错会 401。</div>
                         </div>
+                        </div>
 
                         <div class="settings-section" data-section="backend">
                         <!-- 8. 后台密码 -->
                         <div class="settings-group">
-                            <h3><span class="settings-title">后台密码</span><span class="settings-grip" title="拖动排序">⠿</span><span class="settings-chevron" title="展开/收起">▾</span></h3>
+                            <h3><span class="settings-title">后台密码</span><span class="settings-chevron" title="展开/收起">▾</span></h3>
                             <div class="settings-field">
                                 <label>当前密码</label>
                                 <input type="password" id="setOldPassword" placeholder="输入当前密码" autocomplete="off">
@@ -1419,7 +1417,7 @@
 
                         <!-- 9. 内容维护 -->
                         <div class="settings-group">
-                            <h3><span class="settings-title">内容维护</span><span class="settings-grip" title="拖动排序">⠿</span><span class="settings-chevron" title="展开/收起">▾</span></h3>
+                            <h3><span class="settings-title">内容维护</span><span class="settings-chevron" title="展开/收起">▾</span></h3>
                             <div class="settings-field">
                                 <label>旧文章正文里的内嵌画布</label>
                                 <div class="settings-tip">
@@ -1618,7 +1616,7 @@
     </div>
 
         <script src="js/tag-picker.js?v=1.1.2"></script>
-        <script src="js/admin-app.js?v=1.32.2"></script>
+        <script src="js/admin-app.js?v=1.32.3"></script>
 
     <!-- 前台预览抽屉（iframe 内嵌，零跳出） -->
     <style>
