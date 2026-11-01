@@ -2244,3 +2244,23 @@ body:not(.has-music) .hv3-row-top .hv3-hero {
     color: var(--text-muted);
     letter-spacing: .04em;
 }
+
+/* ------------------------------------------------------------
+   移动端一刀切单列（v3.54.2）
+   12 栏矩阵在 ≤900px 时本来有 grid-template-columns: minmax(0,1fr)，
+   但后面还有别的 .hv3-grid / 子网格规则把它盖回 12 列，结果是：
+   有的卡片占满 12 列（满宽），有的被 grid-column:auto 塞进第 1 列（只剩 176px 宽），
+   手机上看着就“不成一排”。这里统一成一条：单列 + 每块都占满整行。
+   ------------------------------------------------------------ */
+@media (max-width: 900px) {
+    .hv3-grid,
+    .hv3-sub-grid {
+        grid-template-columns: minmax(0, 1fr) !important;
+    }
+
+    .hv3-grid > *,
+    .hv3-sub-grid > * {
+        grid-column: 1 / -1 !important;
+        min-width: 0;
+    }
+}
