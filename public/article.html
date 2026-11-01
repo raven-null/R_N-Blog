@@ -563,11 +563,15 @@
         }
 
         /* 文章内容 */
+        /* 背景和上面的文章头卡（.article-header）用同一个玻璃底：
+           glass.css 里头卡是 `background: var(--glass-bg) !important`（能透出背景插画），
+           正文卡这里原来写死 `--bg-secondary`（实色），于是上下两块一个透一个不透。
+           --glass-bg 本身分浅/深两套（tokens.css），跟着主题走。 */
         .article-content {
-            background: var(--bg-secondary);
+            background: var(--glass-card, var(--glass-bg));
             border-radius: 16px;
             padding: 32px;
-            border: 1px solid var(--border);
+            border: 1px solid var(--glass-border, var(--border));
             line-height: 1.8;
             color: var(--text-primary);
             box-shadow: 0 4px 20px var(--shadow);
