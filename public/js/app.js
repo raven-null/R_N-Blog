@@ -53,6 +53,13 @@ const BlogApp = {
             this.applyHandBody(!document.documentElement.classList.contains('hand-body'));
         });
 
+        // 首页背景切换（手写体左边那颗）：默认天空插画 → 图库图池里的横图，轮着换
+        document.getElementById('hvBgBtn')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.cycleHeroBg();
+        });
+        this.restoreHeroBg();
+
         // 首页主题切换（时钟旁的小圆钮）：只切「日间 / 夜间」两档。
         // 原来走 nextTheme() 是 auto → light → dark，白天在 auto 下按一次等于没变，要按两次才黑
         document.getElementById('hvThemeBtn')?.addEventListener('click', (e) => {
@@ -6217,6 +6224,91 @@ const BlogApp = {
         const btn = document.getElementById('hvHandBtn');
         if (btn) btn.setAttribute('aria-pressed', on ? 'true' : 'false');
         return !!on;
+    },
+
+    // ===== 首页背景切换 =====
+    // 候选 = 默认天空插画 + 图库图池里的横向图（public/images/loader/manifest.json）。
+    // 点一次换一张，选择记在 localStorage；换图只动 sky 层那张 <img>，
+    // 天色滤镜（daylight.js 的 --art-brightness）照旧生效。
+    heroBgPool: null,
+
+    loadHeroBgPool() {
+        if (this.heroBgPool) return Promise.resolve(this.heroBgPool);
+        return fetch('/images/loader/manifest.json', { cache: 'force-cache' })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((data) => {
+                const items = (data && Array.isArray(data.items) ? data.items : [])
+                    .filter((it) => it && it.slots && String(it.rating || 'general') === 'general');
+                this.heroBgPool = items;
+                return items;
+            })
+            .catch(() => {
+                this.heroBgPool = [];
+                return [];
+            });
+    },
+
+    // 把 sky 层换成指定图；传 null 表示回到默认的天空插画（带 srcset）
+    applyHeroBg(item) {
+        const art = document.getElementById('skyArt');
+        if (!art) return;
+        if (!item) {
+            art.removeAttribute('data-picked');
+            art.setAttribute('srcset', 'images/sky/kumeng-960.webp 960w, images/sky/kumeng-1920.webp 1920w');
+            art.setAttribute('src', 'images/sky/kumeng-1920.webp');
+            return;
+        }
+        const url = item.slots['1920'] || item.slots['1280'] || item.slots['2560'];
+        if (!url) return;
+        art.removeAttribute('srcset');   // srcset 优先，留着的话换了 src 也没用
+        art.setAttribute('data-picked', item.id);
+        art.setAttribute('src', url);
+    },
+
+    cycleHeroBg() {
+        const btn = document.getElementById('hvBgBtn');
+        const art = document.getElementById('skyArt');
+        if (!art) return;
+
+        this.loadHeroBgPool().then((pool) => {
+            // index：0 = 默认天空图，1..n = 图池里的第几张
+            let idx = 0;
+            try { idx = Number(localStorage.getItem('blog-hero-bg') ?? '0'); } catch (e) { idx = 0; }
+            if (!Number.isFinite(idx) || idx < 0) idx = 0;
+
+            const total = pool.length + 1;   // 默认图也算一项
+            idx = (idx + 1) % total;
+
+            const item = idx === 0 ? null : pool[idx - 1];
+            this.applyHeroBg(item);
+            try { localStorage.setItem('blog-hero-bg', String(idx)); } catch (e) { }
+
+            if (btn) {
+                const name = item ? ('图库背景 ' + idx + ' / ' + pool.length) : '默认天空背景';
+                btn.title = '切换背景（当前：' + name + '）';
+                btn.setAttribute('aria-pressed', item ? 'true' : 'false');
+            }
+        });
+    },
+
+    restoreHeroBg() {
+        let idx = 0;
+        try { idx = Number(localStorage.getItem('blog-hero-bg') ?? '0'); } catch (e) { idx = 0; }
+        if (!Number.isFinite(idx) || idx <= 0) {
+            const btn = document.getElementById('hvBgBtn');
+            if (btn) { btn.title = '切换背景（当前：默认天空背景）'; btn.setAttribute('aria-pressed', 'false'); }
+            return;
+        }
+        this.loadHeroBgPool().then((pool) => {
+            const item = pool[idx - 1];
+            if (!item) return;
+            this.applyHeroBg(item);
+            const btn = document.getElementById('hvBgBtn');
+            if (btn) {
+                btn.title = '切换背景（当前：图库背景 ' + idx + ' / ' + pool.length + '）';
+                btn.setAttribute('aria-pressed', 'true');
+            }
+        });
     },
 
     // 首页时钟旁的主题图标同步
