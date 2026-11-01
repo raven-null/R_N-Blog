@@ -1300,31 +1300,37 @@ const BlogApp = {
         const track = list.firstElementChild;
         if (!track) return;
 
-        // 一帧 0.28px ≈ 60fps 下 17px/s：再慢一点，读标题不赶
-        const SPEED = 0.28;
-        let raf = 0;
+        // 每 16ms 推进 0.5px ≈ 31px/s：比 17px/s 那版看得出在动，又不至于读不完标题
+        const SPEED = 0.5;
+        // 用固定间隔推进（和日历旁的项目条一致）：rAF 在后台/无渲染时会被挂起，容易「看着不滚」
+        let timer = 0;
         let paused = false;
         let resumeTimer = 0;
+        let acc = 0;
         // 内容不到一屏就不用滚
         let half = 0;
         const measure = () => { half = track.scrollHeight / 2; };
         measure();
         window.addEventListener('resize', measure, { passive: true });
 
-        const step = () => {
-            raf = 0;
-            if (paused || document.hidden || half <= list.clientHeight + 6) return;
-            list.scrollTop += SPEED;
+        const tick = () => {
+            if (paused || document.hidden) return;
+            if (half <= 6 || half <= list.clientHeight + 6) return;
+            // scrollTop 只认真数像素：先攒够 1px 再加，不然小数每帧都被吞掉
+            acc += SPEED;
+            if (acc < 1) return;
+            const stepPx = Math.floor(acc);
+            acc -= stepPx;
+            list.scrollTop += stepPx;
             // 滚过一半（第二份开头 ≈ 第一份开头）就悄悄减回去，无限循环
             if (list.scrollTop >= half) list.scrollTop -= half;
-            raf = requestAnimationFrame(step);
         };
         const play = () => {
-            if (raf || paused || document.hidden) return;
-            raf = requestAnimationFrame(step);
+            if (timer || paused || document.hidden) return;
+            timer = setInterval(tick, 16);
         };
         const stop = () => {
-            if (raf) { cancelAnimationFrame(raf); raf = 0; }
+            if (timer) { clearInterval(timer); timer = 0; }
         };
         const pause = (hold) => {
             paused = true;
@@ -1350,7 +1356,7 @@ const BlogApp = {
         setInterval(() => {
             if (document.hidden) return;
             if (!paused) {
-                if (!raf) play();
+                if (!timer) play();
                 return;
             }
             if (list.matches(':hover') || list.matches(':focus-within')) return;   // 真在交互，别打断
@@ -5223,7 +5229,7 @@ const BlogApp = {
         box.innerHTML = items.map(p => this.hv3DeployedCard(p)).join('');
         // 横向一条：鼠标按住可拖动，滚动条藏起来；和简报一样自己慢慢滚（这里是左右）
         this.bindProjectsDragScroll(box);
-        this.initProjectsLoopScroll(box, '.hv3-project', { auto: true, speed: 0.18 });
+        this.initProjectsLoopScroll(box, '.hv3-project', { auto: true, speed: 0.35 });
     },
 
     // 首页已上线项目卡片：封面截图 + 名称/标签 + 域名
