@@ -15993,6 +15993,39 @@ body:not(.has-music) .hv3-row-top .hv3-hero {
     }
 }
 
+/* 宽高都随图片（v3.54.19）
+   用户要的是盒子跟着图片比例走：这里把三块的高度钉住（260px），
+   宽度交给 aspect-ratio 自己算——横图就更宽、竖图就更窄，块与块的间隙仍由容器的 12px gap 决定。
+   文章卡没有比例信息，单独给 84% 宽。
+   ------------------------------------------------------------ */
+@media (max-width: 900px) {
+    .hv3-row-main > .hv3-shot,
+    .hv3-row-main > .hv3-square {
+        flex: 0 0 auto !important;
+        width: auto !important;
+        max-width: none !important;
+        min-width: 0 !important;
+        height: 260px !important;
+        margin: 0 !important;
+    }
+
+    .hv3-row-main > .hv3-shot {
+        aspect-ratio: var(--shot-ar, 1.6) !important;
+    }
+
+    .hv3-row-main > .hv3-square {
+        aspect-ratio: 1 !important;
+    }
+
+    .hv3-row-main > .hv3-stage {
+        flex: 0 0 84% !important;
+        width: 84% !important;
+        max-width: 84% !important;
+        height: 260px !important;
+        margin: 0 !important;
+    }
+}
+
 
 /* music.css */
 /* ============================================================
