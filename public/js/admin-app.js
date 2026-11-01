@@ -2590,6 +2590,19 @@
             await persistProjects();
         }
 
+        // 主页宽度滑块：拖动时只更新旁边那行文字（真正生效要保存后由前台 home-layout.js 读）
+        function previewHomeWidth(v){
+            const pct=Math.round(Number(v)||86);
+            const val=document.getElementById('setHomeWidthVal');
+            if(val)val.textContent=pct+'%';
+            const hint=document.getElementById('setHomeWidthHint');
+            if(hint){
+                const w=window.innerWidth||1920;
+                const content=Math.min(1900,Math.round(w*pct/100));
+                hint.textContent='当前屏幕 '+w+'px：内容约 '+content+'px，左右各留 '+Math.max(0,Math.round((w-content)/2))+'px';
+            }
+        }
+
         async function loadSettings(){
             const r=await apiFetch('action=settings');
             const s=r.status==='success'&&r.data?r.data:{};
@@ -2606,6 +2619,13 @@
             document.getElementById('setViewGallery').checked=s.views?s.views.gallery!==false:true;
             document.getElementById('setViewProjects').checked=s.views?s.views.projects!==false:true;
             document.getElementById('setNavTags').value=(s.navTags||[]).join(',');
+            // 主页布局滑块
+            const homePctEl=document.getElementById('setHomeWidthPct');
+            if(homePctEl){
+                const pct=Number((s.layout||{}).homeWidthPct);
+                homePctEl.value=String(Number.isFinite(pct)&&pct>=40&&pct<=100?Math.round(pct):86);
+                previewHomeWidth(homePctEl.value);
+            }
             document.getElementById('setAboutVersion').value=s.about?s.about.version||'':'';
             document.getElementById('setAboutTech').value=s.about?s.about.tech||'':'';
             document.getElementById('setAboutUpdated').value=s.about?s.about.updated||'':'';
@@ -2856,6 +2876,14 @@
                     projects:document.getElementById('setViewProjects').checked,
                 },
                 navTags:document.getElementById('setNavTags').value.split(',').map(s=>s.trim()).filter(Boolean),
+            // 主页布局：滑块值 = 内容占视口宽度的百分比（前台 home-layout.js 读它）
+            layout:{
+                homeWidthPct:(()=>{
+                    const el=document.getElementById('setHomeWidthPct');
+                    const n=Number(el?el.value:86);
+                    return Number.isFinite(n)&&n>=40&&n<=100?Math.round(n):86;
+                })(),
+            },
                 about:{
                     version:document.getElementById('setAboutVersion').value.trim(),
                     tech:document.getElementById('setAboutTech').value.trim(),

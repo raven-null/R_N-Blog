@@ -428,6 +428,11 @@
         .switch input:checked + .slider{background:var(--accent);border-color:var(--accent)}
         .switch input:checked + .slider:before{transform:translateX(18px);background:#000}
         .settings-tip{font-size:11px;color:var(--text-muted);margin-top:8px}
+        /* 设置里的拉动条（主页内容宽度） */
+        .settings-range{width:100%;height:6px;margin:10px 0 4px;border-radius:999px;appearance:none;-webkit-appearance:none;background:var(--surface-3,#e6e2d8);outline:none;cursor:pointer}
+        .settings-range::-webkit-slider-thumb{appearance:none;-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--accent);border:2px solid var(--bg-primary);box-shadow:0 2px 6px rgba(0,0,0,.22)}
+        .settings-range::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--accent);border:2px solid var(--bg-primary)}
+        .settings-range-val{font-family:'Courier New',monospace;font-size:12px;color:var(--accent);margin-left:6px}
         /* 头像预览 */
         .settings-avatar-row{display:flex;gap:10px;align-items:center}
         .settings-avatar-preview{width:48px;height:48px;border-radius:50%;border:1px dashed var(--border);display:flex;align-items:center;justify-content:center;overflow:hidden;background:var(--bg-input);color:var(--text-muted);font-size:11px;flex-shrink:0}
@@ -1180,6 +1185,17 @@
                             <div class="settings-tip">首页导航栏将显示这些标签用于文章筛选，默认显示「全部」</div>
                         </div>
 
+                        <!-- 6. 主页布局 -->
+                        <div class="settings-group">
+                            <h3><span class="settings-title">主页布局</span><span class="settings-grip" title="拖动排序">⠿</span><span class="settings-chevron" title="展开/收起">▾</span></h3>
+                            <div class="settings-field">
+                                <label>主页内容宽度 <span class="settings-range-val" id="setHomeWidthVal">86%</span></label>
+                                <input type="range" min="40" max="100" step="1" value="86" id="setHomeWidthPct"
+                                       class="settings-range" oninput="previewHomeWidth(this.value)">
+                                <div class="settings-tip">宽度是占屏幕的百分比，窄屏宽屏会自己跟着变；内容最宽 1900px，再宽就只加留白。<span id="setHomeWidthHint"></span></div>
+                            </div>
+                        </div>
+
                         <!-- 7. 关于信息 -->
                         <div class="settings-group">
                             <h3><span class="settings-title">关于信息（主页底部）</span><span class="settings-grip" title="拖动排序">⠿</span><span class="settings-chevron" title="展开/收起">▾</span></h3>
@@ -1609,6 +1625,6 @@
 <script src="js/login.js?v=1.0.0"></script>
     <script src="/js/theme.js?v=20261030c" defer></script>
     <script>document.addEventListener("DOMContentLoaded", function () { if (window.ThemeManager) ThemeManager.init(); });</script>
-<link rel="stylesheet" href="/css/renewal.css?v=c4f4adabf9">
+<link rel="stylesheet" href="/css/renewal.css?v=4a14f682c2">
 </body>
 </html>

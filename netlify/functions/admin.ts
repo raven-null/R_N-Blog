@@ -1519,6 +1519,8 @@ export default async (req: Request) => {
       bio: "",
       views: { home: true, blog: true, gallery: true, projects: true },
       stats: { posts: true, tags: true, words: true, images: true },
+      // 主页布局（v3.52.4）：后台「主页布局」里那条滑块调的，前台 home-layout.js 读它设 CSS 变量
+      layout: { homeWidthPct: 86 },
       navTags: [],
       about: { version: "", tech: "", updated: "" },
       ai: {
@@ -1595,6 +1597,13 @@ export default async (req: Request) => {
           write: { ...writeMerged, hasKey: writeHasKey },
         },
         navTags: data.navTags && data.navTags.length ? data.navTags : DEFAULT_SETTINGS.navTags,
+        // 主页布局：滑块值 = 内容占视口宽度百分比（60–100），越界一律夹回默认
+        layout: {
+          homeWidthPct: (() => {
+            const v = Number((data.layout || {}).homeWidthPct)
+            return Number.isFinite(v) && v >= 40 && v <= 100 ? Math.round(v) : DEFAULT_SETTINGS.layout.homeWidthPct
+          })(),
+        },
         // 桌宠设置：公开字段，没有密钥，直接跟着设置返回给前台
         pet: {
           ...DEFAULT_SETTINGS.pet,
@@ -1613,7 +1622,7 @@ export default async (req: Request) => {
     }
     if (req.method === "POST") {
       const body = await req.json().catch(() => ({}))
-      const { siteTitle, favicon, siteName, avatar, authorName, bio, views, stats, navTags, about, ai, pet } = body
+      const { siteTitle, favicon, siteName, avatar, authorName, bio, views, stats, navTags, about, ai, pet, layout } = body
 
       // 修改密码操作
       if (body.oldPassword !== undefined || body.newPassword !== undefined) {
@@ -1714,6 +1723,17 @@ export default async (req: Request) => {
             ttsPitch: clampNum(p.ttsPitch, DEFAULT_SETTINGS.pet.ttsPitch, 0.6, 1.6),
             ttsVoice: String(p.ttsVoice || "").trim().slice(0, 40),
             persona: String(p.persona || "").trim().slice(0, 300),
+          }
+        })(),
+        // 主页布局：请求没带 layout（老客户端）时沿用库里已有的值
+        layout: (() => {
+          const prev = (() => {
+            try { return (JSON.parse(prevRaw || "{}").layout) || {} } catch { return {} }
+          })()
+          const src = (layout && typeof layout === "object" ? layout : prev) as any
+          const n = Number(src.homeWidthPct)
+          return {
+            homeWidthPct: Number.isFinite(n) && n >= 40 && n <= 100 ? Math.round(n) : DEFAULT_SETTINGS.layout.homeWidthPct,
           }
         })(),
       }
