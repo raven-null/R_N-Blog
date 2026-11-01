@@ -82,7 +82,15 @@ html[data-theme="dark"] .hv3-card {
 .hv3-who { grid-area: who; }
 .hv3-stats { grid-area: stats; justify-self: start; }
 .hv3-toggles { grid-area: toggles; justify-self: end; }
-.hv3-clock { grid-area: clock; justify-self: center; text-align: center; }
+.hv3-clock {
+    grid-area: clock;
+    justify-self: center;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+}
 
 .hv3-who {
     display: flex;
@@ -177,7 +185,7 @@ body.island-off .now-island {
 }
 
 .hv3-time {
-    font-size: 28px;
+    font-size: 36px;
     font-weight: 650;
     line-height: 1.05;
     letter-spacing: -.01em;
