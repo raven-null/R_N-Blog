@@ -16113,6 +16113,25 @@ body:not(.has-music) .hv3-row-top .hv3-hero {
     }
 }
 
+/* 修：隐藏文章卡和方图的规则没生效（v3.54.23）
+   之前写的是 .hv3-row-main > .hv3-square —— 子选择器只认 DOM 父子关系，
+   而方图其实还在 .hv3-top-row 里面（只是用 display:contents 在布局上拆平了），
+   所以选择器匹配不到，方图一直露着。这里改成后代选择器。
+   ------------------------------------------------------------ */
+@media (max-width: 900px) {
+    .hv3-row-main .hv3-stage,
+    .hv3-row-main .hv3-square {
+        display: none !important;
+    }
+
+    /* 图片区只剩生活切片这一块，占满整宽，一次只显示一张 */
+    .hv3-row-main .hv3-shot {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+    }
+}
+
 
 /* music.css */
 /* ============================================================
