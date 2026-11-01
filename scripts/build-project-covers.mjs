@@ -22,10 +22,11 @@ import sharp from 'sharp'
 
 // 与 js/app.js 里 deployedProjects 的 cover 文件名保持一致
 const SITES = [
+  { slug: 'ravennull', url: 'https://ravennull.work/' },
   { slug: 'pic', url: 'https://pic.ravennull.work/' },
+  { slug: 'game', url: 'https://game.ravennull.work/' },
   { slug: 'db', url: 'https://db.ravennull.work/' },
   { slug: 'interknot', url: 'https://interknot.netlify.app/' },
-  { slug: 'game', url: 'https://game.ravennull.work/' },
   { slug: 'music', url: 'https://music.ravennull.work/' },
 ]
 

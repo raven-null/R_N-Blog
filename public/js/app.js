@@ -5140,6 +5140,15 @@ const BlogApp = {
     //  新站跑一次 scripts/build-project-covers.mjs 生成封面）
     deployedProjects: [
         {
+            name: '渡鸦 NULL',
+            desc: '博客本体：日光与暮色之间的个人空间，文章、图库、音乐和项目都在这一个站里。',
+            url: 'https://ravennull.work/',
+            host: 'ravennull.work',
+            icon: '❖',
+            tag: 'JavaScript',
+            cover: 'images/projects/ravennull.webp',
+        },
+        {
             name: '个人图床',
             desc: '图片托管与图库站点：分类浏览、灯箱查看、幻灯放映，支持访问密码与分级内容。',
             url: 'https://pic.ravennull.work/',
