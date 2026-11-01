@@ -15298,6 +15298,9 @@ body:not(.has-music) .hv3-row-top .hv3-hero {
 .hv3-almanac {
     display: flex;
     flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
     gap: 10px;
     height: 100%;
     min-height: 0;
@@ -15307,8 +15310,9 @@ body:not(.has-music) .hv3-row-top .hv3-hero {
 .al-head {
     display: flex;
     align-items: baseline;
-    justify-content: space-between;
-    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 4px 10px;
 }
 
 .al-solar {
@@ -15349,6 +15353,7 @@ body:not(.has-music) .hv3-row-top .hv3-hero {
 .al-yiji {
     display: flex;
     flex-direction: column;
+    align-items: center;
     gap: 6px;
     margin-top: 2px;
 }
@@ -15384,7 +15389,6 @@ body:not(.has-music) .hv3-row-top .hv3-hero {
 }
 
 .al-foot {
-    margin-top: auto;
     font-size: 11px;
     color: var(--text-muted);
     letter-spacing: .04em;
