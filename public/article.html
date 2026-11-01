@@ -2011,7 +2011,10 @@
         .reader-toolbar {
             gap: 8px;
             flex-wrap: nowrap;
-            padding: 9px 12px;
+            padding: 10px 12px;
+            /* 折叠前后这条的高度不能跳：设置排 36 高、搬过来的导航排 40 高，取 40 那档兜住 */
+            box-sizing: border-box;
+            min-height: 62px;
             border-radius: 16px;
             background: var(--bg-card);
             border: 1px solid var(--border);
@@ -2028,18 +2031,14 @@
             display: none;
         }
 
-        .reader-toolbar .reader-btn,
-        .reader-func-btn,
-        .reader-toolbar .sidebar-action-btn {
-            height: 36px;
-            border-radius: 10px;
-            border-color: var(--border);
-        }
-
+        /* 设置排的小按钮：这条工具栏里自己的尺寸，跟搬过来的目录导航排互不影响 */
         .reader-toolbar .reader-btn {
             display: inline-flex;
             align-items: center;
+            height: 36px;
             padding: 0 13px;
+            border-radius: 10px;
+            border-color: var(--border);
             font-size: 12.5px;
             flex: none;
         }
@@ -2056,9 +2055,11 @@
             display: none;
             align-items: center;
             justify-content: center;
-            width: 36px;
+            width: 40px;
+            height: 40px;
             padding: 0;
             flex: none;
+            border-radius: 10px;
             background: transparent;
             border: 1px solid var(--border);
             color: var(--text-secondary);
@@ -2135,7 +2136,7 @@
         .reader-bar-actions {
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 8px;
             flex: none;
         }
 
@@ -2162,14 +2163,6 @@
 
         .reader-toolbar .sidebar-go-back {
             flex: none;
-            height: 36px;
-            padding: 0 12px;
-            font-size: 12.5px;
-        }
-
-        .reader-toolbar .sidebar-action-btn {
-            width: 36px;
-            font-size: 14px;
         }
 
         /* 音乐岛贴右：左边留给搬过来的那排和功能按钮，中间的空档由这条分隔线吃掉 */
