@@ -186,12 +186,17 @@
             bg.src = picked.slots[slot];
             try { localStorage.setItem('loader-bg-last', picked.id); } catch (e) { }
 
-            var reveal = function () { bg.classList.add('is-ready'); };
-            if (typeof bg.decode === 'function') {
-                bg.decode().then(reveal).catch(reveal);
-            } else {
-                bg.onload = reveal;
-            }
+            // 用 load 而不是 decode()：首屏同时有上百张图在解码，decode 的 promise 会被排到很后面，
+            // 结果遮罩都快揭开了背景才淡入。load 一到就淡入，浏览器自己会边解码边显示。
+            var revealed = false;
+            var reveal = function () {
+                if (revealed) return;
+                revealed = true;
+                bg.classList.add('is-ready');
+            };
+            bg.onload = reveal;
+            bg.onerror = function () { /* 加载失败就保持纯色，不影响遮罩 */ };
+            if (bg.complete && bg.naturalWidth > 0) reveal();
         }
 
         fetch('/images/loader/manifest.json', { cache: 'force-cache' })
