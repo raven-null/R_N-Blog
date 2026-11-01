@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 
 <head>
@@ -169,7 +169,7 @@
             .load-veil { display: none; }
         }
     </style>
-    <link rel="stylesheet" href="css/bundle.css?v=4e569b8697">
+    <link rel="stylesheet" href="css/bundle.css?v=399c74d104">
     <title>渡鸦 NULL · 日光与暮色之间</title>
     <link rel="icon" id="siteFavicon" href="/images/Default/web-logo.webp" type="image/webp">
     <link rel="apple-touch-icon" href="/images/Default/web-logo.webp">
@@ -1171,7 +1171,8 @@
             const selected = (window.BlogApp && BlogApp.lifeState && BlogApp.lifeState.date) || '';
 
             const weekLabels = ['一', '二', '三', '四', '五', '六', '日'];
-            const hint = isCurrentMonth ? `今天 ${now.getDate()}` : '归档';
+            // 头部只写「今天 N」；翻到别的月份就不写字了（原来的「归档」两字去掉）
+            const hint = isCurrentMonth ? `今天 ${now.getDate()}` : '';
             // 有任务的日子点一个小圆点（任务和日历叠在一起看）
             const taskDates = new Set(
                 ((window.BlogApp && BlogApp.lifeState && BlogApp.lifeState.tasks) || [])
@@ -1188,6 +1189,9 @@
                     .filter(Boolean).join(' ');
                 html += `<span class="${cls}" data-date="${dateKey}">${d}</span>`;
             }
+            // 尾部补空位到 6 整行（7 × 6 = 42 格）：
+            // 有的月份占 5 行、有的占 6 行，补满之后日历高度不会随月份上下跳。
+            for (let i = offset + daysInMonth; i < 42; i++) html += '<span class="cal-day is-empty"></span>';
             html += '</div>';
             box.innerHTML = html;
         }
