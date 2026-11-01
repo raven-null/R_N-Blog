@@ -440,9 +440,18 @@
   // 所以朗读期间先把它暂停，说完再继续（只在"确实在播"时暂停，且只恢复我们自己暂停的那次）。
   let musicDucked = false;
 
+  // 本页没有播放器（文章页被首页以 iframe 嵌进来时就是这种）：朗读要让父页面帮忙暂停音乐
+  function duckMusicExternal(on) {
+    if (!global.parent || global.parent === global) return false;
+    try {
+      global.parent.postMessage({ type: 'blog:duck-music', on: !!on }, global.location.origin);
+      return true;
+    } catch (e) { return false; }
+  }
+
   function duckMusic(on) {
     const frame = doc.getElementById('musicFrame');
-    if (!frame || !frame.contentWindow) return false;
+    if (!frame || !frame.contentWindow) return duckMusicExternal(on);
     if (on) {
       if (musicDucked || !MUSIC.playing || MUSIC.loading) return false;
       musicDucked = true;
@@ -1166,7 +1175,13 @@
   function initMusic() {
     if (typeof global.addEventListener !== 'function') return;
     global.addEventListener('message', (event) => {
+      if (event.origin && event.origin !== global.location.origin) return;
       const data = event.data;
+      // 子页面（文章页被首页嵌进来）让「本页」帮忙压低音乐：它自己那边没有播放器
+      if (data && data.type === 'blog:duck-music') {
+        duckMusic(!!data.on);
+        return;
+      }
       if (!data || data.type !== 'folia:now-playing') return;
       const song = data.song || null;
       const prevId = MUSIC.id;

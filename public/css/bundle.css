@@ -16271,10 +16271,29 @@ body.music-degraded #musicBooting {
 }
 
 /* ============================================================
-   关掉灵动岛 = 回到「悬浮导航栏」的原始形态：
-   导航胶囊正常展开、圆球与岛都不出现（音乐视图里不受影响）。
+   关掉灵动岛 = 回到悬浮导航栏原本的样子：
+   · 导航默认收起来（不占位置）
+   · 鼠标靠近顶栏 → 展开；移开 → 又自动收回去
+   · 圆球和岛都不出现；音乐视图里不受影响
    ============================================================ */
 body.island-off:not(.view-music-active) #topBarPill {
+    max-width: 0 !important;
+    padding-inline: 0 !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    transform: translateY(-2px) scale(0.96) !important;
+    overflow: hidden !important;
+    transition:
+        max-width 0.34s cubic-bezier(0.34, 1.4, 0.64, 1),
+        padding 0.3s ease,
+        opacity 0.2s ease,
+        transform 0.32s cubic-bezier(0.34, 1.4, 0.64, 1) !important;
+}
+
+/* 靠近顶栏（或键盘聚焦）就展开 */
+body.island-off:not(.view-music-active) .top-bar:hover #topBarPill,
+body.island-off:not(.view-music-active) #topBarPill:hover,
+body.island-off:not(.view-music-active) #topBarPill:focus-within {
     max-width: 680px !important;
     padding-inline: 10px 14px !important;
     opacity: 1 !important;

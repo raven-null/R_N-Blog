@@ -2059,13 +2059,17 @@
             display: flex;
         }
 
-        /* 原来在目录栏顶部的那排：靠右，音乐岛再往右 */
+        /* 目录收起后搬过来的那排（返回 / 首页 / 主题 / 助手）：占工具栏最左边；
+           目录展开时这排还在侧栏里，插槽是空的，靠 :empty 不占位 */
         .reader-bar-actions {
             display: flex;
             align-items: center;
             gap: 6px;
-            margin-left: auto;
             flex: none;
+        }
+
+        .reader-bar-actions:empty {
+            display: none;
         }
 
         .reader-toolbar .sidebar-go-back {
@@ -2080,8 +2084,9 @@
             font-size: 15px;
         }
 
+        /* 音乐岛贴右：左边留给搬过来的那排和功能按钮，中间的空档由这条分隔线吃掉 */
         #readerIslandSep {
-            margin-left: 4px;
+            margin-left: auto;
         }
 
         /* 手机上这排由右下角的功能球代劳，工具栏里只留功能按钮 */
@@ -2380,8 +2385,31 @@
     <div class="article-layout">
         <!-- 左侧目录栏 -->
         <aside class="toc-sidebar" id="tocSidebar" style="display: none;">
-            <!-- 顶部那排（返回 / 首页 / 主题 / 助手）已经搬进正文顶部的阅读工具栏（#readerToolbar），
-                 目录栏这里只留目录本身（v3.52.1）。 -->
+            <!-- 顶部操作栏：目录展开时就在这儿；收起目录后由 reader.js 整个搬到阅读工具栏最左边 -->
+            <div class="sidebar-top-bar" id="sidebarTopBar">
+                <button class="sidebar-action-btn sidebar-go-back" id="sidebarGoBack" title="返回上一页">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="15 18 9 12 15 6"></polyline>
+                    </svg>
+                    <span>返回</span>
+                </button>
+                <div class="sidebar-actions">
+                    <a href="index.html" class="sidebar-action-btn" title="返回首页">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                            <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                        </svg>
+                    </a>
+                    <button class="sidebar-action-btn" id="sidebarThemeToggle" title="切换主题">
+                        ◐
+                    </button>
+                    <button class="sidebar-action-btn" id="sidebarChatToggle" title="AI 助手">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
             <div class="toc-sidebar-inner">
                 <div class="toc-header">
                     <div class="toc-title">
@@ -2448,9 +2476,12 @@
             </div>
 
             <!-- 阅读工具栏（v3.52.1）：整条玻璃条。
-                 左边一个「功能」按钮，点开才是字号 / 行距 / 衬线 / 专注，鼠标离开这条就收回去；
-                 右边是原来放在目录栏顶部的那排（返回 / 首页 / 主题 / 助手）。 -->
+                 平时只有最左边一个「功能」按钮（点开才是字号 / 行距 / 衬线 / 专注，鼠标离开这条就收回去）；
+                 目录收起来之后，目录栏顶部那排（返回 / 首页 / 主题 / 助手）由 reader.js 整个搬到
+                 #readerBarActions 这个空插槽里，占最左边。 -->
             <div class="reader-toolbar" id="readerToolbar">
+                <div class="reader-bar-actions" id="readerBarActions"></div>
+
                 <div class="reader-func" id="readerFunc">
                     <button class="reader-func-btn" id="readerFuncBtn" type="button" aria-expanded="false" title="阅读设置">
                         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -2474,32 +2505,6 @@
                             <button class="reader-btn" id="readerFontFamily" title="切换字体">衬线</button>
                             <button class="reader-btn" id="readerFocus" title="专注阅读">专注</button>
                         </div>
-                    </div>
-                </div>
-
-                <!-- 原来在目录栏顶部的那排：折叠目录后它还是在这条里，位置不变 -->
-                <div class="reader-bar-actions">
-                    <button class="sidebar-action-btn sidebar-go-back" id="sidebarGoBack" title="返回上一页">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <polyline points="15 18 9 12 15 6"></polyline>
-                        </svg>
-                        <span>返回</span>
-                    </button>
-                    <div class="sidebar-actions">
-                        <a href="index.html" class="sidebar-action-btn" title="返回首页">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-                                <polyline points="9 22 9 12 15 12 15 22"></polyline>
-                            </svg>
-                        </a>
-                        <button class="sidebar-action-btn" id="sidebarThemeToggle" title="切换主题">
-                            ◐
-                        </button>
-                        <button class="sidebar-action-btn" id="sidebarChatToggle" title="AI 助手">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                            </svg>
-                        </button>
                     </div>
                 </div>
 
@@ -2634,7 +2639,7 @@
             '/vendor/grok/eyes.js?v=1.0.0',
             '/vendor/grok/character.js?v=1.0.2',
             '/js/pet-core.js?v=2.0.24',
-            '/js/pet-mind.js?v=2.0.26'
+            '/js/pet-mind.js?v=2.0.27'
         ];
         var started = false;
         function load() {

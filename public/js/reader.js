@@ -66,10 +66,25 @@
     };
 
     /* ===== 目录折叠（v3.52.1） =====
-       收起后整个目录栏消失、正文向左铺开，左边缘留一条竖标签点回来。
+       收起后整个目录栏消失、正文向左铺开，左边缘留一条竖标签点回来；
+       目录栏顶上那排（返回 / 首页 / 主题 / 助手）跟着搬进阅读工具栏的最左边，展开时再搬回去。
        窄屏（≤773px）目录本来就是抽屉，不参与这套，状态也就不写死。 */
     const TOC_STORE = 'article-toc-collapsed';
-    const narrowScreen = () => window.matchMedia('(max-width: 773px)').matches;
+
+    // 那排按钮原本身在侧栏何处：搬过去之前先记下，展开时要放回原位
+    let topBar = null;
+    let topBarParent = null;
+    let topBarNext = null;
+
+    function moveTopBar(collapsed) {
+        const slot = document.getElementById('readerBarActions');
+        if (!topBar || !slot || !topBarParent) return;
+        if (collapsed) {
+            if (topBar.parentElement !== slot) slot.appendChild(topBar);
+        } else if (topBar.parentElement !== topBarParent) {
+            topBarParent.insertBefore(topBar, topBarNext);
+        }
+    }
 
     function setTocCollapsed(collapsed, remember) {
         document.body.classList.toggle('toc-collapsed', collapsed);
@@ -77,6 +92,7 @@
         if (btn) btn.setAttribute('aria-expanded', String(!collapsed));
         const tab = document.getElementById('tocRevealTab');
         if (tab) tab.setAttribute('aria-expanded', String(!collapsed));
+        moveTopBar(collapsed);
         if (remember) {
             try { localStorage.setItem(TOC_STORE, collapsed ? '1' : '0'); } catch (e) { }
         }
@@ -85,6 +101,12 @@
     function initTocCollapse() {
         const collapseBtn = document.getElementById('tocSidebarCollapse');
         const revealTab = document.getElementById('tocRevealTab');
+
+        topBar = document.getElementById('sidebarTopBar');
+        if (topBar) {
+            topBarParent = topBar.parentElement;
+            topBarNext = topBar.nextElementSibling;
+        }
 
         let saved = false;
         try { saved = localStorage.getItem(TOC_STORE) === '1'; } catch (e) { }

@@ -2053,9 +2053,13 @@ const BlogApp = {
                     return;
                 }
                 window.__galleryImages = pool;
-                const idx = pool.findIndex((p) => String(p.thumb || p.url) === src);
+                /* 池里存的是相对路径（/api/photos/xxx/thumb?v=2），卡片上取到的是绝对 URL，
+                   直接比字符串永远不等，灯箱就会从第一张开始 —— 看着就是「显示 A、点开是 B」。 */
+                const idx = this.matchGalleryIndex(pool, src);
                 if (typeof window.openGalleryLightbox === 'function') {
-                    window.openGalleryLightbox(src, idx >= 0 ? idx : 0);
+                    // 传池子里的原样地址，灯箱内部拿它定位就不会再对不上
+                    const pick = idx >= 0 ? pool[idx] : null;
+                    window.openGalleryLightbox(pick ? String(pick.thumb || pick.url) : src, idx >= 0 ? idx : 0);
                 }
             }).catch(() => {
                 if (typeof window.openGalleryLightbox === 'function') window.openGalleryLightbox(src, 0);
@@ -2837,11 +2841,27 @@ const BlogApp = {
             const src = cur ? (cur.currentSrc || cur.src || '') : '';
             if (!src) return;
             window.__galleryImages = pool;
-            const idx = pool.findIndex((p) => String(p.thumb || p.url) === src);
+            const idx = this.matchGalleryIndex(pool, src);
             if (typeof window.openGalleryLightbox === 'function') {
-                window.openGalleryLightbox(src, idx >= 0 ? idx : 0);
+                const pick = idx >= 0 ? pool[idx] : null;
+                window.openGalleryLightbox(pick ? String(pick.thumb || pick.url) : src, idx >= 0 ? idx : 0);
             }
         };
+    },
+
+    // 卡片上的绝对 URL ↔ 图库池里的相对路径：统一成绝对 URL 找到对应下标
+    matchGalleryIndex(pool, src) {
+        if (!Array.isArray(pool) || !pool.length) return -1;
+        const abs = (u) => {
+            try { return new URL(String(u || ''), location.href).href; } catch (e) { return String(u || ''); }
+        };
+        const want = abs(src);
+        let idx = pool.findIndex((p) => abs(p && (p.thumb || p.url)) === want);
+        if (idx < 0) {
+            const bare = want.split('?')[0];
+            idx = pool.findIndex((p) => abs(p && (p.thumb || p.url)).split('?')[0] === bare);
+        }
+        return idx;
     },
 
     // 无限滚动：滚过一半时悄悄把位置减回去，看起来永远滚不完
