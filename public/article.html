@@ -1627,7 +1627,7 @@
                 /* 灰色毛玻璃材质：半透明底 + 斜向高光 + 内外两层阴影 */
                 background:
                     linear-gradient(158deg, rgba(255, 255, 255, 0.13) 0%, rgba(255, 255, 255, 0.04) 38%, rgba(255, 255, 255, 0) 68%),
-                    color-mix(in srgb, var(--surface, #1b1e26) 66%, transparent);
+                    color-mix(in srgb, var(--surface, #1b1e26) 86%, transparent);
                 border: 1px solid rgba(255, 255, 255, 0.16);
                 box-shadow:
                     inset 0 1px 0 rgba(255, 255, 255, 0.22),
@@ -1696,7 +1696,8 @@
                 width: 100vw;
                 height: 100vh;
                 height: 100dvh;
-                z-index: 200;
+                /* 拉高：正文里带 transform/backdrop 的元素会自己开层叠上下文，200 压不住 */
+                z-index: 900;
                 gap: 0;
                 transition: left 0.3s cubic-bezier(0.16, 1, 0.3, 1);
             }
@@ -1709,8 +1710,8 @@
                 display: none;
                 position: fixed;
                 inset: 0;
-                background: rgba(0, 0, 0, 0.5);
-                z-index: 199;
+                background: rgba(0, 0, 0, 0.55);
+                z-index: 880;
                 opacity: 0;
                 transition: opacity 0.3s;
             }

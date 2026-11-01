@@ -16026,6 +16026,47 @@ body:not(.has-music) .hv3-row-top .hv3-hero {
     }
 }
 
+/* 横滑带恢复单行（v3.54.20）
+   上一版为了让简报换行加了 flex-wrap，结果图片块一变宽就各自占一行，成了竖排。
+   现在简报已经从 .hv3-col-right 搬出来（DOM 上在 .hv3-row-main 之后），
+   横滑带只留三块图片、禁止换行；简报是独立一行。
+   ------------------------------------------------------------ */
+@media (max-width: 900px) {
+    .hv3-row-main {
+        flex-wrap: nowrap !important;
+        align-items: flex-start !important;
+        overflow-x: auto !important;
+    }
+
+    /* 三块都按图片比例：高度定住，宽度由 aspect-ratio 推出来 */
+    .hv3-row-main > .hv3-shot,
+    .hv3-row-main > .hv3-square {
+        flex: 0 0 auto !important;
+        width: auto !important;
+        max-width: none !important;
+        height: 260px !important;
+        margin: 0 !important;
+    }
+
+    .hv3-row-main > .hv3-shot { aspect-ratio: var(--shot-ar, 1.6) !important; }
+    .hv3-row-main > .hv3-square { aspect-ratio: 1 !important; }
+
+    .hv3-row-main > .hv3-stage {
+        flex: 0 0 84% !important;
+        width: 84% !important;
+        height: 260px !important;
+        margin: 0 !important;
+    }
+
+    /* 简报：独立一块，整宽，图片下面、日历上面 */
+    .hv3-sub-grid {
+        width: 100% !important;
+        margin: 12px 0 0 !important;
+        display: grid !important;
+        overflow: visible !important;
+    }
+}
+
 
 /* music.css */
 /* ============================================================
