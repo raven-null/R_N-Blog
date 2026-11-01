@@ -16067,6 +16067,32 @@ body:not(.has-music) .hv3-row-top .hv3-hero {
     }
 }
 
+/* 只留一个图片区域（v3.54.21）
+   移动端把文章卡和方图都收起，只留生活切片这一块：
+   它内部本来就在两张图之间左右轮播，高度按 --shot-ar（当前图片真实比例）走，
+   所以「盒子随图片变化」这件事由它自己负责。
+   ------------------------------------------------------------ */
+@media (max-width: 900px) {
+    .hv3-row-main > .hv3-stage,
+    .hv3-row-main > .hv3-square {
+        display: none !important;
+    }
+
+    .hv3-row-main > .hv3-shot {
+        flex: 1 1 auto !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        height: auto !important;
+        aspect-ratio: var(--shot-ar, 1.6) !important;
+        margin: 0 !important;
+    }
+
+    .hv3-row-main {
+        overflow: visible !important;
+        display: block !important;
+    }
+}
+
 
 /* music.css */
 /* ============================================================
