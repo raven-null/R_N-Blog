@@ -1,59 +1,65 @@
 /**
- * 首屏加载遮罩（v2.0.0）
- * 首访图片多（100+ 张，且都要过 /api/*-image 函数），体感就是「白屏卡住」。
- * 这里盖一层遮罩，进度**真实跟着首屏图片的加载数走**（不是假动画）：
- *   0%    遮罩出现
- *   0~92% 首屏（视口 + 下方 40%）的图片一张张到：已 load 的 / 已失败的都算完成
- *   100%  全部完成后补满、淡出、解除滚动锁定
- * 兜底 9 秒：有图一直不回来也不会把人锁在遮罩里。
- * 首屏图少于 5 张（多半是缓存命中）时不显示遮罩，避免每次刷新都黑一下。
+ * 首屏加载遮罩（v2.1.0）
+ * 遮罩的节点和内联样式都写在 index.html 里（body 第一个元素 + head 内联 style），
+ * 所以它是页面上第一个画出来的东西，不会先露出半成品再「补一层遮罩」。
+ * 这里只负责：接管已有的 #loadVeil → 按首屏图片的真实加载数推进 → 收尾移除。
+ *
+ *   0%    遮罩已经在了（HTML 里就带）
+ *   0~92% 首屏（视口 + 下方 40%）的图片一张张到；加载失败的也算完成，不卡进度
+ *   100%  补满 → 淡出 → 自移除，解除滚动锁定
+ * 兜底 9 秒；首屏图少于 5 张（缓存命中 / 短文页）不遮，直接拿掉。
  */
 (function () {
     'use strict';
 
-    try {
-        if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    } catch (e) { }
-
     var MIN_IMAGES = 5;
     var TIMEOUT_MS = 9000;
+    var WAIT_FOR_IMAGES_MS = 3000;
 
-    var veil = document.createElement('div');
-    veil.className = 'load-veil';
-    veil.setAttribute('role', 'status');
-    veil.setAttribute('aria-live', 'polite');
-    veil.innerHTML = '<div class="load-veil-inner">' +
-        '<div class="load-veil-bar"><span></span></div>' +
-        '<div class="load-veil-pct">0%</div>' +
-        '</div>';
+    var veil = document.getElementById('loadVeil');
+    var created = false;
 
-    var fill = null;
-    var pctLabel = null;
-    var shown = false;
+    // 兜底：万一 HTML 里没有（别的页面复用这个脚本），自己造一个
+    if (!veil) {
+        veil = document.createElement('div');
+        veil.className = 'load-veil';
+        veil.id = 'loadVeil';
+        veil.innerHTML = '<div class="load-veil-inner"><div class="load-veil-bar"><span></span></div><div class="load-veil-pct">0%</div></div>';
+        (document.body || document.documentElement).appendChild(veil);
+        created = true;
+    }
+
+    var fill = veil.querySelector('.load-veil-bar > span');
+    var pctLabel = veil.querySelector('.load-veil-pct');
     var finished = false;
     var timer = null;
     var timeout = null;
-    var countdown = 0;
-    var prevOverflow = '';
     var startedAt = Date.now();
+    var prevOverflow = null;
 
-    function mount() {
-        if (veil.parentNode) return;
-        (document.body || document.documentElement).appendChild(veil);
-        fill = veil.querySelector('.load-veil-bar > span');
-        pctLabel = veil.querySelector('.load-veil-pct');
-    }
+    // 减少动效偏好：直接撤掉遮罩
+    try {
+        if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            remove();
+            return;
+        }
+    } catch (e) { }
 
-    function show() {
-        if (shown || finished) return;
-        mount();
-        shown = true;
+    function lockScroll() {
+        if (prevOverflow !== null) return;
         try {
             prevOverflow = document.documentElement.style.overflow;
             document.documentElement.style.overflow = 'hidden';
-        } catch (e) { }
-        veil.classList.add('is-visible');
+        } catch (e) { prevOverflow = ''; }
     }
+
+    function unlockScroll() {
+        if (prevOverflow === null) return;
+        try { document.documentElement.style.overflow = prevOverflow; } catch (e) { }
+        prevOverflow = null;
+    }
+
+    lockScroll();
 
     function snapTo(v) {
         var pct = Math.max(0, Math.min(100, v));
@@ -61,28 +67,41 @@
         if (pctLabel) pctLabel.textContent = Math.round(pct) + '%';
     }
 
+    function remove() {
+        unlockScroll();
+        if (veil.parentNode) veil.parentNode.removeChild(veil);
+    }
+
     function finish() {
         if (finished) return;
         finished = true;
         if (timer) { clearInterval(timer); timer = null; }
         if (timeout) { clearTimeout(timeout); timeout = null; }
-        if (!shown) return;          // 一开始就没显示，直接收工
         snapTo(100);
         veil.classList.add('is-done');
-        try { document.documentElement.style.overflow = prevOverflow; } catch (e) { }
-        setTimeout(function () {
-            if (veil.parentNode) veil.parentNode.removeChild(veil);
-        }, 520);
+        unlockScroll();
+        setTimeout(remove, 460);
     }
 
-    // 首屏范围内的图片（懒加载的那些视口外的不算，否则分母永远补不满）
+    // 遮罩不是「加载完才出现」，而是「一开始就在」；图不够多时直接快速撤掉，不锁人
+    function dropIfFewImages() {
+        if (finished) return;
+        finished = true;
+        if (timer) { clearInterval(timer); timer = null; }
+        if (timeout) { clearTimeout(timeout); timeout = null; }
+        veil.classList.add('is-done');
+        unlockScroll();
+        setTimeout(remove, 260);
+    }
+
+    // 首屏范围内的图片（视口外的懒加载不算，否则分母永远补不满）
     function aboveFoldImgs() {
         var list = [].slice.call(document.querySelectorAll('img'));
         var vh = window.innerHeight || 800;
         return list.filter(function (im) {
             if (!im.getAttribute('src') && !im.getAttribute('srcset')) return false;
             var r = im.getBoundingClientRect();
-            if (!r.width && !r.height) return false;   // 还没上屏
+            if (!r.width && !r.height) return false;
             return r.top < vh * 1.4 && r.bottom > -200;
         });
     }
@@ -90,26 +109,19 @@
     function tick() {
         if (finished) return;
         var imgs = aboveFoldImgs();
-        if (!shown) {
-            // 图片是 JS 渲染出来的，DOMContentLoaded 那会儿往往还是 0 张：
-            // 给 3 秒窗口等它们出现，真的没图（缓存命中 / 短文页）才放弃遮罩
-            if (imgs.length < MIN_IMAGES) {
-                if (Date.now() - startedAt > 3000) finish();
-                return;
-            }
-            show();
+
+        if (imgs.length < MIN_IMAGES) {
+            // 图片是 JS 渲染出来的：给 3 秒等它们出现，真没图才撤遮罩
+            if (Date.now() - startedAt > WAIT_FOR_IMAGES_MS) dropIfFewImages();
+            return;
         }
-        if (!imgs.length) { snapTo(94); return; }
 
         var done = 0;
         for (var i = 0; i < imgs.length; i++) {
-            // error 之后 complete 也是 true，算它完成，别让它卡住进度
             if (imgs[i].complete) done++;
         }
-        // 留 8% 给「最后的收尾」，避免停在 100% 却还没揭开
         snapTo(92 * (done / imgs.length));
 
-        // 首屏这一批到齐就算完事，不等页面里其他懒加载图片
         if (done >= imgs.length) finish();
     }
 

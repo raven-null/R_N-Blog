@@ -20,6 +20,10 @@
          进度推进与移除逻辑见 js/load-progress.js。 -->
     <style>
         html { background: #0c0e13; }
+        /* 主题是 daylight.js 运行时才写上去的：在那之前先跟系统偏好走，避免深色遮罩跳成浅色页面 */
+        @media (prefers-color-scheme: light) {
+            html:not([data-theme]):not([data-tone]) { background: #f7f4ee; }
+        }
         html[data-theme="light"], html[data-tone="light"] { background: #f7f4ee; }
         .load-veil {
             position: fixed;
@@ -32,8 +36,17 @@
             opacity: 1;
             transition: opacity 0.42s ease;
         }
+        @media (prefers-color-scheme: light) {
+            html:not([data-theme]):not([data-tone]) .load-veil { background: #f7f4ee; }
+            html:not([data-theme]):not([data-tone]) .load-veil-bar { background: rgba(0, 0, 0, 0.12); }
+            html:not([data-theme]):not([data-tone]) .load-veil-pct { color: #7a7365; }
+        }
         html[data-theme="light"] .load-veil,
         html[data-tone="light"] .load-veil { background: #f7f4ee; }
+        html[data-theme="light"] .load-veil-bar,
+        html[data-tone="light"] .load-veil-bar { background: rgba(0, 0, 0, 0.12); }
+        html[data-theme="light"] .load-veil-pct,
+        html[data-tone="light"] .load-veil-pct { color: #7a7365; }
         .load-veil.is-done { opacity: 0; pointer-events: none; }
         .load-veil-inner {
             display: flex;
