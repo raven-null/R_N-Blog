@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 博客首页核心逻辑
  * 负责文章加载、标签筛选、搜索、分页和渲染
  */
@@ -6679,7 +6679,8 @@ const BlogApp = {
 
         clock.addEventListener('dblclick', (e) => {
             e.preventDefault();
-            e.stopPropagation();
+            e.stopPropagation();   // 别再冒到 document 上，否则刚进去就被自己的恢复逻辑退出
+            if (typeof this.cancelFlipClick === 'function') this.cancelFlipClick();   // 顺手取消这一次的翻牌
             setMode(true);
         });
 
@@ -6723,11 +6724,22 @@ const BlogApp = {
         }, { passive: false });
 
         flip.addEventListener('mouseleave', () => setTools(false));
-        // 触屏 / 点击也能切（再点一下收起）
+
+        // 单击翻牌要等 250ms：双击是「整页只留背景图」，
+        // 不延迟的话双击会先闪一下翻牌面板再切走。
+        this._flipClickTimer = 0;
         flip.addEventListener('click', (e) => {
             if (e.target.closest('.hv3-toggle')) return;   // 点按钮本身不切页
-            setTools(!flip.classList.contains('is-tools'));
+            clearTimeout(this._flipClickTimer);
+            this._flipClickTimer = setTimeout(() => {
+                setTools(!flip.classList.contains('is-tools'));
+            }, 250);
         });
+        // 供双击分支（bindBgOnlyMode）调用：取消这一次的翻牌，并停在信息面
+        this.cancelFlipClick = () => {
+            clearTimeout(this._flipClickTimer);
+            setTools(false);
+        };
     }
 };
 
