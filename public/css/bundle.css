@@ -15661,6 +15661,70 @@ body:not(.has-music) .hv3-row-top .hv3-hero {
     }
 }
 
+/* ------------------------------------------------------------
+   移动端圆钮收回时间底下（v3.54.8）
+   上一版用 display:contents 把翻牌容器拆了，圆钮被摊在统计旁边。
+   现在改回桌面那套「时钟 ↔ 工具」翻牌：时钟在上、三个圆钮在它下面，
+   点一下时钟（或往下滚）切出来，再点一下收回去——app.js 里早就绑好了
+   .hv3-flip 的 click / wheel / mouseleave，只要别再拆容器就行。
+   ------------------------------------------------------------ */
+@media (max-width: 900px) {
+    .hv3-flip,
+    .hv3-flip-inner,
+    .hv3-flip-view {
+        display: revert;
+    }
+
+    .hv3-hero {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-areas:
+            'who'
+            'clock'
+            'stats';
+        gap: 12px;
+    }
+
+    /* 翻牌容器在桌面用行号占右列两行，手机上换成 clock 区 */
+    .hv3-flip {
+        grid-area: clock;
+        justify-self: start;
+        align-self: start;
+        height: var(--flip-h, 76px);
+    }
+
+    .hv3-clock {
+        grid-area: auto;
+        justify-self: start;
+        align-items: flex-start;
+        text-align: left;
+    }
+
+    .hv3-toggles {
+        grid-area: auto;
+        justify-self: start;
+        gap: 10px;
+    }
+
+    .hv3-stats {
+        grid-area: stats;
+        justify-self: start;
+        gap: 18px;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        scrollbar-width: none;
+    }
+
+    .hv3-stats::-webkit-scrollbar {
+        display: none;
+    }
+
+    .hv3-toggle {
+        flex: 0 0 auto;
+        width: 40px;
+        height: 40px;
+    }
+}
+
 
 /* music.css */
 /* ============================================================
