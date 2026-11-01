@@ -1136,7 +1136,7 @@
                 </div>
 
                 <div id="tab-settings" style="display:none">
-                    <div class="page-bar"><h2>博客设置</h2><div class="page-bar-actions"><button class="btn btn-ghost" onclick="loadSettings()">重置</button></div></div>
+                    <div class="page-bar"><h2>博客设置</h2><div class="page-bar-actions"><button class="btn btn-primary" onclick="saveSettings()">保存设置</button><button class="btn btn-ghost" onclick="loadSettings()">重置</button></div></div>
                     <div class="settings-panel">
                         <div class="settings-tabs">
                             <button class="settings-tab active" data-stab="front" onclick="switchSettingsTab('front')">前台设置</button>
@@ -1431,9 +1431,7 @@
                         </div>
                         </div>
 
-                        <div class="settings-actions">
-                            <button class="btn btn-primary" onclick="saveSettings()">保存设置</button>
-                        </div>
+                        <!-- 保存按钮已挪到页面顶部「博客设置」那一行，挨着「重置」（v3.52.7） -->
                     </div>
                 </div>
             </div>
