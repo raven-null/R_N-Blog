@@ -12,13 +12,14 @@ button,input,textarea,select{font:inherit}button,a,input,textarea,select{-webkit
 .sky{filter:none!important}.sky-art{transition:filter 1.4s ease;opacity:.72!important}.sky::before{filter:none}
 html[data-theme=dark] .sky{filter:brightness(.92)!important}
 .top-bar{background:transparent!important;border-bottom:1px solid transparent!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
-.top-bar-inner{max-width:none!important;margin:auto;padding-inline:clamp(14px,1.6vw,52px)!important;justify-content:center!important}.top-bar-brand{letter-spacing:.03em;font-weight:650!important}
+.top-bar-inner{max-width:1900px!important;margin:auto;padding-inline:clamp(16px,2.6vw,60px)!important;justify-content:center!important}.top-bar-brand{letter-spacing:.03em;font-weight:650!important}
 .top-bar-views{background:transparent!important;border:none;padding:0;border-radius:30px}.view-btn{min-height:34px;color:var(--text-secondary)!important}.view-btn.active{color:var(--text)!important}.view-indicator{background:var(--surface)!important;box-shadow:0 2px 7px #0000000a!important}
-/* 首页铺开 + 自适应（v3.52.2）：原来死卡 1200px，1920 屏左右各空 360px。
-   现在宽度跟着视口走（不再有硬上限），左右内边距、卡间距、卡内边距都用 clamp 随屏缩放——
-   小屏紧凑，2K/4K 上整块等比放大，而不是单纯把卡片拉长。
-   顶栏胶囊用同一套内边距，跟内容左右对齐。 */
-body.home-layout .main-content{max-width:none!important;width:100%!important;margin:0 auto!important;padding:clamp(20px,1.4vw,40px) clamp(14px,1.6vw,52px) clamp(56px,4vw,96px)!important}
+/* 首页宽度（v3.52.3）：左右留白随视口变化，但内容有个上限。
+   原来死卡 1200px（1920 屏左右各空 360）；后来一度铺满全宽，又太贴边。
+   现在：留白 = clamp(16px, 2.6vw, 60px) 随屏长大，内容最宽 1900px——
+   再宽的屏就只加留白、不再拉伸，卡片不会被抻成一条。
+   顶栏胶囊用同一套上限与内边距，跟内容左右对齐。 */
+body.home-layout .main-content{max-width:1900px!important;width:100%!important;margin:0 auto!important;padding:clamp(20px,1.4vw,40px) clamp(16px,2.6vw,60px) clamp(56px,4vw,96px)!important}
 body.home-layout .hv{max-width:none!important;width:100%!important;padding:0!important;display:block!important}
 body.home-layout .hv-hero{position:relative;display:block!important;padding:38px 40px 28px!important;min-height:440px;border:1px solid var(--glass-line);border-radius:28px!important;background:linear-gradient(110deg,var(--glass-card) 0%,var(--glass-card) 48%,transparent 100%)!important;overflow:hidden;margin-bottom:40px!important}
 .home-eyebrow{display:flex;align-items:center;gap:8px;font-size:10px;letter-spacing:.15em;color:var(--text-secondary);margin-bottom:26px}.sun-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 16px var(--accent)}
