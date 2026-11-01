@@ -13,7 +13,7 @@
     'use strict';
 
     var MIN_IMAGES = 5;
-    var TIMEOUT_MS = 9000;
+    var TIMEOUT_MS = 12000;
     var WAIT_FOR_IMAGES_MS = 3000;
 
     var veil = document.getElementById('loadVeil');
@@ -38,6 +38,10 @@
     var timeout = null;
     var startedAt = Date.now();
     var prevOverflow = null;
+    // 首页的「今日简报」是异步接口，出得比图片晚：它没到位就别揭开遮罩，
+    // 否则会先露出一个空白的简报区（app.js 在请求结束时会打 body.news-ready / 派事件）
+    var needsNews = !!document.getElementById('hv3News');
+    var newsReady = !needsNews;
 
     // 减少动效偏好：直接撤掉遮罩
     try {
@@ -63,8 +67,13 @@
 
     lockScroll();
 
+    var lastPct = 8;   // HTML 里条子起步就是 8%，别让 JS 把它缩回去
+
     function snapTo(v) {
         var pct = Math.max(0, Math.min(100, v));
+        // 只增不减：首屏图片会陆续被渲染出来，分母一变大会让进度往回缩，观感就成了「倒退」
+        if (pct < lastPct) pct = lastPct;
+        lastPct = pct;
         if (fill) fill.style.width = pct + '%';
         if (pctLabel) pctLabel.textContent = Math.round(pct) + '%';
     }
@@ -110,11 +119,13 @@
 
     function tick() {
         if (finished) return;
+        if (!newsReady && document.body && document.body.classList.contains('news-ready')) newsReady = true;
+
         var imgs = aboveFoldImgs();
 
         if (imgs.length < MIN_IMAGES) {
             // 图片是 JS 渲染出来的：给 3 秒等它们出现，真没图才撤遮罩
-            if (Date.now() - startedAt > WAIT_FOR_IMAGES_MS) dropIfFewImages();
+            if (Date.now() - startedAt > WAIT_FOR_IMAGES_MS && newsReady) dropIfFewImages();
             return;
         }
 
@@ -122,9 +133,15 @@
         for (var i = 0; i < imgs.length; i++) {
             if (imgs[i].complete) done++;
         }
-        snapTo(92 * (done / imgs.length));
+        // 图片推进到 92%；简报还没到就再压一截，进度条不会先满
+        var ratio = done / imgs.length;
+        snapTo(92 * (newsReady ? ratio : ratio * 0.94));
 
-        if (done >= imgs.length) finish();
+        if (done >= imgs.length) {
+            if (newsReady) { finish(); return; }
+            // 图片都到齐了、就差简报：让条子在这段等待里继续慢慢往前蹭，别停住像卡死
+            snapTo(Math.min(90, lastPct + 0.35));
+        }
     }
 
     function start() {
@@ -140,4 +157,10 @@
     }
 
     window.addEventListener('load', function () { tick(); }, { once: true });
+
+    // 简报一到就立刻再看一眼，不用等下一次轮询
+    document.addEventListener('blog:news-ready', function () {
+        newsReady = true;
+        tick();
+    }, { once: true });
 })();

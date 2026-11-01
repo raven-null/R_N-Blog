@@ -1260,15 +1260,24 @@ const BlogApp = {
         const list = document.getElementById('hv3News');
         if (!list || list.dataset.rendered) return;
         list.dataset.rendered = '1';
+        // 首屏遮罩在等这块内容：请求一结束（不管成败）就放行，别让人对着遮罩干等
+        const markNewsReady = () => {
+            try {
+                document.body.classList.add('news-ready');
+                document.dispatchEvent(new CustomEvent('blog:news-ready'));
+            } catch (e) { }
+        };
         try {
             const items = await this.loadNews();
             this.newsItems = items;
             this.newsPool = items;
             this.newsShown = items.length;
             this.startNewsTicker(list, items);
+            markNewsReady();
         } catch (e) {
             console.error('资讯加载失败:', e);
             list.innerHTML = '<div class="hv3-empty">资讯加载失败，稍后再试</div>';
+            markNewsReady();
         }
     },
 
