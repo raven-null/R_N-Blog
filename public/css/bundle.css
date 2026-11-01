@@ -16269,3 +16269,27 @@ body.music-degraded #musicBooting {
     #musicDegrade h1 { font-size: 17px; }
     #musicDegrade p { font-size: 12.5px; }
 }
+
+/* ============================================================
+   关掉灵动岛 = 回到「悬浮导航栏」的原始形态：
+   导航胶囊正常展开、圆球与岛都不出现（音乐视图里不受影响）。
+   ============================================================ */
+body.island-off:not(.view-music-active) #topBarPill {
+    max-width: 680px !important;
+    padding-inline: 10px 14px !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    transform: none !important;
+    overflow: visible !important;
+}
+
+body.island-off:not(.view-music-active) #topBarPill .top-bar-brand,
+body.island-off:not(.view-music-active) #topBarPill .top-bar-views {
+    max-width: none !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+}
+
+body.island-off:not(.view-music-active) .dock-orb {
+    display: none !important;
+}
