@@ -2485,3 +2485,29 @@ body:not(.has-music) .hv3-row-top .hv3-hero {
         min-height: 180px;
     }
 }
+
+/* ------------------------------------------------------------
+   移动端右列不再被挤成 0 宽（v3.54.7）
+   .hv3-row-main 是横向 flex：左边文章块 .hv3-stage（占满 330）+
+   右边 .hv3-col-right（flex:1 1 auto、min-width:0），手机上右列直接被压成 0 宽，
+   于是里面的生活切片 / 方图 / 今日拾光全都 0 宽——表现为「模块不显示」。
+   ≤900px 让这块整体竖排，右列吃满整行。
+   ------------------------------------------------------------ */
+@media (max-width: 900px) {
+    .hv3-row-main {
+        flex-direction: column !important;
+        align-items: stretch;
+    }
+
+    .hv3-stage,
+    .hv3-col-right {
+        width: 100% !important;
+        flex: none !important;
+    }
+
+    .hv3-col-right {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+    }
+}
