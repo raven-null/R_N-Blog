@@ -1611,13 +1611,20 @@
                 font-size: 12px;
             }
 
-            /* 目录得能在抽屉里滚动：inner 撑满侧栏、别再用 max-height 裁掉列表 */
+            /* 抽屉：靠「绝对定位 + 固定高度」保证列表真的能滚（flex 在固定定位的抽屉里容易算不出高度） */
             .toc-sidebar-inner {
+                position: absolute;
+                top: 64px;
+                left: 10px;
+                right: 10px;
+                bottom: 14px;
                 height: auto;
                 max-height: none;
                 min-height: 0;
-                flex: 1 1 auto;
-                /* 抽屉做成一块灰色毛玻璃：半透明底 + 斜向高光 + 内外两层阴影，糊住后面的正文 */
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+                /* 灰色毛玻璃材质：半透明底 + 斜向高光 + 内外两层阴影 */
                 background:
                     linear-gradient(158deg, rgba(255, 255, 255, 0.13) 0%, rgba(255, 255, 255, 0.04) 38%, rgba(255, 255, 255, 0) 68%),
                     color-mix(in srgb, var(--surface, #1b1e26) 66%, transparent);
@@ -1630,10 +1637,15 @@
                 backdrop-filter: blur(26px) saturate(165%);
             }
 
+            .toc-header {
+                flex: 0 0 auto;
+            }
+
             .toc-list-wrapper {
                 flex: 1 1 auto;
                 min-height: 0;
                 overflow-y: auto;
+                touch-action: pan-y !important;
                 -webkit-overflow-scrolling: touch;
                 overscroll-behavior: contain;
             }
@@ -1679,11 +1691,13 @@
 
             .toc-sidebar {
                 position: fixed;
-                left: -260px;
+                left: -100vw;
                 top: 0;
-                width: 240px;
+                width: 100vw;
                 height: 100vh;
+                height: 100dvh;
                 z-index: 200;
+                gap: 0;
                 transition: left 0.3s cubic-bezier(0.16, 1, 0.3, 1);
             }
 

@@ -2799,3 +2799,27 @@ body:not(.has-music) .hv3-row-top .hv3-hero {
         scroll-snap-align: start;
     }
 }
+
+/* 三块统一宽度（v3.54.17）：脚本会按图片高度回写宽度，把块压窄 → 块之间显得隔很远 */
+@media (max-width: 900px) {
+    .hv3-row-main {
+        justify-content: flex-start !important;
+        align-items: flex-start !important;
+    }
+
+    .hv3-row-main > .hv3-stage,
+    .hv3-row-main > .hv3-shot,
+    .hv3-row-main > .hv3-square {
+        flex: 0 0 84% !important;
+        width: 84% !important;
+        max-width: 84% !important;
+        min-width: 0 !important;
+        margin: 0 !important;
+    }
+
+    /* 块内别再自己居中，看上去就像两侧各留了一大段空白 */
+    .hv3-row-main > .hv3-shot,
+    .hv3-row-main > .hv3-square {
+        justify-self: start;
+    }
+}
