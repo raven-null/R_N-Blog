@@ -165,7 +165,7 @@
     <link rel="dns-prefetch" href="https://music.ravennull.work">
     <script src="/js/site-icon.js?v=1.0.1" defer></script>
     <!-- 首屏加载遮罩：进度跟着首屏图片的真实加载数走（见 js/load-progress.js） -->
-    <script src="/js/load-progress.js?v=2.2.3" defer></script>
+    <script src="/js/load-progress.js?v=2.3.0" defer></script>
     <!-- 主页宽度：后台「主页布局」滑块的值 → CSS 变量 --home-content-w（见 js/home-layout.js） -->
     <script src="/js/home-layout.js?v=1.0.0" defer></script>
 
@@ -220,8 +220,14 @@
 <body class="home-layout">
     <!-- 首屏遮罩：必须是 body 里第一个元素，页面其它东西都在它后面（样式见 head 里的内联 style） -->
     <div class="load-veil" id="loadVeil" role="status" aria-live="polite" aria-label="页面加载中">
-        <!-- 背景图由 js/load-progress.js 按屏幕选档后塞进来；没到位时这里就是纯色底 -->
-        <img class="load-veil-bg" id="loadVeilBg" alt="" aria-hidden="true" decoding="async">
+        <!-- 背景图 1：默认就用页面现在这张天空插画（和 sky 层同一份文件，浏览器只下载一次），
+             写在 HTML 里所以首帧就开始下，srcset 让浏览器自己按屏幕选档 -->
+        <img class="load-veil-bg" id="loadVeilBg" alt="" aria-hidden="true" decoding="async" fetchpriority="high"
+             src="images/sky/kumeng-1920.webp"
+             srcset="images/sky/kumeng-960.webp 960w, images/sky/kumeng-1920.webp 1920w"
+             sizes="100vw">
+        <!-- 背景图 2：等默认图加载完之后，从上往下淡入一张图库里随机挑的（见 js/load-progress.js） -->
+        <img class="load-veil-bg" id="loadVeilBgAlt" alt="" aria-hidden="true" decoding="async">
         <div class="load-veil-shade" aria-hidden="true"></div>
         <div class="load-veil-inner">
             <!-- 加载动画：From Uiverse.io by satyamchaudharydev -->
@@ -781,7 +787,7 @@
     <!-- 桌宠动效引擎（spring-driven character，见 public/vendor/grok/README.md） -->
 
     <!-- /js/* 是 immutable 长缓存：app.js 一改就必须换 ?v=，否则线上一直吃旧文件 -->
-    <script src="js/app.js?v=20261106zg" defer></script>
+    <script src="js/app.js?v=20261106zh" defer></script>
     <script src="js/animations.js?v=3.14.0" defer></script>
 
     <script>

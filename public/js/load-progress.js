@@ -164,71 +164,69 @@
         tick();
     }, { once: true });
 
-    /* ===== 遮罩背景图（v2.2.0）=====
-       图池由 scripts/build-loader-bg.mjs 生成（public/images/loader/manifest.json，每张图三档）。
-       这里只做三件事：按「视口宽 × DPR」选档 → 随机挑一张（避开上次那张）→ decode 完再淡入。
-       任何一步失败都只是没有背景图，遮罩本身照常工作。 */
+    /* ===== 遮罩背景图（v2.3.0）=====
+       第 1 层是 HTML 里写死的默认图（就是页面现在这张天空插画，和 sky 层共用一份文件，
+       首帧就开始下、srcset 自动按屏幕选档）；等它出来之后，再从图池里随机挑一张，
+       用第 2 层交叉淡入盖上去。任何一步失败都只是保留默认图，遮罩照常工作。 */
     function paintVeilBackdrop() {
         var bg = document.getElementById('loadVeilBg');
+        var alt = document.getElementById('loadVeilBgAlt');
         if (!bg) return;
 
-        var need = (window.innerWidth || 1280) * (window.devicePixelRatio || 1);
-        var slot = need >= 2200 ? '2560' : need >= 1500 ? '1920' : '1280';
-
-        function show(items) {
-            if (!items.length) return;
-            var lastId = '';
-            try { lastId = localStorage.getItem('loader-bg-last') || ''; } catch (e) { }
-            var pool = items.filter(function (it) { return it.id !== lastId; });
-            if (!pool.length) pool = items;
-            var picked = pool[Math.floor(Math.random() * pool.length)];
-
-            bg.src = picked.slots[slot];
-            try { localStorage.setItem('loader-bg-last', picked.id); } catch (e) { }
-
-            // 用 load 而不是 decode()：首屏同时有上百张图在解码，decode 的 promise 会被排到很后面，
-            // 结果遮罩都快揭开了背景才淡入。load 一到就淡入，浏览器自己会边解码边显示。
-            var revealed = false;
-            var reveal = function () {
-                if (revealed) return;
-                revealed = true;
-                bg.classList.add('is-ready');
-            };
-            bg.onload = reveal;
-            bg.onerror = function () { /* 加载失败就保持纯色，不影响遮罩 */ };
-            if (bg.complete && bg.naturalWidth > 0) reveal();
+        function markReady(el) {
+            if (el && !el.classList.contains('is-ready')) el.classList.add('is-ready');
         }
 
-        fetch('/images/loader/manifest.json', { cache: 'force-cache' })
-            .then(function (r) { return r.ok ? r.json() : null; })
-            .then(function (data) {
-                var items = (data && Array.isArray(data.items) ? data.items : []).filter(function (it) {
-                    return it && it.slots && it.slots[slot];
-                });
-                if (!items.length) return;
+        // 第 1 层：默认图
+        if (bg.complete && bg.naturalWidth > 0) markReady(bg);
+        else bg.addEventListener('load', function () { markReady(bg); }, { once: true });
 
-                var general = items.filter(function (it) { return String(it.rating || 'general') === 'general'; });
-                // 图池里既然全是普通图（默认情况），就立刻出图——绝不去等 settings 接口，
-                // 那个接口是 Netlify 函数，冷启动要 1~3 秒，遮罩根本撑不到那时候。
-                if (general.length === items.length) { show(items); return; }
+        if (!alt) return;
 
-                // 池子里混了 r16/r18（用 --allow-r18 生成过），这时才需要问后台允不允许
-                var askSettings = Promise.race([
-                    fetch('/api/admin?action=settings', { cache: 'force-cache', headers: { Accept: 'application/json' } })
-                        .then(function (r) { return r.ok ? r.json() : null; })
-                        .catch(function () { return null; }),
-                    new Promise(function (resolve) { setTimeout(function () { resolve(null); }, 800); }),
-                ]);
-                show(general.length ? general : items);   // 先按普通图出，别等
-                askSettings.then(function (res) {
-                    var allow = !!(res && res.data && res.data.layout && res.data.layout.loaderBgAllowR18);
-                    if (!allow) return;
-                    var withR18 = items.filter(function (it) { return it.rating !== 'general'; });
-                    if (withR18.length && !bg.classList.contains('is-ready')) show(items);
-                });
-            })
-            .catch(function () { /* 没有图池就保持纯色 */ });
+        // 第 2 层：等默认图落地后再换随机图（不抢带宽，也不会出现空窗）
+        var swapStarted = false;
+        function swapInRandom() {
+            if (swapStarted) return;
+            swapStarted = true;
+
+            var need = (window.innerWidth || 1280) * (window.devicePixelRatio || 1);
+            var slot = need >= 2200 ? '2560' : need >= 1500 ? '1920' : '1280';
+
+            fetch('/images/loader/manifest.json', { cache: 'force-cache' })
+                .then(function (r) { return r.ok ? r.json() : null; })
+                .then(function (data) {
+                    var items = (data && Array.isArray(data.items) ? data.items : []).filter(function (it) {
+                        return it && it.slots && it.slots[slot];
+                    });
+                    // 只用普通评级的图
+                    var general = items.filter(function (it) { return String(it.rating || 'general') === 'general'; });
+                    var pool = general.length ? general : items;
+                    if (!pool.length) return;
+
+                    var lastId = '';
+                    try { lastId = localStorage.getItem('loader-bg-last') || ''; } catch (e) { }
+                    var fresh = pool.filter(function (it) { return it.id !== lastId; });
+                    if (!fresh.length) fresh = pool;
+                    var picked = fresh[Math.floor(Math.random() * fresh.length)];
+
+                    // 先悄悄下好，再一次性换，避免看到半张图
+                    var probe = new Image();
+                    probe.onload = function () {
+                        alt.src = picked.slots[slot];
+                        try { localStorage.setItem('loader-bg-last', picked.id); } catch (e) { }
+                        markReady(alt);
+                    };
+                    probe.src = picked.slots[slot];
+                })
+                .catch(function () { /* 换图失败就保持默认图 */ });
+        }
+
+        if (bg.complete && bg.naturalWidth > 0) {
+            setTimeout(swapInRandom, 500);
+        } else {
+            bg.addEventListener('load', function () { setTimeout(swapInRandom, 400); }, { once: true });
+            setTimeout(swapInRandom, 2000);
+        }
     }
-
     paintVeilBackdrop();
 })();
