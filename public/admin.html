@@ -429,9 +429,14 @@
         .switch input:checked + .slider:before{transform:translateX(18px);background:#000}
         .settings-tip{font-size:11px;color:var(--text-muted);margin-top:8px}
         /* 设置里的拉动条（主页内容宽度） */
-        .settings-range{width:100%;height:6px;margin:10px 0 4px;border-radius:999px;appearance:none;-webkit-appearance:none;background:var(--surface-3,#e6e2d8);outline:none;cursor:pointer}
-        .settings-range::-webkit-slider-thumb{appearance:none;-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--accent);border:2px solid var(--bg-primary);box-shadow:0 2px 6px rgba(0,0,0,.22)}
-        .settings-range::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--accent);border:2px solid var(--bg-primary)}
+        .settings-range{width:100%;height:26px;margin:6px 0 2px;background:transparent;outline:none;cursor:pointer;
+            -webkit-appearance:none;appearance:none;-webkit-user-drag:none;position:relative;z-index:1}
+        .settings-range::-webkit-slider-runnable-track{height:6px;border-radius:999px;background:var(--surface-3,#e6e2d8)}
+        .settings-range::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:18px;height:18px;margin-top:-6px;border-radius:50%;background:var(--accent);border:2px solid var(--bg-primary);box-shadow:0 2px 6px rgba(0,0,0,.22)}
+        .settings-range::-moz-range-track{height:6px;border-radius:999px;background:var(--surface-3,#e6e2d8)}
+        .settings-range::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:var(--accent);border:2px solid var(--bg-primary)}
+        /* 拖到滑块上时别让整组卡跟着“浮起来” */
+        .settings-group:has(.settings-range:active){opacity:1!important}
         .settings-range-val{font-family:'Courier New',monospace;font-size:12px;color:var(--accent);margin-left:6px}
         /* 滑块下面的实时示意：外框＝屏幕，中间那格＝主页内容，拖动时它跟着缩/涨 */
         .settings-screen{position:relative;height:104px;margin-top:12px;border-radius:10px;overflow:hidden;
@@ -1206,8 +1211,10 @@
                             <h3><span class="settings-title">主页布局</span><span class="settings-grip" title="拖动排序">⠿</span><span class="settings-chevron" title="展开/收起">▾</span></h3>
                             <div class="settings-field">
                                 <label>主页内容宽度 <span class="settings-range-val" id="setHomeWidthVal">86%</span></label>
+                                <!-- draggable="false"：设置组整体可拖动排序（.settings-group 带 draggable），
+                                     不掐掉的话按在滑块上一拖就被当成「拖动整组」，滑块自己反而拖不动 -->
                                 <input type="range" min="40" max="100" step="1" value="86" id="setHomeWidthPct"
-                                       class="settings-range" oninput="previewHomeWidth(this.value)">
+                                       class="settings-range" draggable="false" oninput="previewHomeWidth(this.value)">
                                 <!-- 实时示意：外框＝整块屏幕，中间那格＝主页内容；拖动滑块，中间那格跟着缩/涨 -->
                                 <div class="settings-screen" aria-hidden="true">
                                     <span class="settings-screen-tag">屏幕</span>
@@ -1614,7 +1621,7 @@
     </div>
 
         <script src="js/tag-picker.js?v=1.1.2"></script>
-        <script src="js/admin-app.js?v=1.32.0"></script>
+        <script src="js/admin-app.js?v=1.32.1"></script>
 
     <!-- 前台预览抽屉（iframe 内嵌，零跳出） -->
     <style>

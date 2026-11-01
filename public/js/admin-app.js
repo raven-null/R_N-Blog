@@ -3255,6 +3255,20 @@
                 });
             });
         }
+        // 设置组整体是 draggable（拖动排序），滑块按下去会被浏览器当成「拖动整张卡」，
+        // 表现就是点轨道能跳、按住拖却不动。按下滑块的一瞬间先关掉祖先的 draggable，松手再恢复。
+        document.addEventListener('pointerdown',e=>{
+            const range=e.target.closest('input[type="range"]');
+            if(!range)return;
+            const group=range.closest('.settings-group');
+            if(group)group.setAttribute('draggable','false');
+        },true);
+        const restoreGroupDrag=()=>{
+            document.querySelectorAll('.settings-group[draggable="false"]').forEach(g=>g.setAttribute('draggable','true'));
+        };
+        document.addEventListener('pointerup',restoreGroupDrag,true);
+        document.addEventListener('pointercancel',restoreGroupDrag,true);
+
         document.addEventListener('DOMContentLoaded',()=>{
             initSettingsDrag();
             initSettingsCollapse();
