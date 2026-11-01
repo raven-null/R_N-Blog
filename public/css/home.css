@@ -2647,3 +2647,19 @@ body:not(.has-music) .hv3-row-top .hv3-hero {
         height: 40px;
     }
 }
+
+/* ------------------------------------------------------------
+   移动端：信息卡只留头像 + 名字（v3.54.10）
+   「落日余温 · PERSONAL SPACE」那行小标签和下面的简介，在手机上又小又挤，
+   直接隐藏，只留名字和右边的时钟。
+   ------------------------------------------------------------ */
+@media (max-width: 900px) {
+    .hv3-who .hv3-eyebrow,
+    .hv3-who .hv3-bio {
+        display: none !important;
+    }
+
+    .hv3-who .hv3-name {
+        margin: 0;
+    }
+}
