@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -1714,7 +1714,7 @@
                 left: 0;
             }
 
-            /* 「返回」不用再拉满整行：按内容自适应成小胶囊，右边三个方块靠右。
+            /* 「返回」不用再拉满整行：按内容自适应成小胶囊。
                width 必须显式写回 auto —— 上面 1024 那条 `.sidebar-action-btn{width:36px}`
                写在后面、特异性一样，会把按钮钉成 36px 宽（字直接看不见）。 */
             .toc-sidebar .sidebar-go-back {
@@ -1723,8 +1723,9 @@
                 padding: 0 12px;
             }
 
+            /* 三个按钮靠在一起：不再把首页 / 助手推到右边去留一大片空档 */
             .toc-sidebar .sidebar-actions {
-                margin-left: auto;
+                margin-left: 0;
             }
 
             /* 「折叠子目录」按钮 24px 在指尖上太小，放大触控区（图标仍是 14） */
