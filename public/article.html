@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -1693,10 +1693,15 @@
                 position: fixed;
                 left: -100vw;
                 top: 0;
-                width: 100vw;
+                /* 从左边抽出一块就够，别整屏盖住：86vw，最宽 360px，
+                   右边留出正文 + 遮罩（点遮罩照样能关掉） */
+                width: min(86vw, 360px);
                 height: 100vh;
                 height: 100dvh;
-                /* 移动端目录是整屏抽屉，层级要压过页面上所有浮层：
+                /* 顶部那排按钮以前贴着屏幕边，抽屉窄了之后给它们留出边距；
+                   .toc-sidebar-inner 是 absolute 定位，不受这里 padding 影响 */
+                padding: 10px 10px 0;
+                /* 移动端目录是抽屉，层级要压过页面上所有浮层：
                    正文层叠上下文 200 出头、聊天窗口 1002、划词气泡 2000、进度条 2100、
                    桌宠铃铛 9000 —— 这里取 10000 坐最顶层，遮罩紧随其下一档（9990）。
                    !important：其它样式表可能后到，别被同特异性规则盖回去。 */
@@ -1707,6 +1712,26 @@
 
             .toc-sidebar.show {
                 left: 0;
+            }
+
+            /* 「返回」不用再拉满整行：按内容自适应成小胶囊，右边三个方块靠右。
+               width 必须显式写回 auto —— 上面 1024 那条 `.sidebar-action-btn{width:36px}`
+               写在后面、特异性一样，会把按钮钉成 36px 宽（字直接看不见）。 */
+            .toc-sidebar .sidebar-go-back {
+                flex: 0 0 auto;
+                width: auto;
+                padding: 0 12px;
+            }
+
+            .toc-sidebar .sidebar-actions {
+                margin-left: auto;
+            }
+
+            /* 「折叠子目录」按钮 24px 在指尖上太小，放大触控区（图标仍是 14） */
+            .toc-sidebar .toc-collapse-btn {
+                width: 32px;
+                height: 32px;
+                flex: 0 0 32px;
             }
 
             .sidebar-overlay {
@@ -2508,9 +2533,6 @@
                             <polyline points="9 22 9 12 15 12 15 22"></polyline>
                         </svg>
                     </a>
-                    <button class="sidebar-action-btn" id="sidebarThemeToggle" title="切换主题">
-                        ◐
-                    </button>
                     <button class="sidebar-action-btn" id="sidebarChatToggle" title="AI 助手">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
@@ -2712,74 +2734,11 @@
     <script src="js/reader.js?v=3.15.2" defer></script>
     <script src="js/animations.js?v=3.14.0" defer></script>
 
-    <script src="js/article-app.js?v=2.4.3" defer></script>
+    <script src="js/article-app.js?v=2.4.4" defer></script>
 
-    <!-- 桌宠：看页面 / 主动说话 / 语音对话 -->
-    <div class="deskpet" id="deskPet" data-state="awake">
-        <div class="deskpet-bubble" id="deskPetBubble" role="status" aria-live="polite"></div>
-        <button class="deskpet-body" id="deskPetBody" type="button" aria-label="摸摸桌宠">
-           
-            <svg class="deskpet-art" id="grokPet" role="img" aria-label="桌宠"></svg>
-            <span class="deskpet-zzz" aria-hidden="true"><i>z</i><i>z</i><i>z</i></span>
-        </button>
-
-        <!-- 对话：只弹一个输入条，回复直接走桌宠气泡 -->
-        <div class="pet-chat pet-chat-compact" id="petChat" role="dialog" aria-label="和渡鸦说话">
-            <form class="pet-chat-form" id="petChatForm">
-                <button type="button" class="pet-mic" id="petMic" title="点一下说话（需要麦克风权限）" aria-label="语音输入">
-                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.2a2.4 2.4 0 0 1 2.4 2.4v4.8a2.4 2.4 0 0 1-4.8 0V6.6A2.4 2.4 0 0 1 12 4.2z"/><path d="M6.8 11.4a5.2 5.2 0 0 0 10.4 0"/><path d="M12 16.7v3"/></svg>
-                </button>
-                <input type="text" id="petChatInput" placeholder="和我说点什么…" maxlength="300" autocomplete="off">
-                <button type="submit" class="pet-send" title="发送" aria-label="发送">
-                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V6"/><path d="M6 12l6-6 6 6"/></svg>
-                </button>
-            </form>
-        </div>
-    </div>
-
-    <script>
-    /* DSH-LAZY: 桌宠引擎（约 200KB）空闲时再注入，别挡住文章首屏 */
-    (function () {
-        var DEPS = [
-            '/vendor/grok/geometry-data.js?v=1.0.0',
-            '/vendor/grok/math.js?v=1.0.0',
-            '/vendor/grok/tables.js?v=1.0.0',
-            '/vendor/grok/pose.js?v=1.0.0',
-            '/vendor/grok/tricks.js?v=1.0.0',
-            '/vendor/grok/fx.js?v=1.0.0',
-            '/vendor/grok/eyes.js?v=1.0.0',
-            '/vendor/grok/character.js?v=1.0.2',
-            '/js/pet-core.js?v=2.0.35',
-            '/js/pet-mind.js?v=2.0.27'
-        ];
-        var started = false;
-        function load() {
-            if (started) return;
-            started = true;
-            DEPS.forEach(function (src) {
-                var s = document.createElement('script');
-                s.src = src;
-                s.async = false;   // 保持顺序：grok 引擎有依赖链
-                s.onload = function () {
-                    if (src.indexOf('pet-core') !== -1 && window.PetCore) PetCore.init();
-                    if (src.indexOf('pet-mind') !== -1 && window.PetMind) PetMind.start();
-                };
-                document.body.appendChild(s);
-            });
-        }
-        function schedule() {
-            // 空闲回调 + 超时兜底：后台标签可能一直不"空闲"（load 内有 started 守卫）
-            if ('requestIdleCallback' in window) requestIdleCallback(load, { timeout: 1500 });
-            setTimeout(load, 'requestIdleCallback' in window ? 2100 : 700);
-        }
-        if (document.readyState === 'complete') schedule();
-        else {
-            window.addEventListener('load', function () { setTimeout(schedule, 200); });
-            // 兜底：load 迟迟不来（后台标签 / 慢资源）也照样注入
-            setTimeout(schedule, 1500);
-        }
-    })();
-    </script>
+    <!-- 桌宠只在首页（index.html）：文章页刷新后也该回到主页才见到它，
+         所以这里不再挂 #deskPet，也不再懒加载 grok 引擎 + pet-core / pet-mind，
+         省掉约 200KB 与一段空闲注入逻辑。文章页的 AI 助手仍走 #chatWindow（chat.js）。 -->
 
     <script>
         // 手写体是「首页 hero 的笔形按钮」在全站总开关，文章页只跟随设置、不再自己开一个开关：

@@ -1,5 +1,5 @@
 /**
- * 文章页主脚本（由 article.html 内联脚本抽出，便于独立缓存与排查）· v2.4.3
+ * 文章页主脚本（由 article.html 内联脚本抽出，便于独立缓存与排查）· v2.4.4
  * 改动后请同步 bump article.html 里的 ?v= 版本号
  */
         // 文章详情页应用
@@ -1326,46 +1326,45 @@ const ArticleApp = {
             },
 
             // 初始化目录折叠功能
+            // 目录会随分章加载 / 二次渲染反复重建，所以这里两条规矩：
+            //   ① 监听器只绑一次 —— 重复绑定会让一次点击 toggle 两次，表现就是「按了没反应」；
+            //   ② 回调里实时查节点 —— 别用闭包里那份会过期的 NodeList（旧节点早被 innerHTML 清掉了）。
             initTocCollapse() {
                 const collapseBtn = document.getElementById('tocCollapseBtn');
-                const childContainers = document.querySelectorAll('.toc-child-container');
-                const parentItems = document.querySelectorAll('.toc-parent');
-
                 if (!collapseBtn) return;
 
-                // 统一折叠按钮点击事件
+                // 目录里压根没有子标题时，这个按钮无事可做（点了只有图标转一下）——直接收起来
+                const hasChildren = !!document.querySelector('#toc-list .toc-child-container');
+                collapseBtn.style.display = hasChildren ? '' : 'none';
+                if (!hasChildren) collapseBtn.classList.remove('collapsed');
+                collapseBtn.setAttribute('aria-expanded', String(!collapseBtn.classList.contains('collapsed')));
+                if (!hasChildren) return;
+
+                if (collapseBtn.dataset.collapseBound === '1') return;
+                collapseBtn.dataset.collapseBound = '1';
+
+                // 统一折叠按钮：一次折/展所有子目录
                 collapseBtn.addEventListener('click', () => {
                     const isCollapsed = collapseBtn.classList.toggle('collapsed');
-                    
-                    childContainers.forEach(container => {
-                        if (isCollapsed) {
-                            container.classList.add('collapsed');
-                        } else {
-                            container.classList.remove('collapsed');
-                        }
-                    });
-
-                    parentItems.forEach(item => {
-                        if (isCollapsed) {
-                            item.classList.add('collapsed');
-                        } else {
-                            item.classList.remove('collapsed');
-                        }
-                    });
+                    collapseBtn.setAttribute('aria-expanded', String(!isCollapsed));
+                    document.querySelectorAll('#toc-list .toc-child-container')
+                        .forEach((c) => c.classList.toggle('collapsed', isCollapsed));
+                    document.querySelectorAll('#toc-list .toc-parent')
+                        .forEach((p) => p.classList.toggle('collapsed', isCollapsed));
                 });
 
-                // 为每个父级目录的折叠图标添加点击事件
-                parentItems.forEach(item => {
-                    const toggleIcon = item.querySelector('.toc-toggle-icon');
-                    const childContainer = item.querySelector('.toc-child-container');
-                    
-                    if (toggleIcon && childContainer) {
-                        toggleIcon.addEventListener('click', (e) => {
-                            e.stopPropagation();
-                            const isCollapsed = childContainer.classList.toggle('collapsed');
-                            item.classList.toggle('collapsed', isCollapsed);
-                        });
-                    }
+                // 每个父级条目右边的小箭头：单独折/展这一支
+                document.querySelectorAll('#toc-list .toc-parent').forEach((item) => {
+                    const icon = item.querySelector('.toc-toggle-icon');
+                    if (!icon || icon.dataset.collapseBound === '1') return;
+                    icon.dataset.collapseBound = '1';
+                    icon.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const container = item.querySelector('.toc-child-container');
+                        if (!container) return;
+                        const isCollapsed = container.classList.toggle('collapsed');
+                        item.classList.toggle('collapsed', isCollapsed);
+                    });
                 });
             },
 
