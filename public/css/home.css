@@ -2130,3 +2130,100 @@ body:not(.has-music) .hv3-music {
 body:not(.has-music) .hv3-row-top .hv3-hero {
     grid-column: span 12;
 }
+/* ============================================================
+   万年历：点日历那天，右栏显示这天的农历 / 干支 / 宜忌
+   ============================================================ */
+.hv3-almanac {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    height: 100%;
+    min-height: 0;
+    padding: 2px 2px 0;
+}
+
+.al-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.al-solar {
+    font-size: 26px;
+    font-weight: 700;
+    line-height: 1.1;
+    color: var(--text);
+}
+
+.al-week {
+    font-size: 12px;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+.al-lunar {
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: .02em;
+    color: var(--text);
+}
+
+.al-sub {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.al-fest {
+    align-self: flex-start;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--accent) 16%, transparent);
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.al-yiji {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 2px;
+}
+
+.al-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--text-secondary);
+}
+
+.al-row b {
+    flex: none;
+    width: 22px;
+    height: 22px;
+    display: inline-grid;
+    place-items: center;
+    border-radius: 7px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.al-yi b {
+    background: color-mix(in srgb, #3aa76d 22%, transparent);
+    color: #2f8c5c;
+}
+
+.al-ji b {
+    background: color-mix(in srgb, #d9534f 20%, transparent);
+    color: #c04642;
+}
+
+.al-foot {
+    margin-top: auto;
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: .04em;
+}

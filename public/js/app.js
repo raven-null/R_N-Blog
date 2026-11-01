@@ -3096,29 +3096,21 @@ const BlogApp = {
 
     // 初始化：没登录就把任务/日记都藏起来（日历滚轮切月不受登录限制）
     async initLife() {
-        const box = document.getElementById('homeLife');
-        const journalBox = document.getElementById('homeJournalBox');
-        if (!box) return;
+        // 任务 / 日记已经删掉了：这里只负责日历本身（点日期看万年历）
+        const panel = document.getElementById('hv3TodayPanel');
         this.bindCalendarWheel();
         this.bindCalendarClicks();
-        // 日记的折叠按钮不依赖登录态：先绑上，免得登录切换后点不动
-        this.bindJournalToggle();
-        if (!this.lifeAdminKey()) {
-            box.style.display = 'none';
-            if (journalBox) journalBox.style.display = 'none';
-            // 未登录：写作按钮换成「去后台登录」入口
-            document.getElementById('hv3TodayPanel')?.classList.add('is-guest');
-            this.updateTodayHeader();
-            return;
-        }
+        if (!panel) return;
 
         const today = this.formatDateKey(new Date());
         this.lifeState.date = today;
         this.lifeState.month = today.slice(0, 7);
         this._calViewMonth = this.lifeState.month;
-        this.bindLifeEvents();
 
-        await this.loadLifeMonth(this.lifeState.month);
+        // 日历不用等登录：万年历全是本地算的，谁点都能看
+        if (this.lifeAdminKey()) {
+            await this.loadLifeMonth(this.lifeState.month);
+        }
 
         // 窗口尺寸变了，日历高度跟着变，右栏的上限也要重算
         if (!this._todaySideResizeBound) {
@@ -3142,8 +3134,7 @@ const BlogApp = {
             this._calWheelAt = now;
 
             const delta = e.deltaY > 0 ? 1 : -1;
-            const lifeBox = document.getElementById('homeLife');
-            const loggedIn = !!this.lifeAdminKey() && lifeBox && lifeBox.style.display !== 'none';
+            const loggedIn = !!this.lifeAdminKey();
 
             if (loggedIn) {
                 this.changeLifeMonth(delta);
@@ -3192,15 +3183,173 @@ const BlogApp = {
     },
 
     renderLife() {
-        const monthEl = document.getElementById('lifeMonthLabel');
-        if (monthEl) {
-            const [y, m] = this.lifeState.month.split('-');
-            monthEl.textContent = `${y} 年 ${Number(m)} 月`;
-        }
         this.updateTodayHeader();
-        this.renderLifeTasks();
-        this.renderJournalStack();
+        this.renderAlmanac();
         this.syncTodaySideHeight();
+    },
+
+    /* ===== 万年历（点日历随时看那天） =====
+       农历靠浏览器自带的 chinese 历（Intl），干支/生肖/星座/节日在本地算；
+       宜忌是按十二建除做的简化推荐，图个氛围，别当黄历用。 */
+    renderAlmanac() {
+        const box = document.getElementById('hv3Almanac');
+        if (!box) return;
+        const date = this.lifeState.date || this.formatDateKey(new Date());
+        const a = this.almanacInfo(date);
+        box.innerHTML = `
+            <div class="al-head">
+                <span class="al-solar">${a.month} 月 ${a.day} 日</span>
+                <span class="al-week">周${a.week} · 第 ${a.weekNo} 周</span>
+            </div>
+            <div class="al-lunar">${a.lunar}</div>
+            <div class="al-sub">${a.ganzhiYear} · ${a.zodiac}年 · ${a.sign}</div>
+            ${a.festival ? `<div class="al-fest">${a.festival}</div>` : ''}
+            <div class="al-yiji">
+                <div class="al-row al-yi"><b>宜</b><span>${a.yi}</span></div>
+                <div class="al-row al-ji"><b>忌</b><span>${a.ji}</span></div>
+            </div>
+            <div class="al-foot">${a.dayMaster}</div>
+        `;
+    },
+
+    almanacInfo(dateKey) {
+        const [y, m, d] = String(dateKey).split('-').map(Number);
+        const date = new Date(y, m - 1, d);
+        const weekNames = ['日', '一', '二', '三', '四', '五', '六'];
+
+        // 农历（浏览器原生 chinese 历）：优先 formatToParts，拿不到再退回整串匹配
+        let lunar = '农历 —';
+        let lunarMonth = 0;
+        let lunarDay = 0;
+        let lunarYear = y;
+        let yearName = '';
+        try {
+            const fmt = new Intl.DateTimeFormat('zh-CN-u-ca-chinese', {
+                year: 'numeric', month: 'long', day: 'numeric',
+            });
+            let monthText = '';
+            let dayText = '';
+            try {
+                fmt.formatToParts(date).forEach((p) => {
+                    if (p.type === 'year' || p.type === 'relatedYear') lunarYear = Number(String(p.value).replace(/\D/g, '')) || lunarYear;
+                    if (p.type === 'yearName') yearName = String(p.value);
+                    if (p.type === 'month') monthText = String(p.value);
+                    if (p.type === 'day') dayText = String(p.value);
+                });
+            } catch (e2) {
+                const text = fmt.format(date);
+                const m2 = text.match(/([正二三四五六七八九十冬腊]{1,3}月)/);
+                const d2 = text.match(/月([初十廿卅\d一二三四五六七八九]{1,3})/);
+                if (m2) monthText = m2[1];
+                if (d2) dayText = d2[1];
+            }
+            lunarMonth = this.lunarMonthNumber(monthText);
+            lunarDay = this.lunarDayNumber(dayText);
+            lunar = '农历 ' + String(monthText).replace(/\d/g, '') + this.lunarDayLabel(lunarDay);
+        } catch (e) { /* 老浏览器没有 chinese 历，就只显示公历 */ }
+
+        // 干支年 + 生肖（Intl 直接给了 yearName 就用它）
+        const yearGanZhi = yearName || this.ganzhiOf(lunarYear);
+        const zodiac = '鼠牛虎兔龙蛇马羊猴鸡狗猪'[(((lunarYear - 4) % 12) + 12) % 12];
+
+        // 星座
+        const signs = [[1, 20, '水瓶座'], [2, 19, '双鱼座'], [3, 21, '白羊座'], [4, 20, '金牛座'], [5, 21, '双子座'], [6, 22, '巨蟹座'],
+            [7, 23, '狮子座'], [8, 23, '处女座'], [9, 23, '天秤座'], [10, 24, '天蝎座'], [11, 23, '射手座'], [12, 22, '摩羯座']];
+        let sign = '摩羯座';
+        for (const [sm, sd, name] of signs) {
+            if (m > sm || (m === sm && d >= sd)) sign = name;
+        }
+
+        // 节日：先看农历，再看公历
+        const lunarFest = {
+            '1-1': '春节', '1-15': '元宵节', '2-2': '龙抬头', '5-5': '端午节',
+            '7-7': '七夕', '7-15': '中元节', '8-15': '中秋节', '9-9': '重阳节', '12-8': '腊八节',
+        };
+        const solarFest = {
+            '1-1': '元旦', '2-14': '情人节', '3-8': '妇女节', '4-1': '愚人节', '5-1': '劳动节',
+            '5-4': '青年节', '6-1': '儿童节', '9-10': '教师节', '10-1': '国庆节', '12-24': '平安夜', '12-25': '圣诞节',
+        };
+        const festival = lunarFest[`${lunarMonth}-${lunarDay}`] || solarFest[`${m}-${d}`] || '';
+
+        // 第几周（ISO 近似：按该年第一天算）
+        const start = new Date(y, 0, 1);
+        const weekNo = Math.ceil((((date - start) / 86400000) + start.getDay() + 1) / 7);
+
+        // 十二建除（简化：按公历日序推），配通用宜忌
+        const JIAN = [
+            { name: '建', yi: '出行、上任、会友', ji: '动土、开仓' },
+            { name: '除', yi: '扫舍、疗病、除旧', ji: '求财、嫁娶' },
+            { name: '满', yi: '祈福、开市、交易', ji: '安葬、服药' },
+            { name: '平', yi: '修饰、平治、修整', ji: '栽种、开渠' },
+            { name: '定', yi: '订盟、纳采、安床', ji: '诉讼、出行' },
+            { name: '执', yi: '祭祀、捕捉、立约', ji: '开市、搬迁' },
+            { name: '破', yi: '破屋、求医、解除', ji: '嫁娶、开市' },
+            { name: '危', yi: '安床、祭祀、静养', ji: '登高、远行' },
+            { name: '成', yi: '嫁娶、开市、签约', ji: '诉讼、破土' },
+            { name: '收', yi: '纳财、收纳、收账', ji: '出行、安葬' },
+            { name: '开', yi: '祈福、开市、出行', ji: '安葬、动土' },
+            { name: '闭', yi: '筑堤、埋穴、静修', ji: '开市、出行' },
+        ];
+        const dayNo = Math.floor(date.getTime() / 86400000);
+        const jian = JIAN[((dayNo % 12) + 12) % 12];
+
+        return {
+            month: m,
+            day: d,
+            week: weekNames[date.getDay()],
+            weekNo,
+            lunar,
+            ganzhiYear: yearGanZhi + '年',
+            zodiac,
+            sign,
+            festival,
+            yi: jian.yi,
+            ji: jian.ji,
+            dayMaster: `${jian.name}日 · 宜忌仅供参考`,
+        };
+    },
+
+    // 数字 → 中文农历日（初八 / 廿三 / 三十）
+    lunarDayLabel(n) {
+        const num = Number(n);
+        const digits = ['', '一', '二', '三', '四', '五', '六', '七', '八', '九'];
+        if (!num || num < 1) return '';
+        if (num === 10) return '初十';
+        if (num < 10) return '初' + digits[num];
+        if (num < 20) return '十' + digits[num - 10];
+        if (num === 20) return '二十';
+        if (num < 30) return '廿' + digits[num - 20];
+        return '三十';
+    },
+
+    // 农历月份文本 → 数字（十月 / 正月 / 腊月 / 11月…）
+    lunarMonthNumber(text) {
+        const t = String(text || '').replace(/月/g, '').trim();
+        if (!t) return 0;
+        if (/^\d+$/.test(t)) return Number(t);
+        const map = { 正: 1, 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9, 十: 10, 十一: 11, 冬: 11, 十二: 12, 腊: 12 };
+        return map[t] || 0;
+    },
+
+    // 中文农历日 → 数字（初一…三十；Intl 有时直接给阿拉伯数字）
+    lunarDayNumber(text) {
+        const t = String(text || '').trim();
+        const digits = { 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9, 十: 10 };
+        if (!t) return 0;
+        if (/^\d+$/.test(t)) return Number(t);
+        if (t[0] === '初') return digits[t[1]] || 0;
+        if (t[0] === '十') return 10 + (digits[t[1]] || 0);
+        if (t[0] === '廿') return 20 + (digits[t[1]] || 0);
+        if (t[0] === '卅') return 30;
+        return digits[t] || 0;
+    },
+
+    // 年份 → 干支
+    ganzhiOf(year) {
+        const gan = '甲乙丙丁戊己庚辛壬癸';
+        const zhi = '子丑寅卯辰巳午未申酉戌亥';
+        const n = ((year - 4) % 60 + 60) % 60;
+        return gan[n % 10] + zhi[n % 12];
     },
 
     /* 右栏（任务 + 日记）不能比左边日历高：把日历实际高度写进 max-height，
@@ -3347,7 +3496,8 @@ const BlogApp = {
             // 不再自动弹出「任务 / 日记」选择层：写东西走日历左边那两个按钮
         };
         if (month !== this.lifeState.month) {
-            this.loadLifeMonth(month).then(ok => { if (ok) after(); });
+            // 万年历是本地算的：换月的数据没拿到也照样渲染
+            this.loadLifeMonth(month).catch(() => { }).then(() => after());
             return;
         }
         after();
@@ -3362,23 +3512,9 @@ const BlogApp = {
         if (!proj || !day) return;
         proj.hidden = !!on;
         day.hidden = !on;
-        // 卡片上的标记：日历左边那两个「任务 / 日记」按钮只在点过日期后出现
+        // 卡片上的标记：点过日期后右栏切成万年历
         const panel = document.getElementById('hv3TodayPanel');
         if (panel) panel.classList.toggle('is-day-pane', !!on);
-        if (on) {
-            /* 点日期后，任务区 / 日记区必须真的露出来：
-               它们可能被「未登录」时写的 display:none 或折叠状态藏着 */
-            const life = document.getElementById('homeLife');
-            const jour = document.getElementById('homeJournalBox');
-            if (life) life.style.display = '';
-            if (jour) {
-                // 日记默认不展开：点日期先看任务，想写再点标题
-                jour.style.display = '';
-                jour.classList.add('is-collapsed');
-                const btn = document.getElementById('journalToggle');
-                if (btn) btn.setAttribute('aria-expanded', 'false');
-            }
-        }
         this.syncTodaySideHeight();
         if (!on) this.syncTodaySideSlot();
     },
@@ -3632,38 +3768,8 @@ const BlogApp = {
         panel.dataset.clickBound = '1';
         panel.addEventListener('click', (e) => {
             const cell = e.target.closest('.cal-day');
-            const act = e.target.closest('[data-cal-act]');
-            const quick = e.target.closest('.hv3-day-act');
-            if (!act && !quick && (!cell || !cell.dataset.date)) return;
-            if (!this.lifeAdminKey()) {
-                // 点这两个按钮没登录的话会显得毫无反应 —— 直接带去后台登录
-                if (quick) {
-                    e.preventDefault();
-                    this.petSay('先去后台登录，登录完就能写了', 2600);
-                    setTimeout(() => { location.href = '/admin'; }, 320);
-                    return;
-                }
-                if (cell) {
-                    document.querySelectorAll('#homeCalendar .cal-day').forEach(el => {
-                        el.classList.toggle('is-selected', el === cell);
-                    });
-                }
-                this.petSay('先在后台登录，才能写任务和日记～', 3800);
-                return;
-            }
-            if (quick) {
-                e.preventDefault();
-                // 按下先给个反馈，免得以为没点上
-                quick.classList.add('is-pressed');
-                setTimeout(() => quick.classList.remove('is-pressed'), 280);
-                this.openLifeEditor(quick.dataset.kind);
-                return;
-            }
-            if (act) {
-                e.preventDefault();
-                this.openLifeEditor(act.dataset.calAct);
-                return;
-            }
+            if (!cell || !cell.dataset.date) return;
+            // 万年历是本地算的，登不登录都能看
             this.selectLifeDate(cell.dataset.date);
         });
     },

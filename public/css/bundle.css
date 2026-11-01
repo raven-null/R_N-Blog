@@ -6209,35 +6209,9 @@ body.view-projects-active.home-layout .main-content {
     border-radius: 24px;
 }
 
-/* 底座：半透明软盘，深浅主题下都衬得出黑色剪影 */
-.deskpet-plate {
-    position: absolute;
-    inset: 4px 1px 6px;
-    border-radius: 50%;
-    background:
-        radial-gradient(circle at 50% 30%, rgba(255, 255, 255, 0.26) 0%, rgba(255, 255, 255, 0.05) 42%, rgba(20, 22, 34, 0) 74%),
-        radial-gradient(circle at 50% 62%, rgba(78, 82, 104, 0.42) 0%, rgba(30, 33, 48, 0.26) 56%, rgba(10, 12, 22, 0.10) 100%);
-    border: 1px solid rgba(255, 255, 255, 0.10);
-    box-shadow:
-        0 10px 22px rgba(10, 14, 32, 0.28),
-        inset 0 -6px 12px rgba(0, 0, 0, 0.22),
-        inset 0 1px 2px rgba(255, 255, 255, 0.16);
-    pointer-events: none;
-    transition: box-shadow 0.25s ease, opacity 0.25s ease, transform 0.25s ease;
-}
-
-@media (hover: hover) {
-    .deskpet-body:hover .deskpet-plate {
-        box-shadow:
-            0 12px 26px rgba(10, 14, 32, 0.32),
-            0 0 0 3px rgba(255, 255, 255, 0.08),
-            inset 0 -6px 12px rgba(0, 0, 0, 0.20),
-            inset 0 1px 2px rgba(255, 255, 255, 0.20);
-    }
-}
+/* 桌宠就是那颗纯黑圆球，不再垫一圈底盘（grok 原版没有那层圆盘） */
 
 /* 拖拽时整只轻轻倾斜，手感更"被拎起来" */
-.deskpet.is-dragging .deskpet-plate,
 .deskpet.is-dragging .deskpet-art {
     transform: rotate(var(--pet-tilt, 0deg));
 }
@@ -6498,11 +6472,6 @@ body.view-projects-active.home-layout .main-content {
     box-shadow: 0 8px 22px rgba(10, 14, 32, 0.22), 0 0 0 3px var(--accent-soft, rgba(240, 162, 12, 0.18));
     transform: scale(1.1);
     outline: none;
-}
-
-/* 对话模式：底座一圈呼吸光，表示它正听着 */
-.deskpet.is-voice-mode .deskpet-plate {
-    animation: dpVoicePulse 1.9s ease-in-out infinite;
 }
 
 .deskpet.is-voice-mode .deskpet-body {
@@ -15291,6 +15260,103 @@ body:not(.has-music) .hv3-music {
 
 body:not(.has-music) .hv3-row-top .hv3-hero {
     grid-column: span 12;
+}
+/* ============================================================
+   万年历：点日历那天，右栏显示这天的农历 / 干支 / 宜忌
+   ============================================================ */
+.hv3-almanac {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    height: 100%;
+    min-height: 0;
+    padding: 2px 2px 0;
+}
+
+.al-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.al-solar {
+    font-size: 26px;
+    font-weight: 700;
+    line-height: 1.1;
+    color: var(--text);
+}
+
+.al-week {
+    font-size: 12px;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+.al-lunar {
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: .02em;
+    color: var(--text);
+}
+
+.al-sub {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.al-fest {
+    align-self: flex-start;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--accent) 16%, transparent);
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.al-yiji {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 2px;
+}
+
+.al-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--text-secondary);
+}
+
+.al-row b {
+    flex: none;
+    width: 22px;
+    height: 22px;
+    display: inline-grid;
+    place-items: center;
+    border-radius: 7px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.al-yi b {
+    background: color-mix(in srgb, #3aa76d 22%, transparent);
+    color: #2f8c5c;
+}
+
+.al-ji b {
+    background: color-mix(in srgb, #d9534f 20%, transparent);
+    color: #c04642;
+}
+
+.al-foot {
+    margin-top: auto;
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: .04em;
 }
 
 

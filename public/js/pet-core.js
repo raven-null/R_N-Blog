@@ -856,21 +856,24 @@
 
     function roamStep() {
       roamTimer = 0;
-      if (!roaming || S.dragging || S.sleeping || doc.hidden) return;
+      if (!roaming) return;                        // 只有明确关掉才真的停
+      // 睡着 / 拖拽中 / 标签页在后台：这轮先不走，但要接着排下一次，别把自己弄停了
+      if (S.dragging || S.sleeping || doc.hidden) { scheduleRoam(1500); return; }
       const p = petEl();
-      if (!p) return;
+      if (!p) { scheduleRoam(2000); return; }
       const b = bounds();
       const x = b.minX + Math.random() * Math.max(0, b.maxX - b.minX);
       const y = b.minY + Math.random() * Math.max(0, b.maxY - b.minY);
       p.classList.add('is-roaming');
       place(x, y, false);
       savePos();
-      // 先站稳（移动过渡 0.9s），再说话；说完等气泡自己收掉才走下一站
+      // 先站稳（移动过渡 2.2s），再说话；说完等气泡自己收掉才走下一站
       setTimeout(() => {
-        if (!roaming || S.sleeping || S.dragging) return;
+        if (!roaming) return;
+        if (S.sleeping || S.dragging) { scheduleRoam(2000); return; }
         speakWhere(x + 28, y + 28);
         scheduleRoam(3600 + Math.random() * 4600);
-      }, 2300);   // 等它慢悠悠走到位（过渡 2.2s）再说
+      }, 2300);
     }
 
     function setRoam(on) {
@@ -930,6 +933,15 @@
       host.appendChild(btn);
     });
     pet.appendChild(host);
+
+    // 看门狗：切视图 / 睡醒 / 从后台标签页回来之后，如果它还在「自由走动」却没有下一步，
+    // 3 秒内自动补上 —— 不然一旦某一轮被跳过，桌宠就再也不动了
+    setInterval(() => {
+      if (!roaming) return;
+      if (S.sleeping || S.dragging || doc.hidden) return;
+      if (roamTimer) return;
+      scheduleRoam(1200);
+    }, 3000);
 
     // 自由走动：默认就开着（后台「桌宠 · 自由走动」可以关掉）
     setTimeout(() => {
