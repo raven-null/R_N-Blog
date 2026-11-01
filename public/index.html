@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 
 <head>
@@ -814,8 +814,21 @@
     <!-- 桌宠动效引擎（spring-driven character，见 public/vendor/grok/README.md） -->
 
     <!-- /js/* 是 immutable 长缓存：app.js 一改就必须换 ?v=，否则线上一直吃旧文件 -->
-    <script src="js/app.js?v=20261106zw" defer></script>
+    <script src="js/app.js?v=20261106zx" defer></script>
     <script src="js/animations.js?v=3.14.0" defer></script>
+
+    <script>
+        // 移动端灵动岛默认关：没手动开过的话，解析到这里就先把岛收起，
+        // 免得首屏先闪一下、再由 app.js 收回去（app.js 是 defer，比这段晚）。
+        (function () {
+            try {
+                if (window.matchMedia('(max-width: 900px)').matches &&
+                    localStorage.getItem('blog-island-on') === null) {
+                    document.body.classList.add('island-off');
+                }
+            } catch (e) { /* 读不到就交给 app.js 的默认值 */ }
+        })();
+    </script>
 
     <script>
         // ===== Scroll Observer =====

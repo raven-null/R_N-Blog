@@ -6504,17 +6504,21 @@ const BlogApp = {
         if (!btn || btn.dataset.bound) return;
         btn.dataset.bound = '1';
 
-        const apply = (on) => {
+        const apply = (on, persist) => {
             document.body.classList.toggle('island-off', !on);
             btn.setAttribute('aria-pressed', on ? 'true' : 'false');
             btn.classList.toggle('is-off', !on);
             btn.title = on ? '灵动岛：开（点击关闭）' : '灵动岛：关（点击开启）';
+            if (persist === false) return;   // 只同步默认状态，不覆盖用户的记忆
             try { localStorage.setItem('blog-island-on', on ? '1' : '0'); } catch (e) { /* 忽略 */ }
         };
 
-        let saved = '1';
-        try { saved = localStorage.getItem('blog-island-on') ?? '1'; } catch (e) { saved = '1'; }
-        apply(saved !== '0');
+        // 默认值按屏宽走：桌面默认开，移动端（≤900px）默认关。
+        // 用户点过按钮就写进 localStorage，之后一律按他选的来。
+        let saved = null;
+        try { saved = localStorage.getItem('blog-island-on'); } catch (e) { saved = null; }
+        const narrow = window.innerWidth <= 900;
+        apply(saved === null || saved === '' ? !narrow : saved !== '0', false);
 
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
