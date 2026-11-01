@@ -15,7 +15,7 @@
     <meta property="og:image" content="https://ravennull.work/images/Default/web-logo.webp">
     <meta property="og:locale" content="zh_CN">
     <meta name="twitter:card" content="summary">
-    <link rel="stylesheet" href="css/bundle.css?v=446a1e10b6">
+    <link rel="stylesheet" href="css/bundle.css?v=90fb75fa0a">
     <title>渡鸦 NULL · 日光与暮色之间</title>
     <link rel="icon" id="siteFavicon" href="/images/Default/web-logo.webp" type="image/webp">
     <link rel="apple-touch-icon" href="/images/Default/web-logo.webp">
@@ -316,9 +316,37 @@
                                 </div>
                             </div>
                             <div class="hv3-hero-right">
-                                <div class="hv3-clock">
-                                    <div class="hv3-time" id="hvClockTime">--:--</div>
-                                    <div class="hv3-date" id="hvClockDate"></div>
+                                <!-- 时间 / 工具按钮叠成一列：默认只露出时间，
+                                     鼠标在这里往下滚才滑出按钮，移开鼠标自动滚回时间 -->
+                                <div class="hv3-flip" id="hv3ClockFlip" title="在这里滚一下：切换时间 / 按钮">
+                                    <div class="hv3-flip-inner">
+                                        <div class="hv3-flip-view">
+                                            <div class="hv3-clock">
+                                                <div class="hv3-time" id="hvClockTime">--:--</div>
+                                                <div class="hv3-date" id="hvClockDate"></div>
+                                            </div>
+                                        </div>
+                                        <div class="hv3-flip-view">
+                                            <!-- 显示工具：主题 / 手写体 / 灵动岛 -->
+                                            <div class="hv3-toggles">
+                                                <button class="hv3-toggle" id="hvThemeBtn" type="button" title="切换浅色 / 深色" aria-label="切换主题">
+                                                    <span id="hvThemeIcon">○</span>
+                                                </button>
+                                                <button class="hv3-toggle" id="hvHandBtn" type="button" title="切换手写体（全站）" aria-label="切换手写体" aria-pressed="false">
+                                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                                        <path d="M4 20h4L18.5 9.5a2.5 2.5 0 0 0-3.5-3.5L4.5 16.5V20z"></path>
+                                                        <path d="M13.5 7.5l3 3"></path>
+                                                    </svg>
+                                                </button>
+                                                <button class="hv3-toggle" id="hvIslandBtn" type="button" title="开关灵动岛" aria-label="开关灵动岛" aria-pressed="true">
+                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                                        <rect x="3" y="8" width="18" height="8" rx="4"></rect>
+                                                        <circle cx="8" cy="12" r="1.4" fill="currentColor" stroke="none"></circle>
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div class="hv3-stats">
                                     <button class="hv3-stat" type="button" onclick="BlogApp.goView('blog')">
@@ -329,19 +357,6 @@
                                     </button>
                                     <button class="hv3-stat" type="button" onclick="BlogApp.goView('projects')">
                                         <b id="homeCtaProjects">—</b><span>项目</span>
-                                    </button>
-                                </div>
-
-                                <!-- 显示工具：主题 / 手写体 -->
-                                <div class="hv3-toggles">
-                                    <button class="hv3-toggle" id="hvThemeBtn" type="button" title="切换浅色 / 深色" aria-label="切换主题">
-                                        <span id="hvThemeIcon">○</span>
-                                    </button>
-                                    <button class="hv3-toggle" id="hvHandBtn" type="button" title="切换手写体（全站）" aria-label="切换手写体" aria-pressed="false">
-                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                            <path d="M4 20h4L18.5 9.5a2.5 2.5 0 0 0-3.5-3.5L4.5 16.5V20z"></path>
-                                            <path d="M13.5 7.5l3 3"></path>
-                                        </svg>
                                     </button>
                                 </div>
                             </div>
@@ -654,7 +669,7 @@
     <!-- 桌宠动效引擎（spring-driven character，见 public/vendor/grok/README.md） -->
 
     <!-- /js/* 是 immutable 长缓存：app.js 一改就必须换 ?v=，否则线上一直吃旧文件 -->
-    <script src="js/app.js?v=20261106j" defer></script>
+    <script src="js/app.js?v=20261106k" defer></script>
     <script src="js/animations.js?v=3.14.0" defer></script>
 
     <script>

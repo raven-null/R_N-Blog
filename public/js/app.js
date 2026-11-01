@@ -63,6 +63,11 @@ const BlogApp = {
         });
         this.syncHvThemeIcon();
 
+        // 灵动岛开关（时间下面那排按钮里的第三个）
+        this.bindIslandToggle();
+        // 时间 / 按钮 上下翻：滚轮切换，移开自动回到时间
+        this.bindClockFlip();
+
 
         // 正文手写开关（记忆在 localStorage）
         this.applyHandBody();
@@ -5933,6 +5938,68 @@ const BlogApp = {
         const t = ThemeManager.getCurrentTheme();
         if (t && t.icon) icon.textContent = t.icon;
         if (btn && t && t.name) btn.title = '当前：' + t.name + '（点击切换）';
+    },
+
+    // 灵动岛开关（时钟旁第三个圆钮）：关掉后岛不再弹出来（记忆在 localStorage）
+    bindIslandToggle() {
+        const btn = document.getElementById('hvIslandBtn');
+        if (!btn || btn.dataset.bound) return;
+        btn.dataset.bound = '1';
+
+        const apply = (on) => {
+            document.body.classList.toggle('island-off', !on);
+            btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+            btn.classList.toggle('is-off', !on);
+            btn.title = on ? '灵动岛：开（点击关闭）' : '灵动岛：关（点击开启）';
+            try { localStorage.setItem('blog-island-on', on ? '1' : '0'); } catch (e) { /* 忽略 */ }
+        };
+
+        let saved = '1';
+        try { saved = localStorage.getItem('blog-island-on') ?? '1'; } catch (e) { saved = '1'; }
+        apply(saved !== '0');
+
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            apply(document.body.classList.contains('island-off'));
+        });
+    },
+
+    /* 时间 / 按钮 上下翻：
+       · 默认只露时间
+       · 在时间区域往下滚 → 滑出下面那排按钮；往回滚 → 回到时间
+       · 鼠标移开 → 自动滚回时间 */
+    bindClockFlip() {
+        const flip = document.getElementById('hv3ClockFlip');
+        if (!flip || flip.dataset.bound) return;
+        flip.dataset.bound = '1';
+        const clock = flip.querySelector('.hv3-clock');
+
+        // 两页高度都按时钟那页来，翻译位移也用它，保证正好对齐
+        const sync = () => {
+            const h = clock ? Math.round(clock.getBoundingClientRect().height) : 0;
+            if (h <= 0) return;
+            flip.style.setProperty('--flip-h', h + 'px');
+            flip.style.setProperty('--flip-shift', (-h) + 'px');
+        };
+        sync();
+        setTimeout(sync, 400);       // 字体/时钟内容落位后再校一次
+        window.addEventListener('resize', () => setTimeout(sync, 80), { passive: true });
+
+        const setTools = (on) => flip.classList.toggle('is-tools', !!on);
+
+        flip.addEventListener('wheel', (e) => {
+            const dy = e.deltaY;
+            if (!dy) return;
+            e.preventDefault();
+            setTools(dy > 0);
+        }, { passive: false });
+
+        flip.addEventListener('mouseleave', () => setTools(false));
+        // 触屏 / 点击也能切（再点一下收起）
+        flip.addEventListener('click', (e) => {
+            if (e.target.closest('.hv3-toggle')) return;   // 点按钮本身不切页
+            setTools(!flip.classList.contains('is-tools'));
+        });
     }
 };
 

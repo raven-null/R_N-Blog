@@ -13056,6 +13056,45 @@ html[data-theme="dark"] .hv3-card {
 
 /* 口号区已移除：头像名字在左，时间与数字在右 */
 
+/* 时间 / 按钮 上下翻：平时只露时间，鼠标在上面往下滚才滑出按钮，移开自动滚回去 */
+.hv3-flip {
+    grid-area: 1 / 2 / 3 / 3;
+    align-self: center;
+    justify-self: center;
+    height: var(--flip-h, 76px);
+    overflow: hidden;
+    border-radius: 16px;
+}
+
+.hv3-flip-inner {
+    display: flex;
+    flex-direction: column;
+    transition: transform .46s cubic-bezier(.22, 1, .36, 1);
+    will-change: transform;
+}
+
+.hv3-flip.is-tools .hv3-flip-inner {
+    transform: translateY(var(--flip-shift, -76px));
+}
+
+.hv3-flip-view {
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    height: var(--flip-h, 76px);
+}
+
+.hv3-flip .hv3-clock,
+.hv3-flip .hv3-toggles {
+    grid-area: auto;
+    justify-self: center;
+}
+
+/* 灵动岛关了：不管是谁把它顶出来都不显示 */
+body.island-off .now-island {
+    display: none !important;
+}
+
 .hv3-time {
     font-size: 28px;
     font-weight: 650;
@@ -14588,6 +14627,20 @@ html[data-theme="dark"] .hv3-shot {
     }
 
     .hv3-clock { justify-self: start; }
+
+    /* 窄屏不再上下翻：时间、按钮各占一行，全都露出来 */
+    .hv3-flip {
+        grid-area: 2 / 1 / 3 / 3;
+        height: auto;
+        overflow: visible;
+        justify-self: stretch;
+    }
+
+    .hv3-flip-inner { transform: none !important; }
+
+    .hv3-flip-view { height: auto; }
+
+    .hv3-flip .hv3-toggles { justify-self: start; }
 
     .hv3-toggle {
         width: 34px;
