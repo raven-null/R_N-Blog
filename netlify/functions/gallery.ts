@@ -31,6 +31,10 @@ interface GalleryPhoto {
   rating: string
   tags: any[]
   categories: any[]
+  width: number
+  height: number
+  fav: boolean
+  size: number
   thumb: string
   url: string
 }
@@ -93,6 +97,11 @@ async function fetchPhotos(): Promise<GalleryPhoto[]> {
         rating: String(p?.rating || "general"),
         tags: Array.isArray(p?.tags) ? p.tags : [],
         categories: Array.isArray(p?.categories) ? p.categories : [],
+        // 尺寸和收藏标记：首页「切换背景」要挑横向高清、优先收藏的图（v3.53.8）
+        width: Number(p?.width) || 0,
+        height: Number(p?.height) || 0,
+        fav: p?.fav === true,
+        size: Number(p?.size) || 0,
         // 缩略图带 v=2：上游把缩略图从 480px 提到 960px，换 URL 才能绕过 CDN 旧缓存
         thumb: `${SOURCE}/api/photos/${encodeURIComponent(id)}/thumb?v=2`,
         url: `${SOURCE}/api/photos/${encodeURIComponent(id)}/raw`,

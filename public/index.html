@@ -70,8 +70,7 @@
         #skyArtAlt.is-visible {
             opacity: 1 !important;
         }
-        /* 第 2 层还没有 src 时不占画面，显示与否交给 JS 的 is-ready */
-        #loadVeilBgAlt:not([src]) { display: none; }
+        /* 遮罩的第二层随机图已去掉：首屏网络最紧张，不跟内容抢带宽 */
         @keyframes veil-bg-in {
             to { opacity: 1; }
         }
@@ -170,7 +169,7 @@
             .load-veil { display: none; }
         }
     </style>
-    <link rel="stylesheet" href="css/bundle.css?v=6d2d344463">
+    <link rel="stylesheet" href="css/bundle.css?v=074225ee59">
     <title>渡鸦 NULL · 日光与暮色之间</title>
     <link rel="icon" id="siteFavicon" href="/images/Default/web-logo.webp" type="image/webp">
     <link rel="apple-touch-icon" href="/images/Default/web-logo.webp">
@@ -184,7 +183,7 @@
     <link rel="dns-prefetch" href="https://music.ravennull.work">
     <script src="/js/site-icon.js?v=1.0.1" defer></script>
     <!-- 首屏加载遮罩：进度跟着首屏图片的真实加载数走（见 js/load-progress.js） -->
-    <script src="/js/load-progress.js?v=2.3.0" defer></script>
+    <script src="/js/load-progress.js?v=2.4.0" defer></script>
     <!-- 主页宽度：后台「主页布局」滑块的值 → CSS 变量 --home-content-w（见 js/home-layout.js） -->
     <script src="/js/home-layout.js?v=1.0.0" defer></script>
 
@@ -816,7 +815,7 @@
     <!-- 桌宠动效引擎（spring-driven character，见 public/vendor/grok/README.md） -->
 
     <!-- /js/* 是 immutable 长缓存：app.js 一改就必须换 ?v=，否则线上一直吃旧文件 -->
-    <script src="js/app.js?v=20261106zn" defer></script>
+    <script src="js/app.js?v=20261106zp" defer></script>
     <script src="js/animations.js?v=3.14.0" defer></script>
 
     <script>

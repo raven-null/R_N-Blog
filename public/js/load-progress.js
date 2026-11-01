@@ -164,69 +164,18 @@
         tick();
     }, { once: true });
 
-    /* ===== 遮罩背景图（v2.3.0）=====
-       第 1 层是 HTML 里写死的默认图（就是页面现在这张天空插画，和 sky 层共用一份文件，
-       首帧就开始下、srcset 自动按屏幕选档）；等它出来之后，再从图池里随机挑一张，
-       用第 2 层交叉淡入盖上去。任何一步失败都只是保留默认图，遮罩照常工作。 */
+    /* ===== 遮罩背景图（v2.4.0）=====
+       HTML 里写死的那张默认图（页面现在这张天空插画，和 sky 层共用一份文件，
+       首帧就开始下、srcset 自动按屏幕选档）。不再去外面挑随机图：首屏这时候
+       网络最紧张，背景图跟内容抢带宽只会让人等更久。 */
     function paintVeilBackdrop() {
         var bg = document.getElementById('loadVeilBg');
-        var alt = document.getElementById('loadVeilBgAlt');
         if (!bg) return;
-
-        function markReady(el) {
+        var markReady = function (el) {
             if (el && !el.classList.contains('is-ready')) el.classList.add('is-ready');
-        }
-
-        // 第 1 层：默认图
+        };
         if (bg.complete && bg.naturalWidth > 0) markReady(bg);
         else bg.addEventListener('load', function () { markReady(bg); }, { once: true });
-
-        if (!alt) return;
-
-        // 第 2 层：等默认图落地后再换随机图（不抢带宽，也不会出现空窗）
-        var swapStarted = false;
-        function swapInRandom() {
-            if (swapStarted) return;
-            swapStarted = true;
-
-            var need = (window.innerWidth || 1280) * (window.devicePixelRatio || 1);
-            var slot = need >= 2200 ? '2560' : need >= 1500 ? '1920' : '1280';
-
-            fetch('/images/loader/manifest.json', { cache: 'force-cache' })
-                .then(function (r) { return r.ok ? r.json() : null; })
-                .then(function (data) {
-                    var items = (data && Array.isArray(data.items) ? data.items : []).filter(function (it) {
-                        return it && it.slots && it.slots[slot];
-                    });
-                    // 只用普通评级的图
-                    var general = items.filter(function (it) { return String(it.rating || 'general') === 'general'; });
-                    var pool = general.length ? general : items;
-                    if (!pool.length) return;
-
-                    var lastId = '';
-                    try { lastId = localStorage.getItem('loader-bg-last') || ''; } catch (e) { }
-                    var fresh = pool.filter(function (it) { return it.id !== lastId; });
-                    if (!fresh.length) fresh = pool;
-                    var picked = fresh[Math.floor(Math.random() * fresh.length)];
-
-                    // 先悄悄下好，再一次性换，避免看到半张图
-                    var probe = new Image();
-                    probe.onload = function () {
-                        alt.src = picked.slots[slot];
-                        try { localStorage.setItem('loader-bg-last', picked.id); } catch (e) { }
-                        markReady(alt);
-                    };
-                    probe.src = picked.slots[slot];
-                })
-                .catch(function () { /* 换图失败就保持默认图 */ });
-        }
-
-        if (bg.complete && bg.naturalWidth > 0) {
-            setTimeout(swapInRandom, 500);
-        } else {
-            bg.addEventListener('load', function () { setTimeout(swapInRandom, 400); }, { once: true });
-            setTimeout(swapInRandom, 2000);
-        }
     }
     paintVeilBackdrop();
 })();

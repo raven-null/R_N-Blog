@@ -6227,20 +6227,39 @@ const BlogApp = {
     },
 
     // ===== 首页背景切换 =====
-    // 候选 = 默认天空插画 + 图库图池里的横向图（public/images/loader/manifest.json）。
-    // 点一次换一张，选择记在 localStorage；换图只动 sky 层那张 <img>，
-    // 天色滤镜（daylight.js 的 --art-brightness）照旧生效。
+    // 候选 = 默认天空插画 + 图库「收藏」里的横向高清图（运行时取，不再依赖预生成的图池）。
+    // 刷新时先用默认图把页面顶住，等图库那张原图真的下载完了，再交叉淡入换上去。
     heroBgPool: null,
 
     loadHeroBgPool() {
         if (this.heroBgPool) return Promise.resolve(this.heroBgPool);
-        return fetch('/images/loader/manifest.json', { cache: 'force-cache' })
+
+        // 只请求博客自己的 /api/gallery（它已经代理并缓存了 r-gallery 的清单，
+        // 现在还带上了 width / height / fav）。前端不再直连图库站，省掉一次跨域往返。
+        return fetch('/api/gallery?limit=1000', { cache: 'no-cache' })
             .then((r) => (r.ok ? r.json() : null))
             .then((data) => {
-                const items = (data && Array.isArray(data.items) ? data.items : [])
-                    .filter((it) => it && it.slots && String(it.rating || 'general') === 'general');
-                this.heroBgPool = items;
-                return items;
+                const photos = (data && Array.isArray(data.photos) ? data.photos : []);
+                const usable = photos.filter((p) => {
+                    if (!p || !p.id || !p.url) return false;
+                    if (String(p.rating || 'general') !== 'general') return false;   // 公开首屏不用 r16/r18
+                    const w = Number(p.width) || 0;
+                    const h = Number(p.height) || 0;
+                    return w > h && w >= 1600;
+                });
+                // 收藏优先，其余按分辨率降序
+                usable.sort((a, b) => {
+                    if (!!b.fav !== !!a.fav) return (b.fav ? 1 : 0) - (a.fav ? 1 : 0);
+                    return (Number(b.width) || 0) - (Number(a.width) || 0);
+                });
+                this.heroBgPool = usable.slice(0, 20).map((p) => ({
+                    id: p.id,
+                    fav: !!p.fav,
+                    w: p.width,
+                    h: p.height,
+                    url: p.url,
+                }));
+                return this.heroBgPool;
             })
             .catch(() => {
                 this.heroBgPool = [];
@@ -6255,9 +6274,7 @@ const BlogApp = {
         if (!art) return;
 
         const isDefault = !item;
-        const url = isDefault
-            ? 'images/sky/kumeng-1920.webp'
-            : (item.slots['1920'] || item.slots['1280'] || item.slots['2560']);
+        const url = isDefault ? 'images/sky/kumeng-1920.webp' : item.url;
         if (!url) return;
         const srcset = isDefault ? 'images/sky/kumeng-960.webp 960w, images/sky/kumeng-1920.webp 1920w' : null;
 
@@ -6330,16 +6347,36 @@ const BlogApp = {
     restoreHeroBg() {
         let idx = 0;
         try { idx = Number(localStorage.getItem('blog-hero-bg') ?? '0'); } catch (e) { idx = 0; }
-        if (!Number.isFinite(idx) || idx <= 0) {
-            const btn = document.getElementById('hvBgBtn');
+        if (!Number.isFinite(idx) || idx < 0) idx = 0;
+
+        const btn = document.getElementById('hvBgBtn');
+
+        // 没有明确选过（0 = 默认）：等页面加载完再悄悄换一张图库的图，不跟首屏抢带宽
+        if (idx === 0) {
             if (btn) { btn.title = '切换背景（当前：默认天空背景）'; btn.setAttribute('aria-pressed', 'false'); }
+            const pickLater = () => {
+                this.loadHeroBgPool().then((pool) => {
+                    if (!pool.length) return;
+                    // 当前还是默认图才自动换；用户已经点过就别抢
+                    const art = document.getElementById('skyArt');
+                    if (!art || art.getAttribute('data-picked')) return;
+                    const item = pool[Math.floor(Math.random() * pool.length)];
+                    this.applyHeroBg(item);
+                    if (btn) {
+                        btn.title = '切换背景（当前：图库背景 ' + (pool.indexOf(item) + 1) + ' / ' + pool.length + '）';
+                        btn.setAttribute('aria-pressed', 'true');
+                    }
+                });
+            };
+            if (document.readyState === 'complete') setTimeout(pickLater, 1200);
+            else window.addEventListener('load', () => setTimeout(pickLater, 1200), { once: true });
             return;
         }
+
         this.loadHeroBgPool().then((pool) => {
             const item = pool[idx - 1];
             if (!item) return;
             this.applyHeroBg(item, true);   // 恢复时直接落地，不播淡入
-            const btn = document.getElementById('hvBgBtn');
             if (btn) {
                 btn.title = '切换背景（当前：图库背景 ' + idx + ' / ' + pool.length + '）';
                 btn.setAttribute('aria-pressed', 'true');
