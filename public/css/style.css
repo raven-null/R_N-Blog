@@ -5801,7 +5801,7 @@ html.reader-focus .article-content {
     right: 0;
     width: 100%;
     max-width: 100%;
-    z-index: 60;
+    z-index: 90;
     opacity: 0;
     visibility: hidden;
     transform: translateY(-6px) scale(0.97);

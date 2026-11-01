@@ -1918,6 +1918,25 @@ const BlogApp = {
         }
         track.dataset.empty = '';
 
+        /* 从别的页面切回主页时 renderHome 会再跑一遍。如果文章列表没变，就不要再重建 DOM：
+           重建会把封面 <img> 丢掉重插，图片要重新解码，中间空出一帧 —— 就是用户看到的「先黑一下」。
+           内容真变了（新增/删除文章、换封面）才重建。 */
+        const sig = posts.map((p) => [p.image || '', p.title || '', p.filename || '', p.date || ''].join('|')).join('\n');
+        if (track.dataset.sig === sig && track.querySelector('.hv3-item')) {
+            this._postPlay = { posts: posts, idx: this._postPlay ? (this._postPlay.idx || 0) : 0 };
+            this.syncCarouselHeight();
+            this.bindPostPlay();
+            this.startPostPlay();
+            // 保险：万一还有卡片没图上（当时图片池是空的），补一次
+            const naked = [...track.querySelectorAll('.hv3-item.is-generic')].filter((it) => {
+                const im = it.querySelector('.hv3-cover-img.is-front');
+                return !im || !im.getAttribute('src');
+            });
+            if (naked.length) this.fillCoverPlay(naked);
+            return;
+        }
+        track.dataset.sig = sig;
+
         track.innerHTML = posts.map((post, i) => {
             const href = 'article.html?post=' + encodeURIComponent(post.filename || '');
             const title = this.esc(post.title || '无标题');
@@ -2302,17 +2321,18 @@ const BlogApp = {
         // 不能用 carousel.parentElement / track —— 左边那张卡的宽度正是下面算出来的
         // --car-w，拿它当基准就是自己算自己，会一直塌到 0。
         const row = document.querySelector('.hv3-row-main');
+        // 视图被 display:none 时整行宽度是 0：这时候别算，否则会拿 innerWidth 兜底，
+        // 把盒子算成一个临时尺寸，切回来再改一次 —— 看着就是"闪一下"
+        if (row && !row.clientWidth) return;
         const rowW = (row && row.clientWidth) || window.innerWidth;
         // 当前是第几张由播放器决定（不再是横向滚动位置）
         const idx = this._postPlay ? this._postPlay.idx : 0;
         const card = items[Math.min(items.length - 1, Math.max(0, idx))] || items[0];
         if (!card) return;
         // --cover-ratio = 宽 / 高（renderHvPosts 按封面原始尺寸写入，缺省 1.6）
-        // 手机上不夹得太死：竖图比例多极端都要按真实比例摆，盒子才能把图片刚好装下
+        // 不夹比例：极窄的竖图也得按真实比例摆，否则盒子比图宽、contain 之后两侧露白边
         const rawRatio = Number((card.style.getPropertyValue('--cover-ratio') || '').trim()) || 1.6;
-        const ratio = window.innerWidth <= 900
-            ? Math.max(0.2, Math.min(4, rawRatio))
-            : Math.max(0.5, Math.min(2.4, rawRatio));
+        const ratio = Math.max(0.2, Math.min(4, rawRatio));
 
         let w;
         let h;
@@ -3192,8 +3212,12 @@ const BlogApp = {
         }
 
         if (!tasks.length) {
-            box.style.display = 'none';
-            list.innerHTML = '';
+            /* 平时没任务就整块收起；点了日期（右栏就是「任务 + 日记」）时留一行空态，
+               否则右侧一片空白，看着像功能坏了 */
+            const dayPane = document.getElementById('hv3DayPane');
+            const inDayPane = !!dayPane && !dayPane.hidden;
+            box.style.display = inDayPane ? '' : 'none';
+            list.innerHTML = inDayPane ? '<div class="life-task-empty">这天还没有任务</div>' : '';
             return;
         }
 
@@ -3285,6 +3309,19 @@ const BlogApp = {
         if (!proj || !day) return;
         proj.hidden = !!on;
         day.hidden = !on;
+        if (on) {
+            /* 点日期后，任务区 / 日记区必须真的露出来：
+               它们可能被「未登录」时写的 display:none 或折叠状态藏着 */
+            const life = document.getElementById('homeLife');
+            const jour = document.getElementById('homeJournalBox');
+            if (life) life.style.display = '';
+            if (jour) {
+                jour.style.display = '';
+                jour.classList.remove('is-collapsed');
+                const btn = document.getElementById('journalToggle');
+                if (btn) btn.setAttribute('aria-expanded', 'true');
+            }
+        }
         this.syncTodaySideHeight();
         if (!on) this.syncTodaySideSlot();
     },
@@ -3303,22 +3340,31 @@ const BlogApp = {
         if (!side || !row || !proj || !day || !news) return;
         if (!day.hidden) return;   // 点了日期，交给任务/日记
 
-        // 判断依据用「第二行右列的高度」而不是简报自己的高度：
-        // 简报一旦搬进日历右边，高度会变，拿它判断会来回抽搐。
+        /* 判断依据只用「跟简报位置无关」的量：
+           · 文章卡高度（= 右列 max-height，JS 写在 style 上）
+           · 上半部分（横图 + 方盒）的实际高度
+           · 一条新闻的高度
+           这样搬进搬出都不会让判断值跟着变，不会来回抽搐。
+           只有连一条都放不下（可用高度 < 单条高度）才算"被遮挡"，才搬。 */
         const col = document.querySelector('.hv3-row-main .hv3-col-right');
-        const colH = col ? col.getBoundingClientRect().height : 0;
-        const cramped = colH > 0 && colH < 420;
+        const colMax = col ? (parseInt(col.style.maxHeight || '0', 10) || 0) : 0;
+        const topRow = col ? col.querySelector('.hv3-top-row') : null;
+        const topH = topRow ? topRow.getBoundingClientRect().height : 0;
+        const firstItem = news.querySelector('.hv3-news-item');
+        const itemH = firstItem ? firstItem.getBoundingClientRect().height : 0;
+        const availForNews = colMax - topH - 18;   // 18 = 右列的 gap
+        const cramped = colMax > 0 && itemH > 0 && availForNews < itemH + 4;
         if (this._crampedNews === cramped) return;   // 状态没变就别反复搬 DOM
         this._crampedNews = cramped;
 
         if (cramped) {
-            // 右列太矮，简报会被挤成一条缝 → 挪到日历右边铺开；项目栏让到日历卡下面，别凭空消失
+            // 连一条新闻都露不出来 → 挪到日历右边铺开；项目栏让到日历卡下面，别凭空消失
             if (!this._newsHome) this._newsHome = { parent: news.parentElement, next: news.nextSibling };
             side.appendChild(news);
             proj.hidden = false;
             if (proj.parentElement !== row) row.appendChild(proj);
         } else {
-            // 右列高度够 → 简报回原位；项目栏回到日历右边
+            // 能露出至少一条 → 简报留在原位；项目栏回到日历右边
             if (proj.parentElement !== side) side.insertBefore(proj, side.firstChild);
             proj.hidden = false;
             if (this._newsHome && news.parentElement === side) {
@@ -3527,7 +3573,8 @@ const BlogApp = {
         panel.addEventListener('click', (e) => {
             const cell = e.target.closest('.cal-day');
             const act = e.target.closest('[data-cal-act]');
-            if (!act && (!cell || !cell.dataset.date)) return;
+            const quick = e.target.closest('.hv3-day-act');
+            if (!act && !quick && (!cell || !cell.dataset.date)) return;
             if (!this.lifeAdminKey()) {
                 if (cell) {
                     document.querySelectorAll('#homeCalendar .cal-day').forEach(el => {
@@ -3535,6 +3582,11 @@ const BlogApp = {
                     });
                 }
                 this.petSay('先在后台登录，才能写任务和日记～', 3800);
+                return;
+            }
+            if (quick) {
+                e.preventDefault();
+                this.openLifeEditor(quick.dataset.kind);
                 return;
             }
             if (act) {
