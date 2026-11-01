@@ -636,16 +636,18 @@
                                 </div>
                             </div>
 
-                        </div>
-                    </div>
-
-                    <!-- 今日拾光：从右侧栏搬出来，独占一行（移动端要排在图片下面、日历上面） -->
+                            <!-- 今日拾光（简报）：留在右列里、图片（生活切片 + 方图）下面，
+                                 跟左边的文章卡并排 —— 这是右列本来该有的结构，
+                                 窄屏靠 .hv3-col-right / .hv3-top-row 的 display:contents 拆平，
+                                 仍然排在图片下面、日历上面。 -->
                             <div class="hv3-sub-grid">
                                 <!-- 今日拾光：内容浏览，自动滚动 -->
                                 <section class="hv3-box hv3-news" aria-label="今日拾光">
                                     <div class="hv3-ticker" id="hv3News" aria-label="今日拾光，自动滚动"></div>
                                 </section>
                             </div>
+                        </div>
+                    </div>
 
                     <!-- ③ 第三行 -->
                     <div class="hv3-row-bottom">
