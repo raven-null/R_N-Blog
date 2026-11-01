@@ -2255,6 +2255,8 @@ const BlogApp = {
             const landscape = [];
             const square = [];
             const unknown = [];
+            // 每张图的真实宽高比（宽/高）：方图池空的时候要按「离 1:1 最近」挑替补
+            const ratios = new Map();
             // 按宽高比三分类：接近正方形的（0.85 ~ 1.18）单独给方图盒子，
             // 明显更宽的给生活切片，更窄的给文章位 —— 三类互不重叠
             const kindOf = (w, h) => {
@@ -2279,6 +2281,7 @@ const BlogApp = {
                     const kind = kindOf(w, h);
                     pushKind(p, kind);
                     orient.set(p.id, kind);
+                    ratios.set(p.id, w / h);
                     continue;
                 }
                 const known = orient.get(p.id);
@@ -2293,6 +2296,7 @@ const BlogApp = {
                 im.onload = () => {
                     const kind = kindOf(im.naturalWidth, im.naturalHeight);
                     orient.set(p.id, kind);
+                    ratios.set(p.id, im.naturalWidth / im.naturalHeight);
                     resolve(kind);
                 };
                 im.onerror = () => resolve('');
@@ -2307,7 +2311,13 @@ const BlogApp = {
             };
             await Promise.all(new Array(8).fill(0).map(worker));
 
-            const pools = { portrait, landscape, square };
+            // 方图不够时的替补：横图/竖图里离 1:1 最近的那几张（盒子那边用 cover 裁成方形）
+            const nearSquare = [...portrait, ...landscape]
+                .slice()
+                .sort((a, b) => Math.abs((ratios.get(a.id) || 1) - 1) - Math.abs((ratios.get(b.id) || 1) - 1))
+                .slice(0, 12);
+
+            const pools = { portrait, landscape, square, nearSquare };
             // 空池不缓存：图库还没回来时缓存了空结果，后面就再也补不上图
             if (portrait.length || landscape.length || square.length) this._orientPools = pools;
             return pools;
@@ -2877,8 +2887,9 @@ const BlogApp = {
         });
     },
 
-    /* 方图盒子：只播「接近正方形」的图（宽高比 0.85~1.18）。
-       一张方图都没有时挂占位一直等，不拿横图/竖图凑数 —— 有图才播。 */
+    /* 方图盒子：播「接近正方形」的图（宽高比 0.85~1.18）；
+       图库里一张方图都没有时，退一步用最接近 1:1 的那几张
+       （盒子是方的、图用 object-fit: cover 铺满，看着就是方图）。 */
     async renderHvSquare() {
         const box = document.getElementById('hv3Square');
         if (!box || box.dataset.ready) return;
@@ -2886,12 +2897,22 @@ const BlogApp = {
         const layers = [...box.querySelectorAll('.hv3-square-img')];
         if (layers.length < 2) return;
 
-        let pool = [];
-        try {
-            const pools = await this.orientationPools();
-            pool = pools.square || [];
-        } catch (e) { pool = []; }
+        // ① 先吃本地缓存：图库列表拉过之后会在 sessionStorage 留一份，
+        //    直接从它按宽高比分类就能立刻出图 —— 不用等 /api/gallery 那轮网络。
+        const cached = this.cachedSquarePool();
+        if (cached.length) {
+            box.dataset.waiting = '';
+            this.startSquareRotation(box, layers, cached);
+            return;
+        }
 
+        // ② 没缓存才等完整分类（要拉图库列表、量文章封面尺寸）
+        let pools = { square: [], nearSquare: [] };
+        try {
+            pools = await this.orientationPools();
+        } catch (e) { pools = { square: [], nearSquare: [] }; }
+
+        const pool = (pools.square && pools.square.length) ? pools.square : (pools.nearSquare || []);
         if (!pool.length) {
             box.dataset.waiting = '1';
             clearTimeout(this._squareRetry);
@@ -2903,11 +2924,60 @@ const BlogApp = {
             return;
         }
         box.dataset.waiting = '';
+        this.startSquareRotation(box, layers, pool);
+    },
 
+    /* 从 sessionStorage 那份图库列表（fetchGalleryList 写入）按宽高比分类：
+       有真方图就给真方图，没有就给「最接近 1:1」的 12 张；没有缓存返回空数组。 */
+    cachedSquarePool() {
+        try {
+            const raw = sessionStorage.getItem('blog-gallery-list-v1');
+            if (!raw) return [];
+            const cached = JSON.parse(raw);
+            if (!cached || !Array.isArray(cached.list) || !cached.list.length) return [];
+            const square = [];
+            const near = [];
+            for (const p of cached.list) {
+                if (!p || (!p.thumb && !p.url)) continue;
+                try { if (this.isR18Image(p)) continue; } catch (e) { /* 忽略 */ }
+                const w = Number(p.width) || 0;
+                const h = Number(p.height) || 0;
+                if (!w || !h) continue;
+                const r = w / h;
+                if (r >= 0.85 && r <= 1.18) square.push(p);
+                else near.push({ p, d: Math.abs(r - 1) });
+            }
+            if (square.length) return square;
+            near.sort((a, b) => a.d - b.d);
+            return near.slice(0, 12).map((x) => x.p);
+        } catch (e) {
+            return [];
+        }
+    },
+
+    /* 方图轮播：两层 img 交叉淡入，60 秒换一张；点一下开灯箱。 */
+    startSquareRotation(box, layers, pool) {
         let front = 0;
+        const bad = new Set();   // 加载失败的 src：下次挑图跳过，别一直卡在同一张
         const show = () => {
             if (document.hidden) return;
-            const p = pool[Math.floor(Math.random() * pool.length)];
+            const usable = pool.filter((p) => {
+                const s = String((p && (p.thumb || p.url)) || '');
+                return s && !bad.has(s);
+            });
+            if (!usable.length && bad.size >= pool.length) {
+                // 候选全挂了：挂回占位，过一会儿连同图库一起重新拉一次
+                box.dataset.waiting = '1';
+                clearTimeout(this._squareRetry);
+                this._squareRetry = setTimeout(() => {
+                    box.dataset.ready = '';
+                    this._orientPools = null;
+                    this.renderHvSquare();
+                }, 15000);
+                return;
+            }
+            const pickFrom = usable.length ? usable : pool;
+            const p = pickFrom[Math.floor(Math.random() * pickFrom.length)];
             const src = String((p && (p.thumb || p.url)) || '');
             if (!src) return;
             const prev = layers[front];
@@ -2924,6 +2994,12 @@ const BlogApp = {
                 front = 1 - front;
             };
             next.addEventListener('load', swap, { once: true });
+            next.addEventListener('error', () => {
+                if (done) return;
+                done = true;
+                bad.add(src);
+                setTimeout(show, 1200);    // 这张挂了就换下一张，别让盒子一直空着
+            }, { once: true });
             next.src = src;
             if (next.complete && next.naturalWidth) swap();
         };
