@@ -3036,6 +3036,27 @@ html.bg-only body {
 }
 
 html.bg-only body > *:not(.sky) {
+    /* opacity: 0 是压在这一整棵子树上的，子元素写 visibility: visible !important
+       （renewal.css 里新闻列表 / 项目卡就这么写）也翻不回来；
+       单用 visibility: hidden 会被那些 !important 顶掉，留一块图露在外面。 */
+    opacity: 0 !important;
     visibility: hidden !important;
     pointer-events: none !important;
+}
+
+/* 只看背景时，让壁纸按原样呈现：
+   平时 .sky-art 被压到 opacity .72 + 亮度 0.748，上面还有一层 .sky-tint
+   （linear-gradient + mix-blend-mode: soft-light，opacity 0.66）做时段染色，
+   正常看页面时那是氛围，只剩背景时就是一整块灰玻璃 —— 这里全收掉。 */
+html.bg-only .sky {
+    filter: none !important;
+}
+
+html.bg-only .sky-art {
+    opacity: 1 !important;
+    filter: none !important;
+}
+
+html.bg-only .sky-tint {
+    display: none !important;
 }
