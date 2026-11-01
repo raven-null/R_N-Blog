@@ -15460,6 +15460,72 @@ body:not(.has-music) .hv3-row-top .hv3-hero {
     }
 }
 
+/* ------------------------------------------------------------
+   移动端圆钮回到卡片（v3.54.4）
+   桌面把「时钟 / 三个圆钮」放进 .hv3-flip 翻牌容器里，手机上只露上半截，
+   所以圆钮看着像消失了。≤900px 用 display:contents 拆掉翻牌层，
+   让时钟、统计、圆钮重新落回 .hv3-hero 的网格：
+       谁
+       时钟         ← 独占一行，圆钮再挤也不会压到它
+       统计  圆钮    ← 同一行；圆钮尺寸固定，放不下就横向滚动（滚动条隐藏）
+   ------------------------------------------------------------ */
+@media (max-width: 900px) {
+    .hv3-flip,
+    .hv3-flip-inner,
+    .hv3-flip-view {
+        display: contents;
+    }
+
+    .hv3-hero {
+        grid-template-columns: auto minmax(0, 1fr);
+        grid-template-areas:
+            'who who'
+            'clock clock'
+            'stats toggles';
+        gap: 12px 14px;
+    }
+
+    .hv3-clock {
+        grid-area: clock;
+        justify-self: start;
+        align-items: flex-start;
+        text-align: left;
+    }
+
+    .hv3-stats {
+        grid-area: stats;
+        justify-self: start;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    }
+
+    .hv3-toggles {
+        grid-area: toggles;
+        justify-self: end;
+        flex: none;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    }
+
+    .hv3-stats::-webkit-scrollbar,
+    .hv3-toggles::-webkit-scrollbar {
+        display: none;
+        width: 0;
+        height: 0;
+    }
+
+    /* 圆钮尺寸固定，别被压缩成一团 */
+    .hv3-toggle {
+        flex: 0 0 auto;
+        width: 40px;
+        height: 40px;
+    }
+}
+
 
 /* music.css */
 /* ============================================================
